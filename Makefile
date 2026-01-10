@@ -42,6 +42,25 @@ db-logs: ## View PostgreSQL logs
 db-shell: ## Access PostgreSQL shell
 	docker-compose exec postgres psql -U postgres -d dut_ai_manager
 
+# ==================== Migrations ====================
+migrate-create: ## Create a new migration (usage: make migrate-create msg="description")
+	cd backend && uv run alembic revision --autogenerate -m "$(msg)"
+
+migrate-up: ## Apply all migrations
+	cd backend && uv run alembic upgrade head
+
+migrate-down: ## Rollback last migration
+	cd backend && uv run alembic downgrade -1
+
+migrate-history: ## Show migration history
+	cd backend && uv run alembic history
+
+migrate-current: ## Show current migration
+	cd backend && uv run alembic current
+
+seed-permissions: ## Seed permissions from enums into database
+	cd backend && uv run python -m app.scripts.seed_permissions
+
 # ==================== Backend ====================
 backend-install: ## Install backend dependencies
 	cd backend && uv sync

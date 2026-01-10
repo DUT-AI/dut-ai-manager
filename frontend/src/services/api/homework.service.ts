@@ -1,0 +1,74 @@
+import axiosInstance from '../axiosInstance';
+import type { ApiResponse } from '@/types/api.types';
+import { HomeworkStatus } from '@/types/homework.types';
+import type { 
+    Homework, 
+    HomeworkCreate, 
+    HomeworkSubmission, 
+    HomeworkSubmissionCreate, 
+    HomeworkUpdate 
+} from '@/types/homework.types';
+
+export const homeworkService = {
+    baseUrl: 'homeworks',
+    submissionUrl: 'homework-submissions',
+
+    // Homeworks
+    async getAll(skip = 0, limit = 100) {
+        const response = await axiosInstance.get<ApiResponse<Homework[]>>(`/${this.baseUrl}`, { 
+            params: { skip, limit } 
+        });
+        return response.data.data;
+    },
+
+    async getMyHomeworks(skip = 0, limit = 100) {
+        const response = await axiosInstance.get<ApiResponse<Homework[]>>(`/${this.baseUrl}/me`, { 
+            params: { skip, limit } 
+        });
+        return response.data.data;
+    },
+
+    async getById(id: number) {
+        const response = await axiosInstance.get<ApiResponse<Homework>>(`/${this.baseUrl}/${id}`);
+        return response.data.data;
+    },
+
+    async create(data: HomeworkCreate) {
+        const response = await axiosInstance.post<ApiResponse<Homework>>(`/${this.baseUrl}`, data);
+        return response.data.data;
+    },
+    
+    async update(id: number, data: HomeworkUpdate) {
+        const response = await axiosInstance.put<ApiResponse<Homework>>(`/${this.baseUrl}/${id}`, data);
+        return response.data.data;
+    },
+
+    async delete(id: number) {
+        const response = await axiosInstance.delete<ApiResponse<boolean>>(`/${this.baseUrl}/${id}`);
+        return response.data.data;
+    },
+
+    // Submissions
+    async submit(homeworkId: number, data: HomeworkSubmissionCreate) {
+         const response = await axiosInstance.post<ApiResponse<HomeworkSubmission>>(`/${this.submissionUrl}/${homeworkId}/submit`, data);
+         return response.data.data;
+    },
+
+    async getSubmissions(homeworkId: number) {
+        const response = await axiosInstance.get<ApiResponse<HomeworkSubmission[]>>(`/${this.submissionUrl}/${homeworkId}/submissions`);
+        return response.data.data;
+    },
+
+    async getMySubmission(homeworkId: number) {
+        // Return null data if 404 handled gracefully or rely on try-catch in component
+        const response = await axiosInstance.get<ApiResponse<HomeworkSubmission>>(`/${this.submissionUrl}/${homeworkId}/my-submission`);
+        return response.data.data;
+    },
+
+    async updateStatus(submissionId: number, status: HomeworkStatus) {
+        const response = await axiosInstance.put<ApiResponse<HomeworkSubmission>>(`/${this.submissionUrl}/submissions/${submissionId}/status`, null, { 
+            params: { status } 
+        });
+        return response.data.data;
+    }
+};
