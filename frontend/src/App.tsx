@@ -5,7 +5,7 @@ import { ConfigProvider, Spin } from 'antd';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 
 const AppContent = () => {
-  const { isAuthenticated, loading, logout } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
     return (

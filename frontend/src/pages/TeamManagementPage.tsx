@@ -11,7 +11,6 @@ import {
     Popconfirm,
     Typography,
     Select,
-    Tag,
     Tooltip,
     Avatar
 } from 'antd';
@@ -20,14 +19,12 @@ import {
     EditOutlined,
     DeleteOutlined,
     TeamOutlined,
-    UserOutlined,
-    SearchOutlined,
-    DeleteFilled
+    UserOutlined
 } from '@ant-design/icons';
 import { teamService } from '@/services/api/team.service';
 import { userService } from '@/services/api/user.service';
 import { useAuth } from '@/context/AuthContext';
-import type { TeamResponse, TeamCreate, TeamUpdate } from '@/types/team.types';
+import type { TeamResponse, TeamCreate } from '@/types/team.types';
 import type { UserResponse } from '@/types/user.types';
 import dayjs from 'dayjs';
 
@@ -35,7 +32,7 @@ const { Title, Text } = Typography;
 const { Option } = Select;
 
 const TeamManagementPage = () => {
-    const { hasPermission } = useAuth();
+    useAuth();
     const [teams, setTeams] = useState<TeamResponse[]>([]);
     const [users, setUsers] = useState<UserResponse[]>([]);
     const [loading, setLoading] = useState(false);

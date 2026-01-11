@@ -20,14 +20,14 @@ import PermissionManagementPage from './PermissionManagementPage';
 import TeamManagementPage from './TeamManagementPage';
 import { HomeworkPage } from './HomeworkPage';
 import { SettingsPage } from './SettingsPage';
-import { WarningOutlined, FileTextOutlined, ApartmentOutlined, UserOutlined } from '@ant-design/icons';
+import { WarningOutlined, FileTextOutlined, UserOutlined } from '@ant-design/icons';
 const { Content, Sider } = Layout;
 const { Text } = Typography;
 
 
 
 const DashboardPage = () => {
-    const { loading, hasPermission } = useAuth();
+    const { loading } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
 

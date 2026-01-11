@@ -11,7 +11,7 @@ help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-15s$(NC) %s\n", $$1, $$2}'
 
 # ==================== Docker ====================
-docker-up: ## Start all docker containers
+docker-up: ## Start all docker containers (local dev mode)
 	docker-compose up -d
 
 docker-down: ## Stop all docker containers
@@ -28,6 +28,18 @@ docker-ps: ## List running containers
 
 docker-clean: ## Remove all containers and volumes
 	docker-compose down -v --remove-orphans
+
+docker-build: ## Build all docker images
+	docker-compose build
+
+docker-dev: ## Start full stack in development mode (with hot reload)
+	docker-compose up --build
+
+docker-prod: ## Start full stack in production mode
+	docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
+docker-prod-down: ## Stop production containers
+	docker-compose -f docker-compose.yml -f docker-compose.prod.yml down
 
 # ==================== Database ====================
 db-up: ## Start PostgreSQL only

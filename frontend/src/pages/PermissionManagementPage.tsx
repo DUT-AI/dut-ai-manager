@@ -325,12 +325,12 @@ const PermissionManagementPage = () => {
                                 </Descriptions.Item>
                             </Descriptions>
 
-                            <Divider orientation="left" className="!mb-4">Nội dung / Lý do</Divider>
+                            <Divider style={{ textAlign: 'left' }} className="!mb-4">Nội dung / Lý do</Divider>
                             <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 text-gray-700 whitespace-pre-wrap">
                                 {detailItem.note}
                             </div>
 
-                            <Divider orientation="left">Thông tin hệ thống</Divider>
+                            <Divider style={{ textAlign: 'left' }}>Thông tin hệ thống</Divider>
                             <Descriptions column={1} size="small" className="text-gray-500">
                                 <Descriptions.Item label="Ngày tạo">
                                     {dayjs(detailItem.created_at).format('DD/MM/YYYY HH:mm:ss')}

@@ -307,12 +307,12 @@ const ViolationManagementPage = () => {
                                 </Descriptions.Item>
                             </Descriptions>
 
-                            <Divider orientation="left" className="!mb-4">Lý do / Nội dung</Divider>
+                            <Divider style={{ textAlign: 'left' }} className="!mb-4">Lý do / Nội dung</Divider>
                             <div className="bg-red-50 p-4 rounded-lg border border-red-100 text-gray-700 whitespace-pre-wrap">
                                 {detailItem.reason}
                             </div>
 
-                            <Divider orientation="left" className="!mb-4">Thông tin hệ thống</Divider>
+                            <Divider style={{ textAlign: 'left' }} className="!mb-4">Thông tin hệ thống</Divider>
                             <Descriptions column={1} size="small" className="text-gray-500">
                                 <Descriptions.Item label="Ngày ghi nhận">
                                     {dayjs(detailItem.created_at).format('DD/MM/YYYY HH:mm:ss')}

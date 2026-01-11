@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Layout, Menu, Typography, Form, Input, Button, Card, message, theme } from 'antd';
-import { LockOutlined, UserOutlined, SettingOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import { Layout, Menu, Typography, Form, Input, Button, Card, message } from 'antd';
+import { LockOutlined, SettingOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { authService } from '@/services/api/auth.service';
 
 const { Content, Sider } = Layout;
@@ -11,7 +11,7 @@ export const SettingsPage: React.FC = () => {
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
 
-    const { token } = theme.useToken();
+    // Theme token available via theme.useToken() if needed
 
     const onChangePassword = async (values: any) => {
         setLoading(true);
