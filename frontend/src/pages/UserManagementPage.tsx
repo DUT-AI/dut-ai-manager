@@ -93,8 +93,8 @@ const UserManagementPage = () => {
             setIsModalOpen(false);
             form.resetFields();
             fetchData();
-        } catch (error) {
-            message.error(error.message || 'Operation failed');
+        } catch (error: any) {
+            message.error(error?.message || 'Operation failed');
         }
     };
 
