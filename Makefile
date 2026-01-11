@@ -12,47 +12,25 @@ help: ## Show this help
 
 # ==================== Docker ====================
 docker-up: ## Start all docker containers (local dev mode)
-	docker-compose up -d
+	docker compose up -d
 
 docker-down: ## Stop all docker containers
-	docker-compose down
+	docker compose down
 
 docker-restart: ## Restart all docker containers
-	docker-compose restart
+	docker compose restart
 
 docker-logs: ## View docker logs
-	docker-compose logs -f
+	docker compose logs -f
 
 docker-ps: ## List running containers
-	docker-compose ps
+	docker compose ps
 
 docker-clean: ## Remove all containers and volumes
-	docker-compose down -v --remove-orphans
+	docker compose down -v --remove-orphans
 
 docker-build: ## Build all docker images
-	docker-compose build
-
-docker-dev: ## Start full stack in development mode (with hot reload)
-	docker-compose up --build
-
-docker-prod: ## Start full stack in production mode
-	docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-
-docker-prod-down: ## Stop production containers
-	docker-compose -f docker-compose.yml -f docker-compose.prod.yml down
-
-# ==================== Database ====================
-db-up: ## Start PostgreSQL only
-	docker-compose up -d postgres
-
-db-down: ## Stop PostgreSQL
-	docker-compose stop postgres
-
-db-logs: ## View PostgreSQL logs
-	docker-compose logs -f postgres
-
-db-shell: ## Access PostgreSQL shell
-	docker-compose exec postgres psql -U postgres -d dut_ai_manager
+	docker compose build
 
 # ==================== Migrations ====================
 migrate-create: ## Create a new migration (usage: make migrate-create msg="description")
@@ -70,15 +48,20 @@ migrate-history: ## Show migration history
 migrate-current: ## Show current migration
 	cd backend && uv run alembic current
 
-seed-permissions: ## Seed permissions from enums into database
+seed-db: ## Seed permissions from enums into database
 	cd backend && uv run python -m app.scripts.seed_permissions
 
 # ==================== Backend ====================
 backend-install: ## Install backend dependencies
 	cd backend && uv sync
 
-backend-dev: ## Run backend development server
-	cd backend && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+backend-dev: ## Run backend with remote dev database via Cloudflare Tunnel
+	@echo "🔗 Starting Cloudflare Tunnel to remote dev database..."
+	@. .env 2>/dev/null || . .env 2>/dev/null; cloudflared access tcp --hostname $${CLOUDFLARE_DB_TUNNEL_HOST} --url localhost:5432 &
+	@sleep 3
+	@echo "🚀 Starting backend server..."
+	cd backend && POSTGRES_SERVER=localhost POSTGRES_PORT=5432 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000; \
+	pkill -f "cloudflared access tcp" || true
 
 backend-test: ## Run backend tests
 	cd backend && uv run pytest
