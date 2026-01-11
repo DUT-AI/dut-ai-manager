@@ -57,10 +57,16 @@ backend-install: ## Install backend dependencies
 
 backend-dev: ## Run backend with remote dev database via Cloudflare Tunnel
 	@echo "🔗 Starting Cloudflare Tunnel to remote dev database..."
-	@. .env 2>/dev/null || . .env 2>/dev/null; cloudflared access tcp --hostname $${CLOUDFLARE_DB_TUNNEL_HOST} --url localhost:5432 &
+	@. .env 2>/dev/null; cloudflared access tcp --hostname $${CLOUDFLARE_DB_TUNNEL_HOST} --url localhost:5432 &
 	@sleep 3
 	@echo "🚀 Starting backend server..."
-	cd backend && POSTGRES_SERVER=localhost POSTGRES_PORT=5432 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000; \
+	@. .env 2>/dev/null; cd backend && \
+		POSTGRES_SERVER=localhost \
+		POSTGRES_PORT=5432 \
+		POSTGRES_USER=$${POSTGRES_USER_DEV} \
+		POSTGRES_PASSWORD=$${POSTGRES_PASSWORD_DEV} \
+		POSTGRES_DB=$${POSTGRES_DEV_DB} \
+		uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000; \
 	pkill -f "cloudflared access tcp" || true
 
 backend-test: ## Run backend tests
