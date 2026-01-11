@@ -12,10 +12,10 @@ class BonusPointService:
     def get_all(self, skip: int = 0, limit: int = 100) -> List[BonusPoint]:
         return self.repository.get_all(skip=skip, limit=limit)
 
-    def get_by_user(
-        self, month: Optional[int] = None, year: Optional[int] = None
+    def get(
+        self, month: Optional[int] = None, year: Optional[int] = None, user_id: Optional[int] = None
     ) -> List[BonusPoint]:
-        return self.repository.get_by_month(month=month, year=year)
+        return self.repository.get_by_month(month=month, year=year, user_id=user_id)
 
     def get_by_user_and_date(self, user_id: int, target_date) -> List[BonusPoint]:
         return self.repository.get_by_user_and_date(user_id, target_date)

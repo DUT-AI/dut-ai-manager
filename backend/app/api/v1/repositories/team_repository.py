@@ -40,3 +40,8 @@ class TeamRepository(BaseRepository[Team]):
         """Get all team IDs that a user belongs to"""
         statement = select(TeamMember.team_id).where(TeamMember.user_id == user_id)
         return list(self.session.exec(statement).all())
+
+    def get_user_ids_by_teams(self, team_ids: List[int]) -> List[int]:
+        """Get all user IDs from given teams"""
+        statement = select(TeamMember.user_id).where(TeamMember.team_id.in_(team_ids))
+        return list(set(self.session.exec(statement).all()))

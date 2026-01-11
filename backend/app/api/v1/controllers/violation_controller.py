@@ -27,8 +27,8 @@ async def get_violations(
     limit: int = 100,
 ):
     if user_id:
-        result = service_factory.violation.get_by_user_id(
-            user_id, month=month, year=year
+        result = service_factory.violation.get(
+            user_id=user_id, month=month, year=year
         )
     else:
         result = service_factory.violation.get_all(skip=skip, limit=limit)

@@ -38,11 +38,14 @@ async def get_all_homeworks(
 )
 async def get_my_homeworks(
     service_factory: ServiceFactoryDI,
+    current_user: CurrentUser,
     skip: int = 0,
     limit: int = 100,
 ):
     """Get homeworks assigned to the current user"""
-    result = service_factory.homework.get_assigned_to_user(skip=skip, limit=limit)
+    result = service_factory.homework.get_assigned_to_user(
+        current_user.id, skip=skip, limit=limit
+    )
     return ApiResponse.success(data=result)
 
 

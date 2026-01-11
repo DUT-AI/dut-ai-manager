@@ -9,10 +9,7 @@ from app.models.bonus_points import BonusPoint
 from app.models.permission import Permission
 from app.models.permission_request import PermissionRequest, RequestCategory
 from app.models.team import Team, TeamMember
-from app.models.homework import (
-    Homework,
-    HomeworkAssignee,
-)
+from app.models.homework import Homework
 from app.models.homework_submission import (
     HomeworkSubmission,
     HomeworkStatus,
@@ -36,5 +33,4 @@ __all__ = [
     "Homework",
     "HomeworkSubmission",
     "HomeworkStatus",
-    "HomeworkAssignee",
 ]

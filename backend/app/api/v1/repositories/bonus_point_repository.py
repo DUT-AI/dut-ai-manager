@@ -70,9 +70,13 @@ class BonusPointRepository(BaseRepository[BonusPoint]):
         )
         return list(self.session.exec(statement).all())
 
-    def get_by_month(self, month: int, year: int) -> List[BonusPoint]:
+    def get_by_month(
+        self, month: int, year: int, user_id: Optional[int] = None
+    ) -> List[BonusPoint]:
         """Get all bonus points in a specific month"""
         statement = select(BonusPoint)
+        if user_id:
+            statement = statement.where(BonusPoint.user_id == user_id)
         if month:
             statement = statement.where(extract("month", BonusPoint.date) == month)
         if year:

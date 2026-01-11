@@ -12,14 +12,16 @@ class HomeworkBase(BaseModel):
 
 
 class HomeworkCreate(HomeworkBase):
-    assignee_ids: Optional[List[int]]
+    assignee_ids: Optional[List[int]] = None
+    team_ids: Optional[List[int]] = None  # Query users from these teams
 
 
 class HomeworkUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     deadline: Optional[datetime] = None
-    assignee_ids: Optional[List[int]] = None
+    assignee_ids: Optional[List[int]] = None  # Sync assignees
+    team_ids: Optional[List[int]] = None  # Add users from teams
 
 
 class HomeworkResponse(HomeworkBase):
@@ -29,7 +31,6 @@ class HomeworkResponse(HomeworkBase):
     created_by: Optional[int] = None
 
     # Computed fields (can be populated by service/repo)
-    assignee_count: int = 0
     submission_count: int = 0
 
     class Config:
@@ -48,6 +49,7 @@ class HomeworkSubmissionUpdate(BaseModel):
 class HomeworkSubmissionResponse(BaseModel):
     id: int
     homework_id: int
+    owner_id: int
     user_name: Optional[str] = None
     created_by: Optional[int] = None
     link: str

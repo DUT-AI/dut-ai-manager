@@ -28,7 +28,7 @@ export interface ViolationUpdate extends Partial<ViolationCreate> {}
 export interface PermissionRequestResponse {
     id: number;
     category: string;
-    note: string;
+    note: string;  // Not "reason"
     date: string;
     start_time: string;
     end_time: string;

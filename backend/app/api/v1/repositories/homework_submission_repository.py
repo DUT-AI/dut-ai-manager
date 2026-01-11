@@ -35,3 +35,23 @@ class HomeworkSubmissionRepository(BaseRepository[HomeworkSubmission]):
             .limit(limit)
         )
         return list(self.session.exec(statement).all())
+
+    def get_owner_ids_by_homework(self, homework_id: int) -> List[int]:
+        """Get all owner_ids for a homework"""
+        statement = select(HomeworkSubmission.owner_id).where(
+            HomeworkSubmission.homework_id == homework_id
+        )
+        return list(self.session.exec(statement).all())
+
+    def delete_by_homework_and_owner(self, homework_id: int, owner_id: int) -> bool:
+        """Delete a submission by homework and owner"""
+        statement = select(HomeworkSubmission).where(
+            HomeworkSubmission.homework_id == homework_id,
+            HomeworkSubmission.owner_id == owner_id,
+        )
+        submission = self.session.exec(statement).first()
+        if submission:
+            self.session.delete(submission)
+            self.session.commit()
+            return True
+        return False

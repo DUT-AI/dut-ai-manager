@@ -22,6 +22,11 @@ class PermissionRequestService:
     def get_by_id(self, request_id: int) -> Optional[PermissionRequest]:
         return self.repository.get_by_id(request_id)
 
+    def get(
+        self, month: int | None = None, year: int | None = None
+    ) -> List[PermissionRequest]:
+        return self.repository.get_by_month(month=month, year=year)
+
     def get_by_user(
         self, month: int | None = None, year: int | None = None
     ) -> List[PermissionRequest]:

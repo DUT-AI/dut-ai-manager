@@ -15,7 +15,6 @@ export interface Homework {
     created_at: string;
     updated_at: string;
     created_by?: number;
-    assignee_count?: number;
     submission_count?: number;
 }
 
@@ -24,6 +23,7 @@ export interface HomeworkCreate {
     description: string;
     deadline: string; // ISO string
     assignee_ids?: number[];
+    team_ids?: number[];
 }
 
 export interface HomeworkUpdate {
@@ -31,14 +31,15 @@ export interface HomeworkUpdate {
     description?: string;
     deadline?: string;
     assignee_ids?: number[];
+    team_ids?: number[];
 }
 
 export interface HomeworkSubmission {
     id: number;
     homework_id: number;
-    user_id?: number; // kept for compatibility if needed
-    created_by?: number;
+    owner_id: number;
     user_name?: string;
+    created_by?: number;
     link: string;
     status: HomeworkStatus;
     is_late: boolean;

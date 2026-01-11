@@ -1,23 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import {
-    Table, Button, Modal, Form, Input, DatePicker, Tag, Tabs, Space,
-    message, Drawer, Select, Typography, Card, Statistic
+    Table, Button, Tabs, Space, message, Popconfirm, Typography, Tag
 } from 'antd';
 import {
-    PlusOutlined, UploadOutlined, EyeOutlined, LinkOutlined, EditOutlined, DeleteOutlined
+    PlusOutlined, UploadOutlined, EyeOutlined, EditOutlined, DeleteOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useAuth } from '@/context/AuthContext';
 import { homeworkService } from '@/services/api/homework.service';
 import { userService } from '@/services/api/user.service';
-import type { Homework, HomeworkSubmission } from '@/types/homework.types';
+import { teamService } from '@/services/api/team.service';
+import type { Homework } from '@/types/homework.types';
 import type { UserResponse } from '@/types/user.types';
-import { HomeworkStatus } from '@/types/homework.types';
+import type { TeamResponse } from '@/types/team.types';
 import { HomeworkPermission } from '@/types/rbac.types';
 import type { ColumnsType } from 'antd/es/table';
+import { HomeworkFormModal, SubmitHomeworkModal, SubmissionsDrawer } from '@/components/homework';
 
-const { TextArea } = Input;
-const { Option } = Select;
 const { Title, Text } = Typography;
 
 export const HomeworkPage: React.FC = () => {
@@ -28,20 +27,18 @@ export const HomeworkPage: React.FC = () => {
     // Data States
     const [homeworks, setHomeworks] = useState<Homework[]>([]);
     const [myHomeworks, setMyHomeworks] = useState<Homework[]>([]);
-    const [submissions, setSubmissions] = useState<HomeworkSubmission[]>([]);
     const [users, setUsers] = useState<UserResponse[]>([]);
+    const [teams, setTeams] = useState<TeamResponse[]>([]);
 
     // Modal States
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
     const [isSubmissionsDrawerOpen, setIsSubmissionsDrawerOpen] = useState(false);
 
     // Selected Items
     const [selectedHomework, setSelectedHomework] = useState<Homework | null>(null);
-    const [mySubmission, setMySubmission] = useState<HomeworkSubmission | null>(null);
-
-    const [form] = Form.useForm();
-    const [submitForm] = Form.useForm();
+    const [editingHomework, setEditingHomework] = useState<Homework | null>(null);
+    const [currentAssignees, setCurrentAssignees] = useState<number[]>([]);
 
     const fetchUsers = async () => {
         try {
@@ -52,7 +49,18 @@ export const HomeworkPage: React.FC = () => {
         } catch (error) {
             console.error(error);
         }
-    }
+    };
+
+    const fetchTeams = async () => {
+        try {
+            const res = await teamService.getTeams();
+            if (res) {
+                setTeams(res.data || []);
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    };
 
     const fetchMyHomeworks = async () => {
         setLoading(true);
@@ -78,12 +86,11 @@ export const HomeworkPage: React.FC = () => {
         }
     };
 
-    const fetchSubmissions = async (homeworkId: number) => {
-        try {
-            const data = await homeworkService.getSubmissions(homeworkId);
-            setSubmissions(data || []);
-        } catch (error) {
-            message.error('Không thể tải danh sách nộp bài');
+    const refreshData = () => {
+        if (activeTab === '1') {
+            fetchMyHomeworks();
+        } else {
+            fetchAllHomeworks();
         }
     };
 
@@ -96,98 +103,65 @@ export const HomeworkPage: React.FC = () => {
     }, [activeTab]);
 
     useEffect(() => {
-        if (hasPermission(HomeworkPermission.CREATE) && users.length === 0) {
-            fetchUsers();
+        if (hasPermission(HomeworkPermission.CREATE)) {
+            if (users.length === 0) fetchUsers();
+            if (teams.length === 0) fetchTeams();
         }
     }, [hasPermission]);
 
-    // Handle Create Homework
-    const handleCreateHomework = async (values: any) => {
+    // Open Create Modal
+    const handleOpenCreate = () => {
+        setEditingHomework(null);
+        setIsFormModalOpen(true);
+    };
+
+    // Open Edit Modal
+    const handleOpenEdit = async (homework: Homework) => {
+        setEditingHomework(homework);
+        // Fetch current assignees from submissions
         try {
-            await homeworkService.create({
-                title: values.title,
-                description: values.description,
-                deadline: values.deadline.toISOString(),
-                assignee_ids: values.assignee_ids,
-            });
-            message.success('Tạo bài tập thành công');
-            setIsCreateModalOpen(false);
-            form.resetFields();
-            if (activeTab === '2') fetchAllHomeworks();
-            else setActiveTab('2');
+            const submissions = await homeworkService.getSubmissions(homework.id);
+            setCurrentAssignees(submissions?.map((s: any) => s.owner_id) || []);
+        } catch {
+            setCurrentAssignees([]);
+        }
+        setIsFormModalOpen(true);
+    };
+
+    // Delete Homework
+    const handleDelete = async (id: number) => {
+        try {
+            await homeworkService.delete(id);
+            message.success('Xóa bài tập thành công');
+            refreshData();
         } catch (error: any) {
-            message.error(error.message || 'Tạo bài tập thất bại');
+            message.error(error?.message || 'Xóa bài tập thất bại');
         }
     };
 
-    // Handle Open Submit Modal
-    const handleOpenSubmit = async (homework: Homework) => {
+    // Open Submit Modal
+    const handleOpenSubmit = (homework: Homework) => {
         setSelectedHomework(homework);
         setIsSubmitModalOpen(true);
-        submitForm.resetFields();
-        setMySubmission(null);
-
-        // Fetch current submission if exists
-        try {
-            const submission = await homeworkService.getMySubmission(homework.id);
-            if (submission) {
-                setMySubmission(submission);
-                submitForm.setFieldsValue({ link: submission.link });
-            }
-        } catch (error) {
-            // Ignore 404
-        }
     };
 
-    // Handle Submit
-    const handleSubmit = async (values: any) => {
-        if (!selectedHomework) return;
-        try {
-            await homeworkService.submit(selectedHomework.id, {
-                link: values.link
-            });
-            message.success('Nộp bài thành công');
-            setIsSubmitModalOpen(false);
-            // Refresh logic if needed
-            fetchMyHomeworks();
-        } catch (error: any) {
-            message.error(error.message || 'Nộp bài thất bại');
-        }
-    };
-
-    // Handle View Submissions (Admin/Leader)
+    // Open Submissions Drawer
     const handleViewSubmissions = (homework: Homework) => {
         setSelectedHomework(homework);
-        fetchSubmissions(homework.id);
         setIsSubmissionsDrawerOpen(true);
     };
 
-    // Handle Update Status
-    const handleUpdateStatus = async (submissionId: number, status: HomeworkStatus) => {
-        try {
-            await homeworkService.updateStatus(submissionId, status);
-            message.success('Cập nhật trạng thái thành công');
-            // Update local state
-            setSubmissions(prev => prev.map(s => s.id === submissionId ? { ...s, status } : s));
-        } catch (error: any) {
-            message.error(error.message || 'Cập nhật trạng thái thất bại');
-        }
+    // Form Modal Success
+    const handleFormSuccess = () => {
+        setIsFormModalOpen(false);
+        setEditingHomework(null);
+        refreshData();
     };
 
-    // Render Status Tag
-    const renderStatusTag = (status: HomeworkStatus, isLate: boolean) => {
-        let color = 'default';
-        if (isLate) color = 'error';
-        else if (status === HomeworkStatus.SUBMITTED) color = 'processing';
-        else if (status === HomeworkStatus.LeaderChecked) color = 'warning';
-        else if (status === HomeworkStatus.FINISHED) color = 'success';
-
-        return (
-            <Space>
-                <Tag color={color}>{status}</Tag>
-                {isLate && <Tag color="red">Nộp trễ</Tag>}
-            </Space>
-        );
+    // Submit Modal Success
+    const handleSubmitSuccess = () => {
+        setIsSubmitModalOpen(false);
+        fetchMyHomeworks();
     };
 
     const myColumns: ColumnsType<Homework> = [
@@ -207,7 +181,15 @@ export const HomeworkPage: React.FC = () => {
             title: 'Hạn nộp',
             dataIndex: 'deadline',
             key: 'deadline',
-            render: (date: string) => <Text type="secondary">{dayjs(date).format('DD/MM/YYYY HH:mm')}</Text>,
+            render: (date: string) => {
+                const isOverdue = dayjs().isAfter(dayjs(date));
+                return (
+                    <Text type={isOverdue ? 'danger' : 'secondary'}>
+                        {dayjs(date).format('DD/MM/YYYY HH:mm')}
+                        {isOverdue && <Tag color="red" className="ml-2">Quá hạn</Tag>}
+                    </Text>
+                );
+            },
         },
         {
             title: 'Hành động',
@@ -228,89 +210,53 @@ export const HomeworkPage: React.FC = () => {
             width: 200,
         },
         {
+            title: 'Mô tả',
+            dataIndex: 'description',
+            key: 'description',
+            ellipsis: true,
+            width: 250,
+        },
+        {
             title: 'Hạn nộp',
             dataIndex: 'deadline',
             key: 'deadline',
             width: 150,
-            render: (date: string) => dayjs(date).format('DD/MM/YYYY HH:mm'),
-        },
-        {
-            title: 'Thống kê',
-            key: 'stats',
-            render: () => (
-                <Space size="small" direction="vertical" style={{ fontSize: '12px' }}>
-                    <Text type="secondary">Quản lý chung</Text>
-                </Space>
-            )
+            render: (date: string) => {
+                const isOverdue = dayjs().isAfter(dayjs(date));
+                return (
+                    <Text type={isOverdue ? 'danger' : undefined}>
+                        {dayjs(date).format('DD/MM/YYYY HH:mm')}
+                    </Text>
+                );
+            },
         },
         {
             title: 'Action',
             key: 'action',
+            width: 280,
             render: (_: any, record: Homework) => (
                 <Space>
                     <Button icon={<EyeOutlined />} onClick={() => handleViewSubmissions(record)}>
                         Bài nộp
                     </Button>
-                    {/* Placeholder for future features */}
-                    <Button icon={<EditOutlined />} disabled />
-                    <Button icon={<DeleteOutlined />} disabled />
+                    {hasPermission(HomeworkPermission.UPDATE) && (
+                        <Button icon={<EditOutlined />} onClick={() => handleOpenEdit(record)} />
+                    )}
+                    {hasPermission(HomeworkPermission.DELETE) && (
+                        <Popconfirm
+                            title="Xóa bài tập này?"
+                            description="Hành động này không thể hoàn tác"
+                            onConfirm={() => handleDelete(record.id)}
+                            okText="Xóa"
+                            cancelText="Hủy"
+                            okButtonProps={{ danger: true }}
+                        >
+                            <Button danger icon={<DeleteOutlined />} />
+                        </Popconfirm>
+                    )}
                 </Space>
             ),
         },
-    ];
-
-    const submissionColumns: ColumnsType<HomeworkSubmission> = [
-        {
-            title: 'Học viên',
-            key: 'user',
-            render: (record: HomeworkSubmission) => <Text strong>{record.user_name || `Member #${record.created_by || record.user_id}`}</Text>
-        },
-        {
-            title: 'Link',
-            dataIndex: 'link',
-            key: 'link',
-            render: (link: string) => {
-                let isValid = false;
-                try {
-                    new URL(link);
-                    isValid = true;
-                } catch {
-                    isValid = false;
-                }
-
-                if (!isValid) {
-                    return <Text type="secondary" italic>Link không hợp lệ</Text>;
-                }
-                return <a href={link} target="_blank" rel="noopener noreferrer"><LinkOutlined /> Mở link</a>;
-            }
-        },
-        {
-            title: 'Ngày nộp',
-            dataIndex: 'updated_at',
-            key: 'updated_at',
-            render: (date: string) => dayjs(date).format('DD/MM HH:mm'),
-        },
-        {
-            title: 'Trạng thái',
-            key: 'status',
-            render: (_: any, record: HomeworkSubmission) => renderStatusTag(record.status, record.is_late),
-        },
-        {
-            title: 'Action',
-            key: 'action',
-            render: (_: any, record: HomeworkSubmission) => (
-                <Select
-                    defaultValue={record.status}
-                    style={{ width: 160 }}
-                    onChange={(val) => handleUpdateStatus(record.id, val)}
-                    size="small"
-                >
-                    <Option value={HomeworkStatus.SUBMITTED}>Đã nộp</Option>
-                    <Option value={HomeworkStatus.LeaderChecked}>Leader Check</Option>
-                    <Option value={HomeworkStatus.FINISHED}>Finish</Option>
-                </Select>
-            )
-        }
     ];
 
     return (
@@ -321,7 +267,7 @@ export const HomeworkPage: React.FC = () => {
                     <Button
                         type="primary"
                         icon={<PlusOutlined />}
-                        onClick={() => setIsCreateModalOpen(true)}
+                        onClick={handleOpenCreate}
                         className="bg-indigo-600 hover:bg-indigo-700"
                     >
                         Tạo bài tập mới
@@ -352,99 +298,31 @@ export const HomeworkPage: React.FC = () => {
                 )}
             </Tabs>
 
-            {/* Create Modal */}
-            <Modal
-                title="Tạo bài tập mới"
-                open={isCreateModalOpen}
-                onCancel={() => setIsCreateModalOpen(false)}
-                onOk={form.submit}
-            >
-                <Form form={form} layout="vertical" onFinish={handleCreateHomework}>
-                    <Form.Item name="title" label="Tiêu đề" rules={[{ required: true }]}>
-                        <Input />
-                    </Form.Item>
-                    <Form.Item name="deadline" label="Hạn nộp" rules={[{ required: true }]}>
-                        <DatePicker showTime className="w-full" />
-                    </Form.Item>
-                    <Form.Item name="assignee_ids" label="Giao cho (Để trống nếu giao cho tất cả)">
-                        <Select
-                            mode="multiple"
-                            placeholder="Chọn thành viên..."
-                            allowClear
-                            filterOption={(input: string, option: any) =>
-                                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-                            }
-                            options={users.map(u => ({ label: `${u.name} (${u.email})`, value: u.id }))}
-                        />
-                    </Form.Item>
-                    <Form.Item name="description" label="Mô tả / Đề bài">
-                        <TextArea rows={4} placeholder="Markdown supported..." />
-                    </Form.Item>
-                </Form>
-            </Modal>
+            {/* Create/Edit Modal */}
+            <HomeworkFormModal
+                open={isFormModalOpen}
+                editingItem={editingHomework}
+                users={users}
+                teams={teams}
+                currentAssignees={currentAssignees}
+                onSuccess={handleFormSuccess}
+                onCancel={() => setIsFormModalOpen(false)}
+            />
 
             {/* Submit Modal */}
-            <Modal
-                title={`Nộp bài: ${selectedHomework?.title}`}
+            <SubmitHomeworkModal
                 open={isSubmitModalOpen}
+                homework={selectedHomework}
+                onSuccess={handleSubmitSuccess}
                 onCancel={() => setIsSubmitModalOpen(false)}
-                onOk={submitForm.submit}
-                okText="Nộp bài"
-            >
-                {selectedHomework && (
-                    <div className="mb-4">
-                        <div className="bg-gray-50 p-3 rounded mb-4">
-                            <Text strong>Đề bài:</Text>
-                            <div className="whitespace-pre-wrap mt-1 text-gray-700">
-                                {selectedHomework.description}
-                            </div>
-                            <div className="mt-2 text-xs text-red-500">
-                                Deadline: {dayjs(selectedHomework.deadline).format('DD/MM/YYYY HH:mm')}
-                            </div>
-                        </div>
-
-                        {mySubmission && (
-                            <Card size="small" className="mb-4 border-blue-200 bg-blue-50">
-                                <Statistic
-                                    title="Trạng thái hiện tại"
-                                    value={mySubmission.status}
-                                    valueStyle={{ fontSize: 16, color: '#1890ff' }}
-                                />
-                                <Text type="secondary" style={{ fontSize: 12 }}>
-                                    Cập nhật lần cuối: {dayjs(mySubmission.updated_at).format('DD/MM HH:mm')}
-                                </Text>
-                            </Card>
-                        )}
-                    </div>
-                )}
-
-                <Form form={submitForm} layout="vertical" onFinish={handleSubmit}>
-                    <Form.Item
-                        name="link"
-                        label="Link bài làm (Github, Drive...)"
-                        rules={[
-                            { required: true, message: 'Vui lòng nhập link bài làm' },
-                            { type: 'url', message: 'Link không hợp lệ! Vui lòng nhập đúng định dạng URL (vd: https://...)' }
-                        ]}
-                    >
-                        <Input prefix={<LinkOutlined />} placeholder="https://..." />
-                    </Form.Item>
-                </Form>
-            </Modal>
+            />
 
             {/* Submissions Drawer */}
-            <Drawer
-                title={`Danh sách bài nộp: ${selectedHomework?.title}`}
-                size={720}
+            <SubmissionsDrawer
                 open={isSubmissionsDrawerOpen}
+                homework={selectedHomework}
                 onClose={() => setIsSubmissionsDrawerOpen(false)}
-            >
-                <Table
-                    dataSource={submissions}
-                    columns={submissionColumns}
-                    rowKey="id"
-                />
-            </Drawer>
+            />
         </div>
     );
 };

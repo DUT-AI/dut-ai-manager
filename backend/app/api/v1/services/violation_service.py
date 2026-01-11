@@ -13,10 +13,10 @@ class ViolationService:
     def get_all(self, skip: int = 0, limit: int = 100) -> list[Violation]:
         return self.repository.get_all(skip=skip, limit=limit)
 
-    def get_by_user(
-        self, month: int | None = None, year: int | None = None
+    def get(
+        self, month: int | None = None, year: int | None = None, user_id: int | None = None
     ) -> list[Violation]:
-        return self.repository.get_by_month(month=month, year=year)
+        return self.repository.get_by_month(month=month, year=year, user_id=user_id)
 
     def get_by_user_and_date(self, user_id: int, target_date) -> list[Violation]:
         return self.repository.get_by_user_and_date(user_id, target_date)

@@ -43,9 +43,9 @@ class ReportService:
     def get_monthly_activity_dates(self, month: int, year: int) -> List[date]:
         """Get all dates with any activity in the given month for all users"""
         # Use existing services with month/year filter (fetching all users)
-        bonus_points = self.bonus_point_service.get_by_user(month=month, year=year)
-        violations = self.violation_service.get_by_user(month=month, year=year)
-        permissions = self.permission_request_service.get_by_user(
+        bonus_points = self.bonus_point_service.get(month=month, year=year)
+        violations = self.violation_service.get(month=month, year=year)
+        permissions = self.permission_request_service.get(
             month=month, year=year
         )
 

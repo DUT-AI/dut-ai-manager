@@ -12,7 +12,9 @@ import {
     Tabs,
     Table,
     DatePicker,
-    Badge
+    Badge,
+    Modal,
+    Descriptions
 } from 'antd';
 import {
     UserOutlined,
@@ -53,6 +55,16 @@ const ProfilePage = () => {
     const [permissions, setPermissions] = useState<PermissionRequestResponse[]>([]);
     const [dataLoading, setDataLoading] = useState(false);
 
+    // Detail modal states
+    const [selectedViolation, setSelectedViolation] = useState<ViolationResponse | null>(null);
+    const [selectedBonus, setSelectedBonus] = useState<BonusPointResponse | null>(null);
+    const [selectedPermission, setSelectedPermission] = useState<PermissionRequestResponse | null>(null);
+
+    // Helper: sort by created_at desc (newest first)
+    const sortByDateDesc = <T extends { created_at: string }>(arr: T[]): T[] => {
+        return [...arr].sort((a, b) => dayjs(b.created_at).valueOf() - dayjs(a.created_at).valueOf());
+    };
+
     // Fetch filtered data
     const fetchFilteredData = useCallback(async (uid: number, month: number, year: number) => {
         setDataLoading(true);
@@ -63,9 +75,9 @@ const ProfilePage = () => {
                 permissionService.getPermissions(uid, month, year)
             ]);
 
-            if (results[0].status === 'fulfilled') setBonusPoints(results[0].value.data || []);
-            if (results[1].status === 'fulfilled') setViolations(results[1].value.data || []);
-            if (results[2].status === 'fulfilled') setPermissions(results[2].value.data || []);
+            if (results[0].status === 'fulfilled') setBonusPoints(sortByDateDesc(results[0].value.data || []));
+            if (results[1].status === 'fulfilled') setViolations(sortByDateDesc(results[1].value.data || []));
+            if (results[2].status === 'fulfilled') setPermissions(sortByDateDesc(results[2].value.data || []));
         } catch (error) {
             message.error('Failed to fetch filtered data');
         } finally {
@@ -84,7 +96,6 @@ const ProfilePage = () => {
                     const foundUser = res.data.find(u => u.id === uid);
                     if (foundUser) {
                         setUser(foundUser);
-                        // Initial load with current month/year
                         await fetchFilteredData(uid, selectedDate.month() + 1, selectedDate.year());
                     } else {
                         message.error('User not found');
@@ -109,33 +120,22 @@ const ProfilePage = () => {
     };
 
     const bonusColumns: ColumnsType<BonusPointResponse> = [
-        { title: 'Lý do', dataIndex: 'reason', key: 'reason' },
-        { title: 'Điểm', dataIndex: 'points', key: 'points', render: (val) => <Tag color="green">+{val}</Tag> },
-        { title: 'Ngày', dataIndex: 'created_at', key: 'created_at', render: d => dayjs(d).format('DD/MM/YYYY') }
+        { title: 'Lý do', dataIndex: 'reason', key: 'reason', ellipsis: true },
+        { title: 'Điểm', dataIndex: 'points', key: 'points', width: 80, render: (val) => <Tag color="green">+{val}</Tag> },
+        { title: 'Ngày', dataIndex: 'created_at', key: 'created_at', width: 120, render: d => dayjs(d).format('DD/MM/YYYY') }
     ];
 
     const violationColumns: ColumnsType<ViolationResponse> = [
-        { title: 'Lý do', dataIndex: 'reason', key: 'reason' },
-        { title: 'Mức phạt', dataIndex: 'severity', key: 'severity', render: val => <Tag color="red">{val}</Tag> },
-        { title: 'Ngày', dataIndex: 'created_at', key: 'created_at', render: d => dayjs(d).format('DD/MM/YYYY') }
+        { title: 'Lý do', dataIndex: 'reason', key: 'reason', ellipsis: true },
+        { title: 'Ngày vi phạm', dataIndex: 'date', key: 'date', width: 120, render: d => dayjs(d).format('DD/MM/YYYY') },
+        { title: 'Ngày tạo', dataIndex: 'created_at', key: 'created_at', width: 120, render: d => dayjs(d).format('DD/MM/YYYY') }
     ];
 
     const permissionColumns: ColumnsType<PermissionRequestResponse> = [
-        { title: 'Lý do', dataIndex: 'reason', key: 'reason' },
-        {
-            title: 'Trạng thái',
-            dataIndex: 'status',
-            key: 'status',
-            render: val => {
-                if (!val) return <Tag>N/A</Tag>;
-                let color = 'default';
-                if (val === 'approved') color = 'success';
-                if (val === 'rejected') color = 'error';
-                if (val === 'pending') color = 'warning';
-                return <Tag color={color}>{val.toUpperCase()}</Tag>;
-            }
-        },
-        { title: 'Ngày tạo', dataIndex: 'created_at', key: 'created_at', render: d => dayjs(d).format('DD/MM/YYYY') }
+        { title: 'Loại', dataIndex: 'category', key: 'category', width: 120 },
+        { title: 'Nội dung', dataIndex: 'note', key: 'note', ellipsis: true },
+        { title: 'Thời gian', key: 'time', width: 140, render: (_, r) => `${r.start_time} - ${r.end_time}` },
+        { title: 'Ngày', dataIndex: 'date', key: 'date', width: 120, render: d => dayjs(d).format('DD/MM/YYYY') }
     ];
 
     // Filter component
@@ -267,7 +267,17 @@ const ProfilePage = () => {
                         children: (
                             <>
                                 <FilterBar />
-                                <Table dataSource={violations} columns={violationColumns} rowKey="id" loading={dataLoading} pagination={{ pageSize: 10 }} />
+                                <Table
+                                    dataSource={violations}
+                                    columns={violationColumns}
+                                    rowKey="id"
+                                    loading={dataLoading}
+                                    pagination={{ pageSize: 10 }}
+                                    onRow={(record) => ({
+                                        onClick: () => setSelectedViolation(record),
+                                        className: 'cursor-pointer hover:bg-gray-50'
+                                    })}
+                                />
                             </>
                         )
                     },
@@ -277,7 +287,17 @@ const ProfilePage = () => {
                         children: (
                             <>
                                 <FilterBar />
-                                <Table dataSource={bonusPoints} columns={bonusColumns} rowKey="id" loading={dataLoading} pagination={{ pageSize: 10 }} />
+                                <Table
+                                    dataSource={bonusPoints}
+                                    columns={bonusColumns}
+                                    rowKey="id"
+                                    loading={dataLoading}
+                                    pagination={{ pageSize: 10 }}
+                                    onRow={(record) => ({
+                                        onClick: () => setSelectedBonus(record),
+                                        className: 'cursor-pointer hover:bg-gray-50'
+                                    })}
+                                />
                             </>
                         )
                     },
@@ -287,12 +307,93 @@ const ProfilePage = () => {
                         children: (
                             <>
                                 <FilterBar />
-                                <Table dataSource={permissions} columns={permissionColumns} rowKey="id" loading={dataLoading} pagination={{ pageSize: 10 }} />
+                                <Table
+                                    dataSource={permissions}
+                                    columns={permissionColumns}
+                                    rowKey="id"
+                                    loading={dataLoading}
+                                    pagination={{ pageSize: 10 }}
+                                    onRow={(record) => ({
+                                        onClick: () => setSelectedPermission(record),
+                                        className: 'cursor-pointer hover:bg-gray-50'
+                                    })}
+                                />
                             </>
                         )
                     }
                 ]} />
             </Card>
+
+            {/* Detail Modals */}
+            <Modal
+                title={<><WarningOutlined className="text-red-500 mr-2" /> Chi tiết vi phạm</>}
+                open={!!selectedViolation}
+                onCancel={() => setSelectedViolation(null)}
+                footer={null}
+            >
+                {selectedViolation && (
+                    <Descriptions column={1} bordered size="small">
+                        <Descriptions.Item label="Lý do">{selectedViolation.reason}</Descriptions.Item>
+                        <Descriptions.Item label="Ngày vi phạm">
+                            {dayjs(selectedViolation.date).format('DD/MM/YYYY')}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Người tạo">
+                            {selectedViolation.creator_name || 'N/A'}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Ngày tạo">
+                            {dayjs(selectedViolation.created_at).format('DD/MM/YYYY HH:mm')}
+                        </Descriptions.Item>
+                    </Descriptions>
+                )}
+            </Modal>
+
+            <Modal
+                title={<><TrophyOutlined className="text-green-500 mr-2" /> Chi tiết điểm cộng</>}
+                open={!!selectedBonus}
+                onCancel={() => setSelectedBonus(null)}
+                footer={null}
+            >
+                {selectedBonus && (
+                    <Descriptions column={1} bordered size="small">
+                        <Descriptions.Item label="Lý do">{selectedBonus.reason}</Descriptions.Item>
+                        <Descriptions.Item label="Điểm cộng">
+                            <Tag color="green">+{selectedBonus.points}</Tag>
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Ngày">
+                            {dayjs(selectedBonus.date).format('DD/MM/YYYY')}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Ngày tạo">
+                            {dayjs(selectedBonus.created_at).format('DD/MM/YYYY HH:mm')}
+                        </Descriptions.Item>
+                    </Descriptions>
+                )}
+            </Modal>
+
+            <Modal
+                title={<><FileProtectOutlined className="text-blue-500 mr-2" /> Chi tiết đơn xin phép</>}
+                open={!!selectedPermission}
+                onCancel={() => setSelectedPermission(null)}
+                footer={null}
+            >
+                {selectedPermission && (
+                    <Descriptions column={1} bordered size="small">
+                        <Descriptions.Item label="Loại">{selectedPermission.category}</Descriptions.Item>
+                        <Descriptions.Item label="Nội dung">{selectedPermission.note}</Descriptions.Item>
+                        <Descriptions.Item label="Thời gian">
+                            {selectedPermission.start_time} - {selectedPermission.end_time}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Ngày xin phép">
+                            {dayjs(selectedPermission.date).format('DD/MM/YYYY')}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Người tạo">
+                            {selectedPermission.creator_name || selectedPermission.user_name || 'N/A'}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Ngày tạo">
+                            {dayjs(selectedPermission.created_at).format('DD/MM/YYYY HH:mm')}
+                        </Descriptions.Item>
+                    </Descriptions>
+                )}
+            </Modal>
         </div>
     );
 };

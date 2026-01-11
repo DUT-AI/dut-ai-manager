@@ -24,8 +24,8 @@ async def get_bonus_points(
     limit: int = 100,
 ):
     if user_id:
-        result = service_factory.bonus_point.get_by_user_id(
-            user_id, month=month, year=year
+        result = service_factory.bonus_point.get(
+            user_id=user_id, month=month, year=year
         )
     else:
         result = service_factory.bonus_point.get_all(skip=skip, limit=limit)

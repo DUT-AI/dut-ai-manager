@@ -1,6 +1,7 @@
-import sqlmodel
 from enum import Enum
 from typing import TYPE_CHECKING, Optional
+
+import sqlmodel
 
 from app.models.base import TimestampMixin
 from sqlmodel import Field, Relationship
@@ -24,8 +25,11 @@ class HomeworkSubmission(TimestampMixin, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     homework_id: int = Field(foreign_key="homeworks.id", index=True)
+    owner_id: int = Field(
+        foreign_key="users.id", index=True
+    )  # User assigned to this homework
 
-    link: str = Field(max_length=500)
+    link: str = Field(default="", max_length=500)
     status: HomeworkStatus = Field(
         default=HomeworkStatus.NOT_SUBMITTED, sa_type=sqlmodel.String
     )
@@ -34,9 +38,14 @@ class HomeworkSubmission(TimestampMixin, table=True):
     # Relationships
     homework: "Homework" = Relationship(back_populates="submissions")
     owner: "User" = Relationship(
-        sa_relationship_kwargs={"foreign_keys": "[HomeworkSubmission.created_by]"}
+        sa_relationship_kwargs={"foreign_keys": "[HomeworkSubmission.owner_id]"}
     )
 
     @property
     def user_name(self) -> Optional[str]:
         return self.owner.name if self.owner else None
+
+    @property
+    def user_id(self) -> int:
+        """Alias for owner_id for backward compatibility"""
+        return self.owner_id

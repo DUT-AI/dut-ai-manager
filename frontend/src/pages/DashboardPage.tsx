@@ -1,5 +1,6 @@
 import HeaderLayout from '@/components/MainLayout/Header';
 import {
+    BookOutlined,
     CalendarOutlined,
     DashboardOutlined,
     SafetyCertificateOutlined,
@@ -92,7 +93,7 @@ const DashboardPage = () => {
         },
         {
             key: 'homework',
-            icon: <WarningOutlined />,
+            icon: <BookOutlined />,
             label: 'Bài tập về nhà',
             onClick: () => navigate('/dashboard/homeworks'),
         },

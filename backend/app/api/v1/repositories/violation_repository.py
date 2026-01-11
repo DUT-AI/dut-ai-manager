@@ -81,9 +81,13 @@ class ViolationRepository(BaseRepository[Violation]):
         )
         return list(self.session.exec(statement).all())
 
-    def get_by_month(self, month: int, year: int) -> List[Violation]:
+    def get_by_month(
+        self, month: int, year: int, user_id: Optional[int] = None
+    ) -> List[Violation]:
         """Get all violations in a specific month"""
         statement = select(Violation)
+        if user_id:
+            statement = statement.where(Violation.user_id == user_id)
         if month:
             statement = statement.where(extract("month", Violation.date) == month)
         if year:
