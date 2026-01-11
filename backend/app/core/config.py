@@ -1,18 +1,13 @@
 import secrets
-import warnings
 from typing import Annotated, Any, Literal
 
 from pydantic import (
     AnyUrl,
     BeforeValidator,
-    EmailStr,
-    HttpUrl,
     PostgresDsn,
     computed_field,
-    model_validator,
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing_extensions import Self
 
 
 def parse_cors(v: Any) -> list[str] | str:
@@ -31,10 +26,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    SECRET_KEY: str = secrets.token_urlsafe(
-        32
-    )  # 60 minutes * 24 hours * 8 days = 8 days
-
+    SECRET_KEY: str = secrets.token_urlsafe(32)
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
     FRONTEND_HOST: str
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
@@ -50,22 +42,40 @@ class Settings(BaseSettings):
             self.FRONTEND_HOST
         ]
 
-    POSTGRES_SERVER: str
-    POSTGRES_PORT: int
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: str
-    POSTGRES_DB: str
+    # Base PostgreSQL config
+    POSTGRES_SERVER: str = "localhost"
+    POSTGRES_PORT: int = 5432
+
+    # Production Database credentials
+    POSTGRES_DB: str = ""
+    POSTGRES_USER_ADMIN: str = ""
+    POSTGRES_PASSWORD_ADMIN: str = ""
+
+    # Development Database credentials
+    POSTGRES_DEV_DB: str = ""
+    POSTGRES_USER_DEV: str = ""
+    POSTGRES_PASSWORD_DEV: str = ""
 
     @computed_field  # type: ignore[prop-decorator]
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:
+        # Select credentials based on environment
+        if self.ENVIRONMENT == "production":
+            db_user = self.POSTGRES_USER_ADMIN
+            db_password = self.POSTGRES_PASSWORD_ADMIN
+            db_name = self.POSTGRES_DB
+        else:
+            db_user = self.POSTGRES_USER_DEV
+            db_password = self.POSTGRES_PASSWORD_DEV
+            db_name = self.POSTGRES_DEV_DB
+
         return PostgresDsn.build(
             scheme="postgresql+psycopg",
-            username=self.POSTGRES_USER,
-            password=self.POSTGRES_PASSWORD,
+            username=db_user,
+            password=db_password,
             host=self.POSTGRES_SERVER,
             port=self.POSTGRES_PORT,
-            path=self.POSTGRES_DB,
+            path=db_name,
         )
 
 

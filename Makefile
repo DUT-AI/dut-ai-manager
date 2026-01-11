@@ -32,24 +32,47 @@ docker-clean: ## Remove all containers and volumes
 docker-build: ## Build all docker images
 	docker compose build
 
-# ==================== Migrations ====================
+# ==================== Database Tunnel ====================
+db-tunnel-start: ## Start Cloudflare Tunnel to remote dev database (run in background)
+	@echo "🔗 Starting Cloudflare Tunnel to remote dev database..."
+	@. .env 2>/dev/null; cloudflared access tcp --hostname $${CLOUDFLARE_DB_TUNNEL_HOST} --url localhost:5432 &
+	@sleep 3
+	@echo "✅ Tunnel started on localhost:5432"
+
+db-tunnel-stop: ## Stop Cloudflare Tunnel
+	@pkill -f "cloudflared access tcp" 2>/dev/null || true
+	@echo "✅ Tunnel stopped"
+
+# Helper: Run command with tunnel (internal use)
+define with_tunnel
+	@. .env 2>/dev/null; \
+	cloudflared access tcp --hostname $${CLOUDFLARE_DB_TUNNEL_HOST} --url localhost:5432 & \
+	TUNNEL_PID=$$!; \
+	sleep 3; \
+	cd backend && POSTGRES_SERVER=localhost $(1); \
+	EXIT_CODE=$$?; \
+	kill $$TUNNEL_PID 2>/dev/null || true; \
+	exit $$EXIT_CODE
+endef
+
+# ==================== Migrations (auto-starts tunnel) ====================
 migrate-create: ## Create a new migration (usage: make migrate-create msg="description")
-	cd backend && uv run alembic revision --autogenerate -m "$(msg)"
+	$(call with_tunnel,uv run alembic revision --autogenerate -m "$(msg)")
 
 migrate-up: ## Apply all migrations
-	cd backend && uv run alembic upgrade head
+	$(call with_tunnel,uv run alembic upgrade head)
 
 migrate-down: ## Rollback last migration
-	cd backend && uv run alembic downgrade -1
+	$(call with_tunnel,uv run alembic downgrade -1)
 
 migrate-history: ## Show migration history
-	cd backend && uv run alembic history
+	$(call with_tunnel,uv run alembic history)
 
 migrate-current: ## Show current migration
-	cd backend && uv run alembic current
+	$(call with_tunnel,uv run alembic current)
 
 seed-db: ## Seed permissions from enums into database
-	cd backend && uv run python -m app.scripts.seed_permissions
+	$(call with_tunnel,uv run python -m app.scripts.seed_permissions)
 
 # ==================== Backend ====================
 backend-install: ## Install backend dependencies
@@ -60,14 +83,8 @@ backend-dev: ## Run backend with remote dev database via Cloudflare Tunnel
 	@. .env 2>/dev/null; cloudflared access tcp --hostname $${CLOUDFLARE_DB_TUNNEL_HOST} --url localhost:5432 &
 	@sleep 3
 	@echo "🚀 Starting backend server..."
-	@. .env 2>/dev/null; cd backend && \
-		POSTGRES_SERVER=localhost \
-		POSTGRES_PORT=5432 \
-		POSTGRES_USER=$${POSTGRES_USER_DEV} \
-		POSTGRES_PASSWORD=$${POSTGRES_PASSWORD_DEV} \
-		POSTGRES_DB=$${POSTGRES_DEV_DB} \
-		uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000; \
-	pkill -f "cloudflared access tcp" || true
+	@cd backend && POSTGRES_SERVER=localhost uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000; \
+	$(MAKE) db-tunnel-stop
 
 backend-test: ## Run backend tests
 	cd backend && uv run pytest
@@ -99,7 +116,6 @@ install: backend-install frontend-install ## Install all dependencies
 
 dev: ## Run all development servers (requires tmux or run in separate terminals)
 	@echo "Run these commands in separate terminals:"
-	@echo "  make docker-up"
 	@echo "  make backend-dev"
 	@echo "  make frontend-dev"
 

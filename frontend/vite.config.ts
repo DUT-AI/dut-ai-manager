@@ -9,6 +9,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  envDir: '../',  // Load .env from root directory
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

@@ -94,7 +94,7 @@ const UserManagementPage = () => {
             form.resetFields();
             fetchData();
         } catch (error) {
-            message.error('Operation failed');
+            message.error(error.message || 'Operation failed');
         }
     };
 
