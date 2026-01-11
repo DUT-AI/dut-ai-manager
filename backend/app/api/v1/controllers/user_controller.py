@@ -47,11 +47,11 @@ async def create_user(
     service_factory: ServiceFactoryDI,
 ):
     """Create a new user"""
-    success, user, message = service_factory.user.create_user(user_data)
-    if not success:
-        return ApiResponse.error(message=message, status_code=400)
+    user = service_factory.user.create_user(user_data)
     return ApiResponse.success(
-        data=UserResponse.model_validate(user), message=message, status_code=201
+        data=UserResponse.model_validate(user),
+        message="User created successfully",
+        status_code=201,
     )
 
 
@@ -64,7 +64,11 @@ async def update_user(
 ):
     """Update a user"""
     user = service_factory.user.update_user(user_id, user_data)
-    return ApiResponse.success(data=UserResponse.model_validate(user))
+    return ApiResponse.success(
+        data=UserResponse.model_validate(user),
+        message="User updated successfully",
+        status_code=200,
+    )
 
 
 @router.delete("/{user_id}", response_model=ApiResponse[None])
@@ -74,7 +78,5 @@ async def delete_user(
     service_factory: ServiceFactoryDI,
 ):
     """Delete a user"""
-    success = service_factory.user.delete_user(user_id)
-    if not success:
-        return ApiResponse.error(message="User not found", status_code=404)
+    service_factory.user.delete_user(user_id)
     return ApiResponse.success(message="User deleted successfully")
