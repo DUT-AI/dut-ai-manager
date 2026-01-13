@@ -1,3 +1,4 @@
+from app.api.v1.services.user_service import UserService
 from typing import List, Optional
 
 from app.api.v1.services.violation_service import ViolationService
@@ -15,10 +16,14 @@ from loguru import logger
 
 class HomeworkSubmissionService:
     def __init__(
-        self, repo_factory: RepositoryFactory, violation_service: ViolationService
+        self,
+        repo_factory: RepositoryFactory,
+        violation_service: ViolationService,
+        user_service: UserService,
     ):
         self.repo_factory = repo_factory
         self.violation_service = violation_service
+        self.user_service = user_service
 
     def get_submission_of_user(
         self,
@@ -50,7 +55,7 @@ class HomeworkSubmissionService:
                 filter_submissions = [
                     item
                     for item in homework_submissions
-                    if item.created_by in team_member_ids
+                    if item.owner_id in team_member_ids
                 ]
                 return filter_submissions
             case RoleType.TEAMMATE:
@@ -58,7 +63,7 @@ class HomeworkSubmissionService:
                 filter_submissions = [
                     item
                     for item in homework_submissions
-                    if item.created_by == current_user.id
+                    if item.owner_id == current_user.id
                 ]
                 return filter_submissions
             case _:
@@ -90,7 +95,8 @@ class HomeworkSubmissionService:
                     user_id=user_id,
                     reason=f"Nộp bài trễ: {homework.title}",
                     date=now_utc7,
-                )
+                ),
+                is_system=True,
             )
 
         if existing_submission:
@@ -102,12 +108,15 @@ class HomeworkSubmissionService:
             return self.repo_factory.homework_submission.update(existing_submission)
 
         # Should not happen as we pre-create submissions
+        system_user = self.user_service.get_system()
         submission = HomeworkSubmission(
             homework_id=homework_id,
-            created_by=user_id,
+            owner_id=user_id,
             link=str(data.link),
             status=HomeworkStatus.SUBMITTED,
             is_late=is_late,
+            created_by=system_user.id,
+            updated_by=system_user.id,
         )
         return self.repo_factory.homework_submission.create(submission)
 

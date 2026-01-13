@@ -2,7 +2,7 @@ from typing import List, Optional, Tuple
 
 from app.api.v1.repositories import UserRepository
 from app.api.v1.services.auth_service import AuthService
-from app.models import User
+from app.models import User, RoleType
 from app.schemas.response import BadRequestException
 from app.schemas.user import UserCreate, UserUpdate
 
@@ -14,6 +14,12 @@ class UserService:
 
     def get_all_users(self) -> List[User]:
         return self.user_repo.get_all()
+
+    def get_system(self) -> User:
+        return self.user_repo.search_user("Hệ thống")[0]
+
+    def search_user(self, keyword: str) -> List[User]:
+        return self.user_repo.search_user(keyword)
 
     def get_user_by_id(self, user_id: int) -> Optional[User]:
         user = self.user_repo.get_by_id(user_id)
@@ -43,12 +49,19 @@ class UserService:
         )
         return self.user_repo.create(user)
 
-    def update_user(self, user_id: int, user_data: UserUpdate) -> Optional[User]:
+    def update_user(
+        self, user_id: int, user_data: UserUpdate, current_user: User
+    ) -> Optional[User]:
+
         user = self.get_user_by_id(user_id)
         if not user:
             raise BadRequestException("User not found")
 
         update_dict = user_data.model_dump(exclude_unset=True)
+
+        # Only admin can update role_id
+        if "role_id" in update_dict and current_user.role.name != RoleType.ADMIN:
+            raise BadRequestException("Only admin can update role")
 
         # Update other fields
         for key, value in update_dict.items():

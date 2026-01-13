@@ -47,7 +47,9 @@ async def create_permission_request(
 @router.put(
     "/{request_id}",
     response_model=ApiResponse[PermissionRequestResponse],
-    dependencies=[hasPermission(PermissionRequestPermission.UPDATE)],
+    dependencies=[
+        hasPermission(PermissionRequestPermission.UPDATE),
+    ],
 )
 async def update_permission_request(
     request_id: int,

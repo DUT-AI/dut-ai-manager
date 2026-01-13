@@ -119,6 +119,6 @@ class HomeworkService:
             homework_id
         )
         for submission in submissions:
-            self.repo_factory.homework_submission.delete(submission.id)
+            self.repo_factory.homework_submission.delete(submission)
 
-        return self.repo_factory.homework.delete(homework_id)
+        return self.repo_factory.homework.delete_by_id(homework_id)

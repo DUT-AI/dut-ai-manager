@@ -1,3 +1,4 @@
+from typing import List
 from typing import Optional
 
 from app.api.v1.repositories import BaseRepository
@@ -20,3 +21,8 @@ class UserRepository(BaseRepository[User]):
         """Get user by account ID"""
         statement = select(User).where(User.account_id == account_id)
         return self.session.exec(statement).first()
+
+    def search_user(self, keyword: str) -> List[User]:
+        """Search user by name"""
+        statement = select(User).where(User.name.contains(keyword))
+        return self.session.exec(statement).all()

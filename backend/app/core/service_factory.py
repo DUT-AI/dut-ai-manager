@@ -44,7 +44,8 @@ class ServiceFactory:
     def permission_request(self) -> PermissionRequestService:
         if "permission_request" not in self._cache:
             self._cache["permission_request"] = PermissionRequestService(
-                self._repo.permission_request
+                self._repo.permission_request,
+                violation_service=self.violation,
             )
         return self._cache["permission_request"]
 
@@ -57,7 +58,9 @@ class ServiceFactory:
     @property
     def violation(self) -> ViolationService:
         if "violation" not in self._cache:
-            self._cache["violation"] = ViolationService(self._repo.violation)
+            self._cache["violation"] = ViolationService(
+                self._repo.violation, user_service=self.user
+            )
         return self._cache["violation"]
 
     @property
@@ -76,7 +79,7 @@ class ServiceFactory:
     def homework_submission(self) -> HomeworkSubmissionService:
         if "homework_submission" not in self._cache:
             self._cache["homework_submission"] = HomeworkSubmissionService(
-                self._repo, violation_service=self.violation
+                self._repo, violation_service=self.violation, user_service=self.user
             )
         return self._cache["homework_submission"]
 

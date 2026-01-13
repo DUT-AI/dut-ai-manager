@@ -1,8 +1,9 @@
 from typing import List, Optional
 
 from app.api.v1.repositories.base import BaseRepository
+from app.models import RequestCategory
 from app.models.permission_request import PermissionRequest
-from sqlalchemy import desc, extract
+from sqlalchemy import desc, extract, func
 from sqlalchemy.orm import joinedload
 from sqlmodel import Session, select
 
@@ -84,3 +85,19 @@ class PermissionRequestRepository(BaseRepository[PermissionRequest]):
             joinedload(PermissionRequest.updater),
         )
         return list(self.session.exec(statement).all())
+
+    def count_by_user_category_month(
+        self, user_id: int, category: RequestCategory, month: int, year: int
+    ) -> int:
+        """Count permission requests by user, category, and month"""
+        statement = (
+            select(func.count())
+            .select_from(PermissionRequest)
+            .where(
+                PermissionRequest.created_by == user_id,
+                PermissionRequest.category == category,
+                extract("month", PermissionRequest.date) == month,
+                extract("year", PermissionRequest.date) == year,
+            )
+        )
+        return self.session.exec(statement).one()

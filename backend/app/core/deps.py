@@ -156,3 +156,23 @@ def hasTeamLeaderAccess(target_user_id_param: str = "user_id"):
             )
 
     return Depends(dependency)
+
+
+def onlyEditOrDeleteYourself(target_user_id_param: str = "user_id"):
+    async def dependency(request: Request, current_user: CurrentUser):
+        if current_user.role.name != RoleType.LEADER:
+            return  # Admin/other roles bypass
+
+        # Try to get from query params first, then from body
+        target_user_id = request.query_params.get(target_user_id_param)
+        if not target_user_id:
+            data = await request.json()
+            target_user_id = data.get(target_user_id_param)
+        # Check team membership...
+        if current_user.id != int(target_user_id):
+            raise BadRequestException(
+                "Chỉ được edit thông tin bản thân",
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+
+    return Depends(dependency)

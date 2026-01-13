@@ -1,3 +1,4 @@
+from app.utils.datetime import get_current_utc7_time
 from typing import List, Optional
 
 from loguru import logger
@@ -5,7 +6,10 @@ from loguru import logger
 from app.api.v1.repositories.permission_request_repository import (
     PermissionRequestRepository,
 )
-from app.models.permission_request import PermissionRequest
+from app.api.v1.services.violation_service import ViolationService
+from app.core.context import get_current_user_id
+from app.models.permission_request import PermissionRequest, RequestCategory
+from app.schemas.activity import ViolationCreate
 from app.schemas.permission_request import (
     PermissionRequestCreate,
     PermissionRequestUpdate,
@@ -13,8 +17,13 @@ from app.schemas.permission_request import (
 
 
 class PermissionRequestService:
-    def __init__(self, repository: PermissionRequestRepository):
+    def __init__(
+        self,
+        repository: PermissionRequestRepository,
+        violation_service: ViolationService,
+    ):
         self.repository = repository
+        self.violation_service = violation_service
 
     def get_all(self, skip: int = 0, limit: int = 100) -> List[PermissionRequest]:
         return self.repository.get_all(skip=skip, limit=limit)
@@ -36,6 +45,39 @@ class PermissionRequestService:
         return self.repository.get_by_date(target_date)
 
     def create(self, data: PermissionRequestCreate) -> PermissionRequest:
+        user_id = get_current_user_id()
+
+        # Check if this is ABSENCE or POSTPONE category
+        if data.category in [RequestCategory.ABSENCE, RequestCategory.POSTPONE]:
+            month = data.date.month
+            year = data.date.year
+
+            # Count existing requests of same category in same month
+            existing_count = self.repository.count_by_user_category_month(
+                user_id=user_id,
+                category=data.category,
+                month=month,
+                year=year,
+            )
+
+            # If already has at least 1, create a violation
+            if existing_count >= 1:
+                match data.category:
+                    case RequestCategory.ABSENCE:
+                        category_text = "xin vắng sinh hoạt"
+                    case RequestCategory.POSTPONE:
+                        category_text = "xin tạm hoãn bài tập"
+                    case _:
+                        category_text = "Lỗi không xác định được loại yêu cầu"
+
+                self.violation_service.create(
+                    ViolationCreate(
+                        user_id=user_id,
+                        reason=f"{category_text.capitalize()} lần {existing_count + 1} trong tháng {month}/{year}",
+                        date=get_current_utc7_time(),
+                    ),
+                    is_system=True,
+                )
 
         request = PermissionRequest(**data.model_dump())
         return self.repository.create(request)

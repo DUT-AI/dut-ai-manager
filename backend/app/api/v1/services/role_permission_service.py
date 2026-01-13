@@ -20,10 +20,10 @@ class RolePermissionService:
     """Service for managing Roles and Permissions"""
 
     def __init__(
-            self,
-            role_repo: RoleRepository,
-            permission_repo: PermissionRepository,
-            role_permission_repo: RolePermissionRepository,
+        self,
+        role_repo: RoleRepository,
+        permission_repo: PermissionRepository,
+        role_permission_repo: RolePermissionRepository,
     ):
         self.role_repo = role_repo
         self.permission_repo = permission_repo
@@ -63,7 +63,7 @@ class RolePermissionService:
         return self.permission_repo.create(perm)
 
     def update_permission(
-            self, perm_id: int, perm_data: PermissionUpdate
+        self, perm_id: int, perm_data: PermissionUpdate
     ) -> Optional[Permission]:
         perm = self.permission_repo.get_by_id(perm_id)
         if not perm:
@@ -98,7 +98,7 @@ class RolePermissionService:
         return True, "Permission assigned successfully"
 
     def remove_permission_from_role(
-            self, role_id: int, perm_id: int
+        self, role_id: int, perm_id: int
     ) -> Tuple[bool, str]:
         link = self.role_permission_repo.get_by_role_and_permission(role_id, perm_id)
         if not link:

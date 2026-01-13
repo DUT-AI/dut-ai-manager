@@ -1,6 +1,11 @@
 from typing import Annotated, List
 
-from app.core.deps import ServiceFactoryDI, hasPermission
+from app.core.deps import (
+    ServiceFactoryDI,
+    hasPermission,
+    CurrentUser,
+    onlyEditOrDeleteYourself,
+)
 from app.core.permissions import UserPermission
 from app.models import User
 from app.schemas.response import ApiResponse
@@ -55,15 +60,22 @@ async def create_user(
     )
 
 
-@router.put("/{user_id}", response_model=ApiResponse[UserResponse])
+@router.put(
+    "/{user_id}",
+    response_model=ApiResponse[UserResponse],
+    dependencies=[
+        hasPermission(UserPermission.UPDATE),
+        onlyEditOrDeleteYourself("user_id"),
+    ],
+)
 async def update_user(
     user_id: int,
     user_data: UserUpdate,
-    _user: Annotated[User, hasPermission(UserPermission.UPDATE)],
     service_factory: ServiceFactoryDI,
+    current_user: CurrentUser,
 ):
     """Update a user"""
-    user = service_factory.user.update_user(user_id, user_data)
+    user = service_factory.user.update_user(user_id, user_data, current_user)
     return ApiResponse.success(
         data=UserResponse.model_validate(user),
         message="User updated successfully",
@@ -71,10 +83,13 @@ async def update_user(
     )
 
 
-@router.delete("/{user_id}", response_model=ApiResponse[None])
+@router.delete(
+    "/{user_id}",
+    response_model=ApiResponse[None],
+    dependencies=[hasPermission(UserPermission.DELETE)],
+)
 async def delete_user(
     user_id: int,
-    _user: Annotated[User, hasPermission(UserPermission.DELETE)],
     service_factory: ServiceFactoryDI,
 ):
     """Delete a user"""

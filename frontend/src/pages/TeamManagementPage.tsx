@@ -86,7 +86,7 @@ const TeamManagementPage = () => {
             form.resetFields();
             fetchData();
         } catch (error) {
-            message.error('Thao tác thất bại');
+            message.error(error?.message || 'Thao tác thất bại');
         }
     };
 
@@ -100,7 +100,7 @@ const TeamManagementPage = () => {
                 message.error(res.message);
             }
         } catch (error) {
-            message.error('Xóa thất bại');
+            message.error(error?.message || 'Xóa thất bại');
         }
     };
 

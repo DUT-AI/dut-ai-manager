@@ -34,10 +34,13 @@ import {
     ViolationModal
 } from '@/components/activity';
 import useToggle from '@/hooks/useToggle';
+import { useAuth } from '@/context/AuthContext';
+import { BonusPointPermission, PermissionRequestPermission, ViolationPermission } from '@/types/rbac.types';
 
 const { Title, Text } = Typography;
 
 const ActivityCalendarPage = () => {
+    const { hasPermission } = useAuth();
     // State
     const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
     const [drawerVisible, setDrawerVisible] = useToggle(false);
@@ -227,28 +230,37 @@ const ActivityCalendarPage = () => {
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        <Button
-                            type="primary"
-                            icon={<PlusOutlined />}
-                            className="bg-green-500 hover:bg-green-600 border-none"
-                            onClick={openAddBonus}
-                        >
-                            Thêm Điểm Cộng
-                        </Button>
-                        <Button
-                            type="primary"
-                            icon={<WarningOutlined />}
-                            className="bg-red-500 hover:bg-red-600 border-none"
-                            onClick={openAddViolation}
-                        >
-                            Thêm Vi Phạm
-                        </Button>
-                        <Button
-                            icon={<FileTextOutlined />}
-                            onClick={openAddPermission}
-                        >
-                            Xin Phép
-                        </Button>
+                        {hasPermission(PermissionRequestPermission.CREATE) && (
+                            <Button
+                                type="primary"
+                                icon={<PlusOutlined />}
+                                className="bg-green-500 hover:bg-green-600 border-none"
+                                onClick={openAddPermission}
+                            >
+                                Xin Phép
+                            </Button>
+                        )}
+                        {hasPermission(BonusPointPermission.CREATE) && (
+                            <Button
+                                type="primary"
+                                icon={<PlusOutlined />}
+                                className="bg-green-500 hover:bg-green-600 border-none"
+                                onClick={openAddBonus}
+                            >
+                                Thêm Điểm Cộng
+                            </Button>
+                        )}
+                        {hasPermission(ViolationPermission.CREATE) && (
+                            <Button
+                                type="primary"
+                                icon={<WarningOutlined />}
+                                className="bg-red-500 hover:bg-red-600 border-none"
+                                onClick={openAddViolation}
+                            >
+                                Thêm Vi Phạm
+                            </Button>
+                        )}
+
                     </div>
                 </div>
 

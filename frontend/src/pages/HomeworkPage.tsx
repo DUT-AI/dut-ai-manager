@@ -20,7 +20,7 @@ import { HomeworkFormModal, SubmitHomeworkModal, SubmissionsDrawer } from '@/com
 const { Title, Text } = Typography;
 
 export const HomeworkPage: React.FC = () => {
-    const { hasPermission } = useAuth();
+    const { hasPermission, isAdminOrLeader } = useAuth();
     const [activeTab, setActiveTab] = useState('1');
     const [loading, setLoading] = useState(false);
 
@@ -286,7 +286,7 @@ export const HomeworkPage: React.FC = () => {
                     />
                 </Tabs.TabPane>
 
-                {(hasPermission(HomeworkPermission.CREATE) || hasPermission(HomeworkPermission.READ)) && (
+                {isAdminOrLeader() && (
                     <Tabs.TabPane tab="Tất cả bài tập (Quản lý)" key="2">
                         <Table
                             dataSource={homeworks}

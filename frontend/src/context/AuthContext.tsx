@@ -9,6 +9,7 @@ interface AuthContextType {
     login: (accessToken: string, refreshToken: string) => Promise<void>;
     logout: () => Promise<void>;
     hasPermission: (permission: string) => boolean;
+    isAdminOrLeader: () => boolean;
     refreshUser: () => Promise<void>;
 }
 
@@ -67,6 +68,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return user.permissions?.includes(permission) || false;
     };
 
+    const isAdminOrLeader = (): boolean => {
+        if (!user) return false;
+        return user.role_name === 'admin' || user.role_name === 'leader';
+    };
+
     const value = {
         user,
         loading,
@@ -74,6 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         logout,
         hasPermission,
+        isAdminOrLeader,
         refreshUser: fetchUser,
     };
 

@@ -1,20 +1,26 @@
+from app.api.v1.services.user_service import UserService
 from typing import Optional
 
 from app.api.v1.repositories.violation_repository import ViolationRepository
 from app.models import Violation
 from app.schemas.activity import ViolationCreate, ViolationUpdate
 from fastapi.exceptions import HTTPException
+from loguru import logger
 
 
 class ViolationService:
-    def __init__(self, repository: ViolationRepository):
+    def __init__(self, repository: ViolationRepository, user_service: UserService):
         self.repository = repository
+        self.user_service = user_service
 
     def get_all(self, skip: int = 0, limit: int = 100) -> list[Violation]:
         return self.repository.get_all(skip=skip, limit=limit)
 
     def get(
-        self, month: int | None = None, year: int | None = None, user_id: int | None = None
+        self,
+        month: int | None = None,
+        year: int | None = None,
+        user_id: int | None = None,
     ) -> list[Violation]:
         return self.repository.get_by_month(month=month, year=year, user_id=user_id)
 
@@ -30,8 +36,13 @@ class ViolationService:
             raise HTTPException(status_code=404, detail="Item not found")
         return item
 
-    def create(self, data: ViolationCreate) -> Violation:
+    def create(self, data: ViolationCreate, is_system: bool = False) -> Violation:
         item = Violation(**data.model_dump())
+        if is_system:
+            system_user = self.user_service.get_system()
+            item.created_by = system_user.id
+            item.updated_by = system_user.id
+        logger.debug(f"create violation: {item}")
         return self.repository.create(item)
 
     def update(self, item_id: int, data: ViolationUpdate) -> Optional[Violation]:

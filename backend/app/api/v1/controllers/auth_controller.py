@@ -1,14 +1,12 @@
-from app.core.permissions import UserPermission
-from app.core.deps import hasPermission
 from app.core.config import settings
-from app.core.deps import CurrentUser
-from app.core.deps import ServiceFactoryDI
+from app.core.deps import CurrentUser, ServiceFactoryDI, hasPermission
+from app.core.permissions import UserPermission
 from app.schemas.auth import (
+    ChangePasswordRequest,
     LoginRequest,
     RefreshTokenRequest,
     TokenResponse,
     UserResponse,
-    ChangePasswordRequest,
 )
 from app.schemas.response import ApiResponse
 from fastapi import APIRouter, Response
