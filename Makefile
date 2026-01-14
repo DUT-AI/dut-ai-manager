@@ -62,6 +62,9 @@ migrate-create: ## Create a new migration (usage: make migrate-create msg="descr
 migrate-up: ## Apply all migrations
 	$(call with_tunnel,uv run alembic upgrade head)
 
+migrate-up-prod: ## Apply all migrations
+	cd backend && uv run alembic upgrade head	
+
 migrate-down: ## Rollback last migration
 	$(call with_tunnel,uv run alembic downgrade -1)
 
