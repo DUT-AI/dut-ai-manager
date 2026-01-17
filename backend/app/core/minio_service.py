@@ -17,6 +17,8 @@ class MinioService:
     ALLOWED_EXTENSIONS = {".zip", ".rar", ".7z", ".tar.gz", ".gz"}
     # Maximum file size in bytes (10MB)
     MAX_FILE_SIZE = 10 * 1024 * 1024
+    # Prefix for homework submissions
+    SUBMISSIONS_PREFIX = "homework-submissions"
 
     def __init__(self):
         self.client = Minio(
@@ -93,16 +95,18 @@ class MinioService:
             Public URL of the uploaded file
         """
         try:
+            # Add submissions prefix to the filename
+            object_name = f"{self.SUBMISSIONS_PREFIX}/{filename}"
             data = BytesIO(file_data)
             self.client.put_object(
                 bucket_name=self.bucket_name,
-                object_name=filename,
+                object_name=object_name,
                 data=data,
                 length=len(file_data),
                 content_type=content_type,
             )
-            logger.info(f"Uploaded file to MinIO: {filename}")
-            return self.get_public_url(filename)
+            logger.info(f"Uploaded file to MinIO: {object_name}")
+            return self.get_public_url(object_name)
         except S3Error as e:
             logger.error(f"Failed to upload file to MinIO: {e}")
             raise

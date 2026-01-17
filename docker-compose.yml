@@ -38,14 +38,14 @@ services:
       retries: 5
     networks:
       - dut-ai-network
-    deploy:
-      resources:
-        limits:
-          cpus: '2'
-          memory: 2G
-        reservations:
-          cpus: '1'
-          memory: 1G
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2'
+    #       memory: 2G
+    #     reservations:
+    #       cpus: '1'
+    #       memory: 1G
 
   # ================================================
   # Backend - FastAPI
@@ -74,6 +74,7 @@ services:
       start_period: 40s
     networks:
       - dut-ai-network
+      - dut-ai-shared
     deploy:
       resources:
         limits:
@@ -119,3 +120,6 @@ services:
 networks:
   dut-ai-network:
     driver: bridge
+  dut-ai-shared:
+    external: true
+    name: dut-ai-shared
