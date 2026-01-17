@@ -51,7 +51,7 @@ export const HomeworkFormModal = ({
             const baseData = {
                 title: values.title,
                 description: values.description || '',
-                deadline: values.deadline.toISOString(),
+                deadline: values.deadline.format('YYYY-MM-DDTHH:mm:ss'),
             };
 
             if (isEditing) {
