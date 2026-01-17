@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
     Table,
     Button,
@@ -22,9 +22,17 @@ import {
     LockOutlined,
     KeyOutlined
 } from '@ant-design/icons';
-import { rbacService } from '@/services/api/rbac.service';
+import {
+    useRoles,
+    usePermissions,
+    useCreateRole,
+    useUpdateRole,
+    useDeleteRole,
+    useAddPermissionToRole,
+    useRemovePermissionFromRole
+} from '@/hooks';
 import { RolePermission } from '@/types/rbac.types';
-import type { RoleResponse, PermissionResponse } from '@/types/rbac.types';
+import type { RoleResponse } from '@/types/rbac.types';
 import { useAuth } from '@/context/AuthContext';
 import useToggle from '@/hooks/useToggle';
 
@@ -32,65 +40,51 @@ const { Title, Text } = Typography;
 
 const RoleManagementPage = () => {
     const { hasPermission } = useAuth();
-    const [roles, setRoles] = useState<RoleResponse[]>([]);
-    const [permissions, setPermissions] = useState<PermissionResponse[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [isModalOpen, toggleModal] = useToggle(false);
-    const [editingRole, setEditingRole] = useState<RoleResponse | null>(null);
     const [form] = Form.useForm();
 
+    // TanStack Query hooks
+    const { data: roles = [], isLoading } = useRoles();
+    const { data: permissions = [] } = usePermissions();
+    const createRole = useCreateRole();
+    const updateRole = useUpdateRole();
+    const deleteRole = useDeleteRole();
+    const addPermissionToRole = useAddPermissionToRole();
+    const removePermissionFromRole = useRemovePermissionFromRole();
+
+    // Modal states
+    const [isModalOpen, toggleModal] = useToggle(false);
+    const [editingRole, setEditingRole] = useState<RoleResponse | null>(null);
     const [isPermModalOpen, togglePermModal] = useToggle(false);
     const [currentRoleForPerms, setCurrentRoleForPerms] = useState<RoleResponse | null>(null);
     const [targetKeys, setTargetKeys] = useState<string[]>([]);
+    const [permLoading, setPermLoading] = useState(false);
 
     const canCreateRole = hasPermission(RolePermission.CREATE);
     const canUpdateRole = hasPermission(RolePermission.UPDATE);
     const canDeleteRole = hasPermission(RolePermission.DELETE);
 
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            const [rolesRes, permsRes] = await Promise.all([
-                rbacService.getRoles(),
-                rbacService.getPermissions()
-            ]);
-            if (rolesRes.is_success) setRoles(rolesRes.data || []);
-            if (permsRes.is_success) setPermissions(permsRes.data || []);
-        } catch (error) {
-            message.error('Failed to fetch RBAC data');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchData();
-    }, []);
-
     const handleCreateOrUpdate = async (values: any) => {
         try {
             if (editingRole) {
-                await rbacService.updateRole(editingRole.id, values);
+                await updateRole.mutateAsync({ id: editingRole.id, data: values });
                 message.success('Role updated successfully');
             } else {
-                await rbacService.createRole(values);
+                await createRole.mutateAsync(values);
                 message.success('Role created successfully');
             }
             toggleModal(false);
             form.resetFields();
-            fetchData();
-        } catch (error) {
-            message.error('Operation failed');
+        } catch (error: any) {
+            message.error(error?.response?.data?.message || 'Operation failed');
         }
     };
 
     const handleDelete = async (id: number) => {
         try {
-            await rbacService.deleteRole(id);
+            await deleteRole.mutateAsync(id);
             message.success('Role deleted successfully');
-            fetchData();
-        } catch (error) {
-            message.error('Delete failed');
+        } catch (error: any) {
+            message.error(error?.response?.data?.message || 'Delete failed');
         }
     };
 
@@ -105,22 +99,21 @@ const RoleManagementPage = () => {
         if (!currentRoleForPerms) return;
 
         try {
-            setLoading(true);
+            setPermLoading(true);
             for (const key of moveKeys) {
                 const permId = parseInt(key as string);
                 if (direction === 'right') {
-                    await rbacService.addPermissionToRole(currentRoleForPerms.id, permId);
+                    await addPermissionToRole.mutateAsync({ roleId: currentRoleForPerms.id, permId });
                 } else {
-                    await rbacService.removePermissionFromRole(currentRoleForPerms.id, permId);
+                    await removePermissionFromRole.mutateAsync({ roleId: currentRoleForPerms.id, permId });
                 }
             }
             message.success('Permissions updated');
             setTargetKeys(nextTargetKeys as string[]);
-            fetchData();
-        } catch (error) {
-            message.error('Failed to update permissions');
+        } catch (error: any) {
+            message.error(error?.response?.data?.message || 'Failed to update permissions');
         } finally {
-            setLoading(false);
+            setPermLoading(false);
         }
     };
 
@@ -227,7 +220,7 @@ const RoleManagementPage = () => {
                     columns={columns}
                     dataSource={roles}
                     rowKey="id"
-                    loading={loading}
+                    loading={isLoading}
                     pagination={false}
                     className="border border-gray-100 rounded-lg"
                 />
@@ -239,6 +232,7 @@ const RoleManagementPage = () => {
                 open={isModalOpen}
                 onCancel={() => toggleModal(false)}
                 onOk={() => form.submit()}
+                confirmLoading={createRole.isPending || updateRole.isPending}
             >
                 <Form form={form} layout="vertical" onFinish={handleCreateOrUpdate} className="mt-4">
                     <Form.Item name="name" label="Role Name" rules={[{ required: true }]}>
@@ -269,6 +263,7 @@ const RoleManagementPage = () => {
                         targetKeys={targetKeys}
                         onChange={handlePermTransfer}
                         render={item => item.title}
+                        disabled={permLoading}
                         listStyle={{
                             width: 300,
                             height: 400,

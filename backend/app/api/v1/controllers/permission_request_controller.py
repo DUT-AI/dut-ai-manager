@@ -25,7 +25,9 @@ async def get_permission_requests(
     limit: int = 100,
 ):
     if user_id:
-        result = service_factory.permission_request.get_by_user(month=month, year=year)
+        result = service_factory.permission_request.get_by_user(
+            user_id=user_id, month=month, year=year
+        )
     else:
         result = service_factory.permission_request.get_all(skip=skip, limit=limit)
     return ApiResponse.success(data=result)

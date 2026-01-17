@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
     Table,
     Button,
@@ -21,11 +21,9 @@ import {
     TeamOutlined,
     UserOutlined
 } from '@ant-design/icons';
-import { teamService } from '@/services/api/team.service';
-import { userService } from '@/services/api/user.service';
+import { useTeams, useCreateTeam, useUpdateTeam, useDeleteTeam, useUsers } from '@/hooks';
 import { useAuth } from '@/context/AuthContext';
 import type { TeamResponse, TeamCreate } from '@/types/team.types';
-import type { UserResponse } from '@/types/user.types';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -33,32 +31,16 @@ const { Option } = Select;
 
 const TeamManagementPage = () => {
     useAuth();
-    const [teams, setTeams] = useState<TeamResponse[]>([]);
-    const [users, setUsers] = useState<UserResponse[]>([]);
-    const [loading, setLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<TeamResponse | null>(null);
     const [form] = Form.useForm();
 
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            const [teamRes, userRes] = await Promise.all([
-                teamService.getTeams(),
-                userService.getUsers()
-            ]);
-            if (teamRes.is_success) setTeams(teamRes.data || []);
-            if (userRes.is_success) setUsers(userRes.data || []);
-        } catch (error) {
-            message.error('Không thể tải dữ liệu');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchData();
-    }, []);
+    // TanStack Query hooks
+    const { data: teams = [], isLoading } = useTeams();
+    const { data: users = [] } = useUsers();
+    const createTeam = useCreateTeam();
+    const updateTeam = useUpdateTeam();
+    const deleteTeam = useDeleteTeam();
 
     const handleCreateOrUpdate = async (values: any) => {
         try {
@@ -68,39 +50,25 @@ const TeamManagementPage = () => {
             };
 
             if (editingItem) {
-                const res = await teamService.updateTeam(editingItem.id, payload);
-                if (res.is_success) {
-                    message.success('Cập nhật nhóm thành công');
-                } else {
-                    message.error(res.message);
-                }
+                await updateTeam.mutateAsync({ id: editingItem.id, data: payload });
+                message.success('Cập nhật nhóm thành công');
             } else {
-                const res = await teamService.createTeam(payload);
-                if (res.is_success) {
-                    message.success('Tạo nhóm mới thành công');
-                } else {
-                    message.error(res.message);
-                }
+                await createTeam.mutateAsync(payload);
+                message.success('Tạo nhóm mới thành công');
             }
             setIsModalOpen(false);
             form.resetFields();
-            fetchData();
-        } catch (error) {
-            message.error(error?.message || 'Thao tác thất bại');
+        } catch (error: any) {
+            message.error(error?.response?.data?.message || 'Thao tác thất bại');
         }
     };
 
     const handleDelete = async (id: number) => {
         try {
-            const res = await teamService.deleteTeam(id);
-            if (res.is_success) {
-                message.success('Xóa nhóm thành công');
-                fetchData();
-            } else {
-                message.error(res.message);
-            }
-        } catch (error) {
-            message.error(error?.message || 'Xóa thất bại');
+            await deleteTeam.mutateAsync(id);
+            message.success('Xóa nhóm thành công');
+        } catch (error: any) {
+            message.error(error?.response?.data?.message || 'Xóa thất bại');
         }
     };
 
@@ -201,7 +169,7 @@ const TeamManagementPage = () => {
                     columns={columns}
                     dataSource={teams}
                     rowKey="id"
-                    loading={loading}
+                    loading={isLoading}
                     className="custom-table"
                 />
             </Card>
@@ -212,6 +180,7 @@ const TeamManagementPage = () => {
                 onCancel={() => setIsModalOpen(false)}
                 onOk={() => form.submit()}
                 centered
+                confirmLoading={createTeam.isPending || updateTeam.isPending}
                 destroyOnHidden
             >
                 <Form form={form} layout="vertical" onFinish={handleCreateOrUpdate} className="mt-4">

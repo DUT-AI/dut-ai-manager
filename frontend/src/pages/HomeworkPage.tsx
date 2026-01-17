@@ -7,12 +7,16 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useAuth } from '@/context/AuthContext';
+import {
+    useHomeworks,
+    useMyHomeworks,
+    useDeleteHomework,
+    useSubmissions,
+    useUsers,
+    useTeams
+} from '@/hooks';
 import { homeworkService } from '@/services/api/homework.service';
-import { userService } from '@/services/api/user.service';
-import { teamService } from '@/services/api/team.service';
 import type { Homework } from '@/types/homework.types';
-import type { UserResponse } from '@/types/user.types';
-import type { TeamResponse } from '@/types/team.types';
 import { HomeworkPermission } from '@/types/rbac.types';
 import type { ColumnsType } from 'antd/es/table';
 import { HomeworkFormModal, SubmitHomeworkModal, SubmissionsDrawer } from '@/components/homework';
@@ -22,13 +26,13 @@ const { Title, Text } = Typography;
 export const HomeworkPage: React.FC = () => {
     const { hasPermission, isAdminOrLeader } = useAuth();
     const [activeTab, setActiveTab] = useState('1');
-    const [loading, setLoading] = useState(false);
 
-    // Data States
-    const [homeworks, setHomeworks] = useState<Homework[]>([]);
-    const [myHomeworks, setMyHomeworks] = useState<Homework[]>([]);
-    const [users, setUsers] = useState<UserResponse[]>([]);
-    const [teams, setTeams] = useState<TeamResponse[]>([]);
+    // TanStack Query hooks
+    const { data: myHomeworks = [], isLoading: myLoading, refetch: refetchMyHomeworks } = useMyHomeworks();
+    const { data: allHomeworks = [], isLoading: allLoading, refetch: refetchAllHomeworks } = useHomeworks();
+    const { data: users = [] } = useUsers();
+    const { data: teams = [] } = useTeams();
+    const deleteHomework = useDeleteHomework();
 
     // Modal States
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -40,74 +44,16 @@ export const HomeworkPage: React.FC = () => {
     const [editingHomework, setEditingHomework] = useState<Homework | null>(null);
     const [currentAssignees, setCurrentAssignees] = useState<number[]>([]);
 
-    const fetchUsers = async () => {
-        try {
-            const res = await userService.getUsers();
-            if (res && res.data) {
-                setUsers(res.data);
-            }
-        } catch (error) {
-            console.error(error);
-        }
-    };
-
-    const fetchTeams = async () => {
-        try {
-            const res = await teamService.getTeams();
-            if (res) {
-                setTeams(res.data || []);
-            }
-        } catch (error) {
-            console.error(error);
-        }
-    };
-
-    const fetchMyHomeworks = async () => {
-        setLoading(true);
-        try {
-            const data = await homeworkService.getMyHomeworks();
-            setMyHomeworks(data || []);
-        } catch (error) {
-            message.error('Không thể tải bài tập của bạn');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchAllHomeworks = async () => {
-        setLoading(true);
-        try {
-            const data = await homeworkService.getAll();
-            setHomeworks(data || []);
-        } catch (error) {
-            message.error('Không thể tải danh sách bài tập');
-        } finally {
-            setLoading(false);
-        }
-    };
+    const loading = activeTab === '1' ? myLoading : allLoading;
+    const homeworks = activeTab === '1' ? myHomeworks : allHomeworks;
 
     const refreshData = () => {
         if (activeTab === '1') {
-            fetchMyHomeworks();
+            refetchMyHomeworks();
         } else {
-            fetchAllHomeworks();
+            refetchAllHomeworks();
         }
     };
-
-    useEffect(() => {
-        if (activeTab === '1') {
-            fetchMyHomeworks();
-        } else if (activeTab === '2') {
-            fetchAllHomeworks();
-        }
-    }, [activeTab]);
-
-    useEffect(() => {
-        if (hasPermission(HomeworkPermission.CREATE)) {
-            if (users.length === 0) fetchUsers();
-            if (teams.length === 0) fetchTeams();
-        }
-    }, [hasPermission]);
 
     // Open Create Modal
     const handleOpenCreate = () => {
@@ -131,11 +77,10 @@ export const HomeworkPage: React.FC = () => {
     // Delete Homework
     const handleDelete = async (id: number) => {
         try {
-            await homeworkService.delete(id);
+            await deleteHomework.mutateAsync(id);
             message.success('Xóa bài tập thành công');
-            refreshData();
         } catch (error: any) {
-            message.error(error?.message || 'Xóa bài tập thất bại');
+            message.error(error?.response?.data?.message || 'Xóa bài tập thất bại');
         }
     };
 
@@ -161,7 +106,7 @@ export const HomeworkPage: React.FC = () => {
     // Submit Modal Success
     const handleSubmitSuccess = () => {
         setIsSubmitModalOpen(false);
-        fetchMyHomeworks();
+        refetchMyHomeworks();
     };
 
     const myColumns: ColumnsType<Homework> = [
@@ -281,7 +226,7 @@ export const HomeworkPage: React.FC = () => {
                         dataSource={myHomeworks}
                         columns={myColumns}
                         rowKey="id"
-                        loading={loading}
+                        loading={myLoading}
                         locale={{ emptyText: "Không có bài tập nào được giao" }}
                     />
                 </Tabs.TabPane>
@@ -289,10 +234,10 @@ export const HomeworkPage: React.FC = () => {
                 {isAdminOrLeader() && (
                     <Tabs.TabPane tab="Tất cả bài tập (Quản lý)" key="2">
                         <Table
-                            dataSource={homeworks}
+                            dataSource={allHomeworks}
                             columns={adminColumns}
                             rowKey="id"
-                            loading={loading}
+                            loading={allLoading}
                         />
                     </Tabs.TabPane>
                 )}

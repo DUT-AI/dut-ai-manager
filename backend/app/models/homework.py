@@ -17,7 +17,7 @@ class Homework(TimestampMixin, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     title: str = Field(max_length=255, index=True)
-    deadline: datetime
+    deadline: datetime = Field(index=True)
     description: str  # Markdown text
 
     # Relationships

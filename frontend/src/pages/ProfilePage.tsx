@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     Card,
@@ -30,12 +30,8 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
-import { userService } from '../services/api/user.service';
-import { bonusPointService } from '../services/api/bonus-point.service';
-import { violationService } from '../services/api/violation.service';
-import { permissionService } from '../services/api/permission.service';
+import { useUsers, useViolations, useBonusPoints, usePermissionRequests } from '@/hooks';
 
-import type { UserResponse } from '../types/user.types';
 import type { BonusPointResponse, ViolationResponse, PermissionRequestResponse } from '../types/activity.types';
 import type { ColumnsType } from 'antd/es/table';
 
@@ -44,80 +40,55 @@ const { Title, Text } = Typography;
 const ProfilePage = () => {
     const { userId } = useParams();
     const navigate = useNavigate();
-    const [user, setUser] = useState<UserResponse | null>(null);
-    const [loading, setLoading] = useState(true);
+    const uid = userId ? parseInt(userId) : undefined;
 
-    // Filter state - default to current month/year
+    const [activeTab, setActiveTab] = useState('info');
     const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
-
-    const [bonusPoints, setBonusPoints] = useState<BonusPointResponse[]>([]);
-    const [violations, setViolations] = useState<ViolationResponse[]>([]);
-    const [permissions, setPermissions] = useState<PermissionRequestResponse[]>([]);
-    const [dataLoading, setDataLoading] = useState(false);
 
     // Detail modal states
     const [selectedViolation, setSelectedViolation] = useState<ViolationResponse | null>(null);
     const [selectedBonus, setSelectedBonus] = useState<BonusPointResponse | null>(null);
     const [selectedPermission, setSelectedPermission] = useState<PermissionRequestResponse | null>(null);
 
-    // Helper: sort by created_at desc (newest first)
-    const sortByDateDesc = <T extends { created_at: string }>(arr: T[]): T[] => {
-        return [...arr].sort((a, b) => dayjs(b.created_at).valueOf() - dayjs(a.created_at).valueOf());
-    };
+    // Get user from cached users list
+    const { data: users = [], isLoading: usersLoading } = useUsers();
+    const user = useMemo(() => users.find(u => u.id === uid), [users, uid]);
 
-    // Fetch filtered data
-    const fetchFilteredData = useCallback(async (uid: number, month: number, year: number) => {
-        setDataLoading(true);
-        try {
-            const results = await Promise.allSettled([
-                bonusPointService.getBonusPoints(uid, month, year),
-                violationService.getViolations(0, 100, uid, month, year),
-                permissionService.getPermissions(uid, month, year)
-            ]);
+    // Lazy load data - only fetch when tab is active
+    const { data: violations = [], isLoading: violationsLoading } = useViolations({
+        userId: uid,
+        month: selectedDate.month() + 1,
+        year: selectedDate.year(),
+        enabled: activeTab === 'violations' && !!uid,
+    });
 
-            if (results[0].status === 'fulfilled') setBonusPoints(sortByDateDesc(results[0].value.data || []));
-            if (results[1].status === 'fulfilled') setViolations(sortByDateDesc(results[1].value.data || []));
-            if (results[2].status === 'fulfilled') setPermissions(sortByDateDesc(results[2].value.data || []));
-        } catch (error) {
-            message.error('Failed to fetch filtered data');
-        } finally {
-            setDataLoading(false);
-        }
-    }, []);
+    const { data: bonusPoints = [], isLoading: bonusLoading } = useBonusPoints({
+        userId: uid,
+        month: selectedDate.month() + 1,
+        year: selectedDate.year(),
+        enabled: activeTab === 'bonus' && !!uid,
+    });
 
-    useEffect(() => {
-        const fetchUser = async () => {
-            if (!userId) return;
-            const uid = parseInt(userId);
+    const { data: permissionRequests = [], isLoading: permissionsLoading } = usePermissionRequests({
+        userId: uid,
+        month: selectedDate.month() + 1,
+        year: selectedDate.year(),
+        enabled: activeTab === 'permissions' && !!uid,
+    });
 
-            try {
-                const res = await userService.getUsers();
-                if (res.data) {
-                    const foundUser = res.data.find(u => u.id === uid);
-                    if (foundUser) {
-                        setUser(foundUser);
-                        await fetchFilteredData(uid, selectedDate.month() + 1, selectedDate.year());
-                    } else {
-                        message.error('User not found');
-                        return;
-                    }
-                }
-            } catch (error) {
-                message.error('Failed to fetch user profile');
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchUser();
-    }, [userId]);
-
-    // Handle date filter change
-    const handleDateChange = async (date: Dayjs | null) => {
-        if (!date || !userId) return;
-        setSelectedDate(date);
-        await fetchFilteredData(parseInt(userId), date.month() + 1, date.year());
-    };
+    // Sort by created_at desc
+    const sortedViolations = useMemo(() =>
+        [...violations].sort((a, b) => dayjs(b.created_at).valueOf() - dayjs(a.created_at).valueOf()),
+        [violations]
+    );
+    const sortedBonusPoints = useMemo(() =>
+        [...bonusPoints].sort((a, b) => dayjs(b.created_at).valueOf() - dayjs(a.created_at).valueOf()),
+        [bonusPoints]
+    );
+    const sortedPermissions = useMemo(() =>
+        [...permissionRequests].sort((a, b) => dayjs(b.created_at).valueOf() - dayjs(a.created_at).valueOf()),
+        [permissionRequests]
+    );
 
     const bonusColumns: ColumnsType<BonusPointResponse> = [
         { title: 'Lý do', dataIndex: 'reason', key: 'reason', ellipsis: true },
@@ -146,7 +117,7 @@ const ProfilePage = () => {
             <DatePicker
                 picker="month"
                 value={selectedDate}
-                onChange={handleDateChange}
+                onChange={(date) => date && setSelectedDate(date)}
                 format="MM/YYYY"
                 allowClear={false}
                 className="w-32"
@@ -157,7 +128,7 @@ const ProfilePage = () => {
         </div>
     );
 
-    if (loading) {
+    if (usersLoading) {
         return (
             <div className="p-8">
                 <Card className="rounded-2xl shadow-sm border-gray-100">
@@ -203,10 +174,7 @@ const ProfilePage = () => {
                         <div className="flex justify-between items-start">
                             <div>
                                 <Title level={2} className="!m-0">{user.name}</Title>
-                                <Space direction="vertical" size={0} className="mt-1">
-                                    <Text type="secondary" className="text-sm">#{user.id}</Text>
-                                    <Tag color="blue" className="mt-2 uppercase font-bold">{user.role_name}</Tag>
-                                </Space>
+                                <Tag color="blue" className="mt-2 uppercase font-bold">{user.role_name}</Tag>
                             </div>
                             <Tag color={user.status === 'active' ? 'success' : 'error'} className="rounded-full px-4">
                                 {user.status.toUpperCase()}
@@ -215,113 +183,136 @@ const ProfilePage = () => {
                     </div>
                 </div>
 
-                <Tabs defaultActiveKey="info" className="mt-4" items={[
-                    {
-                        key: 'info',
-                        label: <span><UserOutlined /> Thông tin chung</span>,
-                        children: (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
-                                <Space direction="vertical" size="large" className="w-full">
-                                    <div>
-                                        <Text type="secondary" className="text-xs uppercase font-bold tracking-wider block mb-2">Thông tin liên hệ</Text>
-                                        <Space direction="vertical" className="w-full">
-                                            <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-50">
-                                                <MailOutlined className="text-indigo-500" />
-                                                <Text>{user.email}</Text>
-                                            </div>
-                                            <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-50">
-                                                <PhoneOutlined className="text-indigo-500" />
-                                                <Text>{user.phone_number || 'Chưa cập nhật số điện thoại'}</Text>
-                                            </div>
-                                        </Space>
-                                    </div>
-                                </Space>
+                <Tabs
+                    activeKey={activeTab}
+                    onChange={setActiveTab}
+                    className="mt-4"
+                    items={[
+                        {
+                            key: 'info',
+                            label: <span><UserOutlined /> Thông tin chung</span>,
+                            children: (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
+                                    <Space direction="vertical" size="large" className="w-full">
+                                        <div>
+                                            <Text type="secondary" className="text-xs uppercase font-bold tracking-wider block mb-2">Thông tin liên hệ</Text>
+                                            <Space direction="vertical" className="w-full">
+                                                <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-50">
+                                                    <MailOutlined className="text-indigo-500" />
+                                                    <Text>{user.email}</Text>
+                                                </div>
+                                                <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-50">
+                                                    <PhoneOutlined className="text-indigo-500" />
+                                                    <Text>{user.phone_number || 'Chưa cập nhật số điện thoại'}</Text>
+                                                </div>
+                                            </Space>
+                                        </div>
+                                    </Space>
 
-                                <Space direction="vertical" size="large" className="w-full">
-                                    <div>
-                                        <Text type="secondary" className="text-xs uppercase font-bold tracking-wider block mb-2">Hoạt động hệ thống</Text>
-                                        <Space direction="vertical" className="w-full">
-                                            <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-50">
-                                                <Space>
-                                                    <CalendarOutlined className="text-indigo-500" />
-                                                    <Text>Lịch hoạt động</Text>
-                                                </Space>
-                                                <Button type="link" onClick={() => navigate('/dashboard/activities')}>Xem ngay</Button>
-                                            </div>
-                                            <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-50">
-                                                <Space>
-                                                    <SafetyCertificateOutlined className="text-indigo-500" />
-                                                    <Text>Vai trò hiện tại</Text>
-                                                </Space>
-                                                <Tag color="purple">{user.role_name}</Tag>
-                                            </div>
-                                        </Space>
-                                    </div>
+                                    <Space direction="vertical" size="large" className="w-full">
+                                        <div>
+                                            <Text type="secondary" className="text-xs uppercase font-bold tracking-wider block mb-2">Hoạt động hệ thống</Text>
+                                            <Space direction="vertical" className="w-full">
+                                                <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-50">
+                                                    <Space>
+                                                        <CalendarOutlined className="text-indigo-500" />
+                                                        <Text>Lịch hoạt động</Text>
+                                                    </Space>
+                                                    <Button type="link" onClick={() => navigate('/dashboard/activities')}>Xem ngay</Button>
+                                                </div>
+                                                <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-50">
+                                                    <Space>
+                                                        <SafetyCertificateOutlined className="text-indigo-500" />
+                                                        <Text>Vai trò hiện tại</Text>
+                                                    </Space>
+                                                    <Tag color="purple">{user.role_name}</Tag>
+                                                </div>
+                                            </Space>
+                                        </div>
+                                    </Space>
+                                </div>
+                            )
+                        },
+                        {
+                            key: 'violations',
+                            label: (
+                                <Space>
+                                    <WarningOutlined />
+                                    <span>Lỗi vi phạm</span>
+                                    <Badge count={activeTab === 'violations' ? sortedViolations.length : 0} size="small" />
                                 </Space>
-                            </div>
-                        )
-                    },
-                    {
-                        key: 'violations',
-                        label: <Badge count={violations.length} size="small" offset={[8, 0]}><span><WarningOutlined /> Lỗi vi phạm</span></Badge>,
-                        children: (
-                            <>
-                                <FilterBar />
-                                <Table
-                                    dataSource={violations}
-                                    columns={violationColumns}
-                                    rowKey="id"
-                                    loading={dataLoading}
-                                    pagination={{ pageSize: 10 }}
-                                    onRow={(record) => ({
-                                        onClick: () => setSelectedViolation(record),
-                                        className: 'cursor-pointer hover:bg-gray-50'
-                                    })}
-                                />
-                            </>
-                        )
-                    },
-                    {
-                        key: 'bonus',
-                        label: <Badge count={bonusPoints.length} size="small" offset={[8, 0]}><span><TrophyOutlined /> Điểm cộng</span></Badge>,
-                        children: (
-                            <>
-                                <FilterBar />
-                                <Table
-                                    dataSource={bonusPoints}
-                                    columns={bonusColumns}
-                                    rowKey="id"
-                                    loading={dataLoading}
-                                    pagination={{ pageSize: 10 }}
-                                    onRow={(record) => ({
-                                        onClick: () => setSelectedBonus(record),
-                                        className: 'cursor-pointer hover:bg-gray-50'
-                                    })}
-                                />
-                            </>
-                        )
-                    },
-                    {
-                        key: 'permissions',
-                        label: <Badge count={permissions.length} size="small" offset={[8, 0]}><span><FileProtectOutlined /> Xin phép</span></Badge>,
-                        children: (
-                            <>
-                                <FilterBar />
-                                <Table
-                                    dataSource={permissions}
-                                    columns={permissionColumns}
-                                    rowKey="id"
-                                    loading={dataLoading}
-                                    pagination={{ pageSize: 10 }}
-                                    onRow={(record) => ({
-                                        onClick: () => setSelectedPermission(record),
-                                        className: 'cursor-pointer hover:bg-gray-50'
-                                    })}
-                                />
-                            </>
-                        )
-                    }
-                ]} />
+                            ),
+                            children: (
+                                <>
+                                    <FilterBar />
+                                    <Table
+                                        dataSource={sortedViolations}
+                                        columns={violationColumns}
+                                        rowKey="id"
+                                        loading={violationsLoading}
+                                        pagination={{ pageSize: 10 }}
+                                        onRow={(record) => ({
+                                            onClick: () => setSelectedViolation(record),
+                                            className: 'cursor-pointer hover:bg-gray-50'
+                                        })}
+                                    />
+                                </>
+                            )
+                        },
+                        {
+                            key: 'bonus',
+                            label: (
+                                <Space>
+                                    <TrophyOutlined />
+                                    <span>Điểm cộng</span>
+                                    <Badge count={activeTab === 'bonus' ? sortedBonusPoints.length : 0} size="small" />
+                                </Space>
+                            ),
+                            children: (
+                                <>
+                                    <FilterBar />
+                                    <Table
+                                        dataSource={sortedBonusPoints}
+                                        columns={bonusColumns}
+                                        rowKey="id"
+                                        loading={bonusLoading}
+                                        pagination={{ pageSize: 10 }}
+                                        onRow={(record) => ({
+                                            onClick: () => setSelectedBonus(record),
+                                            className: 'cursor-pointer hover:bg-gray-50'
+                                        })}
+                                    />
+                                </>
+                            )
+                        },
+                        {
+                            key: 'permissions',
+                            label: (
+                                <Space>
+                                    <FileProtectOutlined />
+                                    <span>Xin phép</span>
+                                    <Badge count={activeTab === 'permissions' ? sortedPermissions.length : 0} size="small" />
+                                </Space>
+                            ),
+                            children: (
+                                <>
+                                    <FilterBar />
+                                    <Table
+                                        dataSource={sortedPermissions}
+                                        columns={permissionColumns}
+                                        rowKey="id"
+                                        loading={permissionsLoading}
+                                        pagination={{ pageSize: 10 }}
+                                        onRow={(record) => ({
+                                            onClick: () => setSelectedPermission(record),
+                                            className: 'cursor-pointer hover:bg-gray-50'
+                                        })}
+                                    />
+                                </>
+                            )
+                        }
+                    ]}
+                />
             </Card>
 
             {/* Detail Modals */}

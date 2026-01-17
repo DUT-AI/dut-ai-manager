@@ -31,7 +31,7 @@ class HomeworkSubmission(TimestampMixin, table=True):
 
     link: str = Field(default="", max_length=500)
     status: HomeworkStatus = Field(
-        default=HomeworkStatus.NOT_SUBMITTED, sa_type=sqlmodel.String
+        default=HomeworkStatus.NOT_SUBMITTED, sa_type=sqlmodel.String, index=True
     )
     is_late: bool = Field(default=False)
 

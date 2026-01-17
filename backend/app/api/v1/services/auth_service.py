@@ -49,13 +49,23 @@ class AuthService:
 
         return user
 
-    def create_tokens(self, user_id: int) -> Tuple[str, str]:
-        """Create access and refresh tokens for user"""
+    def create_tokens(self, user: User) -> Tuple[str, str]:
+        """Create access and refresh tokens for user with embedded user info"""
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+
+        # Build extra claims for JWT
+        extra_claims = {
+            "name": user.name,
+            "role": user.role.name.value if user.role else None,
+            "permissions": list(user.permissions) if user.role else [],
+        }
+
         access_token = create_access_token(
-            subject=user_id, expires_delta=access_token_expires
+            subject=user.id,
+            expires_delta=access_token_expires,
+            extra_claims=extra_claims,
         )
-        refresh_token = create_refresh_token(subject=user_id)
+        refresh_token = create_refresh_token(subject=user.id)
         return access_token, refresh_token
 
     def refresh_tokens(self, refresh_token_str: str) -> Optional[Tuple[str, str]]:
@@ -80,7 +90,7 @@ class AuthService:
         if not user:
             raise BadRequestException("User not found")
 
-        tokens = self.create_tokens(user.id)
+        tokens = self.create_tokens(user)
         return tokens
 
     def get_user_from_token(self, token: str) -> Optional[User]:

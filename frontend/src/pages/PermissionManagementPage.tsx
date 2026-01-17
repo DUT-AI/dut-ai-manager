@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
     Table,
     Button,
@@ -28,7 +28,12 @@ import {
     ClockCircleOutlined,
     InfoCircleOutlined
 } from '@ant-design/icons';
-import { permissionService } from '@/services/api/permission.service';
+import {
+    usePermissionRequests,
+    useCreatePermissionRequest,
+    useUpdatePermissionRequest,
+    useDeletePermissionRequest
+} from '@/hooks';
 import { useAuth } from '@/context/AuthContext';
 import { PermissionRequestPermission } from '@/types/rbac.types';
 import type { PermissionRequestResponse, PermissionCreate } from '@/types/activity.types';
@@ -40,8 +45,12 @@ const { TextArea } = Input;
 
 const PermissionManagementPage = () => {
     const { hasPermission } = useAuth();
-    const [permissions, setPermissions] = useState<PermissionRequestResponse[]>([]);
-    const [loading, setLoading] = useState(false);
+
+    // TanStack Query hooks
+    const { data: permissions = [], isLoading } = usePermissionRequests();
+    const createPermission = useCreatePermissionRequest();
+    const updatePermission = useUpdatePermissionRequest();
+    const deletePermission = useDeletePermissionRequest();
 
     // Modal Create/Edit
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -56,22 +65,6 @@ const PermissionManagementPage = () => {
     const canUpdate = hasPermission(PermissionRequestPermission.UPDATE);
     const canDelete = hasPermission(PermissionRequestPermission.DELETE);
 
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            const permRes = await permissionService.getPermissions();
-            if (permRes.is_success) setPermissions(permRes.data || []);
-        } catch (error) {
-            message.error('Failed to fetch data');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchData();
-    }, []);
-
     const handleCreateOrUpdate = async (values: any) => {
         const formattedValues: PermissionCreate = {
             ...values,
@@ -82,40 +75,26 @@ const PermissionManagementPage = () => {
 
         try {
             if (editingItem) {
-                const response = await permissionService.updatePermission(editingItem.id, formattedValues);
-                if (response.is_success) {
-                    message.success('Permission request updated successfully');
-                } else {
-                    message.error(response.message || 'Update failed');
-                }
+                await updatePermission.mutateAsync({ id: editingItem.id, data: formattedValues });
+                message.success('Permission request updated successfully');
             } else {
-                const response = await permissionService.createPermission(formattedValues);
-                if (response.is_success) {
-                    message.success('Permission request created successfully');
-                } else {
-                    message.error(response.message || 'Create failed');
-                }
+                await createPermission.mutateAsync(formattedValues);
+                message.success('Permission request created successfully');
             }
             setIsModalOpen(false);
             form.resetFields();
-            fetchData();
-        } catch (error) {
-            message.error('Operation failed');
+        } catch (error: any) {
+            message.error(error?.response?.data?.message || 'Operation failed');
         }
     };
 
     const handleDelete = async (id: number) => {
         try {
-            const response = await permissionService.deletePermission(id);
-            if (response.is_success) {
-                message.success('Permission request deleted successfully');
-                fetchData();
-                setIsDetailOpen(false); // Close detail if deleted from detail view
-            } else {
-                message.error(response.message || 'Delete failed');
-            }
-        } catch (error) {
-            message.error('Delete failed');
+            await deletePermission.mutateAsync(id);
+            message.success('Permission request deleted successfully');
+            setIsDetailOpen(false);
+        } catch (error: any) {
+            message.error(error?.response?.data?.message || 'Delete failed');
         }
     };
 
@@ -239,7 +218,7 @@ const PermissionManagementPage = () => {
                     columns={columns}
                     dataSource={permissions}
                     rowKey="id"
-                    loading={loading}
+                    loading={isLoading}
                     className="border border-gray-100 rounded-lg custom-table cursor-pointer"
                     pagination={{ pageSize: 10 }}
                     onRow={(record) => ({
@@ -259,6 +238,7 @@ const PermissionManagementPage = () => {
                 onCancel={() => setIsModalOpen(false)}
                 onOk={() => form.submit()}
                 centered
+                confirmLoading={createPermission.isPending || updatePermission.isPending}
                 destroyOnHidden
                 okText={editingItem ? 'Lưu thay đổi' : 'Gửi đơn'}
                 cancelText="Hủy"

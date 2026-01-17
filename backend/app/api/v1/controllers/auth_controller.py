@@ -25,7 +25,7 @@ async def login(
     user = service_factory.auth.authenticate(request.email, request.password)
 
     # Create tokens
-    access_token, rf_token = service_factory.auth.create_tokens(user.id)
+    access_token, rf_token = service_factory.auth.create_tokens(user)
 
     # Set cookies
     response.set_cookie(
@@ -95,9 +95,19 @@ async def logout(response: Response):
 
 @router.get("/me", response_model=ApiResponse[UserResponse])
 async def get_me(current_user: CurrentUser):
-    """Get current user info."""
+    """Get current user info using JWT claims."""
+    # Use JWT claims to avoid lazy loading DB queries
     return ApiResponse.success(
-        data=UserResponse.model_validate(current_user),
+        data=UserResponse(
+            id=current_user.id,
+            name=getattr(current_user, "_jwt_name", current_user.name),
+            email=current_user.email,
+            phone_number=current_user.phone_number,
+            status=current_user.status.value if current_user.status else "active",
+            role_id=current_user.role_id,
+            role_name=getattr(current_user, "_jwt_role", None),
+            permissions=list(getattr(current_user, "_jwt_permissions", [])),
+        ),
     )
 
 

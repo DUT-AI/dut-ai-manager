@@ -15,10 +15,14 @@ class HomeworkSubmissionRepository(BaseRepository[HomeworkSubmission]):
     def get_by_homework_and_user(
         self, homework_id: int, user_id: int
     ) -> Optional[HomeworkSubmission]:
-        """Get submission for a homework by a specific user (owner)"""
-        statement = select(HomeworkSubmission).where(
-            HomeworkSubmission.homework_id == homework_id,
-            HomeworkSubmission.owner_id == user_id,
+        """Get submission for a homework by a specific user (owner) with owner eagerly loaded"""
+        statement = (
+            select(HomeworkSubmission)
+            .where(
+                HomeworkSubmission.homework_id == homework_id,
+                HomeworkSubmission.owner_id == user_id,
+            )
+            .options(joinedload(HomeworkSubmission.owner))
         )
         return self.session.exec(statement).first()
 

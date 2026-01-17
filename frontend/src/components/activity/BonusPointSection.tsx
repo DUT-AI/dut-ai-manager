@@ -85,7 +85,7 @@ export const BonusPointSection = ({ data, onEdit, onRefresh }: Props) => {
                                     </Popconfirm>
                                 </div>
                             </div>
-                            <Text className="block text-sm text-gray-600 mb-1">{item.user_name || `User #${item.user_id}`}</Text>
+                            <Text className="block text-sm text-gray-600 mb-1">{item.user_name || 'Unknown'}</Text>
                             <Text className="block text-sm text-gray-700 line-clamp-2">{item.reason}</Text>
                             <div className="mt-2 pt-2 border-t border-green-100 flex justify-between items-center text-[10px] text-gray-400">
                                 <span>Tạo bởi: {item.creator_name || 'System'}</span>
@@ -112,7 +112,7 @@ export const BonusPointSection = ({ data, onEdit, onRefresh }: Props) => {
                     <div className="flex flex-col gap-4">
                         <Descriptions column={1} size="small" bordered>
                             <Descriptions.Item label="Thành viên">
-                                <Text strong>{detailItem.user_name || `User #${detailItem.user_id}`}</Text>
+                                <Text strong>{detailItem.user_name || 'Unknown'}</Text>
                             </Descriptions.Item>
                             <Descriptions.Item label="Điểm số">
                                 <Text strong className="text-green-600">+{detailItem.points}</Text>

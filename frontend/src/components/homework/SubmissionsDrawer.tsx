@@ -69,7 +69,7 @@ export const SubmissionsDrawer = ({ open, homework, onClose }: Props) => {
             title: 'Học viên',
             key: 'user',
             render: (record: HomeworkSubmission) => (
-                <Text strong>{record.user_name || `Member #${record.created_by || record.user_id}`}</Text>
+                <Text strong>{record.user_name || 'Unknown'}</Text>
             )
         },
         {

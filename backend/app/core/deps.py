@@ -5,13 +5,12 @@ from app.core.context import set_current_user_id
 from app.core.database import get_session
 from app.core.repository_factory import RepositoryFactory
 from app.core.service_factory import ServiceFactory
-from app.models import Role, RolePermission, RoleType, User
+from app.models import RoleType, User
 from app.schemas.response import BadRequestException
 from app.utils.password import decode_token
 from fastapi import Depends, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy.orm import selectinload
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 security = HTTPBearer(auto_error=False)
 
@@ -40,7 +39,7 @@ def get_current_user(
     token: Annotated[str, Depends(get_token_from_cookie_or_header)],
     session: Annotated[Session, Depends(get_session)],
 ) -> User:
-    """Get current user from token"""
+    """Get current user from token. Uses JWT claims for role/permissions to avoid DB queries."""
     payload = decode_token(token)
 
     if not payload:
@@ -56,19 +55,17 @@ def get_current_user(
     if not user_id:
         raise BadRequestException("Invalid token payload", status.HTTP_401_UNAUTHORIZED)
 
-    statement = (
-        select(User)
-        .where(User.id == int(user_id))
-        .options(
-            selectinload(User.role)
-            .selectinload(Role.role_permissions)
-            .selectinload(RolePermission.permission)
-        )
-    )
-    user = session.exec(statement).first()
+    # Get basic user info from DB (minimal query)
+    user = session.get(User, int(user_id))
 
     if not user:
         raise BadRequestException("User not found", status.HTTP_401_UNAUTHORIZED)
+
+    # Attach JWT claims to user for permission checking (avoid DB queries)
+    # These are cached from login time
+    user._jwt_role = payload.get("role")
+    user._jwt_permissions = set(payload.get("permissions", []))
+    user._jwt_name = payload.get("name")
 
     # Set current user ID in context for audit fields
     set_current_user_id(user.id)
@@ -87,24 +84,22 @@ class PermissionChecker:
         )
 
     def __call__(self, current_user: CurrentUser) -> User:
-        if not current_user.role:
+        # Use JWT claims for role/permissions (no DB query needed)
+        jwt_role = getattr(current_user, "_jwt_role", None)
+        jwt_permissions = getattr(current_user, "_jwt_permissions", set())
+
+        if not jwt_role:
             raise BadRequestException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 message="User has no role assigned",
             )
 
         # Check if user is admin (admin has all permissions)
-        if current_user.role.name == RoleType.ADMIN:
+        if jwt_role == RoleType.ADMIN.value:
             return current_user
 
-        # Check specific permission
-        user_permissions = {
-            rp.permission.name
-            for rp in current_user.role.role_permissions
-            if rp.permission
-        }
-
-        if self.permission not in user_permissions:
+        # Check specific permission using JWT claims
+        if self.permission not in jwt_permissions:
             raise BadRequestException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 message=f"Missing required permission: {self.permission}",
@@ -137,7 +132,8 @@ def hasTeamLeaderAccess(target_user_id_param: str = "user_id"):
     async def dependency(
         request: Request, current_user: CurrentUser, service_factory: ServiceFactoryDI
     ):
-        if current_user.role.name != RoleType.LEADER:
+        jwt_role = getattr(current_user, "_jwt_role", None)
+        if jwt_role != RoleType.LEADER.value:
             return  # Admin/other roles bypass
 
         # Try to get from query params first, then from body
@@ -160,7 +156,8 @@ def hasTeamLeaderAccess(target_user_id_param: str = "user_id"):
 
 def onlyEditOrDeleteYourself(target_user_id_param: str = "user_id"):
     async def dependency(request: Request, current_user: CurrentUser):
-        if current_user.role.name != RoleType.LEADER:
+        jwt_role = getattr(current_user, "_jwt_role", None)
+        if jwt_role != RoleType.LEADER.value:
             return  # Admin/other roles bypass
 
         # Try to get from query params first, then from body

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import {
     Table,
     Button,
@@ -12,7 +12,9 @@ import {
     Popconfirm,
     Typography,
     Select,
-    Badge
+    Badge,
+    Row,
+    Col
 } from 'antd';
 import {
     PlusOutlined,
@@ -23,14 +25,14 @@ import {
     MailOutlined,
     PhoneOutlined,
     CheckCircleOutlined,
-    StopOutlined
+    StopOutlined,
+    SearchOutlined,
+    FilterOutlined
 } from '@ant-design/icons';
-import { userService } from '../services/api/user.service';
-import { rbacService } from '../services/api/rbac.service';
+import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, useRoles } from '@/hooks';
 import { useAuth } from '../context/AuthContext';
 import { UserPermission } from '../types/rbac.types';
 import type { UserResponse } from '../types/user.types';
-import type { RoleResponse } from '../types/rbac.types';
 
 import { useNavigate } from 'react-router-dom';
 
@@ -40,73 +42,65 @@ const { Option } = Select;
 const UserManagementPage = () => {
     const navigate = useNavigate();
     const { hasPermission } = useAuth();
-    const [users, setUsers] = useState<UserResponse[]>([]);
-    const [roles, setRoles] = useState<RoleResponse[]>([]);
-    const [loading, setLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<UserResponse | null>(null);
     const [form] = Form.useForm();
+
+    // Search & Filter states
+    const [searchText, setSearchText] = useState('');
+    const [filterRole, setFilterRole] = useState<string | undefined>(undefined);
+    const [filterStatus, setFilterStatus] = useState<string | undefined>(undefined);
+
+    // TanStack Query hooks
+    const { data: users = [], isLoading } = useUsers();
+    const { data: roles = [] } = useRoles();
+    const createUser = useCreateUser();
+    const updateUser = useUpdateUser();
+    const deleteUser = useDeleteUser();
+
+    // Filtered users
+    const filteredUsers = useMemo(() => {
+        return users.filter(user => {
+            // Search filter (name, email, phone)
+            const matchSearch = searchText === '' ||
+                user.name?.toLowerCase().includes(searchText.toLowerCase()) ||
+                user.email?.toLowerCase().includes(searchText.toLowerCase()) ||
+                user.phone_number?.toLowerCase().includes(searchText.toLowerCase());
+
+            // Role filter
+            const matchRole = !filterRole || user.role_name === filterRole;
+
+            // Status filter
+            const matchStatus = !filterStatus || user.status === filterStatus;
+
+            return matchSearch && matchRole && matchStatus;
+        });
+    }, [users, searchText, filterRole, filterStatus]);
 
     const canCreate = hasPermission(UserPermission.CREATE);
     const canUpdate = hasPermission(UserPermission.UPDATE);
     const canDelete = hasPermission(UserPermission.DELETE);
 
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            const [usersRes, rolesRes] = await Promise.all([
-                userService.getUsers(),
-                rbacService.getRoles()
-            ]);
-            if (usersRes.is_success) setUsers(usersRes.data || []);
-            if (rolesRes.is_success) setRoles(rolesRes.data || []);
-        } catch (error) {
-            message.error('Failed to fetch data');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchData();
-    }, []);
-
     const handleCreateOrUpdate = async (values: any) => {
         try {
             if (editingUser) {
-                const response = await userService.updateUser(editingUser.id, values);
-                if (response.is_success) {
-                    message.success('User updated successfully');
-                } else {
-                    message.error(response.message || 'Operation failed');
-                    return;
-                }
+                await updateUser.mutateAsync({ id: editingUser.id, data: values });
+                message.success('User updated successfully');
             } else {
-                const response = await userService.createUser(values);
-                if (response.is_success) {
-                    message.success('User created successfully');
-                } else {
-                    message.error(response.message || 'Operation failed');
-                    return;
-                }
+                await createUser.mutateAsync(values);
+                message.success('User created successfully');
             }
             setIsModalOpen(false);
             form.resetFields();
-            fetchData();
         } catch (error: any) {
-            message.error(error?.message || 'Operation failed');
+            message.error(error?.response?.data?.message || 'Operation failed');
         }
     };
 
     const handleDelete = async (id: number) => {
         try {
-            const response = await userService.deleteUser(id);
-            if (response.is_success) {
-                message.success('User deleted successfully');
-                fetchData();
-            } else {
-                message.error(response.message || 'Delete failed');
-            }
+            await deleteUser.mutateAsync(id);
+            message.success('User deleted successfully');
         } catch (error) {
             message.error('Delete failed');
         }
@@ -123,7 +117,6 @@ const UserManagementPage = () => {
                     </div>
                     <div>
                         <Text strong className="block">{record.name}</Text>
-                        <Text type="secondary" className="text-xs">ID: #{record.id}</Text>
                     </div>
                 </Space>
             ),
@@ -227,6 +220,62 @@ const UserManagementPage = () => {
                     )}
                 </div>
 
+                {/* Search & Filter Bar */}
+                <Row gutter={16} className="mb-4">
+                    <Col xs={24} sm={12} md={8}>
+                        <Input
+                            placeholder="Tìm kiếm theo tên, email, SĐT..."
+                            prefix={<SearchOutlined className="text-gray-400" />}
+                            value={searchText}
+                            onChange={(e) => setSearchText(e.target.value)}
+                            allowClear
+                            className="w-full"
+                        />
+                    </Col>
+                    <Col xs={12} sm={6} md={4}>
+                        <Select
+                            placeholder="Vai trò"
+                            value={filterRole}
+                            onChange={setFilterRole}
+                            allowClear
+                            className="w-full"
+                            suffixIcon={<FilterOutlined />}
+                        >
+                            {roles.map(role => (
+                                <Option key={role.id} value={role.name}>
+                                    {role.name.toUpperCase()}
+                                </Option>
+                            ))}
+                        </Select>
+                    </Col>
+                    <Col xs={12} sm={6} md={4}>
+                        <Select
+                            placeholder="Trạng thái"
+                            value={filterStatus}
+                            onChange={setFilterStatus}
+                            allowClear
+                            className="w-full"
+                            suffixIcon={<FilterOutlined />}
+                        >
+                            <Option value="active">Active</Option>
+                            <Option value="inactive">Inactive</Option>
+                        </Select>
+                    </Col>
+                    {(searchText || filterRole || filterStatus) && (
+                        <Col>
+                            <Button
+                                onClick={() => {
+                                    setSearchText('');
+                                    setFilterRole(undefined);
+                                    setFilterStatus(undefined);
+                                }}
+                            >
+                                Xóa bộ lọc
+                            </Button>
+                        </Col>
+                    )}
+                </Row>
+
                 {!canUpdate && (
                     <div className="mb-4 bg-yellow-50 p-4 rounded-lg border border-yellow-100 flex items-center">
                         <LockOutlined className="text-yellow-600 mr-3 text-lg" />
@@ -238,9 +287,9 @@ const UserManagementPage = () => {
 
                 <Table
                     columns={columns}
-                    dataSource={users}
+                    dataSource={filteredUsers}
                     rowKey="id"
-                    loading={loading}
+                    loading={isLoading}
                     className="border border-gray-100 rounded-lg custom-table"
                     pagination={{ pageSize: 10 }}
                 />
@@ -259,6 +308,7 @@ const UserManagementPage = () => {
                 width={600}
                 centered
                 okText={editingUser ? 'Save Changes' : 'Create User'}
+                confirmLoading={createUser.isPending || updateUser.isPending}
                 destroyOnHidden
             >
                 <Form form={form} layout="vertical" onFinish={handleCreateOrUpdate} className="mt-6">

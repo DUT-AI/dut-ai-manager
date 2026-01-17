@@ -114,7 +114,11 @@ class HomeworkSubmissionService:
 
         # Upload file to MinIO
         # Format: homework_title/username_filename_timestamp.ext
-        user = self.user_service.get_by_id(user_id)
+        # Use owner from existing submission if available to avoid extra query
+        if existing_submission and existing_submission.owner:
+            user = existing_submission.owner
+        else:
+            user = self.user_service.get_by_id(user_id)
         user_name = user.name.replace(" ", "_") if user else f"user_{user_id}"
         homework_title = homework.title.replace(" ", "_").replace("/", "_")
         timestamp = now_utc7.strftime("%Y%m%d_%H%M%S")
@@ -197,7 +201,7 @@ class HomeworkSubmissionService:
                     for tm in current_user.team_members
                     for member in tm.team.team_members
                 )
-                if submission.created_by not in team_member_ids:
+                if submission.owner_id not in team_member_ids:
                     raise BadRequestException(
                         "Bạn chỉ có thể update submission của thành viên cùng team"
                     )

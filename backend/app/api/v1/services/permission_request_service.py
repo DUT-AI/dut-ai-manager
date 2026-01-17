@@ -37,9 +37,11 @@ class PermissionRequestService:
         return self.repository.get_by_month(month=month, year=year)
 
     def get_by_user(
-        self, month: int | None = None, year: int | None = None
+        self, user_id: int, month: int | None = None, year: int | None = None
     ) -> List[PermissionRequest]:
-        return self.repository.get_by_month(month=month, year=year)
+        return self.repository.get_by_created_by(
+            user_id=user_id, month=month, year=year
+        )
 
     def get_by_date(self, target_date) -> List[PermissionRequest]:
         return self.repository.get_by_date(target_date)

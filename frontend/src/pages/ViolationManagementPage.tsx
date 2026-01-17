@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
     Table,
     Button,
@@ -25,12 +25,10 @@ import {
     UserOutlined,
     InfoCircleOutlined
 } from '@ant-design/icons';
-import { violationService } from '@/services/api/violation.service';
-import { userService } from '@/services/api/user.service';
+import { useViolations, useCreateViolation, useUpdateViolation, useDeleteViolation, useUsers } from '@/hooks';
 import { useAuth } from '@/context/AuthContext';
 import { ViolationPermission } from '@/types/rbac.types';
 import type { ViolationResponse, ViolationCreate } from '@/types/activity.types';
-import type { UserResponse } from '@/types/user.types';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -39,9 +37,13 @@ const { TextArea } = Input;
 
 const ViolationManagementPage = () => {
     const { hasPermission } = useAuth();
-    const [violations, setViolations] = useState<ViolationResponse[]>([]);
-    const [users, setUsers] = useState<UserResponse[]>([]);
-    const [loading, setLoading] = useState(false);
+
+    // TanStack Query hooks
+    const { data: violations = [], isLoading } = useViolations();
+    const { data: users = [] } = useUsers();
+    const createViolation = useCreateViolation();
+    const updateViolation = useUpdateViolation();
+    const deleteViolation = useDeleteViolation();
 
     // Modal Create/Edit
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -56,26 +58,6 @@ const ViolationManagementPage = () => {
     const canUpdate = hasPermission(ViolationPermission.UPDATE);
     const canDelete = hasPermission(ViolationPermission.DELETE);
 
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            const [violationRes, usersRes] = await Promise.all([
-                violationService.getViolations(),
-                userService.getUsers()
-            ]);
-            if (violationRes.is_success) setViolations(violationRes.data || []);
-            if (usersRes.is_success) setUsers(usersRes.data || []);
-        } catch (error) {
-            message.error('Failed to fetch data');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchData();
-    }, []);
-
     const handleCreateOrUpdate = async (values: any) => {
         const formattedValues: ViolationCreate = {
             ...values,
@@ -84,40 +66,26 @@ const ViolationManagementPage = () => {
 
         try {
             if (editingItem) {
-                const response = await violationService.updateViolation(editingItem.id, formattedValues);
-                if (response.is_success) {
-                    message.success('Violation updated successfully');
-                } else {
-                    message.error(response.message || 'Update failed');
-                }
+                await updateViolation.mutateAsync({ id: editingItem.id, data: formattedValues });
+                message.success('Violation updated successfully');
             } else {
-                const response = await violationService.createViolation(formattedValues);
-                if (response.is_success) {
-                    message.success('Violation recorded successfully');
-                } else {
-                    message.error(response.message || 'Create failed');
-                }
+                await createViolation.mutateAsync(formattedValues);
+                message.success('Violation recorded successfully');
             }
             setIsModalOpen(false);
             form.resetFields();
-            fetchData();
-        } catch (error) {
-            message.error('Operation failed');
+        } catch (error: any) {
+            message.error(error?.response?.data?.message || 'Operation failed');
         }
     };
 
     const handleDelete = async (id: number) => {
         try {
-            const response = await violationService.deleteViolation(id);
-            if (response.is_success) {
-                message.success('Violation deleted successfully');
-                fetchData();
-                setIsDetailOpen(false);
-            } else {
-                message.error(response.message || 'Delete failed');
-            }
-        } catch (error) {
-            message.error('Delete failed');
+            await deleteViolation.mutateAsync(id);
+            message.success('Violation deleted successfully');
+            setIsDetailOpen(false);
+        } catch (error: any) {
+            message.error(error?.response?.data?.message || 'Delete failed');
         }
     };
 
@@ -136,7 +104,6 @@ const ViolationManagementPage = () => {
                     <AvatarIcon />
                     <div>
                         <Text strong className="block">{record.user_name || 'Unknown'}</Text>
-                        <Text type="secondary" className="text-xs">User ID: #{record.user_id}</Text>
                     </div>
                 </Space>
             ),
@@ -227,7 +194,7 @@ const ViolationManagementPage = () => {
                     columns={columns}
                     dataSource={violations}
                     rowKey="id"
-                    loading={loading}
+                    loading={isLoading}
                     className="border border-gray-100 rounded-lg custom-table cursor-pointer"
                     pagination={{ pageSize: 10 }}
                     onRow={(record) => ({
@@ -247,6 +214,7 @@ const ViolationManagementPage = () => {
                 onCancel={() => setIsModalOpen(false)}
                 onOk={() => form.submit()}
                 centered
+                confirmLoading={createViolation.isPending || updateViolation.isPending}
                 destroyOnHidden
                 okText={editingItem ? 'Lưu thay đổi' : 'Ghi nhận'}
                 cancelText="Hủy"
@@ -299,7 +267,6 @@ const ViolationManagementPage = () => {
                                     <Space>
                                         <UserOutlined />
                                         <Text strong>{detailItem.user_name || 'Unknown'}</Text>
-                                        <Text type="secondary">(#{detailItem.user_id})</Text>
                                     </Space>
                                 </Descriptions.Item>
                                 <Descriptions.Item label="Thời gian">

@@ -11,9 +11,11 @@ ALGORITHM = "HS256"
 
 
 def create_access_token(
-        subject: str | Any, expires_delta: timedelta | None = None
+    subject: str | Any,
+    expires_delta: timedelta | None = None,
+    extra_claims: dict | None = None,
 ) -> str:
-    """Create access token"""
+    """Create access token with optional extra claims (name, role, permissions)"""
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
@@ -21,12 +23,17 @@ def create_access_token(
             minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
     to_encode = {"exp": expire, "sub": str(subject), "type": "access"}
+
+    # Add extra claims (name, role, permissions)
+    if extra_claims:
+        to_encode.update(extra_claims)
+
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
 
 def create_refresh_token(
-        subject: str | Any, expires_delta: timedelta | None = None
+    subject: str | Any, expires_delta: timedelta | None = None
 ) -> str:
     """Create refresh token"""
     if expires_delta:

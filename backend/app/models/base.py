@@ -9,7 +9,7 @@ from sqlmodel import Field, SQLModel
 class TimestampMixin(SQLModel):
     """Mixin for created_at, updated_at timestamps and creator tracking."""
 
-    created_at: datetime = Field(default_factory=get_current_utc7_time)
+    created_at: datetime = Field(default_factory=get_current_utc7_time, index=True)
     updated_at: datetime = Field(
         default_factory=get_current_utc7_time,
         sa_column_kwargs={"onupdate": get_current_utc7_time},

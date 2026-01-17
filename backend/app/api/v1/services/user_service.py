@@ -12,6 +12,10 @@ class UserService:
         self.user_repo = user_repo
         self.auth_service = auth_service
 
+    def get_by_id(self, user_id: int) -> Optional[User]:
+        """Get user by ID with role eagerly loaded"""
+        return self.user_repo.get_by_id_with_role(user_id)
+
     def get_all_users(self) -> List[User]:
         return self.user_repo.get_all()
 

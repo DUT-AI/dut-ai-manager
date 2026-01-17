@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Optional
 
 from app.models.base import TimestampMixin
 from sqlmodel import Field, Relationship
+from sqlalchemy import Index
 
 if TYPE_CHECKING:
     from app.models.user import User
@@ -22,11 +23,12 @@ class PermissionRequest(TimestampMixin, table=True):
     """Permission Request model"""
 
     __tablename__ = "permission_requests"
+    __table_args__ = (Index("ix_permission_requests_created_by", "created_by"),)
 
     id: Optional[int] = Field(default=None, primary_key=True)
     category: RequestCategory = Field(index=True)
     note: str = Field(max_length=500)
-    date: dt_date = Field()
+    date: dt_date = Field(index=True)
     start_time: dt_time = Field()
     end_time: dt_time = Field()
 
