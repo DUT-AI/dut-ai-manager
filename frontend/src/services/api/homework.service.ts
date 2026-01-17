@@ -5,7 +5,6 @@ import type {
     Homework, 
     HomeworkCreate, 
     HomeworkSubmission, 
-    HomeworkSubmissionCreate, 
     HomeworkUpdate 
 } from '@/types/homework.types';
 
@@ -49,9 +48,19 @@ export const homeworkService = {
     },
 
     // Submissions
-    async submit(homeworkId: number, data: HomeworkSubmissionCreate) {
-         const response = await axiosInstance.post<ApiResponse<HomeworkSubmission>>(`/${this.submissionUrl}/${homeworkId}/submit`, data);
-         return response.data.data;
+    async submit(homeworkId: number, file: File) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const response = await axiosInstance.post<ApiResponse<HomeworkSubmission>>(
+            `/${this.submissionUrl}/${homeworkId}/submit`,
+            formData,
+            {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            }
+        );
+        return response.data.data;
     },
 
     async getSubmissions(homeworkId: number) {

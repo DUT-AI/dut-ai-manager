@@ -78,8 +78,13 @@ class ServiceFactory:
     @property
     def homework_submission(self) -> HomeworkSubmissionService:
         if "homework_submission" not in self._cache:
+            from app.core.minio_service import get_minio_service
+
             self._cache["homework_submission"] = HomeworkSubmissionService(
-                self._repo, violation_service=self.violation, user_service=self.user
+                self._repo,
+                violation_service=self.violation,
+                user_service=self.user,
+                minio_service=get_minio_service(),
             )
         return self._cache["homework_submission"]
 

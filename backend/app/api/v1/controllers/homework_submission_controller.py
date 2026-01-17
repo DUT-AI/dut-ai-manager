@@ -1,16 +1,14 @@
-from app.core.deps import hasTeamLeaderAccess
 from app.core.deps import CurrentUser
 from app.core.permissions import HomeworkSubmissionPermission
 from fastapi.exceptions import HTTPException
 from app.models.homework_submission import HomeworkStatus
 from typing import List
 from app.core.deps import ServiceFactoryDI
-from app.core.permissions import HomeworkPermission
 from app.core.deps import hasPermission
-from app.schemas.homework import HomeworkSubmissionCreate
 from app.schemas.homework import HomeworkSubmissionResponse
-from app.schemas.response import ApiResponse
+from app.schemas.response import ApiResponse, BadRequestException
 from fastapi.routing import APIRouter
+from fastapi import UploadFile, File
 
 router = APIRouter(prefix="/homework-submissions", tags=["Homework Submissions"])
 
@@ -22,10 +20,13 @@ router = APIRouter(prefix="/homework-submissions", tags=["Homework Submissions"]
 )
 async def submit_homework(
     homework_id: int,
-    data: HomeworkSubmissionCreate,
     service_factory: ServiceFactoryDI,
+    file: UploadFile = File(
+        ..., description="File nén bài tập (.zip, .rar, .7z, .tar.gz)"
+    ),
 ):
-    result = service_factory.homework_submission.submit(homework_id, data)
+    """Submit homework by uploading a compressed file."""
+    result = await service_factory.homework_submission.submit(homework_id, file)
     return ApiResponse.success(data=result)
 
 

@@ -1,11 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Modal, Form, Input, Card, Statistic, Typography, message } from 'antd';
-import { LinkOutlined } from '@ant-design/icons';
+import { Modal, Card, Statistic, Typography, message, Upload } from 'antd';
+import { FileZipOutlined, DownloadOutlined } from '@ant-design/icons';
+import type { UploadFile, UploadProps } from 'antd';
 import dayjs from 'dayjs';
 import type { Homework, HomeworkSubmission } from '@/types/homework.types';
 import { homeworkService } from '@/services/api/homework.service';
 
-const { Text } = Typography;
+const { Text, Link } = Typography;
+
+// Allowed file extensions (10MB max)
+const ALLOWED_EXTENSIONS = ['.zip', '.rar', '.7z', '.tar.gz', '.gz'];
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 interface Props {
     open: boolean;
@@ -15,42 +20,79 @@ interface Props {
 }
 
 export const SubmitHomeworkModal = ({ open, homework, onSuccess, onCancel }: Props) => {
-    const [form] = Form.useForm();
     const [mySubmission, setMySubmission] = useState<HomeworkSubmission | null>(null);
-    const [loading, setLoading] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [fileList, setFileList] = useState<UploadFile[]>([]);
 
     useEffect(() => {
         if (open && homework) {
-            form.resetFields();
             setMySubmission(null);
+            setFileList([]);
             fetchMySubmission();
         }
     }, [open, homework]);
 
     const fetchMySubmission = async () => {
         if (!homework) return;
-        setLoading(true);
         try {
             const submission = await homeworkService.getMySubmission(homework.id);
             if (submission) {
                 setMySubmission(submission);
-                form.setFieldsValue({ link: submission.link });
             }
         } catch (error: any) {
             // Ignore 404 - user hasn't submitted yet
-        } finally {
-            setLoading(false);
         }
     };
 
-    const handleFinish = async (values: any) => {
+    const validateFile = (file: File): string | null => {
+        const fileName = file.name.toLowerCase();
+        const isValidExtension = ALLOWED_EXTENSIONS.some(ext => fileName.endsWith(ext));
+        if (!isValidExtension) {
+            return `Chỉ chấp nhận file nén: ${ALLOWED_EXTENSIONS.join(', ')}`;
+        }
+        if (file.size > MAX_FILE_SIZE) {
+            return `File quá lớn. Giới hạn tối đa: ${MAX_FILE_SIZE / (1024 * 1024)}MB`;
+        }
+        return null;
+    };
+
+    const handleUploadProps: UploadProps = {
+        beforeUpload: (file) => {
+            const error = validateFile(file);
+            if (error) {
+                message.error(error);
+                return Upload.LIST_IGNORE;
+            }
+            setFileList([file as unknown as UploadFile]);
+            return false; // Prevent auto upload
+        },
+        onRemove: () => {
+            setFileList([]);
+        },
+        fileList,
+        maxCount: 1,
+        accept: ALLOWED_EXTENSIONS.join(','),
+    };
+
+    const handleSubmit = async () => {
         if (!homework) return;
+
+        if (fileList.length === 0) {
+            message.warning('Vui lòng chọn file để nộp bài');
+            return;
+        }
+
+        const file = fileList[0] as unknown as File;
+
+        setSubmitting(true);
         try {
-            await homeworkService.submit(homework.id, { link: values.link });
+            await homeworkService.submit(homework.id, file);
             message.success('Nộp bài thành công');
             onSuccess();
         } catch (error: any) {
-            message.error(error?.message || 'Nộp bài thất bại');
+            message.error(error?.response?.data?.message || error?.message || 'Nộp bài thất bại');
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -59,10 +101,11 @@ export const SubmitHomeworkModal = ({ open, homework, onSuccess, onCancel }: Pro
             title={`Nộp bài: ${homework?.title}`}
             open={open}
             onCancel={onCancel}
-            onOk={form.submit}
+            onOk={handleSubmit}
             okText="Nộp bài"
-            confirmLoading={loading}
+            confirmLoading={submitting}
             destroyOnClose
+            okButtonProps={{ disabled: fileList.length === 0 }}
         >
             {homework && (
                 <div className="mb-4">
@@ -83,26 +126,41 @@ export const SubmitHomeworkModal = ({ open, homework, onSuccess, onCancel }: Pro
                                 value={mySubmission.status}
                                 valueStyle={{ fontSize: 16, color: '#1890ff' }}
                             />
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                                Cập nhật lần cuối: {dayjs(mySubmission.updated_at).format('DD/MM HH:mm')}
-                            </Text>
+                            <div className="mt-2">
+                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                    Cập nhật lần cuối: {dayjs(mySubmission.updated_at).format('DD/MM HH:mm')}
+                                </Text>
+                                {mySubmission.link && (
+                                    <div className="mt-1">
+                                        <Link href={mySubmission.link} target="_blank">
+                                            <DownloadOutlined /> Tải file đã nộp
+                                        </Link>
+                                    </div>
+                                )}
+                            </div>
                         </Card>
                     )}
                 </div>
             )}
 
-            <Form form={form} layout="vertical" onFinish={handleFinish}>
-                <Form.Item
-                    name="link"
-                    label="Link bài làm (Github, Drive...)"
-                    rules={[
-                        { required: true, message: 'Vui lòng nhập link bài làm' },
-                        { type: 'url', message: 'Link không hợp lệ! Vui lòng nhập đúng định dạng URL (vd: https://...)' }
-                    ]}
-                >
-                    <Input prefix={<LinkOutlined />} placeholder="https://..." />
-                </Form.Item>
-            </Form>
+            <div className="mb-2">
+                <Text strong>File bài làm:</Text>
+                <div className="text-xs text-gray-500 mb-2">
+                    Chấp nhận: {ALLOWED_EXTENSIONS.join(', ')} (tối đa 10MB)
+                </div>
+            </div>
+
+            <Upload.Dragger {...handleUploadProps}>
+                <p className="ant-upload-drag-icon">
+                    <FileZipOutlined style={{ fontSize: 48, color: '#1890ff' }} />
+                </p>
+                <p className="ant-upload-text">
+                    Kéo thả file hoặc click để chọn file
+                </p>
+                <p className="ant-upload-hint">
+                    {mySubmission?.link ? 'Upload file mới sẽ thay thế file cũ' : 'Chỉ hỗ trợ file nén (.zip, .rar, .7z, .tar.gz)'}
+                </p>
+            </Upload.Dragger>
         </Modal>
     );
 };

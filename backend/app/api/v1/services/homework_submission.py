@@ -1,14 +1,16 @@
 from app.api.v1.services.user_service import UserService
 from typing import List, Optional
 
+from fastapi import UploadFile
+
 from app.api.v1.services.violation_service import ViolationService
 from app.core.context import get_current_user_id
+from app.core.minio_service import MinioService
 from app.core.repository_factory import RepositoryFactory
 from app.models import HomeworkSubmission, User
 from app.models.homework_submission import HomeworkStatus
 from app.models.role import Role, RoleType
 from app.schemas.activity import ViolationCreate
-from app.schemas.homework import HomeworkSubmissionCreate
 from app.schemas.response import BadRequestException
 from app.utils.datetime import get_current_utc7_time
 from loguru import logger
@@ -20,10 +22,12 @@ class HomeworkSubmissionService:
         repo_factory: RepositoryFactory,
         violation_service: ViolationService,
         user_service: UserService,
+        minio_service: MinioService,
     ):
         self.repo_factory = repo_factory
         self.violation_service = violation_service
         self.user_service = user_service
+        self.minio_service = minio_service
 
     def get_submission_of_user(
         self,
@@ -69,9 +73,18 @@ class HomeworkSubmissionService:
             case _:
                 return []
 
-    def submit(
-        self, homework_id: int, data: HomeworkSubmissionCreate
-    ) -> HomeworkSubmission:
+    async def submit(self, homework_id: int, file: UploadFile) -> HomeworkSubmission:
+        """Submit homework by uploading a file to MinIO."""
+        # Validate file
+        file_content = await file.read()
+        file_size = len(file_content)
+
+        validation_error = self.minio_service.validate_file(
+            file.filename or "", file_size
+        )
+        if validation_error:
+            raise BadRequestException(validation_error)
+
         # Check if submission exists
         existing_submission = self.get_submission_of_user(homework_id)
 
@@ -99,8 +112,33 @@ class HomeworkSubmissionService:
                 is_system=True,
             )
 
+        # Upload file to MinIO
+        # Format: homework_title/username_filename_timestamp.ext
+        user = self.user_service.get_by_id(user_id)
+        user_name = user.name.replace(" ", "_") if user else f"user_{user_id}"
+        homework_title = homework.title.replace(" ", "_").replace("/", "_")
+        timestamp = now_utc7.strftime("%Y%m%d_%H%M%S")
+
+        # Get filename and extension
+        original_filename = (
+            file.filename.replace(" ", "_") if file.filename else "submission.zip"
+        )
+        if "." in original_filename:
+            name_part, ext_part = original_filename.rsplit(".", 1)
+            safe_filename = f"{name_part}_{timestamp}.{ext_part}"
+        else:
+            safe_filename = f"{original_filename}_{timestamp}"
+
+        object_name = f"{homework_title}/{user_name}_{safe_filename}"
+
+        file_url = self.minio_service.upload_file(
+            file_data=file_content,
+            filename=object_name,
+            content_type=file.content_type or "application/octet-stream",
+        )
+
         if existing_submission:
-            existing_submission.link = str(data.link)
+            existing_submission.link = file_url
             existing_submission.status = HomeworkStatus.SUBMITTED
             existing_submission.is_late = is_late
             existing_submission.updated_at = now_utc7
@@ -112,7 +150,7 @@ class HomeworkSubmissionService:
         submission = HomeworkSubmission(
             homework_id=homework_id,
             owner_id=user_id,
-            link=str(data.link),
+            link=file_url,
             status=HomeworkStatus.SUBMITTED,
             is_late=is_late,
             created_by=system_user.id,

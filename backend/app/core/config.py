@@ -31,6 +31,16 @@ class Settings(BaseSettings):
     FRONTEND_HOST: str
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
 
+    # MinIO Configuration
+    MINIO_ENDPOINT: str = "localhost:9000"
+    MINIO_ACCESS_KEY: str = ""
+    MINIO_SECRET_KEY: str = ""
+    MINIO_BUCKET_NAME: str = "homework-submissions"
+
+    @property
+    def MINIO_SECURE(self) -> bool:
+        return self.ENVIRONMENT == "production"
+
     BACKEND_CORS_ORIGINS: Annotated[list[AnyUrl] | str, BeforeValidator(parse_cors)] = (
         []
     )
