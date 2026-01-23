@@ -63,9 +63,12 @@ def get_current_user(
 
     # Attach JWT claims to user for permission checking (avoid DB queries)
     # These are cached from login time
-    user._jwt_role = payload.get("role")
-    user._jwt_permissions = set(payload.get("permissions", []))
-    user._jwt_name = payload.get("name")
+    if role := payload.get("role"):
+        user._jwt_role = role
+    if permissions := payload.get("permissions"):
+        user._jwt_permissions = set(permissions)
+    if name := payload.get("name"):
+        user._jwt_name = name
 
     # Set current user ID in context for audit fields
     set_current_user_id(user.id)

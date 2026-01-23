@@ -100,7 +100,7 @@ async def get_me(current_user: CurrentUser):
     return ApiResponse.success(
         data=UserResponse(
             id=current_user.id,
-            name=getattr(current_user, "_jwt_name", current_user.name),
+            name=getattr(current_user, "_jwt_name", None) or current_user.name,
             email=current_user.email,
             phone_number=current_user.phone_number,
             status=current_user.status.value if current_user.status else "active",

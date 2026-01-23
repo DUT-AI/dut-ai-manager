@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     def MINIO_SECURE(self) -> bool:
         return self.ENVIRONMENT == "production"
 
+    # Discord Bot Configuration
+    DISCORD_BOT_TOKEN: str = ""
+
     BACKEND_CORS_ORIGINS: Annotated[list[AnyUrl] | str, BeforeValidator(parse_cors)] = (
         []
     )

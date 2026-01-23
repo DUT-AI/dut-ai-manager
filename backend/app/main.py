@@ -1,5 +1,3 @@
-from pprint import pformat
-
 from app.api.v1.router import api_v1_router
 from app.core.config import settings
 from app.core.logging_config import setup_logging
@@ -11,6 +9,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from loguru import logger
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 
 def create_app():
@@ -53,7 +52,17 @@ def create_app():
     async def validation_exception_handler(request, exc):
         logger.error(f"Validation error for {request.method} {request.url.path}")
         logger.error(f"Error details: {exc.errors()}")
-        logger.error(f"Request body: {exc.body}")
+
+        # Try to get body from exception or request
+        body = exc.body
+        if body is None:
+            try:
+                body_bytes = await request.body()
+                body = body_bytes.decode() if body_bytes else None
+            except Exception:
+                body = "<Could not read body>"
+
+        logger.error(f"Request body: {body}")
 
         return JSONResponse(
             status_code=422,
@@ -67,10 +76,17 @@ def create_app():
 
     @_app.exception_handler(BadRequestException)
     async def bad_request_exception_handler(request, exc: BadRequestException):
+        # Try to get body
+        try:
+            body_bytes = await request.body()
+            body = body_bytes.decode() if body_bytes else "None"
+        except Exception:
+            body = "<Could not read body>"
+
         logger.error(
-            f"Exception for {request.method} {request.url.path} with body {pformat(request.body)}"
+            f"Exception for {request.method} {request.url.path} with body {body}"
         )
-        logger.error(f"Error details: {exc}")
+        logger.error(f"Error details: {exc.message}")
 
         return JSONResponse(
             status_code=exc.status_code,
@@ -82,9 +98,26 @@ def create_app():
             },
         )
 
+    @_app.exception_handler(StarletteHTTPException)
+    async def http_exception_handler(request, exc):
+        logger.error(
+            f"HTTP {exc.status_code} error for {request.method} {request.url.path}"
+        )
+        logger.error(f"Error details: {exc.detail}")
+
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "is_success": False,
+                "status_code": exc.status_code,
+                "message": str(exc.detail),
+                "data": None,
+            },
+        )
+
     @_app.exception_handler(Exception)
     async def exception_handler(request, exc):
-        logger.error(f"Exception for {request.method} {request.url.path}")
+        logger.error(f"Unhandled exception for {request.method} {request.url.path}")
         logger.exception(f"Error details: {exc}")
 
         return JSONResponse(
