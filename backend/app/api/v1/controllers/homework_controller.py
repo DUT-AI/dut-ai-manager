@@ -1,14 +1,10 @@
-from typing import Annotated, List
+from typing import List
 
 from app.core.deps import CurrentUser, ServiceFactoryDI, hasPermission
 from app.core.permissions import HomeworkPermission
-from app.models import HomeworkStatus, User
 from app.schemas.homework import (
     HomeworkCreate,
     HomeworkResponse,
-    HomeworkSubmissionCreate,
-    HomeworkSubmissionResponse,
-    HomeworkSubmissionUpdate,
     HomeworkUpdate,
 )
 from app.schemas.response import ApiResponse
@@ -58,7 +54,7 @@ async def create_homework(
     data: HomeworkCreate,
     service_factory: ServiceFactoryDI,
 ):
-    result = service_factory.homework.create(data)
+    result = await service_factory.homework.create(data)
     return ApiResponse.success(data=result)
 
 
@@ -87,7 +83,7 @@ async def update_homework(
     data: HomeworkUpdate,
     service_factory: ServiceFactoryDI,
 ):
-    result = service_factory.homework.update(homework_id, data)
+    result = await service_factory.homework.update(homework_id, data)
     if not result:
         raise HTTPException(status_code=404, detail="Homework not found")
     return ApiResponse.success(data=result)

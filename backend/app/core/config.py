@@ -36,13 +36,11 @@ class Settings(BaseSettings):
     MINIO_ACCESS_KEY: str = ""
     MINIO_SECRET_KEY: str = ""
     MINIO_BUCKET_NAME: str = "homework-submissions"
-
-    @property
-    def MINIO_SECURE(self) -> bool:
-        return self.ENVIRONMENT == "production"
+    MINIO_SECURE: bool = False
 
     # Discord Bot Configuration
     DISCORD_BOT_TOKEN: str = ""
+    DISCORD_PERMISSION_ROOM_ID: str = ""
 
     BACKEND_CORS_ORIGINS: Annotated[list[AnyUrl] | str, BeforeValidator(parse_cors)] = (
         []

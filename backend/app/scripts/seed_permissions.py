@@ -108,6 +108,7 @@ def seed_permissions():
         HomeworkSubmissionPermission,
         PermissionPermission,
         PermissionRequestPermission,
+        MeetingPermission,
     ]
 
     with Session(engine) as session:

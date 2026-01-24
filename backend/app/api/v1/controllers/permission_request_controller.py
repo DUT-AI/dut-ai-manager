@@ -42,7 +42,7 @@ async def create_permission_request(
     data: PermissionRequestCreate,
     service_factory: ServiceFactoryDI,
 ):
-    result = service_factory.permission_request.create(data)
+    result = await service_factory.permission_request.create(data)
     return ApiResponse.success(data=result)
 
 

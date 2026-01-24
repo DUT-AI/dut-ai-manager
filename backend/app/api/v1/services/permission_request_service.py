@@ -1,11 +1,9 @@
-from app.utils.datetime import get_current_utc7_time
 from typing import List, Optional
-
-from loguru import logger
 
 from app.api.v1.repositories.permission_request_repository import (
     PermissionRequestRepository,
 )
+from app.api.v1.services.notification_service import NotificationService
 from app.api.v1.services.violation_service import ViolationService
 from app.core.context import get_current_user_id
 from app.models.permission_request import PermissionRequest, RequestCategory
@@ -14,6 +12,7 @@ from app.schemas.permission_request import (
     PermissionRequestCreate,
     PermissionRequestUpdate,
 )
+from app.utils.datetime import get_current_utc7_time
 
 
 class PermissionRequestService:
@@ -21,9 +20,11 @@ class PermissionRequestService:
         self,
         repository: PermissionRequestRepository,
         violation_service: ViolationService,
+        notification_service: NotificationService,
     ):
         self.repository = repository
         self.violation_service = violation_service
+        self.notification_service = notification_service
 
     def get_all(self, skip: int = 0, limit: int = 100) -> List[PermissionRequest]:
         return self.repository.get_all(skip=skip, limit=limit)
@@ -46,7 +47,7 @@ class PermissionRequestService:
     def get_by_date(self, target_date) -> List[PermissionRequest]:
         return self.repository.get_by_date(target_date)
 
-    def create(self, data: PermissionRequestCreate) -> PermissionRequest:
+    async def create(self, data: PermissionRequestCreate) -> PermissionRequest:
         user_id = get_current_user_id()
 
         # Check if this is ABSENCE or POSTPONE category
@@ -72,7 +73,7 @@ class PermissionRequestService:
                     case _:
                         category_text = "Lỗi không xác định được loại yêu cầu"
 
-                self.violation_service.create(
+                await self.violation_service.create(
                     ViolationCreate(
                         user_id=user_id,
                         reason=f"{category_text.capitalize()} lần {existing_count + 1} trong tháng {month}/{year}",
@@ -82,7 +83,14 @@ class PermissionRequestService:
                 )
 
         request = PermissionRequest(**data.model_dump())
-        return self.repository.create(request)
+        created_request = self.repository.create(request)
+
+        # Send notification
+        await self.notification_service.send_permission_request_notification(
+            created_request
+        )
+
+        return created_request
 
     def update(
         self, request_id: int, data: PermissionRequestUpdate

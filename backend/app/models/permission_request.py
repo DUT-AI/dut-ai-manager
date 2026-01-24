@@ -50,6 +50,10 @@ class PermissionRequest(TimestampMixin, table=True):
         return self.creator.name if self.creator else None
 
     @property
+    def user_avatar(self) -> Optional[str]:
+        return self.creator.avatar_url if self.creator else None
+
+    @property
     def creator_name(self) -> Optional[str]:
         return self.creator.name if self.creator else None
 

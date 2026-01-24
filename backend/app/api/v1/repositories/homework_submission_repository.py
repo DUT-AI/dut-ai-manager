@@ -1,7 +1,8 @@
 from typing import List, Optional
 
 from app.api.v1.repositories.base import BaseRepository
-from app.models import HomeworkSubmission
+from app.models import Homework, HomeworkStatus, HomeworkSubmission
+from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 from sqlmodel import Session, select
 
@@ -59,3 +60,25 @@ class HomeworkSubmissionRepository(BaseRepository[HomeworkSubmission]):
             self.session.commit()
             return True
         return False
+
+    def get_not_submitted_for_deadline_date(
+        self, target_date
+    ) -> List[HomeworkSubmission]:
+        """
+        Get all submissions with status NOT_SUBMITTED where homework.deadline.date = target_date.
+        Used by the scheduled homework checker job.
+        """
+
+        statement = (
+            select(HomeworkSubmission)
+            .join(Homework, HomeworkSubmission.homework_id == Homework.id)
+            .where(
+                HomeworkSubmission.status == HomeworkStatus.NOT_SUBMITTED,
+                func.date(Homework.deadline) == target_date,
+            )
+            .options(
+                joinedload(HomeworkSubmission.owner),
+                joinedload(HomeworkSubmission.homework),
+            )
+        )
+        return list(self.session.exec(statement).unique().all())

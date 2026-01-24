@@ -27,6 +27,9 @@ class MinioService:
             secret_key=settings.MINIO_SECRET_KEY,
             secure=settings.MINIO_SECURE,
         )
+        logger.debug(
+            f"MinIO client initialized with endpoint: {settings.MINIO_ENDPOINT}, bucket: {settings.MINIO_BUCKET_NAME}"
+        )
         self.bucket_name = settings.MINIO_BUCKET_NAME
         self._ensure_bucket_exists()
 
@@ -88,25 +91,23 @@ class MinioService:
 
         Args:
             file_data: File content as bytes
-            filename: Name to save the file as (should include path prefix)
+            filename: Name to save the file as (should include the full path/prefix relative to bucket)
             content_type: MIME type of the file
 
         Returns:
             Public URL of the uploaded file
         """
         try:
-            # Add submissions prefix to the filename
-            object_name = f"{self.SUBMISSIONS_PREFIX}/{filename}"
             data = BytesIO(file_data)
             self.client.put_object(
                 bucket_name=self.bucket_name,
-                object_name=object_name,
+                object_name=filename,
                 data=data,
                 length=len(file_data),
                 content_type=content_type,
             )
-            logger.info(f"Uploaded file to MinIO: {object_name}")
-            return self.get_public_url(object_name)
+            logger.info(f"Uploaded file to MinIO: {filename}")
+            return self.get_public_url(filename)
         except S3Error as e:
             logger.error(f"Failed to upload file to MinIO: {e}")
             raise

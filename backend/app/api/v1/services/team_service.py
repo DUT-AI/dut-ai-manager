@@ -15,7 +15,10 @@ class TeamService:
             if tm.user:
                 members.append(
                     TeamMemberResponse(
-                        user_id=tm.user.id, user_name=tm.user.name, email=tm.user.email
+                        user_id=tm.user.id,
+                        user_name=tm.user.name,
+                        email=tm.user.email,
+                        user_avatar=tm.user.avatar_url,
                     )
                 )
 

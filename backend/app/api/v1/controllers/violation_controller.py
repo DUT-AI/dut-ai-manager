@@ -39,7 +39,7 @@ async def create_violation(
     _: Annotated[User, hasPermission(ViolationPermission.CREATE)],
     service_factory: ServiceFactoryDI,
 ):
-    result = service_factory.violation.create(data)
+    result = await service_factory.violation.create(data)
     return ApiResponse.success(data=result)
 
 

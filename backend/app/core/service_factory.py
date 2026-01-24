@@ -8,6 +8,8 @@ from app.api.v1.services.violation_service import ViolationService
 from app.api.v1.services.team_service import TeamService
 from app.api.v1.services.homework_service import HomeworkService
 from app.api.v1.services.report_service import ReportService
+from app.api.v1.services.meeting_service import MeetingService
+from app.api.v1.services.notification_service import NotificationService
 from app.core.repository_factory import RepositoryFactory
 
 
@@ -27,8 +29,12 @@ class ServiceFactory:
     @property
     def user(self) -> UserService:
         if "user" not in self._cache:
+            from app.core.minio_service import get_minio_service
+
             self._cache["user"] = UserService(
-                user_repo=self._repo.user, auth_service=self.auth
+                user_repo=self._repo.user,
+                auth_service=self.auth,
+                minio_service=get_minio_service(),
             )
         return self._cache["user"]
 
@@ -46,8 +52,19 @@ class ServiceFactory:
             self._cache["permission_request"] = PermissionRequestService(
                 self._repo.permission_request,
                 violation_service=self.violation,
+                notification_service=self.notification,
             )
         return self._cache["permission_request"]
+
+    @property
+    def notification(self) -> NotificationService:
+        if "notification" not in self._cache:
+            from app.core.discord_service import DiscordService
+
+            self._cache["notification"] = NotificationService(
+                discord_service=DiscordService()
+            )
+        return self._cache["notification"]
 
     @property
     def bonus_point(self) -> BonusPointService:
@@ -59,7 +76,9 @@ class ServiceFactory:
     def violation(self) -> ViolationService:
         if "violation" not in self._cache:
             self._cache["violation"] = ViolationService(
-                self._repo.violation, user_service=self.user
+                self._repo.violation,
+                user_service=self.user,
+                notification_service=self.notification,
             )
         return self._cache["violation"]
 
@@ -72,7 +91,9 @@ class ServiceFactory:
     @property
     def homework(self) -> HomeworkService:
         if "homework" not in self._cache:
-            self._cache["homework"] = HomeworkService(self._repo)
+            self._cache["homework"] = HomeworkService(
+                self._repo, notification_service=self.notification
+            )
         return self._cache["homework"]
 
     @property
@@ -95,5 +116,21 @@ class ServiceFactory:
                 bonus_point_service=self.bonus_point,
                 violation_service=self.violation,
                 permission_request_service=self.permission_request,
+                meeting_service=self.meeting,
             )
         return self._cache["report"]
+
+    @property
+    def meeting(self) -> MeetingService:
+        if "meeting" not in self._cache:
+            from app.core.minio_service import get_minio_service
+
+            self._cache["meeting"] = MeetingService(
+                repo_factory=self._repo,
+                meeting_repo=self._repo.meeting,
+                participant_repo=self._repo.meeting_participant,
+                user_service=self.user,
+                violation_service=self.violation,
+                minio_service=get_minio_service(),
+            )
+        return self._cache["meeting"]

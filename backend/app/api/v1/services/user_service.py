@@ -1,16 +1,51 @@
 from typing import List, Optional, Tuple
-
+from app.core.minio_service import MinioService
+from fastapi import UploadFile
+from app.utils.datetime import get_current_utc7_time
 from app.api.v1.repositories import UserRepository
 from app.api.v1.services.auth_service import AuthService
 from app.models import User, RoleType
 from app.schemas.response import BadRequestException
-from app.schemas.user import UserCreate, UserUpdate
+from app.schemas.user import UserCreate, UserUpdate, UserSettingsUpdate
 
 
 class UserService:
-    def __init__(self, user_repo: UserRepository, auth_service: AuthService):
+    def __init__(
+        self,
+        user_repo: UserRepository,
+        auth_service: AuthService,
+        minio_service: MinioService,
+    ):
         self.user_repo = user_repo
         self.auth_service = auth_service
+        self.minio_service = minio_service
+
+    async def update_avatar(self, user_id: int, file: UploadFile) -> User:
+        user = self.get_user_by_id(user_id)
+        if not user:
+            raise BadRequestException("User not found")
+
+        # Upload to MinIO
+        file_content = await file.read()
+        now = get_current_utc7_time()
+        timestamp = now.strftime("%Y%m%d_%H%M%S")
+
+        # Extension handling
+        ext = "jpg"
+        if file.filename and "." in file.filename:
+            ext = file.filename.split(".")[-1]
+
+        filename = f"avatars/{user_id}_{timestamp}.{ext}"
+
+        avatar_url = self.minio_service.upload_file(
+            file_data=file_content,
+            filename=filename,
+            content_type=file.content_type or "image/jpeg",
+        )
+
+        # Update user
+        user.avatar_url = avatar_url
+        return self.user_repo.update(user)
 
     def get_by_id(self, user_id: int) -> Optional[User]:
         """Get user by ID with role eagerly loaded"""
@@ -81,3 +116,16 @@ class UserService:
             self.auth_service.delete_account(user.account_id)
 
         return self.user_repo.delete_by_id(user_id)
+
+    def update_settings(
+        self, user_id: int, settings_data: UserSettingsUpdate
+    ) -> Optional[User]:
+        user = self.get_user_by_id(user_id)
+        if not user:
+            raise BadRequestException("User not found")
+
+        update_dict = settings_data.model_dump(exclude_unset=True)
+        for key, value in update_dict.items():
+            setattr(user, key, value)
+
+        return self.user_repo.update(user)

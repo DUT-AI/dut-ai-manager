@@ -51,6 +51,7 @@ class HomeworkSubmissionResponse(BaseModel):
     homework_id: int
     owner_id: int
     user_name: Optional[str] = None
+    user_avatar: Optional[str] = None
     created_by: Optional[int] = None
     link: str
     status: HomeworkStatus

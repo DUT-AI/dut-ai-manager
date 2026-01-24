@@ -1,4 +1,4 @@
-from typing import Annotated, List
+from typing import List
 
 from app.core.deps import (
     ServiceFactoryDI,
@@ -7,10 +7,9 @@ from app.core.deps import (
     onlyEditOrDeleteYourself,
 )
 from app.core.permissions import UserPermission
-from app.models import User
 from app.schemas.response import ApiResponse
-from app.schemas.user import UserCreate, UserResponse, UserUpdate
-from fastapi import APIRouter
+from app.schemas.user import UserCreate, UserResponse, UserUpdate, UserSettingsUpdate
+from fastapi import APIRouter, UploadFile
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -57,6 +56,42 @@ async def create_user(
         data=UserResponse.model_validate(user),
         message="User created successfully",
         status_code=201,
+    )
+
+
+@router.put(
+    "/me/settings",
+    response_model=ApiResponse[UserResponse],
+)
+async def update_me(
+    settings_data: UserSettingsUpdate,
+    service_factory: ServiceFactoryDI,
+    current_user: CurrentUser,
+):
+    """Update current user's settings (avatar and discord_id)"""
+    user = service_factory.user.update_settings(current_user.id, settings_data)
+    return ApiResponse.success(
+        data=UserResponse.model_validate(user),
+        message="Settings updated successfully",
+        status_code=200,
+    )
+
+
+@router.post(
+    "/me/avatar",
+    response_model=ApiResponse[UserResponse],
+)
+async def update_avatar_me(
+    file: UploadFile,
+    service_factory: ServiceFactoryDI,
+    current_user: CurrentUser,
+):
+    """Upload avatar for current user"""
+    user = await service_factory.user.update_avatar(current_user.id, file)
+    return ApiResponse.success(
+        data=UserResponse.model_validate(user),
+        message="Avatar uploaded successfully",
+        status_code=200,
     )
 
 

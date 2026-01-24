@@ -1,9 +1,10 @@
+from sqlalchemy import func
 from typing import List, Optional
 
 from app.api.v1.repositories.base import BaseRepository
 from app.models import RequestCategory
 from app.models.permission_request import PermissionRequest
-from sqlalchemy import desc, extract, func
+from sqlalchemy import desc, extract
 from sqlalchemy.orm import joinedload
 from sqlmodel import Session, select
 
@@ -101,3 +102,20 @@ class PermissionRequestRepository(BaseRepository[PermissionRequest]):
             )
         )
         return self.session.exec(statement).one()
+
+    def has_postpone_request_for_date(self, user_id: int, target_date) -> bool:
+        """
+        Check if user has a POSTPONE permission request for specific date.
+        Used by the scheduled homework checker job.
+        """
+        statement = (
+            select(func.count())
+            .select_from(PermissionRequest)
+            .where(
+                PermissionRequest.created_by == user_id,
+                PermissionRequest.category == RequestCategory.POSTPONE,
+                PermissionRequest.date == target_date,
+            )
+        )
+        count = self.session.exec(statement).one()
+        return count > 0

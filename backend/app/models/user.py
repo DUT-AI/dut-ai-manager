@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from app.models.permission_request import PermissionRequest
     from app.models.activity import BonusPoint, Violation
     from app.models.team import TeamMember
+    from app.models.meeting import MeetingParticipant
 
 
 class UserStatus(str, Enum):
@@ -29,6 +30,8 @@ class User(TimestampMixin, table=True):
     phone_number: Optional[str] = Field(default=None, max_length=20)
     email: str = Field(max_length=255, unique=True, index=True)
     status: UserStatus = Field(default=UserStatus.ACTIVE)
+    discord_id: Optional[str] = Field(default=None, max_length=255, index=True)
+    avatar_url: Optional[str] = Field(default=None)
 
     # Foreign keys
     role_id: Optional[int] = Field(default=None, foreign_key="roles.id", index=True)
@@ -57,11 +60,15 @@ class User(TimestampMixin, table=True):
         back_populates="user",
         sa_relationship_kwargs={"foreign_keys": "[TeamMember.user_id]"},
     )
+    meeting_participations: list["MeetingParticipant"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"foreign_keys": "[MeetingParticipant.user_id]"},
+    )
 
     @property
     def role_name(self) -> Optional[str]:
         if self.role:
-            return self.role.name.value
+            return self.role.name
         return None
 
     @property
@@ -73,6 +80,6 @@ class User(TimestampMixin, table=True):
         }
 
     def has_permission(self, permission_name: str) -> bool:
-        if self.role and self.role.name.value == "admin":
+        if self.role and self.role.name == "admin":
             return True
         return permission_name in self.permissions

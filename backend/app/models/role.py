@@ -24,7 +24,7 @@ class Role(TimestampMixin, table=True):
     __tablename__ = "roles"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    name: RoleType = Field(unique=True, index=True)
+    name: str = Field(unique=True, index=True)
     description: Optional[str] = Field(default=None, max_length=255)
 
     # Relationships - use string for forward reference

@@ -1,6 +1,9 @@
+from contextlib import asynccontextmanager
+
 from app.api.v1.router import api_v1_router
 from app.core.config import settings
 from app.core.logging_config import setup_logging
+from app.core.scheduler import start_scheduler, shutdown_scheduler
 from app.middleware.auth import set_user_context
 from app.middleware.logging import logging_middleware
 from app.schemas.response import BadRequestException
@@ -12,6 +15,18 @@ from loguru import logger
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup and shutdown events."""
+    # Startup
+    start_scheduler()
+    logger.info("🚀 Application started")
+    yield
+    # Shutdown
+    shutdown_scheduler()
+    logger.info("👋 Application shutdown")
+
+
 def create_app():
     setup_logging()
 
@@ -19,6 +34,7 @@ def create_app():
         title="DUT AI Manager API",
         description="API for DUT AI Manager",
         version="1.0.0",
+        lifespan=lifespan,
     )
 
     # Register middlewares

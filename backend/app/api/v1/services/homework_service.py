@@ -1,3 +1,4 @@
+from app.api.v1.services.notification_service import NotificationService
 from app.models.homework_submission import HomeworkStatus
 from app.models.homework_submission import HomeworkSubmission
 from app.schemas.response import BadRequestException
@@ -9,8 +10,13 @@ from app.schemas.homework import HomeworkCreate, HomeworkUpdate
 
 
 class HomeworkService:
-    def __init__(self, repo_factory: RepositoryFactory):
+    def __init__(
+        self,
+        repo_factory: RepositoryFactory,
+        notification_service: NotificationService,
+    ):
         self.repo_factory = repo_factory
+        self.notification_service = notification_service
 
     def get_all(self, skip: int = 0, limit: int = 100) -> List[Homework]:
         return self.repo_factory.homework.get_all(skip=skip, limit=limit)
@@ -40,7 +46,7 @@ class HomeworkService:
 
         return all_ids
 
-    def create(self, data: HomeworkCreate) -> Homework:
+    async def create(self, data: HomeworkCreate) -> Homework:
         # Collect all assignee IDs
         all_assignee_ids = self._collect_assignee_ids(data.assignee_ids, data.team_ids)
 
@@ -63,9 +69,22 @@ class HomeworkService:
             )
             self.repo_factory.homework_submission.create(submission)
 
+        # Send notifications asynchronously
+        for user_id in all_assignee_ids:
+            user = self.repo_factory.user.get_by_id(user_id)
+            if user:
+                # We don't await each notification to avoid blocking the response
+                # But since the request is async, we can await it or use background tasks
+                # For simplicity and reliability in this agentic task, we await it here
+                await self.notification_service.send_homework_assigned_notification(
+                    user, homework
+                )
+
         return homework
 
-    def update(self, homework_id: int, data: HomeworkUpdate) -> Optional[Homework]:
+    async def update(
+        self, homework_id: int, data: HomeworkUpdate
+    ) -> Optional[Homework]:
         homework = self.get_by_id(homework_id)
         if not homework:
             return None
@@ -103,6 +122,13 @@ class HomeworkService:
                         link="",
                     )
                     self.repo_factory.homework_submission.create(submission)
+
+                    # Send notification to new assignee
+                    user = self.repo_factory.user.get_by_id(owner_id)
+                    if user:
+                        await self.notification_service.send_homework_assigned_notification(
+                            user, homework
+                        )
 
                 # Remove old assignees
                 to_remove = current_ids - new_assignee_ids

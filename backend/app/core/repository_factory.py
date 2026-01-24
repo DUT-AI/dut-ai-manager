@@ -4,6 +4,10 @@ from app.api.v1.repositories.homework_submission_repository import (
     HomeworkSubmissionRepository,
 )
 from app.api.v1.repositories.team_repository import TeamRepository
+from app.api.v1.repositories.meeting_repository import (
+    MeetingRepository,
+    MeetingParticipantRepository,
+)
 from app.api.v1.repositories import (
     AccountRepository,
     BonusPointRepository,
@@ -93,3 +97,17 @@ class RepositoryFactory:
                 self._session
             )
         return self._cache["homework_submission"]
+
+    @property
+    def meeting(self) -> MeetingRepository:
+        if "meeting" not in self._cache:
+            self._cache["meeting"] = MeetingRepository(self._session)
+        return self._cache["meeting"]
+
+    @property
+    def meeting_participant(self) -> MeetingParticipantRepository:
+        if "meeting_participant" not in self._cache:
+            self._cache["meeting_participant"] = MeetingParticipantRepository(
+                self._session
+            )
+        return self._cache["meeting_participant"]

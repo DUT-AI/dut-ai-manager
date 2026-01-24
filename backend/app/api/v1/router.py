@@ -9,6 +9,7 @@ from app.api.v1.controllers import (
     team_controller,
     homework_controller,
     homework_submission_controller,
+    meeting_controller,
 )
 from fastapi import APIRouter
 
@@ -26,6 +27,7 @@ routers = [
     team_controller.router,
     homework_controller.router,
     homework_submission_controller.router,
+    meeting_controller.router,
 ]
 
 # Include all routers in a single loop

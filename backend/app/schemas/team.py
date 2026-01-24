@@ -20,6 +20,7 @@ class TeamMemberResponse(BaseModel):
     user_id: int
     user_name: str
     email: str
+    user_avatar: Optional[str] = None
 
     class Config:
         from_attributes = True

@@ -32,6 +32,7 @@ class PermissionRequestResponse(PermissionRequestBase):
     created_at: datetime
     updated_at: datetime
     user_name: Optional[str] = None  # Alias for creator's name
+    user_avatar: Optional[str] = None
     creator_name: Optional[str] = None
     updater_name: Optional[str] = None
 

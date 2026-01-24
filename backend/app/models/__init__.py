@@ -10,6 +10,7 @@ from app.models.permission import Permission
 from app.models.permission_request import PermissionRequest, RequestCategory
 from app.models.team import Team, TeamMember
 from app.models.homework import Homework
+from app.models.meeting import Meeting, MeetingParticipant, ParticipantStatus
 from app.models.homework_submission import (
     HomeworkSubmission,
     HomeworkStatus,
@@ -33,4 +34,7 @@ __all__ = [
     "Homework",
     "HomeworkSubmission",
     "HomeworkStatus",
+    "Meeting",
+    "MeetingParticipant",
+    "ParticipantStatus",
 ]

@@ -103,7 +103,7 @@ class HomeworkSubmissionService:
 
         # If late and not late before, create violation via ViolationService
         if is_late and (not existing_submission or not existing_submission.is_late):
-            self.violation_service.create(
+            await self.violation_service.create(
                 ViolationCreate(
                     user_id=user_id,
                     reason=f"Nộp bài trễ: {homework.title}",
@@ -133,7 +133,9 @@ class HomeworkSubmissionService:
         else:
             safe_filename = f"{original_filename}_{timestamp}"
 
-        object_name = f"{homework_title}/{user_name}_{safe_filename}"
+        object_name = (
+            f"homework-submissions/{homework_title}/{user_name}_{safe_filename}"
+        )
 
         file_url = self.minio_service.upload_file(
             file_data=file_content,

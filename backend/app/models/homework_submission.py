@@ -46,6 +46,10 @@ class HomeworkSubmission(TimestampMixin, table=True):
         return self.owner.name if self.owner else None
 
     @property
+    def user_avatar(self) -> Optional[str]:
+        return self.owner.avatar_url if self.owner else None
+
+    @property
     def user_id(self) -> int:
         """Alias for owner_id for backward compatibility"""
         return self.owner_id

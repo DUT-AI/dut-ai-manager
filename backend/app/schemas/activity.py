@@ -1,6 +1,7 @@
 from datetime import date, datetime
 from typing import List, Optional
 
+from app.schemas.meeting import MeetingResponse
 from app.schemas.permission_request import PermissionRequestResponse
 from pydantic import BaseModel
 
@@ -25,6 +26,7 @@ class BonusPointResponse(BonusPointBase):
     id: int
     user_id: int
     user_name: Optional[str] = None
+    user_avatar: Optional[str] = None
     created_by: Optional[int] = None
     updated_by: Optional[int] = None
     creator_name: Optional[str] = None
@@ -54,6 +56,7 @@ class ViolationResponse(ViolationBase):
     id: int
     user_id: int
     user_name: Optional[str] = None
+    user_avatar: Optional[str] = None
     created_by: Optional[int] = None
     updated_by: Optional[int] = None
     creator_name: Optional[str] = None
@@ -70,3 +73,4 @@ class DailySummaryResponse(BaseModel):
     permission_requests: List[PermissionRequestResponse] = []
     bonus_points: List[BonusPointResponse] = []
     violations: List[ViolationResponse] = []
+    meetings: List[MeetingResponse] = []

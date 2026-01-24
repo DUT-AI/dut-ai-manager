@@ -10,6 +10,8 @@ class UserBase(BaseModel):
     phone_number: Optional[str] = None
     status: UserStatus = UserStatus.ACTIVE
     role_id: Optional[int] = None
+    avatar_url: Optional[str] = None
+    discord_id: Optional[str] = None
 
 
 class UserCreate(UserBase):
@@ -22,6 +24,8 @@ class UserUpdate(BaseModel):
     phone_number: Optional[str] = None
     status: Optional[UserStatus] = None
     role_id: Optional[int] = None
+    avatar_url: Optional[str] = None
+    discord_id: Optional[str] = None
 
 
 class UserResponse(UserBase):
@@ -30,3 +34,8 @@ class UserResponse(UserBase):
 
     class Config:
         from_attributes = True
+
+
+class UserSettingsUpdate(BaseModel):
+    avatar_url: Optional[str] = None
+    discord_id: Optional[str] = None

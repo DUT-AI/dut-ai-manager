@@ -30,7 +30,7 @@ class PermissionResponse(PermissionBase):
 
 
 class RoleBase(BaseModel):
-    name: RoleType
+    name: str
     description: Optional[str] = None
 
 
@@ -39,7 +39,7 @@ class RoleCreate(RoleBase):
 
 
 class RoleUpdate(BaseModel):
-    name: Optional[RoleType] = None
+    name: Optional[str] = None
     description: Optional[str] = None
 
 

@@ -43,6 +43,10 @@ class Violation(TimestampMixin, table=True):
         return self.user.name if self.user else None
 
     @property
+    def user_avatar(self) -> Optional[str]:
+        return self.user.avatar_url if self.user else None
+
+    @property
     def creator_name(self) -> Optional[str]:
         return self.creator.name if self.creator else None
 

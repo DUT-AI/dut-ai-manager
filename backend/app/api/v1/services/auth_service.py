@@ -56,7 +56,7 @@ class AuthService:
         # Build extra claims for JWT
         extra_claims = {
             "name": user.name,
-            "role": user.role.name.value if user.role else None,
+            "role": user.role.name if user.role else None,
             "permissions": list(user.permissions) if user.role else [],
         }
 

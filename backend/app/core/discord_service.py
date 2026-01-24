@@ -34,19 +34,16 @@ class DiscordService:
             "Content-Type": "application/json",
         }
 
-    async def send_message_to_user(self, user_id: str, content: str) -> dict:
+    async def send_message_to_user(
+        self, user_id: str, content: str = "", embed: Optional[dict] = None
+    ) -> dict:
         """
         Send a direct message to a Discord user.
 
         Args:
             user_id: The Discord user ID to send the message to.
             content: The message content to send.
-
-        Returns:
-            The response from the Discord API.
-
-        Raises:
-            DiscordServiceError: If the message fails to send.
+            embed: Optional embed dictionary for rich content.
         """
         try:
             async with aiohttp.ClientSession() as session:
@@ -74,6 +71,14 @@ class DiscordService:
                 send_message_url = f"{self.BASE_URL}/channels/{channel_id}/messages"
                 message_payload = {"content": content}
 
+                if embed:
+                    # Discord REST API expects an array of embeds
+                    if "timestamp" not in embed:
+                        from datetime import datetime
+
+                        embed["timestamp"] = datetime.utcnow().isoformat()
+                    message_payload["embeds"] = [embed]
+
                 async with session.post(
                     send_message_url, json=message_payload, headers=self.headers
                 ) as response:
@@ -96,7 +101,7 @@ class DiscordService:
             raise DiscordServiceError(f"Network error: {e}") from e
 
     async def send_message_to_room(
-        self, channel_id: str, content: str, embed: Optional[dict] = None
+        self, channel_id: str, content: str = "", embed: Optional[dict] = None
     ) -> dict:
         """
         Send a message to a Discord channel (room/text channel).
@@ -104,13 +109,7 @@ class DiscordService:
         Args:
             channel_id: The Discord channel ID to send the message to.
             content: The message content to send.
-            embed: Optional embed object for rich content.
-
-        Returns:
-            The response from the Discord API.
-
-        Raises:
-            DiscordServiceError: If the message fails to send.
+            embed: Optional embed dictionary for rich content.
         """
         try:
             async with aiohttp.ClientSession() as session:
@@ -118,6 +117,11 @@ class DiscordService:
                 payload = {"content": content}
 
                 if embed:
+                    # Discord REST API expects an array of embeds
+                    if "timestamp" not in embed:
+                        from datetime import datetime
+
+                        embed["timestamp"] = datetime.utcnow().isoformat()
                     payload["embeds"] = [embed]
 
                 async with session.post(
@@ -142,8 +146,3 @@ class DiscordService:
                 f"Network error while sending message to channel {channel_id}: {e}"
             )
             raise DiscordServiceError(f"Network error: {e}") from e
-
-
-def get_discord_service() -> DiscordService:
-    """Get Discord service singleton."""
-    return DiscordService()

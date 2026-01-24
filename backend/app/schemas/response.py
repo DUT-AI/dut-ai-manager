@@ -44,6 +44,21 @@ class ApiResponse(BaseModel, Generic[T]):
             message=message,
         )
 
+    @classmethod
+    def created(
+        cls,
+        data: Optional[T] = None,
+        message: str = "Created",
+        status_code: int = 201,
+    ) -> "ApiResponse[T]":
+        """Create a created response"""
+        return cls(
+            is_success=True,
+            status_code=status_code,
+            data=data,
+            message=message,
+        )
+
 
 class BadRequestException(Exception):
     def __init__(self, message: str, data: Any | None = None, status_code: int = 400):

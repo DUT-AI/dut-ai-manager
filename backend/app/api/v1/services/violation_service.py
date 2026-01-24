@@ -1,3 +1,4 @@
+from app.api.v1.services.notification_service import NotificationService
 from app.api.v1.services.user_service import UserService
 from typing import Optional
 
@@ -9,9 +10,15 @@ from loguru import logger
 
 
 class ViolationService:
-    def __init__(self, repository: ViolationRepository, user_service: UserService):
+    def __init__(
+        self,
+        repository: ViolationRepository,
+        user_service: UserService,
+        notification_service: NotificationService,
+    ):
         self.repository = repository
         self.user_service = user_service
+        self.notification_service = notification_service
 
     def get_all(self, skip: int = 0, limit: int = 100) -> list[Violation]:
         return self.repository.get_all(skip=skip, limit=limit)
@@ -36,14 +43,19 @@ class ViolationService:
             raise HTTPException(status_code=404, detail="Item not found")
         return item
 
-    def create(self, data: ViolationCreate, is_system: bool = False) -> Violation:
+    async def create(self, data: ViolationCreate, is_system: bool = False) -> Violation:
         item = Violation(**data.model_dump())
         if is_system:
             system_user = self.user_service.get_system()
             item.created_by = system_user.id
             item.updated_by = system_user.id
         logger.debug(f"create violation: {item}")
-        return self.repository.create(item)
+        created_violation = self.repository.create(item)
+
+        # Send notification
+        await self.notification_service.send_violation_notification(created_violation)
+
+        return created_violation
 
     def update(self, item_id: int, data: ViolationUpdate) -> Optional[Violation]:
         item = self.repository.get_by_id(item_id)
