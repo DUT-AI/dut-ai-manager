@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Drawer, Table, Select, Tag, Space, Typography, message } from 'antd';
-import { LinkOutlined } from '@ant-design/icons';
+import { Drawer, Table, Select, Tag, Space, Typography, message, Avatar } from 'antd';
+import { LinkOutlined, UserOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Homework, HomeworkSubmission } from '@/types/homework.types';
 import { HomeworkStatus } from '@/types/homework.types';
@@ -69,7 +69,10 @@ export const SubmissionsDrawer = ({ open, homework, onClose }: Props) => {
             title: 'Học viên',
             key: 'user',
             render: (record: HomeworkSubmission) => (
-                <Text strong>{record.user_name || 'Unknown'}</Text>
+                <Space>
+                    <Avatar src={record.user_avatar} icon={<UserOutlined />} size="small" />
+                    <Text strong>{record.user_name || 'Unknown'}</Text>
+                </Space>
             )
         },
         {

@@ -39,6 +39,7 @@ export interface HomeworkSubmission {
     homework_id: number;
     owner_id: number;
     user_name?: string;
+    user_avatar?: string;
     created_by?: number;
     link: string;
     status: HomeworkStatus;

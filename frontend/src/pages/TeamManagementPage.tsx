@@ -36,7 +36,8 @@ const TeamManagementPage = () => {
     const [form] = Form.useForm();
 
     // TanStack Query hooks
-    const { data: teams = [], isLoading } = useTeams();
+    const { data, isLoading } = useTeams();
+    const teams = data || [];
     const { data: users = [] } = useUsers();
     const createTeam = useCreateTeam();
     const updateTeam = useUpdateTeam();
@@ -94,7 +95,7 @@ const TeamManagementPage = () => {
                     <Avatar.Group maxCount={5} size="small" maxStyle={{ color: '#f56a00', backgroundColor: '#fde3cf' }}>
                         {record.members.map(m => (
                             <Tooltip title={m.user_name} key={m.user_id}>
-                                <Avatar style={{ backgroundColor: '#87d068' }} icon={<UserOutlined />} />
+                                <Avatar src={m.user_avatar} icon={<UserOutlined />} />
                             </Tooltip>
                         ))}
                     </Avatar.Group>

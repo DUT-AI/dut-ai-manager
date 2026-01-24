@@ -14,7 +14,8 @@ import {
     Select,
     Badge,
     Row,
-    Col
+    Col,
+    Avatar
 } from 'antd';
 import {
     PlusOutlined,
@@ -27,7 +28,9 @@ import {
     CheckCircleOutlined,
     StopOutlined,
     SearchOutlined,
-    FilterOutlined
+    FilterOutlined,
+    DiscordOutlined,
+    PictureOutlined
 } from '@ant-design/icons';
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, useRoles } from '@/hooks';
 import { useAuth } from '../context/AuthContext';
@@ -112,11 +115,19 @@ const UserManagementPage = () => {
             key: 'user',
             render: (_: any, record: UserResponse) => (
                 <Space>
-                    <div className="w-10 h-10 rounded-full bg-linear-to-br from-[#4f46e5] to-[#7c3aed] flex items-center justify-center text-white shadow-sm">
-                        <UserOutlined />
-                    </div>
+                    <Avatar
+                        src={record.avatar_url}
+                        icon={<UserOutlined />}
+                        className="bg-linear-to-br from-[#4f46e5] to-[#7c3aed] flex items-center justify-center text-white shadow-sm"
+                    />
                     <div>
                         <Text strong className="block">{record.name}</Text>
+                        {record.discord_id && (
+                            <Text type="secondary" className="text-[10px] flex items-center gap-1">
+                                <DiscordOutlined className="text-indigo-400" />
+                                {record.discord_id}
+                            </Text>
+                        )}
                     </div>
                 </Space>
             ),
@@ -125,14 +136,14 @@ const UserManagementPage = () => {
             title: 'Liên hệ',
             key: 'contact',
             render: (_: any, record: UserResponse) => (
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-0.5">
                     <div className="flex items-center text-xs">
-                        <MailOutlined className="mr-2 text-gray-400" />
-                        <Text>{record.email}</Text>
+                        <MailOutlined className="mr-2 text-gray-400 text-[10px]" />
+                        <Text className="text-xs">{record.email}</Text>
                     </div>
                     <div className="flex items-center text-xs">
-                        <PhoneOutlined className="mr-2 text-gray-400" />
-                        <Text>{record.phone_number || 'N/A'}</Text>
+                        <PhoneOutlined className="mr-2 text-gray-400 text-[10px]" />
+                        <Text className="text-xs">{record.phone_number || 'N/A'}</Text>
                     </div>
                 </div>
             ),
@@ -349,7 +360,14 @@ const UserManagementPage = () => {
                                 </Option>
                             </Select>
                         </Form.Item>
+                        <Form.Item name="discord_id" label="Discord ID">
+                            <Input prefix={<DiscordOutlined className="text-gray-400" />} placeholder="123456789" />
+                        </Form.Item>
                     </div>
+
+                    <Form.Item name="avatar_url" label="Avatar URL">
+                        <Input prefix={<PictureOutlined className="text-gray-400" />} placeholder="https://example.com/avatar.jpg" />
+                    </Form.Item>
                 </Form>
             </Modal>
         </div>

@@ -1,6 +1,6 @@
 import axiosInstance from '../axiosInstance';
 import type { ApiResponse } from '@/types/api.types';
-import type { UserResponse, UserCreate, UserUpdate } from '@/types/user.types';
+import type { UserResponse, UserCreate, UserUpdate, UserSettingsUpdate } from '@/types/user.types';
 
 export const userService = {
   getUsers: async () => {
@@ -20,6 +20,22 @@ export const userService = {
 
   updateUser: async (id: number, data: UserUpdate) => {
     const response = await axiosInstance.put<ApiResponse<UserResponse>>(`/users/${id}`, data);
+    return response.data;
+  },
+
+  updateSettings: async (data: UserSettingsUpdate) => {
+    const response = await axiosInstance.put<ApiResponse<UserResponse>>('/users/me/settings', data);
+    return response.data;
+  },
+
+  updateAvatar: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await axiosInstance.post<ApiResponse<UserResponse>>('/users/me/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 

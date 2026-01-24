@@ -2,6 +2,7 @@ export interface TeamMemberResponse {
     user_id: number;
     user_name: string;
     email: string;
+    user_avatar?: string;
 }
 
 export interface TeamResponse {

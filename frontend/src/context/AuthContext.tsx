@@ -64,13 +64,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const hasPermission = (permission: string): boolean => {
         if (!user) return false;
-        if (user.role_name === 'admin') return true;
+        const role = user.role_name?.toLowerCase();
+        if (role === 'admin') return true;
         return user.permissions?.includes(permission) || false;
     };
 
     const isAdminOrLeader = (): boolean => {
         if (!user) return false;
-        return user.role_name === 'admin' || user.role_name === 'leader';
+        const role = user.role_name?.toLowerCase();
+        return role === 'admin' || role === 'leader';
     };
 
     const value = {

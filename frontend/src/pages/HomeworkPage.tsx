@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
     Table, Button, Tabs, Space, message, Popconfirm, Typography, Tag
 } from 'antd';
@@ -8,12 +8,11 @@ import {
 import dayjs from 'dayjs';
 import { useAuth } from '@/context/AuthContext';
 import {
-    useHomeworks,
     useMyHomeworks,
     useDeleteHomework,
-    useSubmissions,
     useUsers,
-    useTeams
+    useTeams,
+    useHomeworks
 } from '@/hooks';
 import { homeworkService } from '@/services/api/homework.service';
 import type { Homework } from '@/types/homework.types';
@@ -28,10 +27,16 @@ export const HomeworkPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState('1');
 
     // TanStack Query hooks
-    const { data: myHomeworks = [], isLoading: myLoading, refetch: refetchMyHomeworks } = useMyHomeworks();
-    const { data: allHomeworks = [], isLoading: allLoading, refetch: refetchAllHomeworks } = useHomeworks();
-    const { data: users = [] } = useUsers();
-    const { data: teams = [] } = useTeams();
+    const { data: myData, isLoading: myLoading, refetch: refetchMyHomeworks } = useMyHomeworks();
+    const { data: allData, isLoading: allLoading, refetch: refetchAllHomeworks } = useHomeworks();
+    const { data: usersData = [] } = useUsers();
+    const { data: teamsData = [] } = useTeams();
+
+    const myHomeworks = myData || [];
+    const allHomeworks = allData || [];
+    const users = usersData || [];
+    const teams = teamsData || [];
+
     const deleteHomework = useDeleteHomework();
 
     // Modal States
@@ -44,9 +49,6 @@ export const HomeworkPage: React.FC = () => {
     const [editingHomework, setEditingHomework] = useState<Homework | null>(null);
     const [currentAssignees, setCurrentAssignees] = useState<number[]>([]);
 
-    const loading = activeTab === '1' ? myLoading : allLoading;
-    const homeworks = activeTab === '1' ? myHomeworks : allHomeworks;
-
     const refreshData = () => {
         if (activeTab === '1') {
             refetchMyHomeworks();
@@ -58,6 +60,7 @@ export const HomeworkPage: React.FC = () => {
     // Open Create Modal
     const handleOpenCreate = () => {
         setEditingHomework(null);
+        setCurrentAssignees([]);
         setIsFormModalOpen(true);
     };
 
@@ -220,28 +223,38 @@ export const HomeworkPage: React.FC = () => {
                 )}
             </div>
 
-            <Tabs activeKey={activeTab} onChange={setActiveTab} type="card">
-                <Tabs.TabPane tab="Bài tập của tôi" key="1">
-                    <Table
-                        dataSource={myHomeworks}
-                        columns={myColumns}
-                        rowKey="id"
-                        loading={myLoading}
-                        locale={{ emptyText: "Không có bài tập nào được giao" }}
-                    />
-                </Tabs.TabPane>
-
-                {isAdminOrLeader() && (
-                    <Tabs.TabPane tab="Tất cả bài tập (Quản lý)" key="2">
-                        <Table
-                            dataSource={allHomeworks}
-                            columns={adminColumns}
-                            rowKey="id"
-                            loading={allLoading}
-                        />
-                    </Tabs.TabPane>
-                )}
-            </Tabs>
+            <Tabs
+                activeKey={activeTab}
+                onChange={setActiveTab}
+                type="card"
+                items={[
+                    {
+                        key: '1',
+                        label: 'Bài tập của tôi',
+                        children: (
+                            <Table
+                                dataSource={myHomeworks}
+                                columns={myColumns}
+                                rowKey="id"
+                                loading={myLoading}
+                                locale={{ emptyText: "Không có bài tập nào được giao" }}
+                            />
+                        )
+                    },
+                    ...(isAdminOrLeader() ? [{
+                        key: '2',
+                        label: 'Tất cả bài tập (Quản lý)',
+                        children: (
+                            <Table
+                                dataSource={allHomeworks}
+                                columns={adminColumns}
+                                rowKey="id"
+                                loading={allLoading}
+                            />
+                        )
+                    }] : [])
+                ]}
+            />
 
             {/* Create/Edit Modal */}
             <HomeworkFormModal

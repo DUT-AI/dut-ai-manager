@@ -1,3 +1,6 @@
+import type { MeetingResponse } from './meeting.types';
+import type { UserResponse } from './user.types';
+
 export interface PermissionCreate {
     category: string;
     note: string;
@@ -35,6 +38,7 @@ export interface PermissionRequestResponse {
     created_by?: number;
     updated_by?: number;
     user_name?: string;
+    user_avatar?: string;
     creator_name?: string;
     updater_name?: string;
     created_at: string;
@@ -48,6 +52,7 @@ export interface BonusPointResponse {
     date: string;
     user_id: number;
     user_name?: string;
+    user_avatar?: string;
     created_by?: number;
     updated_by?: number;
     creator_name?: string;
@@ -62,6 +67,7 @@ export interface ViolationResponse {
     date: string;
     user_id: number;
     user_name?: string;
+    user_avatar?: string;
     created_by?: number;
     updated_by?: number;
     creator_name?: string;
@@ -75,4 +81,5 @@ export interface DailySummaryResponse {
     permission_requests: PermissionRequestResponse[];
     bonus_points: BonusPointResponse[];
     violations: ViolationResponse[];
+    meetings: MeetingResponse[];
 }

@@ -8,7 +8,6 @@ import {
     Space,
     Skeleton,
     Button,
-    message,
     Tabs,
     Table,
     DatePicker,
@@ -166,6 +165,7 @@ const ProfilePage = () => {
                     <div className="absolute -top-12 left-0">
                         <Avatar
                             size={100}
+                            src={user.avatar_url}
                             icon={<UserOutlined />}
                             className="border-4 border-white bg-gray-100 text-[#4f46e5] shadow-md"
                         />

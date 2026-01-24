@@ -14,7 +14,8 @@ import {
     DatePicker,
     Drawer,
     Descriptions,
-    Divider
+    Divider,
+    Avatar
 } from 'antd';
 import {
     PlusOutlined,
@@ -89,11 +90,7 @@ const ViolationManagementPage = () => {
         }
     };
 
-    const AvatarIcon = () => (
-        <div className="w-8 h-8 rounded-full bg-linear-to-br from-red-500 to-orange-500 flex items-center justify-center text-white shadow-sm text-xs">
-            <UserOutlined />
-        </div>
-    );
+
 
     const columns = [
         {
@@ -101,7 +98,12 @@ const ViolationManagementPage = () => {
             key: 'user',
             render: (_: any, record: ViolationResponse) => (
                 <Space>
-                    <AvatarIcon />
+                    <Avatar
+                        src={record.user_avatar}
+                        icon={<UserOutlined />}
+                        className="bg-linear-to-br from-red-500 to-orange-500 shadow-sm"
+                        size="small"
+                    />
                     <div>
                         <Text strong className="block">{record.user_name || 'Unknown'}</Text>
                     </div>

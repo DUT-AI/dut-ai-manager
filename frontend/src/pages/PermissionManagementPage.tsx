@@ -16,7 +16,8 @@ import {
     TimePicker,
     Drawer,
     Descriptions,
-    Divider
+    Divider,
+    Avatar
 } from 'antd';
 import {
     PlusOutlined,
@@ -104,9 +105,12 @@ const PermissionManagementPage = () => {
             key: 'creator',
             render: (_: any, record: PermissionRequestResponse) => (
                 <Space>
-                    <div className="w-8 h-8 rounded-full bg-linear-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-sm text-xs">
-                        <UserOutlined />
-                    </div>
+                    <Avatar
+                        src={record.user_avatar}
+                        icon={<UserOutlined />}
+                        className="bg-linear-to-br from-indigo-500 to-purple-500 shadow-sm"
+                        size="small"
+                    />
                     <div>
                         <Text strong className="block">
                             {record.user_name || (record.created_by ? `#${record.created_by}` : 'N/A')}

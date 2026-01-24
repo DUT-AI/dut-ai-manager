@@ -8,7 +8,8 @@ import {
     Divider,
     Spin,
     message,
-    Button
+    Button,
+    Modal
 } from 'antd';
 import {
     CalendarOutlined,
@@ -33,6 +34,12 @@ import {
     BonusPointModal,
     ViolationModal
 } from '@/components/activity';
+import {
+    MeetingModal,
+    MeetingSection,
+    ParticipantListModal
+} from '@/components/meeting';
+import { meetingService } from '@/services/api/meeting.service';
 import useToggle from '@/hooks/useToggle';
 import { useAuth } from '@/context/AuthContext';
 import { BonusPointPermission, PermissionRequestPermission, ViolationPermission } from '@/types/rbac.types';
@@ -56,6 +63,12 @@ const ActivityCalendarPage = () => {
     const [editingPermission, setEditingPermission] = useState<PermissionRequestResponse | null>(null);
     const [editingBonus, setEditingBonus] = useState<BonusPointResponse | null>(null);
     const [editingViolation, setEditingViolation] = useState<ViolationResponse | null>(null);
+
+    // Meeting States
+    const [isMeetingModalOpen, setIsMeetingModalOpen] = useToggle(false);
+    const [isParticipantModalOpen, setIsParticipantModalOpen] = useToggle(false);
+    const [selectedMeeting, setSelectedMeeting] = useState<any | null>(null);
+    const [editingMeeting, setEditingMeeting] = useState<any | null>(null);
 
     // Fetch Data
     const fetchMonthlyData = async (date: Dayjs) => {
@@ -185,6 +198,42 @@ const ActivityCalendarPage = () => {
         }
     };
 
+    const handleMeetingSubmit = async (values: any) => {
+        try {
+            if (editingMeeting) {
+                await meetingService.updateMeeting(editingMeeting.id, values);
+                message.success('Đã cập nhật buổi sinh hoạt');
+            } else {
+                await meetingService.createMeeting(values);
+                message.success('Đã tạo buổi sinh hoạt');
+            }
+            setIsMeetingModalOpen(false);
+            setEditingMeeting(null);
+            refreshData();
+        } catch (error) {
+            message.error(editingMeeting ? 'Cập nhật thất bại' : 'Tạo buổi sinh hoạt thất bại');
+        }
+    };
+
+    const handleDeleteMeeting = (id: number) => {
+        Modal.confirm({
+            title: 'Xác nhận xóa',
+            content: 'Bạn có chắc chắn muốn xóa buổi sinh hoạt này? Dữ liệu người tham gia cũng sẽ bị xóa.',
+            okText: 'Xóa',
+            okType: 'danger',
+            cancelText: 'Hủy',
+            onOk: async () => {
+                try {
+                    await meetingService.deleteMeeting(id);
+                    message.success('Đã xóa buổi sinh hoạt');
+                    refreshData();
+                } catch (error) {
+                    message.error('Xóa thất bại');
+                }
+            }
+        });
+    };
+
     // Open Modals
     const openAddPermission = () => {
         setEditingPermission(null);
@@ -214,6 +263,21 @@ const ActivityCalendarPage = () => {
     const openEditViolation = (item: ViolationResponse) => {
         setEditingViolation(item);
         setIsViolationModalOpen(true);
+    };
+
+    const openAddMeeting = () => {
+        setEditingMeeting(null);
+        setIsMeetingModalOpen(true);
+    };
+
+    const openEditMeeting = (meeting: any) => {
+        setEditingMeeting(meeting);
+        setIsMeetingModalOpen(true);
+    };
+
+    const openViewParticipants = (meeting: any) => {
+        setSelectedMeeting(meeting);
+        setIsParticipantModalOpen(true);
     };
 
     return (
@@ -260,6 +324,14 @@ const ActivityCalendarPage = () => {
                                 Thêm Vi Phạm
                             </Button>
                         )}
+                        <Button
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            className="bg-blue-600 hover:bg-blue-700 border-none"
+                            onClick={openAddMeeting}
+                        >
+                            Tạo Meeting
+                        </Button>
 
                     </div>
                 </div>
@@ -314,11 +386,37 @@ const ActivityCalendarPage = () => {
                             onEdit={openEditViolation}
                             onRefresh={refreshData}
                         />
+
+                        <Divider className="!m-0" />
+
+                        <MeetingSection
+                            data={dailyData?.meetings || []}
+                            onViewParticipants={openViewParticipants}
+                            onEdit={openEditMeeting}
+                            onDelete={handleDeleteMeeting}
+                        />
                     </div>
                 )}
             </Drawer>
 
             {/* Modals */}
+            <MeetingModal
+                open={isMeetingModalOpen}
+                editingItem={editingMeeting}
+                initialDate={getInitialDate()}
+                users={users}
+                onSubmit={handleMeetingSubmit}
+                onCancel={() => {
+                    setIsMeetingModalOpen(false);
+                    setEditingMeeting(null);
+                }}
+            />
+
+            <ParticipantListModal
+                open={isParticipantModalOpen}
+                meeting={selectedMeeting}
+                onCancel={() => setIsParticipantModalOpen(false)}
+            />
             <PermissionRequestModal
                 open={isPermissionModalOpen}
                 editingItem={editingPermission}

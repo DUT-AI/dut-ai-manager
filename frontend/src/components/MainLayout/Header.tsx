@@ -62,6 +62,7 @@ const HeaderLayout = () => {
                     <Avatar
                         className="bg-linear-to-br from-[#6366f1] to-[#a855f7] text-white shadow-md border-2 border-white/10 group-hover:border-white/30 transition-all"
                         size="large"
+                        src={user?.avatar_url}
                         icon={<UserOutlined />}
                     />
                     <div className="hidden md:flex flex-col items-start leading-none ml-1">

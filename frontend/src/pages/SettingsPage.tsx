@@ -1,17 +1,28 @@
-import React, { useState } from 'react';
-import { Layout, Menu, Typography, Form, Input, Button, Card, message } from 'antd';
-import { LockOutlined, SettingOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import React, { useState, useEffect } from 'react';
+import { Layout, Menu, Typography, Form, Input, Button, Card, message, Avatar, Upload } from 'antd';
+import { LockOutlined, SettingOutlined, SafetyCertificateOutlined, UserOutlined, DiscordOutlined, UploadOutlined } from '@ant-design/icons';
 import { authService } from '@/services/api/auth.service';
+import { userService } from '@/services/api/user.service';
+import { useAuth } from '@/context/AuthContext';
 
 const { Content, Sider } = Layout;
 const { Title, Text } = Typography;
 
 export const SettingsPage: React.FC = () => {
-    const [activeKey, setActiveKey] = useState('password');
-    const [form] = Form.useForm();
+    const { user, refreshUser } = useAuth();
+    const [activeKey, setActiveKey] = useState('general');
+    const [passwordForm] = Form.useForm();
+    const [generalForm] = Form.useForm();
     const [loading, setLoading] = useState(false);
+    const [uploading, setUploading] = useState(false);
 
-    // Theme token available via theme.useToken() if needed
+    useEffect(() => {
+        if (user) {
+            generalForm.setFieldsValue({
+                discord_id: user.discord_id,
+            });
+        }
+    }, [user, generalForm]);
 
     const onChangePassword = async (values: any) => {
         setLoading(true);
@@ -22,11 +33,43 @@ export const SettingsPage: React.FC = () => {
                 confirm_password: values.confirm_password,
             });
             message.success('Đổi mật khẩu thành công');
-            form.resetFields();
+            passwordForm.resetFields();
         } catch (error: any) {
             console.error(error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const onUpdateSettings = async (values: any) => {
+        setLoading(true);
+        try {
+            await userService.updateSettings(values);
+            message.success('Cập nhật thông tin thành công');
+            await refreshUser();
+        } catch (error: any) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    const handleAvatarUpload = async (info: any) => {
+        if (info.file.status === 'uploading') {
+            setUploading(true);
+            return;
+        }
+        if (info.file.status === 'done' || info.file.originFileObj) {
+            try {
+                setUploading(true);
+                await userService.updateAvatar(info.file.originFileObj);
+                message.success('Cập nhật ảnh đại diện thành công');
+                await refreshUser();
+            } catch (error) {
+                message.error('Lỗi khi upload ảnh');
+            } finally {
+                setUploading(false);
+            }
         }
     };
 
@@ -36,7 +79,7 @@ export const SettingsPage: React.FC = () => {
             bordered={false}
             className="shadow-sm w-full max-w-2xl"
         >
-            <Form form={form} layout="vertical" onFinish={onChangePassword} className="mt-4">
+            <Form form={passwordForm} layout="vertical" onFinish={onChangePassword} className="mt-4">
                 <Form.Item
                     name="old_password"
                     label="Mật khẩu hiện tại"
@@ -87,16 +130,73 @@ export const SettingsPage: React.FC = () => {
 
     const renderGeneralContent = () => (
         <Card
-            title={<><SettingOutlined className="mr-2" />Cài đặt chung</>}
+            title={<><UserOutlined className="mr-2" />Thông tin cá nhân</>}
             bordered={false}
             className="shadow-sm w-full max-w-2xl"
         >
-            <div className="text-center py-12">
-                <div className="bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                    <SettingOutlined className="text-2xl text-gray-400" />
+            <div className="flex flex-col items-center mb-10 bg-gray-50 p-8 rounded-2xl border border-gray-100">
+                <Avatar
+                    size={100}
+                    src={user?.avatar_url}
+                    icon={<UserOutlined />}
+                    className="shadow-xl border-4 border-white mb-6"
+                />
+
+                <Upload
+                    showUploadList={false}
+                    beforeUpload={(file) => {
+                        const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png';
+                        if (!isJpgOrPng) {
+                            message.error('Bạn chỉ có thể upload file JPG/PNG!');
+                        }
+                        const isLt2M = file.size / 1024 / 1024 < 2;
+                        if (!isLt2M) {
+                            message.error('Ảnh phải nhỏ hơn 2MB!');
+                        }
+                        return isJpgOrPng && isLt2M;
+                    }}
+                    customRequest={({ file, onSuccess }: any) => {
+                        setTimeout(() => onSuccess("ok"), 0);
+                    }}
+                    onChange={handleAvatarUpload}
+                >
+                    <Button icon={<UploadOutlined />} loading={uploading}>
+                        Thay đổi ảnh đại diện
+                    </Button>
+                </Upload>
+
+                <div className="mt-6 text-center">
+                    <Title level={5} className="!mb-0">{user?.name}</Title>
+                    <Text type="secondary">{user?.email}</Text>
+                    <div className="mt-2">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 shadow-sm">
+                            {user?.role_name?.toUpperCase()}
+                        </span>
+                    </div>
                 </div>
-                <Text type="secondary">Các tính năng cài đặt chung đang được phát triển.</Text>
             </div>
+
+            <Form form={generalForm} layout="vertical" onFinish={onUpdateSettings}>
+                <Form.Item
+                    name="discord_id"
+                    label="Discord ID"
+                    tooltip="ID người dùng Discord của bạn để nhận thông báo trực tiếp"
+                >
+                    <Input
+                        prefix={<DiscordOutlined className="text-gray-400" />}
+                        placeholder="Ví dụ: 123456789012345678"
+                        size="large"
+                    />
+                </Form.Item>
+
+                <Form.Item className="mb-0 mt-8">
+                    <div className="flex justify-end">
+                        <Button type="primary" htmlType="submit" loading={loading} size="large" className="bg-indigo-600 px-10 rounded-xl shadow-lg shadow-indigo-200">
+                            Lưu thông tin
+                        </Button>
+                    </div>
+                </Form.Item>
+            </Form>
         </Card>
     );
 
@@ -129,7 +229,7 @@ export const SettingsPage: React.FC = () => {
                             {
                                 key: 'general',
                                 icon: <SettingOutlined />,
-                                label: 'Chung',
+                                label: 'Tài khoản',
                                 className: 'mb-1 rounded-lg'
                             },
                             { type: 'divider' },
