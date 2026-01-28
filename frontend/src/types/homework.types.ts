@@ -16,6 +16,7 @@ export interface Homework {
     updated_at: string;
     created_by?: number;
     submission_count?: number;
+    file_url?: string;
 }
 
 export interface HomeworkCreate {

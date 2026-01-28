@@ -17,7 +17,7 @@ export const bonusPointService = {
   },
 
   async createBonusPoint(data: BonusPointCreate) {
-    const response = await axiosInstance.post<ApiResponse<BonusPointResponse>>(`/${this.subPath}`, data);
+    const response = await axiosInstance.post<ApiResponse<BonusPointResponse[]>>(`/${this.subPath}`, data);
     return response.data;
   },
 

@@ -33,7 +33,7 @@ async def get_violations(
     return ApiResponse.success(data=result)
 
 
-@router.post("", response_model=ApiResponse[ViolationResponse])
+@router.post("", response_model=ApiResponse[list[ViolationResponse]])
 async def create_violation(
     data: ViolationCreate,
     _: Annotated[User, hasPermission(ViolationPermission.CREATE)],

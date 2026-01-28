@@ -13,7 +13,7 @@ class BonusPointBase(BaseModel):
 
 
 class BonusPointCreate(BonusPointBase):
-    user_id: int
+    user_ids: List[int]
 
 
 class BonusPointUpdate(BaseModel):
@@ -44,7 +44,7 @@ class ViolationBase(BaseModel):
 
 
 class ViolationCreate(ViolationBase):
-    user_id: int
+    user_ids: List[int]
 
 
 class ViolationUpdate(BaseModel):

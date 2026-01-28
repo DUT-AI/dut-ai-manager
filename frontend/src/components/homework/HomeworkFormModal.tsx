@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
-import { Modal, Form, Input, DatePicker, Select, message, Divider } from 'antd';
-import { TeamOutlined, UserOutlined } from '@ant-design/icons';
+import { useEffect, useState } from 'react';
+import { Modal, Form, Input, DatePicker, Select, message, Divider, Upload, Button } from 'antd';
+import { TeamOutlined, UserOutlined, UploadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Homework } from '@/types/homework.types';
 import type { UserResponse } from '@/types/user.types';
@@ -29,7 +29,15 @@ export const HomeworkFormModal = ({
     onCancel
 }: Props) => {
     const [form] = Form.useForm();
+    const [loading, setLoading] = useState(false);
     const isEditing = !!editingItem;
+
+    const normFile = (e: any) => {
+        if (Array.isArray(e)) {
+            return e;
+        }
+        return e?.fileList;
+    };
 
     useEffect(() => {
         if (open) {
@@ -47,6 +55,7 @@ export const HomeworkFormModal = ({
     }, [open, editingItem, form, currentAssignees]);
 
     const handleFinish = async (values: any) => {
+        setLoading(true);
         try {
             const baseData = {
                 title: values.title,
@@ -66,12 +75,15 @@ export const HomeworkFormModal = ({
                     ...baseData,
                     assignee_ids: values.assignee_ids || [],
                     team_ids: values.team_ids || [],
+                    file: values.file?.[0]?.originFileObj
                 });
                 message.success('Tạo bài tập thành công');
             }
             onSuccess();
         } catch (error: any) {
             message.error(error?.message || 'Thao tác thất bại');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -81,6 +93,7 @@ export const HomeworkFormModal = ({
             open={open}
             onCancel={onCancel}
             onOk={form.submit}
+            confirmLoading={loading}
             destroyOnClose
             width={600}
         >
@@ -152,6 +165,31 @@ export const HomeworkFormModal = ({
                 <Form.Item name="description" label="Mô tả / Đề bài">
                     <TextArea rows={4} placeholder="Nhập mô tả bài tập (hỗ trợ Markdown)..." />
                 </Form.Item>
+
+                {!isEditing && (
+                    <Form.Item
+                        name="file"
+                        label="Đính kèm tệp"
+                        valuePropName="fileList"
+                        getValueFromEvent={normFile}
+                        extra="Chỉ chấp nhận 1 file nén (.zip, .rar, .gz), tối đa 10MB"
+                    >
+                        <Upload
+                            maxCount={1}
+                            beforeUpload={(file) => {
+                                const isLt10M = file.size / 1024 / 1024 < 10;
+                                if (!isLt10M) {
+                                    message.error('File phải nhỏ hơn 10MB!');
+                                    return Upload.LIST_IGNORE;
+                                }
+                                return false;
+                            }}
+                            accept=".zip,.rar,.7z,.tar.gz,.gz"
+                        >
+                            <Button icon={<UploadOutlined />}>Chọn file đính kèm</Button>
+                        </Upload>
+                    </Form.Item>
+                )}
             </Form>
         </Modal>
     );

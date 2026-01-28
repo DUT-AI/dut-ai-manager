@@ -19,6 +19,7 @@ class Homework(TimestampMixin, table=True):
     title: str = Field(max_length=255, index=True)
     deadline: datetime = Field(index=True)
     description: str  # Markdown text
+    file_url: Optional[str] = Field(default=None)
 
     # Relationships
     submissions: List["HomeworkSubmission"] = Relationship(back_populates="homework")

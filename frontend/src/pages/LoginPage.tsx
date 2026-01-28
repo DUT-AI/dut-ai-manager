@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Form, Input, Button, Card, Typography, message, Flex } from 'antd';
-import { UserOutlined, LockOutlined, LoginOutlined } from '@ant-design/icons';
+import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { authService } from '../services/api/auth.service';
 import { useAuth } from '../context/AuthContext';
 import type { LoginRequest } from '../types/auth.types';
+import logo from '../assets/logo.jpg';
+import background from '../assets/background.png';
 
 const { Title, Text } = Typography;
 
@@ -40,17 +42,29 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     return (
         <>
             {contextHolder}
-            <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-[#667eea] to-[#764ba2] p-5">
+            <div
+                className="min-h-screen flex items-center justify-start p-5 md:pl-32"
+                style={{
+                    backgroundImage: `url(${background})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat'
+                }}
+            >
                 <Card
-                    className="w-full max-w-[420px] rounded-2xl shadow-2xl transition-all duration-300 hover:shadow-3xl border-none"
+                    className="w-full max-w-[420px] rounded-2xl shadow-2xl transition-all duration-300 hover:shadow-3xl border-none backdrop-blur-sm bg-white/90"
                     styles={{
                         body: { padding: '40px' }
                     }}
                 >
                     <Flex vertical gap="large" className="w-full">
                         <div className="text-center">
-                            <div className="w-20 h-20 rounded-full bg-linear-to-br from-[#667eea] to-[#764ba2] flex items-center justify-center mx-auto mb-4 shadow-lg animate-bounce-subtle">
-                                <LoginOutlined className="text-[36px] text-white" />
+                            <div className="flex justify-center mb-4">
+                                <img
+                                    src={logo}
+                                    alt="Logo"
+                                    className="w-24 h-24 rounded-full object-cover shadow-lg animate-bounce-subtle"
+                                />
                             </div>
                             <Title level={2} className="m-0 text-[#1a1a2e] font-bold tracking-tight">
                                 Welcome Back

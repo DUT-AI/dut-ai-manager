@@ -60,16 +60,24 @@ const ViolationManagementPage = () => {
     const canDelete = hasPermission(ViolationPermission.DELETE);
 
     const handleCreateOrUpdate = async (values: any) => {
-        const formattedValues: ViolationCreate = {
-            ...values,
-            date: values.date.toISOString(),
-        };
-
         try {
             if (editingItem) {
-                await updateViolation.mutateAsync({ id: editingItem.id, data: formattedValues });
+                // For edit, we stick to original violation update if backend supports it.
+                // Note: ViolationUpdate schema does NOT have user_id(s). So we can't update users here anyway.
+                // We just send date and reason.
+                const updateData = {
+                    reason: values.reason,
+                    date: values.date.toISOString(),
+                };
+                await updateViolation.mutateAsync({ id: editingItem.id, data: updateData });
                 message.success('Violation updated successfully');
             } else {
+                // Create mode uses user_ids
+                const formattedValues: ViolationCreate = {
+                    user_ids: values.user_ids, // Expect array
+                    reason: values.reason,
+                    date: values.date.toISOString(),
+                };
                 await createViolation.mutateAsync(formattedValues);
                 message.success('Violation recorded successfully');
             }
@@ -142,6 +150,7 @@ const ViolationManagementPage = () => {
                             setEditingItem(record);
                             form.setFieldsValue({
                                 ...record,
+                                user_name: record.user_name || 'Unknown', // Set for display
                                 date: dayjs(record.date)
                             });
                             setIsModalOpen(true);
@@ -223,20 +232,27 @@ const ViolationManagementPage = () => {
                 width={500}
             >
                 <Form form={form} layout="vertical" onFinish={handleCreateOrUpdate} className="mt-6">
-                    <Form.Item name="user_id" label="Thành viên vi phạm" rules={[{ required: true, message: 'Vui lòng chọn thành viên!' }]}>
-                        <Select
-                            showSearch
-                            placeholder="Tìm kiếm thành viên"
-                            optionFilterProp="children"
-                            filterOption={(input, option) =>
-                                String(option?.children ?? '').toLowerCase().includes(input.toLowerCase())
-                            }
-                        >
-                            {users.map(u => (
-                                <Option key={u.id} value={u.id}>{u.name} ({u.email})</Option>
-                            ))}
-                        </Select>
-                    </Form.Item>
+                    {editingItem ? (
+                        <Form.Item name="user_name" label="Thành viên vi phạm">
+                            <Input disabled />
+                        </Form.Item>
+                    ) : (
+                        <Form.Item name="user_ids" label="Thành viên vi phạm" rules={[{ required: true, message: 'Vui lòng chọn thành viên!' }]}>
+                            <Select
+                                mode="multiple"
+                                showSearch
+                                placeholder="Tìm kiếm thành viên"
+                                optionFilterProp="children"
+                                filterOption={(input, option) =>
+                                    String(option?.children ?? '').toLowerCase().includes(input.toLowerCase())
+                                }
+                            >
+                                {users.map(u => (
+                                    <Option key={u.id} value={u.id}>{u.name} ({u.email})</Option>
+                                ))}
+                            </Select>
+                        </Form.Item>
+                    )}
 
                     <Form.Item name="date" label="Thời gian vi phạm" rules={[{ required: true, message: 'Vui lòng chọn thời gian!' }]}>
                         <DatePicker showTime format="DD/MM/YYYY HH:mm" className="w-full" />

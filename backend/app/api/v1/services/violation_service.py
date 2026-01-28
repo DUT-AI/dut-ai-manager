@@ -43,19 +43,31 @@ class ViolationService:
             raise HTTPException(status_code=404, detail="Item not found")
         return item
 
-    async def create(self, data: ViolationCreate, is_system: bool = False) -> Violation:
-        item = Violation(**data.model_dump())
-        if is_system:
-            system_user = self.user_service.get_system()
-            item.created_by = system_user.id
-            item.updated_by = system_user.id
-        logger.debug(f"create violation: {item}")
-        created_violation = self.repository.create(item)
+    async def create(
+        self, data: ViolationCreate, is_system: bool = False
+    ) -> list[Violation]:
+        created_violations = []
+        base_data = data.model_dump(exclude={"user_ids"})
 
-        # Send notification
-        await self.notification_service.send_violation_notification(created_violation)
+        for user_id in data.user_ids:
+            item_data = {**base_data, "user_id": user_id}
+            item = Violation(**item_data)
 
-        return created_violation
+            if is_system:
+                system_user = self.user_service.get_system()
+                item.created_by = system_user.id
+                item.updated_by = system_user.id
+
+            logger.debug(f"create violation: {item}")
+            created_violation = self.repository.create(item)
+
+            # Send notification
+            await self.notification_service.send_violation_notification(
+                created_violation
+            )
+            created_violations.append(created_violation)
+
+        return created_violations
 
     def update(self, item_id: int, data: ViolationUpdate) -> Optional[Violation]:
         item = self.repository.get_by_id(item_id)

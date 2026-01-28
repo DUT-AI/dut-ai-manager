@@ -117,6 +117,13 @@ export const SubmitHomeworkModal = ({ open, homework, onSuccess, onCancel }: Pro
                         <div className="mt-2 text-xs text-red-500">
                             Deadline: {dayjs(homework.deadline).format('DD/MM/YYYY HH:mm')}
                         </div>
+                        {homework.file_url && (
+                            <div className="mt-2 text-xs">
+                                <Link href={homework.file_url} target="_blank">
+                                    <DownloadOutlined /> Tải file đính kèm
+                                </Link>
+                            </div>
+                        )}
                     </div>
 
                     {mySubmission && (

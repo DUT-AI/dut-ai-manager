@@ -46,9 +46,9 @@ class HomeworkSubmissionService:
         )
         logger.debug(homework_submissions)
         match current_user.role.name:
-            case RoleType.ADMIN:
+            case RoleType.ADMIN.value:
                 return homework_submissions
-            case RoleType.LEADER:
+            case RoleType.LEADER.value:
                 # Lấy tất cả member_ids của các team mà leader thuộc về
                 team_member_ids = set(
                     member.user_id
@@ -62,7 +62,7 @@ class HomeworkSubmissionService:
                     if item.owner_id in team_member_ids
                 ]
                 return filter_submissions
-            case RoleType.TEAMMATE:
+            case RoleType.TEAMMATE.value:
                 # Chỉ có thể xem của mình
                 filter_submissions = [
                     item
@@ -182,10 +182,10 @@ class HomeworkSubmissionService:
 
         # Authorization logic based on role
         match current_user.role.name:
-            case RoleType.ADMIN:
+            case RoleType.ADMIN.value:
                 # Admin can update any status
                 pass
-            case RoleType.LEADER:
+            case RoleType.LEADER.value:
                 if submission.status == HomeworkStatus.LEADER_CHECKED:
                     raise BadRequestException(
                         "Submission đã được đánh dấu 'leader đã check'"

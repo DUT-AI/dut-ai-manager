@@ -13,7 +13,10 @@ class BonusPointService:
         return self.repository.get_all(skip=skip, limit=limit)
 
     def get(
-        self, month: Optional[int] = None, year: Optional[int] = None, user_id: Optional[int] = None
+        self,
+        month: Optional[int] = None,
+        year: Optional[int] = None,
+        user_id: Optional[int] = None,
     ) -> List[BonusPoint]:
         return self.repository.get_by_month(month=month, year=year, user_id=user_id)
 
@@ -28,9 +31,17 @@ class BonusPointService:
 
     # ...
 
-    def create(self, data: BonusPointCreate) -> BonusPoint:
-        item = BonusPoint(**data.model_dump())
-        return self.repository.create(item)
+    def create(self, data: BonusPointCreate) -> list[BonusPoint]:
+        created_items = []
+        base_data = data.model_dump(exclude={"user_ids"})
+
+        for user_id in data.user_ids:
+            item_data = {**base_data, "user_id": user_id}
+            item = BonusPoint(**item_data)
+            created = self.repository.create(item)
+            created_items.append(created)
+
+        return created_items
 
     def update(self, item_id: int, data: BonusPointUpdate) -> Optional[BonusPoint]:
         item = self.repository.get_by_id(item_id)

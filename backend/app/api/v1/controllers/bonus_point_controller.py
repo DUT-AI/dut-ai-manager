@@ -34,10 +34,12 @@ async def get_bonus_points(
 
 @router.post(
     "",
-    response_model=ApiResponse[BonusPointResponse],
+    response_model=ApiResponse[list[BonusPointResponse]],
     dependencies=[
         hasPermission(BonusPointPermission.CREATE),
-        hasTeamLeaderAccess("user_id"),
+        hasTeamLeaderAccess(
+            "user_ids"
+        ),  # Update dependency to check user_ids if possible? hasTeamLeaderAccess might need Check.
     ],
 )
 async def create_bonus_point(

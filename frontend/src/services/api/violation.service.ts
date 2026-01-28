@@ -11,7 +11,7 @@ export const violationService = {
   },
 
   createViolation: async (data: any) => {
-    const response = await axiosInstance.post<ApiResponse<ViolationResponse>>('/violations', data);
+    const response = await axiosInstance.post<ApiResponse<ViolationResponse[]>>('/violations', data);
     return response.data;
   },
 

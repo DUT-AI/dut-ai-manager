@@ -99,7 +99,7 @@ class UserService:
         update_dict = user_data.model_dump(exclude_unset=True)
 
         # Only admin can update role_id
-        if "role_id" in update_dict and current_user.role.name != RoleType.ADMIN:
+        if "role_id" in update_dict and current_user.role.name != RoleType.ADMIN.value:
             raise BadRequestException("Only admin can update role")
 
         # Update other fields

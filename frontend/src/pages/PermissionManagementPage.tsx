@@ -44,6 +44,13 @@ const { Title, Text } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
 
+const CATEGORY_COLORS: Record<string, string> = {
+    'vắng sinh hoạt': 'volcano',
+    'đi trễ sinh hoạt': 'gold',
+    'tạm hoãn bài tập': 'geekblue',
+    'khác': 'default',
+};
+
 const PermissionManagementPage = () => {
     const { hasPermission } = useAuth();
 
@@ -124,7 +131,7 @@ const PermissionManagementPage = () => {
             dataIndex: 'category',
             key: 'category',
             render: (category: string) => (
-                <Tag color="cyan" className="font-medium px-3 rounded-full">
+                <Tag color={CATEGORY_COLORS[category.toLowerCase()] || 'default'} className="font-medium px-3 rounded-full">
                     {category.toUpperCase()}
                 </Tag>
             ),
@@ -301,7 +308,7 @@ const PermissionManagementPage = () => {
                                     </Space>
                                 </Descriptions.Item>
                                 <Descriptions.Item label="Loại phép">
-                                    <Tag color="cyan">{detailItem.category.toUpperCase()}</Tag>
+                                    <Tag color={CATEGORY_COLORS[detailItem.category.toLowerCase()] || 'default'}>{detailItem.category.toUpperCase()}</Tag>
                                 </Descriptions.Item>
                                 <Descriptions.Item label="Thời gian">
                                     {dayjs(detailItem.date).format('DD/MM/YYYY')} <br />

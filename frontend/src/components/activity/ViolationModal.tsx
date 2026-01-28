@@ -36,12 +36,22 @@ export const ViolationModal = ({ open, editingItem, initialDate, users, onSubmit
     }, [open, editingItem, initialDate, form]);
 
     const handleFinish = (values: any) => {
-        const formattedValues = {
-            user_id: values.user_id,
-            reason: values.reason,
-            date: values.date.toISOString()
-        };
-        onSubmit(formattedValues);
+        if (editingItem) {
+            // For edit we typically update existing violation, no change to user_id usually.
+            // But we pass what we have.
+            const formattedValues = {
+                ...values,
+                date: values.date.toISOString()
+            }
+            onSubmit(formattedValues);
+        } else {
+            const formattedValues = {
+                user_ids: values.user_ids,
+                reason: values.reason,
+                date: values.date.toISOString()
+            };
+            onSubmit(formattedValues);
+        }
     };
 
     return (
@@ -53,20 +63,39 @@ export const ViolationModal = ({ open, editingItem, initialDate, users, onSubmit
             destroyOnClose
         >
             <Form form={form} layout="vertical" onFinish={handleFinish}>
-                <Form.Item name="user_id" label="Thành viên" rules={[{ required: true, message: 'Vui lòng chọn thành viên!' }]}>
-                    <Select
-                        showSearch
-                        placeholder="Chọn thành viên"
-                        optionFilterProp="children"
-                        filterOption={(input, option) =>
-                            String(option?.children ?? '').toLowerCase().includes(input.toLowerCase())
-                        }
-                    >
-                        {users.map(u => (
-                            <Option key={u.id} value={u.id}>{u.name} ({u.email})</Option>
-                        ))}
-                    </Select>
-                </Form.Item>
+                {editingItem ? (
+                    <Form.Item name="user_id" label="Thành viên" rules={[{ required: true, message: 'Vui lòng chọn thành viên!' }]}>
+                        <Select
+                            disabled
+                            showSearch
+                            placeholder="Chọn thành viên"
+                            optionFilterProp="children"
+                            filterOption={(input, option) =>
+                                String(option?.children ?? '').toLowerCase().includes(input.toLowerCase())
+                            }
+                        >
+                            {users.map(u => (
+                                <Option key={u.id} value={u.id}>{u.name} ({u.email})</Option>
+                            ))}
+                        </Select>
+                    </Form.Item>
+                ) : (
+                    <Form.Item name="user_ids" label="Thành viên" rules={[{ required: true, message: 'Vui lòng chọn thành viên!' }]}>
+                        <Select
+                            mode="multiple"
+                            showSearch
+                            placeholder="Chọn thành viên"
+                            optionFilterProp="children"
+                            filterOption={(input, option) =>
+                                String(option?.children ?? '').toLowerCase().includes(input.toLowerCase())
+                            }
+                        >
+                            {users.map(u => (
+                                <Option key={u.id} value={u.id}>{u.name} ({u.email})</Option>
+                            ))}
+                        </Select>
+                    </Form.Item>
+                )}
                 <Form.Item name="date" label="Ngày & Giờ" rules={[{ required: true, message: 'Vui lòng chọn thời gian!' }]}>
                     <DatePicker showTime format="DD/MM/YYYY HH:mm" className="w-full" />
                 </Form.Item>

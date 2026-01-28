@@ -32,12 +32,32 @@ export const homeworkService = {
         return response.data.data;
     },
 
-    async create(data: HomeworkCreate) {
-        const response = await axiosInstance.post<ApiResponse<Homework>>(`/${this.baseUrl}`, data);
+    async create(data: HomeworkCreate & { file?: File }) {
+        const formData = new FormData();
+        formData.append('title', data.title);
+        formData.append('description', data.description);
+        formData.append('deadline', data.deadline);
+        
+        if (data.assignee_ids) {
+            data.assignee_ids.forEach(id => formData.append('assignee_ids', id.toString()));
+        }
+        if (data.team_ids) {
+            data.team_ids.forEach(id => formData.append('team_ids', id.toString()));
+        }
+        if (data.file) {
+            formData.append('file', data.file);
+        }
+
+        const response = await axiosInstance.post<ApiResponse<Homework>>(`/${this.baseUrl}`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
         return response.data.data;
     },
     
     async update(id: number, data: HomeworkUpdate) {
+        // TODO: Update backend to support file upload on update if needed
         const response = await axiosInstance.put<ApiResponse<Homework>>(`/${this.baseUrl}/${id}`, data);
         return response.data.data;
     },

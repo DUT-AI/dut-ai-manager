@@ -8,7 +8,9 @@ from pydantic import BaseModel, HttpUrl
 class HomeworkBase(BaseModel):
     title: str
     description: str
+    description: str
     deadline: datetime
+    file_url: Optional[str] = None
 
 
 class HomeworkCreate(HomeworkBase):
@@ -20,6 +22,7 @@ class HomeworkUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     deadline: Optional[datetime] = None
+    file_url: Optional[str] = None
     assignee_ids: Optional[List[int]] = None  # Sync assignees
     team_ids: Optional[List[int]] = None  # Add users from teams
 

@@ -12,7 +12,7 @@ export interface PermissionCreate {
 export interface PermissionUpdate extends Partial<PermissionCreate> {}
 
 export interface BonusPointCreate {
-    user_id: number;
+    user_ids: number[];
     points: number;
     reason: string;
     date: string; // ISO Datetime
@@ -21,7 +21,7 @@ export interface BonusPointCreate {
 export interface BonusPointUpdate extends Partial<BonusPointCreate> {}
 
 export interface ViolationCreate {
-    user_id: number;
+    user_ids: number[];
     reason: string;
     date: string; // ISO Datetime
 }

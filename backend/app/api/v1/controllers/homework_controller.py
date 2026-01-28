@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from app.core.deps import CurrentUser, ServiceFactoryDI, hasPermission
 from app.core.permissions import HomeworkPermission
@@ -8,7 +8,7 @@ from app.schemas.homework import (
     HomeworkUpdate,
 )
 from app.schemas.response import ApiResponse
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Form, File, UploadFile, Depends
 
 router = APIRouter(prefix="/homeworks", tags=["homeworks"])
 
@@ -51,9 +51,51 @@ async def get_my_homeworks(
     dependencies=[hasPermission(HomeworkPermission.CREATE)],
 )
 async def create_homework(
-    data: HomeworkCreate,
     service_factory: ServiceFactoryDI,
+    title: str = Form(...),
+    description: str = Form(""),
+    deadline: str = Form(...),
+    assignee_ids: Optional[List[int]] = Form(None),
+    team_ids: Optional[List[int]] = Form(None),
+    file: Optional[UploadFile] = File(None),
 ):
+    from app.core.minio_service import get_minio_service
+    from datetime import datetime
+    import uuid
+    import os
+
+    file_url = None
+    if file:
+        minio_service = get_minio_service()
+        # Read content to validate size
+        content = await file.read()
+        error = minio_service.validate_file(file.filename, len(content))
+        if error:
+            raise HTTPException(status_code=400, detail=error)
+
+        # Upload
+        ext = os.path.splitext(file.filename)[1]
+        filename = f"{minio_service.SUBMISSIONS_PREFIX}/{uuid.uuid4()}{ext}"
+        try:
+            file_url = minio_service.upload_file(content, filename, file.content_type)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+    # Parse deadline string to datetime
+    try:
+        deadline_dt = datetime.fromisoformat(deadline.replace("Z", "+00:00"))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid deadline format")
+
+    data = HomeworkCreate(
+        title=title,
+        description=description,
+        deadline=deadline_dt,
+        assignee_ids=assignee_ids,
+        team_ids=team_ids,
+        file_url=file_url,
+    )
+
     result = await service_factory.homework.create(data)
     return ApiResponse.success(data=result)
 
