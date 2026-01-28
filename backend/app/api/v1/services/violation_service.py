@@ -20,8 +20,10 @@ class ViolationService:
         self.user_service = user_service
         self.notification_service = notification_service
 
-    def get_all(self, skip: int = 0, limit: int = 100) -> list[Violation]:
-        return self.repository.get_all(skip=skip, limit=limit)
+    def get_all(
+        self, skip: int = 0, limit: int = 100, deleted: bool = False
+    ) -> list[Violation]:
+        return self.repository.get_all(skip=skip, limit=limit, deleted=deleted)
 
     def get(
         self,
@@ -83,3 +85,6 @@ class ViolationService:
     def delete(self, item_id: int) -> bool:
         item = self.repository.get_by_id(item_id)
         return self.repository.delete_by_id(item.id)
+
+    def restore(self, item_id: int) -> Optional[Violation]:
+        return self.repository.restore(item_id)

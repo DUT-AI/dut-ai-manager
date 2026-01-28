@@ -13,9 +13,9 @@ export const homeworkService = {
     submissionUrl: 'homework-submissions',
 
     // Homeworks
-    async getAll(skip = 0, limit = 100) {
+    async getAll(skip = 0, limit = 100, deleted = false) {
         const response = await axiosInstance.get<ApiResponse<Homework[]>>(`/${this.baseUrl}`, { 
-            params: { skip, limit } 
+            params: { skip, limit, deleted } 
         });
         return response.data.data;
     },
@@ -56,14 +56,38 @@ export const homeworkService = {
         return response.data.data;
     },
     
-    async update(id: number, data: HomeworkUpdate) {
-        // TODO: Update backend to support file upload on update if needed
-        const response = await axiosInstance.put<ApiResponse<Homework>>(`/${this.baseUrl}/${id}`, data);
+    async update(id: number, data: HomeworkUpdate & { file?: File }) {
+        const formData = new FormData();
+        // Title is mandatory now
+        if (data.title) formData.append('title', data.title);
+        if (data.description) formData.append('description', data.description);
+        if (data.deadline) formData.append('deadline', typeof data.deadline === 'string' ? data.deadline : (data.deadline as any).toISOString());
+        
+        if (data.assignee_ids) {
+            data.assignee_ids.forEach(id => formData.append('assignee_ids', id.toString()));
+        }
+        if (data.team_ids) {
+            data.team_ids.forEach(id => formData.append('team_ids', id.toString()));
+        }
+        if (data.file) {
+            formData.append('file', data.file);
+        }
+
+        const response = await axiosInstance.put<ApiResponse<Homework>>(`/${this.baseUrl}/${id}`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
         return response.data.data;
     },
 
     async delete(id: number) {
         const response = await axiosInstance.delete<ApiResponse<boolean>>(`/${this.baseUrl}/${id}`);
+        return response.data.data;
+    },
+
+    async restore(id: number) {
+        const response = await axiosInstance.put<ApiResponse<Homework>>(`/${this.baseUrl}/${id}/restore`);
         return response.data.data;
     },
 

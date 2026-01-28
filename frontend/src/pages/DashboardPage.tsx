@@ -21,7 +21,8 @@ import PermissionManagementPage from './PermissionManagementPage';
 import TeamManagementPage from './TeamManagementPage';
 import { HomeworkPage } from './HomeworkPage';
 import { SettingsPage } from './SettingsPage';
-import { WarningOutlined, FileTextOutlined, UserOutlined } from '@ant-design/icons';
+import { TrashPage } from '@/pages/TrashPage';
+import { WarningOutlined, FileTextOutlined, UserOutlined, DeleteOutlined } from '@ant-design/icons';
 const { Content, Sider } = Layout;
 const { Text } = Typography;
 
@@ -43,6 +44,7 @@ const DashboardPage = () => {
         if (path.includes('/teams')) return 'teams';
         if (path.includes('/profile')) return 'profile_detail';
         if (path.includes('/settings')) return 'settings';
+        if (path.includes('/trash')) return 'trash';
         return 'profile';
     };
 
@@ -103,6 +105,12 @@ const DashboardPage = () => {
             label: 'Cài đặt',
             onClick: () => navigate('/dashboard/settings'),
         },
+        {
+            key: 'trash',
+            icon: <DeleteOutlined />,
+            label: 'Thùng rác',
+            onClick: () => navigate('/dashboard/trash'),
+        },
     ];
 
     if (loading) {
@@ -156,6 +164,7 @@ const DashboardPage = () => {
                             <Route path="teams" element={<TeamManagementPage />} />
                             <Route path="homeworks" element={<HomeworkPage />} />
                             <Route path="settings" element={<SettingsPage />} />
+                            <Route path="trash" element={<TrashPage />} />
                             <Route path="profile/:userId" element={<ProfilePage />} />
                             <Route path="*" element={<Navigate to="/dashboard" replace />} />
                         </Routes>

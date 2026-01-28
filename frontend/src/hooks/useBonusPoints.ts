@@ -25,7 +25,7 @@ export const useBonusPoints = (filters: {
         rest.month, 
         rest.year
       );
-      return response.data ?? [];
+      return response ?? [];
     },
     staleTime: 60 * 1000, // 1 minute
     enabled,

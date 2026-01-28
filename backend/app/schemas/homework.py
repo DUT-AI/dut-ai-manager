@@ -19,7 +19,7 @@ class HomeworkCreate(HomeworkBase):
 
 
 class HomeworkUpdate(BaseModel):
-    title: Optional[str] = None
+    title: str
     description: Optional[str] = None
     deadline: Optional[datetime] = None
     file_url: Optional[str] = None

@@ -25,11 +25,14 @@ async def get_violations(
     year: int | None = None,
     skip: int = 0,
     limit: int = 100,
+    deleted: bool = False,
 ):
     if user_id:
         result = service_factory.violation.get(user_id=user_id, month=month, year=year)
     else:
-        result = service_factory.violation.get_all(skip=skip, limit=limit)
+        result = service_factory.violation.get_all(
+            skip=skip, limit=limit, deleted=deleted
+        )
     return ApiResponse.success(data=result)
 
 
@@ -61,4 +64,18 @@ async def delete_violation(
     service_factory: ServiceFactoryDI,
 ):
     result = service_factory.violation.delete(item_id)
+    return ApiResponse.success(data=result)
+
+
+@router.put("/{item_id}/restore", response_model=ApiResponse[ViolationResponse])
+async def restore_violation(
+    item_id: int,
+    _: Annotated[User, hasPermission(ViolationPermission.DELETE)],
+    service_factory: ServiceFactoryDI,
+):
+    result = service_factory.violation.restore(item_id)
+    if not result:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=404, detail="Item not found or not deleted")
     return ApiResponse.success(data=result)

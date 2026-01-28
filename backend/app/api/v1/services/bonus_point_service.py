@@ -9,8 +9,10 @@ class BonusPointService:
     def __init__(self, repository: BonusPointRepository):
         self.repository = repository
 
-    def get_all(self, skip: int = 0, limit: int = 100) -> List[BonusPoint]:
-        return self.repository.get_all(skip=skip, limit=limit)
+    def get_all(
+        self, skip: int = 0, limit: int = 100, deleted: bool = False
+    ) -> List[BonusPoint]:
+        return self.repository.get_all(skip=skip, limit=limit, deleted=deleted)
 
     def get(
         self,
@@ -56,3 +58,6 @@ class BonusPointService:
 
     def delete(self, item_id: int) -> bool:
         return self.repository.delete_by_id(item_id)
+
+    def restore(self, item_id: int) -> Optional[BonusPoint]:
+        return self.repository.restore(item_id)

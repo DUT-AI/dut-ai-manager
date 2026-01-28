@@ -18,7 +18,9 @@ class BonusPointRepository(BaseRepository[BonusPoint]):
         self, user_id: int, month: Optional[int] = None, year: Optional[int] = None
     ) -> List[BonusPoint]:
         """Get all bonus points by a specific user, optionally filtered by month/year"""
-        statement = select(BonusPoint).where(BonusPoint.user_id == user_id)
+        statement = select(BonusPoint).where(
+            BonusPoint.is_deleted == False, BonusPoint.user_id == user_id
+        )
 
         if month is not None:
             statement = statement.where(
@@ -40,6 +42,7 @@ class BonusPointRepository(BaseRepository[BonusPoint]):
         statement = (
             select(BonusPoint)
             .where(
+                BonusPoint.is_deleted == False,
                 BonusPoint.user_id == user_id,
                 BonusPoint.date >= start,
                 BonusPoint.date <= end,
@@ -59,6 +62,7 @@ class BonusPointRepository(BaseRepository[BonusPoint]):
         statement = (
             select(BonusPoint)
             .where(
+                BonusPoint.is_deleted == False,
                 BonusPoint.date >= start,
                 BonusPoint.date <= end,
             )
@@ -74,7 +78,7 @@ class BonusPointRepository(BaseRepository[BonusPoint]):
         self, month: int, year: int, user_id: Optional[int] = None
     ) -> List[BonusPoint]:
         """Get all bonus points in a specific month"""
-        statement = select(BonusPoint)
+        statement = select(BonusPoint).where(BonusPoint.is_deleted == False)
         if user_id:
             statement = statement.where(BonusPoint.user_id == user_id)
         if month:

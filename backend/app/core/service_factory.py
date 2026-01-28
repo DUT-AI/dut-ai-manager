@@ -1,16 +1,18 @@
-from app.api.v1.services.homework_submission import HomeworkSubmissionService
 from app.api.v1.services.auth_service import AuthService
 from app.api.v1.services.bonus_point_service import BonusPointService
-from app.api.v1.services.permission_request_service import PermissionRequestService
-from app.api.v1.services.role_permission_service import RolePermissionService
-from app.api.v1.services.user_service import UserService
-from app.api.v1.services.violation_service import ViolationService
-from app.api.v1.services.team_service import TeamService
 from app.api.v1.services.homework_service import HomeworkService
-from app.api.v1.services.report_service import ReportService
+from app.api.v1.services.homework_submission import HomeworkSubmissionService
 from app.api.v1.services.meeting_service import MeetingService
 from app.api.v1.services.notification_service import NotificationService
+from app.api.v1.services.permission_request_service import PermissionRequestService
+from app.api.v1.services.report_service import ReportService
+from app.api.v1.services.role_permission_service import RolePermissionService
+from app.api.v1.services.team_service import TeamService
+from app.api.v1.services.user_service import UserService
+from app.api.v1.services.violation_service import ViolationService
+from app.core.minio_service import MinioService
 from app.core.repository_factory import RepositoryFactory
+from app.core.discord_service import DiscordService
 
 
 class ServiceFactory:
@@ -27,14 +29,18 @@ class ServiceFactory:
         return self._cache["auth"]
 
     @property
+    def minio(self) -> MinioService:
+        if "minio" not in self._cache:
+            self._cache["minio"] = MinioService()
+        return self._cache["minio"]
+
+    @property
     def user(self) -> UserService:
         if "user" not in self._cache:
-            from app.core.minio_service import get_minio_service
-
             self._cache["user"] = UserService(
                 user_repo=self._repo.user,
                 auth_service=self.auth,
-                minio_service=get_minio_service(),
+                minio_service=self.minio,
             )
         return self._cache["user"]
 
@@ -59,8 +65,6 @@ class ServiceFactory:
     @property
     def notification(self) -> NotificationService:
         if "notification" not in self._cache:
-            from app.core.discord_service import DiscordService
-
             self._cache["notification"] = NotificationService(
                 discord_service=DiscordService()
             )
@@ -92,20 +96,20 @@ class ServiceFactory:
     def homework(self) -> HomeworkService:
         if "homework" not in self._cache:
             self._cache["homework"] = HomeworkService(
-                self._repo, notification_service=self.notification
+                self._repo,
+                notification_service=self.notification,
+                minio_service=self.minio,
             )
         return self._cache["homework"]
 
     @property
     def homework_submission(self) -> HomeworkSubmissionService:
         if "homework_submission" not in self._cache:
-            from app.core.minio_service import get_minio_service
-
             self._cache["homework_submission"] = HomeworkSubmissionService(
                 self._repo,
                 violation_service=self.violation,
                 user_service=self.user,
-                minio_service=get_minio_service(),
+                minio_service=self.minio,
             )
         return self._cache["homework_submission"]
 
@@ -123,14 +127,12 @@ class ServiceFactory:
     @property
     def meeting(self) -> MeetingService:
         if "meeting" not in self._cache:
-            from app.core.minio_service import get_minio_service
-
             self._cache["meeting"] = MeetingService(
                 repo_factory=self._repo,
                 meeting_repo=self._repo.meeting,
                 participant_repo=self._repo.meeting_participant,
                 user_service=self.user,
                 violation_service=self.violation,
-                minio_service=get_minio_service(),
+                minio_service=self.minio,
             )
         return self._cache["meeting"]

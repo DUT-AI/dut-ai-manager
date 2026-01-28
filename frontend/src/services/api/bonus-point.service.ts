@@ -9,11 +9,11 @@ import type {
 export const bonusPointService = {
   subPath: 'bonus-points',
 
-  async getBonusPoints(userId?: number, month?: number, year?: number) {
+  async getBonusPoints(userId?: number, month?: number, year?: number, deleted?: boolean) {
     const response = await axiosInstance.get<ApiResponse<BonusPointResponse[]>>(`/${this.subPath}`, {
-        params: { user_id: userId, month, year }
+        params: { user_id: userId, month, year, deleted }
     });
-    return response.data;
+    return response.data.data;
   },
 
   async createBonusPoint(data: BonusPointCreate) {
@@ -28,6 +28,11 @@ export const bonusPointService = {
 
   async deleteBonusPoint(id: number) {
     const response = await axiosInstance.delete<ApiResponse<boolean>>(`/${this.subPath}/${id}`);
+    return response.data;
+  },
+
+  async restoreBonusPoint(id: number) {
+    const response = await axiosInstance.put<ApiResponse<BonusPointResponse>>(`/${this.subPath}/${id}/restore`);
     return response.data;
   },
 };

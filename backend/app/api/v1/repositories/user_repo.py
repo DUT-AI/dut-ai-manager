@@ -20,6 +20,7 @@ class UserRepository(BaseRepository[User]):
         """Get user by ID with role and permissions eagerly loaded"""
         statement = (
             select(User)
+            .where(User.is_deleted == False)
             .where(User.id == user_id)
             .options(
                 joinedload(User.role)
@@ -33,6 +34,7 @@ class UserRepository(BaseRepository[User]):
         """Get user by email with role and permissions eagerly loaded"""
         statement = (
             select(User)
+            .where(User.is_deleted == False)
             .where(User.email == email)
             .options(
                 joinedload(User.role)
@@ -46,6 +48,7 @@ class UserRepository(BaseRepository[User]):
         """Get user by account ID with role eagerly loaded"""
         statement = (
             select(User)
+            .where(User.is_deleted == False)
             .where(User.account_id == account_id)
             .options(
                 joinedload(User.role)
@@ -57,5 +60,9 @@ class UserRepository(BaseRepository[User]):
 
     def search_user(self, keyword: str) -> List[User]:
         """Search user by name"""
-        statement = select(User).where(User.name.contains(keyword))
+        statement = (
+            select(User)
+            .where(User.is_deleted == False)
+            .where(User.name.contains(keyword))
+        )
         return self.session.exec(statement).all()

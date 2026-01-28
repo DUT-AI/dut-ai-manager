@@ -1,12 +1,14 @@
-from app.api.v1.services.notification_service import NotificationService
-from app.models.homework_submission import HomeworkStatus
-from app.models.homework_submission import HomeworkSubmission
-from app.schemas.response import BadRequestException
 from typing import List, Optional, Set
 
+from app.api.v1.services.notification_service import NotificationService
+from app.core.minio_service import MinioService
 from app.core.repository_factory import RepositoryFactory
 from app.models import Homework
+from app.models.homework_submission import HomeworkStatus, HomeworkSubmission
 from app.schemas.homework import HomeworkCreate, HomeworkUpdate
+from app.schemas.response import BadRequestException
+from app.utils.datetime import get_current_utc7_time
+from fastapi import UploadFile
 
 
 class HomeworkService:
@@ -14,12 +16,32 @@ class HomeworkService:
         self,
         repo_factory: RepositoryFactory,
         notification_service: NotificationService,
+        minio_service: MinioService,
     ):
         self.repo_factory = repo_factory
         self.notification_service = notification_service
+        self.minio_service = minio_service
 
-    def get_all(self, skip: int = 0, limit: int = 100) -> List[Homework]:
-        return self.repo_factory.homework.get_all(skip=skip, limit=limit)
+    async def _handle_file(self, file: UploadFile, title: str) -> str:
+        content = await file.read()
+        error = self.minio_service.validate_file(file.filename, len(content))
+        if error:
+            raise BadRequestException(error)
+
+        # Upload
+        now_utc7 = get_current_utc7_time()
+        timestamp = now_utc7.strftime("%Y%m%d_%H%M%S")
+        filename = f"{self.minio_service.HOMEWORK_PREFIX}/{title}/{title}_{timestamp}"
+
+        file_url = self.minio_service.upload_file(content, filename, file.content_type)
+        return file_url
+
+    def get_all(
+        self, skip: int = 0, limit: int = 100, deleted: bool = False
+    ) -> List[Homework]:
+        return self.repo_factory.homework.get_all(
+            skip=skip, limit=limit, deleted=deleted
+        )
 
     def get_assigned_to_user(
         self, user_id: int, skip: int = 0, limit: int = 100
@@ -46,7 +68,11 @@ class HomeworkService:
 
         return all_ids
 
-    async def create(self, data: HomeworkCreate) -> Homework:
+    async def create(self, data: HomeworkCreate, file: UploadFile) -> Homework:
+        file_url = None
+        if file:
+            file_url = await self._handle_file(file, data.title)
+
         # Collect all assignee IDs
         all_assignee_ids = self._collect_assignee_ids(data.assignee_ids, data.team_ids)
 
@@ -54,8 +80,10 @@ class HomeworkService:
             raise BadRequestException("Cần chọn người nhận hoặc team")
 
         # Create homework model
-        homework_data = data.model_dump(exclude={"assignee_ids", "team_ids"})
-        homework = Homework(**homework_data)
+        homework_data = data.model_dump(
+            exclude={"assignee_ids", "team_ids", "file_url"}
+        )
+        homework = Homework(**homework_data, file_url=file_url)
         homework = self.repo_factory.homework.create(homework)
 
         # Create submission for each assignee
@@ -73,9 +101,6 @@ class HomeworkService:
         for user_id in all_assignee_ids:
             user = self.repo_factory.user.get_by_id(user_id)
             if user:
-                # We don't await each notification to avoid blocking the response
-                # But since the request is async, we can await it or use background tasks
-                # For simplicity and reliability in this agentic task, we await it here
                 await self.notification_service.send_homework_assigned_notification(
                     user, homework
                 )
@@ -83,18 +108,22 @@ class HomeworkService:
         return homework
 
     async def update(
-        self, homework_id: int, data: HomeworkUpdate
+        self, homework_id: int, data: HomeworkUpdate, file: Optional[UploadFile] = None
     ) -> Optional[Homework]:
         homework = self.get_by_id(homework_id)
         if not homework:
             return None
 
+        if file:
+            homework.file_url = await self._handle_file(file, data.title)
+
         # Update homework fields
         update_data = data.model_dump(
-            exclude_unset=True, exclude={"assignee_ids", "team_ids"}
+            exclude_unset=False, exclude={"assignee_ids", "team_ids", "file_url"}
         )
         for key, value in update_data.items():
-            setattr(homework, key, value)
+            if value is not None:
+                setattr(homework, key, value)
         homework = self.repo_factory.homework.update(homework)
 
         # Sync assignees if provided
@@ -148,3 +177,6 @@ class HomeworkService:
             self.repo_factory.homework_submission.delete(submission)
 
         return self.repo_factory.homework.delete_by_id(homework_id)
+
+    def restore(self, homework_id: int) -> Optional[Homework]:
+        return self.repo_factory.homework.restore(homework_id)

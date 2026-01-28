@@ -14,18 +14,6 @@ services:
     container_name: dut-ai-postgres
     restart: always
     env_file: .env
-    command:
-      - "postgres"
-      - "-c"
-      - "shared_buffers=512MB"
-      - "-c"
-      - "effective_cache_size=1536MB"
-      - "-c"
-      - "work_mem=32MB"
-      - "-c"
-      - "maintenance_work_mem=128MB"
-      - "-c"
-      - "max_connections=100"
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:

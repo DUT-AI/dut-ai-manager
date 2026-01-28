@@ -23,13 +23,16 @@ async def get_permission_requests(
     year: int | None = None,
     skip: int = 0,
     limit: int = 100,
+    deleted: bool = False,
 ):
     if user_id:
         result = service_factory.permission_request.get_by_user(
             user_id=user_id, month=month, year=year
         )
     else:
-        result = service_factory.permission_request.get_all(skip=skip, limit=limit)
+        result = service_factory.permission_request.get_all(
+            skip=skip, limit=limit, deleted=deleted
+        )
     return ApiResponse.success(data=result)
 
 
@@ -72,4 +75,19 @@ async def delete_permission_request(
     service_factory: ServiceFactoryDI,
 ):
     result = service_factory.permission_request.delete(request_id)
+    return ApiResponse.success(data=result)
+
+
+@router.put(
+    "/{request_id}/restore",
+    response_model=ApiResponse[PermissionRequestResponse],
+    dependencies=[hasPermission(PermissionRequestPermission.DELETE)],
+)
+async def restore_permission_request(
+    request_id: int,
+    service_factory: ServiceFactoryDI,
+):
+    result = service_factory.permission_request.restore(request_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Request not found or not deleted")
     return ApiResponse.success(data=result)

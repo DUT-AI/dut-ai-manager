@@ -26,8 +26,10 @@ class PermissionRequestService:
         self.violation_service = violation_service
         self.notification_service = notification_service
 
-    def get_all(self, skip: int = 0, limit: int = 100) -> List[PermissionRequest]:
-        return self.repository.get_all(skip=skip, limit=limit)
+    def get_all(
+        self, skip: int = 0, limit: int = 100, deleted: bool = False
+    ) -> List[PermissionRequest]:
+        return self.repository.get_all(skip=skip, limit=limit, deleted=deleted)
 
     def get_by_id(self, request_id: int) -> Optional[PermissionRequest]:
         return self.repository.get_by_id(request_id)
@@ -107,3 +109,6 @@ class PermissionRequestService:
 
     def delete(self, request_id: int) -> bool:
         return self.repository.delete_by_id(request_id)
+
+    def restore(self, request_id: int) -> Optional[PermissionRequest]:
+        return self.repository.restore(request_id)

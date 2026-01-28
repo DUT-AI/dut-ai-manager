@@ -68,6 +68,7 @@ export const HomeworkFormModal = ({
                     ...baseData,
                     assignee_ids: values.assignee_ids || [],
                     team_ids: values.team_ids || [],
+                    file: values.file?.[0]?.originFileObj
                 });
                 message.success('Cập nhật bài tập thành công');
             } else {
@@ -166,30 +167,28 @@ export const HomeworkFormModal = ({
                     <TextArea rows={4} placeholder="Nhập mô tả bài tập (hỗ trợ Markdown)..." />
                 </Form.Item>
 
-                {!isEditing && (
-                    <Form.Item
-                        name="file"
-                        label="Đính kèm tệp"
-                        valuePropName="fileList"
-                        getValueFromEvent={normFile}
-                        extra="Chỉ chấp nhận 1 file nén (.zip, .rar, .gz), tối đa 10MB"
+                <Form.Item
+                    name="file"
+                    label={isEditing ? "Thay thế tệp đính kèm (Tùy chọn)" : "Đính kèm tệp"}
+                    valuePropName="fileList"
+                    getValueFromEvent={normFile}
+                    extra={isEditing ? "Tải lên file mới để thay thế file cũ. Chỉ chấp nhận 1 file nén (.zip, .rar, .gz), tối đa 10MB" : "Chỉ chấp nhận 1 file nén (.zip, .rar, .gz), tối đa 10MB"}
+                >
+                    <Upload
+                        maxCount={1}
+                        beforeUpload={(file) => {
+                            const isLt10M = file.size / 1024 / 1024 < 10;
+                            if (!isLt10M) {
+                                message.error('File phải nhỏ hơn 10MB!');
+                                return Upload.LIST_IGNORE;
+                            }
+                            return false;
+                        }}
+                        accept=".zip,.rar,.7z,.tar.gz,.gz"
                     >
-                        <Upload
-                            maxCount={1}
-                            beforeUpload={(file) => {
-                                const isLt10M = file.size / 1024 / 1024 < 10;
-                                if (!isLt10M) {
-                                    message.error('File phải nhỏ hơn 10MB!');
-                                    return Upload.LIST_IGNORE;
-                                }
-                                return false;
-                            }}
-                            accept=".zip,.rar,.7z,.tar.gz,.gz"
-                        >
-                            <Button icon={<UploadOutlined />}>Chọn file đính kèm</Button>
-                        </Upload>
-                    </Form.Item>
-                )}
+                        <Button icon={<UploadOutlined />}>{isEditing ? "Chọn file thay thế" : "Chọn file đính kèm"}</Button>
+                    </Upload>
+                </Form.Item>
             </Form>
         </Modal>
     );

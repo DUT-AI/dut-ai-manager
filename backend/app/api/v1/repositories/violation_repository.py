@@ -14,11 +14,14 @@ class ViolationRepository(BaseRepository[Violation]):
     def __init__(self, session: Session):
         super().__init__(session, Violation)
 
-    def get_all(self, skip: int = 0, limit: int = 100) -> List[Violation]:
+    def get_all(
+        self, skip: int = 0, limit: int = 100, deleted: bool = False
+    ) -> List[Violation]:
         """Get all violations with user details"""
 
         statement = (
             select(Violation)
+            .where(Violation.is_deleted == deleted)
             .options(
                 joinedload(Violation.user),
                 joinedload(Violation.creator),
@@ -34,7 +37,11 @@ class ViolationRepository(BaseRepository[Violation]):
         self, user_id: int, month: Optional[int] = None, year: Optional[int] = None
     ) -> List[Violation]:
         """Get all violations by a specific user, optionally filtered by month/year"""
-        statement = select(Violation).where(Violation.user_id == user_id)
+        statement = (
+            select(Violation)
+            .where(Violation.is_deleted == False)
+            .where(Violation.user_id == user_id)
+        )
 
         if month is not None:
             statement = statement.where(extract("month", Violation.created_at) == month)
@@ -52,6 +59,7 @@ class ViolationRepository(BaseRepository[Violation]):
         statement = (
             select(Violation)
             .where(
+                Violation.is_deleted == False,
                 Violation.user_id == user_id,
                 Violation.date >= start,
                 Violation.date <= end,
@@ -70,6 +78,7 @@ class ViolationRepository(BaseRepository[Violation]):
         statement = (
             select(Violation)
             .where(
+                Violation.is_deleted == False,
                 Violation.date >= start,
                 Violation.date <= end,
             )
@@ -85,7 +94,7 @@ class ViolationRepository(BaseRepository[Violation]):
         self, month: int, year: int, user_id: Optional[int] = None
     ) -> List[Violation]:
         """Get all violations in a specific month"""
-        statement = select(Violation)
+        statement = select(Violation).where(Violation.is_deleted == False)
         if user_id:
             statement = statement.where(Violation.user_id == user_id)
         if month:

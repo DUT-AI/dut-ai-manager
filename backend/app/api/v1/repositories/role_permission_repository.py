@@ -20,6 +20,7 @@ class RoleRepository(BaseRepository[Role]):
 
         statement = (
             select(Role)
+            .where(Role.is_deleted == False)
             .offset(skip)
             .limit(limit)
             .options(
@@ -34,7 +35,10 @@ class RoleRepository(BaseRepository[Role]):
         """Get role with its permissions"""
         statement = (
             select(Role)
-            .where(Role.id == role_id)
+            .where(
+                Role.is_deleted == False,
+                Role.id == role_id,
+            )
             .options(
                 selectinload(Role.role_permissions).selectinload(
                     RolePermission.permission
@@ -58,10 +62,11 @@ class RolePermissionRepository(BaseRepository[RolePermission]):
         super().__init__(session, RolePermission)
 
     def get_by_role_and_permission(
-            self, role_id: int, permission_id: int
+        self, role_id: int, permission_id: int
     ) -> Optional[RolePermission]:
         """Get link by role and permission IDs"""
         statement = select(RolePermission).where(
+            RolePermission.is_deleted == False,
             RolePermission.role_id == role_id,
             RolePermission.permission_id == permission_id,
         )

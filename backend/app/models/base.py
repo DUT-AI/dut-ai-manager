@@ -14,6 +14,7 @@ class TimestampMixin(SQLModel):
         default_factory=get_current_utc7_time,
         sa_column_kwargs={"onupdate": get_current_utc7_time},
     )
+    is_deleted: bool = Field(default=False)
     created_by: Optional[int] = Field(
         default_factory=get_current_user_id, foreign_key="users.id"
     )

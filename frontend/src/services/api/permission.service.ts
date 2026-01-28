@@ -9,11 +9,11 @@ import type {
 export const permissionService = {
   subPath: 'permissions',
 
-  async getPermissions(userId?: number, month?: number, year?: number) {
+  async getPermissions(userId?: number, month?: number, year?: number, deleted?: boolean) {
     const response = await axiosInstance.get<ApiResponse<PermissionRequestResponse[]>>(`/${this.subPath}`, {
-        params: { user_id: userId, month, year }
+        params: { user_id: userId, month, year, deleted }
     });
-    return response.data;
+    return response.data.data;
   },
 
   async createPermission(data: PermissionCreate) {
@@ -28,6 +28,11 @@ export const permissionService = {
 
   async deletePermission(id: number) {
     const response = await axiosInstance.delete<ApiResponse<boolean>>(`/${this.subPath}/${id}`);
+    return response.data;
+  },
+
+  async restorePermission(id: number) {
+    const response = await axiosInstance.put<ApiResponse<PermissionRequestResponse>>(`/${this.subPath}/${id}/restore`);
     return response.data;
   },
 };

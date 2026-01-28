@@ -20,6 +20,7 @@ class HomeworkSubmissionRepository(BaseRepository[HomeworkSubmission]):
         statement = (
             select(HomeworkSubmission)
             .where(
+                HomeworkSubmission.is_deleted == False,
                 HomeworkSubmission.homework_id == homework_id,
                 HomeworkSubmission.owner_id == user_id,
             )
@@ -33,6 +34,7 @@ class HomeworkSubmissionRepository(BaseRepository[HomeworkSubmission]):
         """Get all submissions for a homework"""
         statement = (
             select(HomeworkSubmission)
+            .where(HomeworkSubmission.is_deleted == False)
             .where(HomeworkSubmission.homework_id == homework_id)
             .options(joinedload(HomeworkSubmission.owner))
             .order_by(HomeworkSubmission.created_at)
@@ -44,20 +46,21 @@ class HomeworkSubmissionRepository(BaseRepository[HomeworkSubmission]):
     def get_owner_ids_by_homework(self, homework_id: int) -> List[int]:
         """Get all owner_ids for a homework"""
         statement = select(HomeworkSubmission.owner_id).where(
-            HomeworkSubmission.homework_id == homework_id
+            HomeworkSubmission.is_deleted == False,
+            HomeworkSubmission.homework_id == homework_id,
         )
         return list(self.session.exec(statement).all())
 
     def delete_by_homework_and_owner(self, homework_id: int, owner_id: int) -> bool:
         """Delete a submission by homework and owner"""
         statement = select(HomeworkSubmission).where(
+            HomeworkSubmission.is_deleted == False,
             HomeworkSubmission.homework_id == homework_id,
             HomeworkSubmission.owner_id == owner_id,
         )
         submission = self.session.exec(statement).first()
         if submission:
-            self.session.delete(submission)
-            self.session.commit()
+            self.delete(submission)
             return True
         return False
 
@@ -73,6 +76,7 @@ class HomeworkSubmissionRepository(BaseRepository[HomeworkSubmission]):
             select(HomeworkSubmission)
             .join(Homework, HomeworkSubmission.homework_id == Homework.id)
             .where(
+                HomeworkSubmission.is_deleted == False,
                 HomeworkSubmission.status == HomeworkStatus.NOT_SUBMITTED,
                 func.date(Homework.deadline) == target_date,
             )

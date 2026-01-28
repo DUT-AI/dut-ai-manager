@@ -15,11 +15,14 @@ class PermissionRequestRepository(BaseRepository[PermissionRequest]):
     def __init__(self, session: Session):
         super().__init__(session, PermissionRequest)
 
-    def get_all(self, skip: int = 0, limit: int = 100) -> List[PermissionRequest]:
+    def get_all(
+        self, skip: int = 0, limit: int = 100, deleted: bool = False
+    ) -> List[PermissionRequest]:
         """Get all permission requests"""
 
         statement = (
             select(PermissionRequest)
+            .where(PermissionRequest.is_deleted == deleted)
             .options(
                 joinedload(PermissionRequest.creator),
                 joinedload(PermissionRequest.updater),
@@ -35,7 +38,8 @@ class PermissionRequestRepository(BaseRepository[PermissionRequest]):
     ) -> List[PermissionRequest]:
         """Get all requests created by a specific user, optionally filtered by month/year"""
         statement = select(PermissionRequest).where(
-            PermissionRequest.created_by == user_id
+            PermissionRequest.is_deleted == False,
+            PermissionRequest.created_by == user_id,
         )
 
         if month is not None:
@@ -54,6 +58,7 @@ class PermissionRequestRepository(BaseRepository[PermissionRequest]):
     ) -> List[PermissionRequest]:
         """Get permission requests for a user on a specific date"""
         statement = select(PermissionRequest).where(
+            PermissionRequest.is_deleted == False,
             PermissionRequest.created_by == user_id,
             PermissionRequest.date == target_date,
         )
@@ -63,6 +68,7 @@ class PermissionRequestRepository(BaseRepository[PermissionRequest]):
         """Get all permission requests on a specific date"""
         statement = (
             select(PermissionRequest)
+            .where(PermissionRequest.is_deleted == False)
             .where(PermissionRequest.date == target_date)
             .options(
                 joinedload(PermissionRequest.creator),
@@ -73,7 +79,9 @@ class PermissionRequestRepository(BaseRepository[PermissionRequest]):
 
     def get_by_month(self, month: int, year: int) -> List[PermissionRequest]:
         """Get all permission requests in a specific month"""
-        statement = select(PermissionRequest)
+        statement = select(PermissionRequest).where(
+            PermissionRequest.is_deleted == False
+        )
         if month:
             statement = statement.where(
                 extract("month", PermissionRequest.date) == month
@@ -95,6 +103,7 @@ class PermissionRequestRepository(BaseRepository[PermissionRequest]):
             select(func.count())
             .select_from(PermissionRequest)
             .where(
+                PermissionRequest.is_deleted == False,
                 PermissionRequest.created_by == user_id,
                 PermissionRequest.category == category,
                 extract("month", PermissionRequest.date) == month,
@@ -112,6 +121,7 @@ class PermissionRequestRepository(BaseRepository[PermissionRequest]):
             select(func.count())
             .select_from(PermissionRequest)
             .where(
+                PermissionRequest.is_deleted == False,
                 PermissionRequest.created_by == user_id,
                 PermissionRequest.category == RequestCategory.POSTPONE,
                 PermissionRequest.date == target_date,

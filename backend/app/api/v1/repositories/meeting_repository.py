@@ -16,7 +16,10 @@ class MeetingRepository(BaseRepository[Meeting]):
     def get_with_participants(self, meeting_id: int) -> Optional[Meeting]:
         statement = (
             select(Meeting)
-            .where(Meeting.id == meeting_id)
+            .where(
+                Meeting.is_deleted is False,
+                Meeting.id == meeting_id,
+            )
             .options(
                 joinedload(Meeting.participants).joinedload(MeetingParticipant.user)
             )
@@ -28,6 +31,7 @@ class MeetingRepository(BaseRepository[Meeting]):
     ) -> List[Meeting]:
         statement = (
             select(Meeting)
+            .where(Meeting.is_deleted == False)
             .options(
                 joinedload(Meeting.participants).joinedload(MeetingParticipant.user)
             )
@@ -39,7 +43,10 @@ class MeetingRepository(BaseRepository[Meeting]):
     def get_by_date(self, target_date: date) -> List[Meeting]:
         statement = (
             select(Meeting)
-            .where(func.date(Meeting.start_time) == target_date)
+            .where(
+                Meeting.is_deleted is False,
+                func.date(Meeting.start_time) == target_date,
+            )
             .options(
                 joinedload(Meeting.participants).joinedload(MeetingParticipant.user)
             )
@@ -54,17 +61,20 @@ class MeetingParticipantRepository(BaseRepository[MeetingParticipant]):
     def get_by_meeting_and_user(
         self, meeting_id: int, user_id: int
     ) -> Optional[MeetingParticipant]:
-        statement = (
-            select(MeetingParticipant)
-            .where(MeetingParticipant.meeting_id == meeting_id)
-            .where(MeetingParticipant.user_id == user_id)
+        statement = select(MeetingParticipant).where(
+            MeetingParticipant.is_deleted is False,
+            MeetingParticipant.meeting_id == meeting_id,
+            MeetingParticipant.user_id == user_id,
         )
         return self.session.exec(statement).first()
 
     def get_by_meeting(self, meeting_id: int) -> List[MeetingParticipant]:
         statement = (
             select(MeetingParticipant)
-            .where(MeetingParticipant.meeting_id == meeting_id)
+            .where(
+                MeetingParticipant.is_deleted is False,
+                MeetingParticipant.meeting_id == meeting_id,
+            )
             .options(joinedload(MeetingParticipant.user))
         )
         return list(self.session.exec(statement).all())

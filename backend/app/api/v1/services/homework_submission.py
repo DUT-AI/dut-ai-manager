@@ -1,9 +1,9 @@
+from app.api.v1.services.violation_service import ViolationService
 from app.api.v1.services.user_service import UserService
 from typing import List, Optional
 
 from fastapi import UploadFile
 
-from app.api.v1.services.violation_service import ViolationService
 from app.core.context import get_current_user_id
 from app.core.minio_service import MinioService
 from app.core.repository_factory import RepositoryFactory

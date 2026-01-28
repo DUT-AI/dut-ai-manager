@@ -1,5 +1,6 @@
 """MinIO Storage Service for file uploads."""
 
+from app.schemas.response import BadRequestException
 from io import BytesIO
 from typing import Optional
 
@@ -8,6 +9,7 @@ from minio.error import S3Error
 from loguru import logger
 
 from app.core.config import settings
+import json
 
 
 class MinioService:
@@ -19,6 +21,7 @@ class MinioService:
     MAX_FILE_SIZE = 10 * 1024 * 1024
     # Prefix for homework submissions
     SUBMISSIONS_PREFIX = "homework-submissions"
+    HOMEWORK_PREFIX = "homeworks"
 
     def __init__(self):
         self.client = Minio(
@@ -40,22 +43,21 @@ class MinioService:
                 self.client.make_bucket(self.bucket_name)
                 logger.info(f"Created MinIO bucket: {self.bucket_name}")
 
-                # Set bucket policy for public read access
-                policy = {
-                    "Version": "2012-10-17",
-                    "Statement": [
-                        {
-                            "Effect": "Allow",
-                            "Principal": {"AWS": "*"},
-                            "Action": ["s3:GetObject"],
-                            "Resource": [f"arn:aws:s3:::{self.bucket_name}/*"],
-                        }
-                    ],
-                }
-                import json
+            # Set bucket policy for public read access
+            policy = {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Principal": {"AWS": "*"},
+                        "Action": ["s3:GetObject"],
+                        "Resource": [f"arn:aws:s3:::{self.bucket_name}/*"],
+                    }
+                ],
+            }
 
-                self.client.set_bucket_policy(self.bucket_name, json.dumps(policy))
-                logger.info(f"Set public read policy for bucket: {self.bucket_name}")
+            self.client.set_bucket_policy(self.bucket_name, json.dumps(policy))
+            logger.info(f"Set public read policy for bucket: {self.bucket_name}")
         except S3Error as e:
             logger.error(f"Failed to ensure bucket exists: {e}")
             raise
@@ -110,7 +112,7 @@ class MinioService:
             return self.get_public_url(filename)
         except S3Error as e:
             logger.error(f"Failed to upload file to MinIO: {e}")
-            raise
+            raise BadRequestException("Failed to upload file to MinIO")
 
     def get_public_url(self, filename: str) -> str:
         """
@@ -142,15 +144,3 @@ class MinioService:
         except S3Error as e:
             logger.error(f"Failed to delete file from MinIO: {e}")
             return False
-
-
-# Singleton instance
-_minio_service: Optional[MinioService] = None
-
-
-def get_minio_service() -> MinioService:
-    """Get or create MinIO service singleton."""
-    global _minio_service
-    if _minio_service is None:
-        _minio_service = MinioService()
-    return _minio_service
