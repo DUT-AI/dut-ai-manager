@@ -69,10 +69,8 @@ class ReportService:
             if p.date:
                 activity_dates.add(p.date)
 
-        meetings = self.meeting_service.get_all(limit=1000)  # Simple approach for now
-        # Ideally, MeetingService should have a get() with month/year filter too
+        meetings = self.meeting_service.get_all(limit=1000, month=month, year=year)
         for m in meetings:
-            if m.start_time.month == month and m.start_time.year == year:
-                activity_dates.add(m.start_time.date())
+            activity_dates.add(m.start_time.date())
 
         return sorted(list(activity_dates))

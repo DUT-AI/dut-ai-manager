@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import List, Optional
 
-from fastapi import UploadFile
+from fastapi import UploadFile, status
 
 from app.api.v1.repositories.meeting_repository import (
     MeetingParticipantRepository,
@@ -36,11 +36,22 @@ class MeetingService:
         self.violation_service = violation_service
         self.minio_service = minio_service
 
-    def get_all(self, skip: int = 0, limit: int = 100) -> List[Meeting]:
-        return self.meeting_repo.get_all_with_participants(skip, limit)
+    def get_all(
+        self,
+        skip: int = 0,
+        limit: int = 100,
+        month: Optional[int] = None,
+        year: Optional[int] = None,
+    ) -> List[Meeting]:
+        return self.meeting_repo.get_all_with_participants(skip, limit, month, year)
 
     def get_by_id(self, meeting_id: int) -> Optional[Meeting]:
-        return self.meeting_repo.get_with_participants(meeting_id)
+        meeting = self.meeting_repo.get_with_participants(meeting_id)
+        if not meeting:
+            raise BadRequestException(
+                "Meeting not found", status_code=status.HTTP_404_NOT_FOUND
+            )
+        return meeting
 
     def get_by_date(self, target_date: date) -> List[Meeting]:
         return self.meeting_repo.get_by_date(target_date)
@@ -183,7 +194,9 @@ class MeetingService:
                 # No permission
                 violation_reason = f"Đi trễ không phép buổi sinh hoạt: {meeting.title} (Thời gian check in: {check_in_time_str})"
                 await self.violation_service.create(
-                    ViolationCreate(user_id=user_id, reason=violation_reason, date=now),
+                    ViolationCreate(
+                        user_ids=[user_id], reason=violation_reason, date=now
+                    ),
                     is_system=True,
                 )
             else:
@@ -195,7 +208,7 @@ class MeetingService:
                     violation_reason = f"Đi trễ có phép buổi sinh hoạt: {meeting.title} (Thời gian xin phép: {perm_end_time_str} Thời gian check in: {check_in_time_str})"
                     await self.violation_service.create(
                         ViolationCreate(
-                            user_id=user_id, reason=violation_reason, date=now
+                            user_ids=[user_id], reason=violation_reason, date=now
                         ),
                         is_system=True,
                     )

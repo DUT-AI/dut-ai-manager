@@ -35,6 +35,7 @@ class PermissionRequestResponse(PermissionRequestBase):
     user_avatar: Optional[str] = None
     creator_name: Optional[str] = None
     updater_name: Optional[str] = None
+    is_deleted: bool
 
     class Config:
         from_attributes = True

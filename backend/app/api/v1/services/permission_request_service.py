@@ -40,10 +40,14 @@ class PermissionRequestService:
         return self.repository.get_by_month(month=month, year=year)
 
     def get_by_user(
-        self, user_id: int, month: int | None = None, year: int | None = None
+        self,
+        user_id: int,
+        month: int | None = None,
+        year: int | None = None,
+        deleted: bool = False,
     ) -> List[PermissionRequest]:
         return self.repository.get_by_created_by(
-            user_id=user_id, month=month, year=year
+            user_id=user_id, month=month, year=year, deleted=deleted
         )
 
     def get_by_date(self, target_date) -> List[PermissionRequest]:
@@ -77,7 +81,7 @@ class PermissionRequestService:
 
                 await self.violation_service.create(
                     ViolationCreate(
-                        user_id=user_id,
+                        user_ids=[user_id],
                         reason=f"{category_text.capitalize()} lần {existing_count + 1} trong tháng {month}/{year}",
                         date=get_current_utc7_time(),
                     ),

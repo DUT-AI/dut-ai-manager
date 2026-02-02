@@ -47,8 +47,6 @@ async def get_meeting(
 ):
     """Get meeting by ID"""
     meeting = service_factory.meeting.get_by_id(meeting_id)
-    if not meeting:
-        return ApiResponse.not_found(message="Meeting not found")
     return ApiResponse.success(data=meeting, message="Meeting retrieved successfully")
 
 

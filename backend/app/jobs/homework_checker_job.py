@@ -79,7 +79,7 @@ async def check_overdue_homework_submissions() -> None:
 
             # Create violation
             violation_data = ViolationCreate(
-                user_id=user_id,
+                user_ids=[user_id],
                 reason=f"Không nộp bài tập: {homework.title}",
                 date=get_current_utc7_time(),
             )

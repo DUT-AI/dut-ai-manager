@@ -27,7 +27,7 @@ async def get_permission_requests(
 ):
     if user_id:
         result = service_factory.permission_request.get_by_user(
-            user_id=user_id, month=month, year=year
+            user_id=user_id, month=month, year=year, deleted=deleted
         )
     else:
         result = service_factory.permission_request.get_all(

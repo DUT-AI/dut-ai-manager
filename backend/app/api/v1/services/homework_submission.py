@@ -105,7 +105,7 @@ class HomeworkSubmissionService:
         if is_late and (not existing_submission or not existing_submission.is_late):
             await self.violation_service.create(
                 ViolationCreate(
-                    user_id=user_id,
+                    user_ids=[user_id],
                     reason=f"Nộp bài trễ: {homework.title}",
                     date=now_utc7,
                 ),

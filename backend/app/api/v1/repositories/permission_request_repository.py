@@ -34,11 +34,15 @@ class PermissionRequestRepository(BaseRepository[PermissionRequest]):
         return list(self.session.exec(statement).all())
 
     def get_by_created_by(
-        self, user_id: int, month: Optional[int] = None, year: Optional[int] = None
+        self,
+        user_id: int,
+        month: Optional[int] = None,
+        year: Optional[int] = None,
+        deleted: bool = False,
     ) -> List[PermissionRequest]:
         """Get all requests created by a specific user, optionally filtered by month/year"""
         statement = select(PermissionRequest).where(
-            PermissionRequest.is_deleted == False,
+            PermissionRequest.is_deleted == deleted,
             PermissionRequest.created_by == user_id,
         )
 

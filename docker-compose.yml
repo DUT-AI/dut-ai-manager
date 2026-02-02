@@ -39,6 +39,7 @@ services:
     env_file: .env
     environment:
       # Override these values for container environment
+      - ENVIRONMENT=production
       - POSTGRES_SERVER=postgres
       - POSTGRES_PORT=5432
     ports:

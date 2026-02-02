@@ -50,10 +50,9 @@ def decode_token(token: str) -> dict | None:
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
         return payload
-    except jwt.ExpiredSignatureError:
+    except Exception:
         return None
-    except jwt.InvalidTokenError:
-        return None
+
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:

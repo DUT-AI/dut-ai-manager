@@ -1,5 +1,7 @@
 from datetime import date
 from typing import List, Optional
+from sqlalchemy import extract
+
 
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
@@ -17,7 +19,7 @@ class MeetingRepository(BaseRepository[Meeting]):
         statement = (
             select(Meeting)
             .where(
-                Meeting.is_deleted is False,
+                Meeting.is_deleted == False,
                 Meeting.id == meeting_id,
             )
             .options(
@@ -27,12 +29,21 @@ class MeetingRepository(BaseRepository[Meeting]):
         return self.session.exec(statement).first()
 
     def get_all_with_participants(
-        self, skip: int = 0, limit: int = 100
+        self,
+        skip: int = 0,
+        limit: int = 100,
+        month: Optional[int] = None,
+        year: Optional[int] = None,
     ) -> List[Meeting]:
+        query = select(Meeting).where(Meeting.is_deleted == False)
+
+        if month:
+            query = query.where(extract("month", Meeting.start_time) == month)
+        if year:
+            query = query.where(extract("year", Meeting.start_time) == year)
+
         statement = (
-            select(Meeting)
-            .where(Meeting.is_deleted == False)
-            .options(
+            query.options(
                 joinedload(Meeting.participants).joinedload(MeetingParticipant.user)
             )
             .offset(skip)
@@ -44,11 +55,8 @@ class MeetingRepository(BaseRepository[Meeting]):
         statement = (
             select(Meeting)
             .where(
-                Meeting.is_deleted is False,
+                Meeting.is_deleted == False,
                 func.date(Meeting.start_time) == target_date,
-            )
-            .options(
-                joinedload(Meeting.participants).joinedload(MeetingParticipant.user)
             )
         )
         return list(self.session.exec(statement).unique().all())
@@ -62,7 +70,7 @@ class MeetingParticipantRepository(BaseRepository[MeetingParticipant]):
         self, meeting_id: int, user_id: int
     ) -> Optional[MeetingParticipant]:
         statement = select(MeetingParticipant).where(
-            MeetingParticipant.is_deleted is False,
+            MeetingParticipant.is_deleted == False,
             MeetingParticipant.meeting_id == meeting_id,
             MeetingParticipant.user_id == user_id,
         )
@@ -72,7 +80,7 @@ class MeetingParticipantRepository(BaseRepository[MeetingParticipant]):
         statement = (
             select(MeetingParticipant)
             .where(
-                MeetingParticipant.is_deleted is False,
+                MeetingParticipant.is_deleted == False,
                 MeetingParticipant.meeting_id == meeting_id,
             )
             .options(joinedload(MeetingParticipant.user))
