@@ -4,7 +4,7 @@ from sqlalchemy import extract
 
 
 from sqlalchemy import func
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import contains_eager, joinedload
 from sqlmodel import Session, select
 
 from app.api.v1.repositories.base import BaseRepository
@@ -18,15 +18,20 @@ class MeetingRepository(BaseRepository[Meeting]):
     def get_with_participants(self, meeting_id: int) -> Optional[Meeting]:
         statement = (
             select(Meeting)
+            .outerjoin(
+                MeetingParticipant,
+                (Meeting.id == MeetingParticipant.meeting_id)
+                & (MeetingParticipant.is_deleted == False),
+            )
             .where(
                 Meeting.is_deleted == False,
                 Meeting.id == meeting_id,
             )
             .options(
-                joinedload(Meeting.participants).joinedload(MeetingParticipant.user)
+                contains_eager(Meeting.participants).joinedload(MeetingParticipant.user)
             )
         )
-        return self.session.exec(statement).first()
+        return self.session.exec(statement).unique().first()
 
     def get_all_with_participants(
         self,
@@ -43,8 +48,13 @@ class MeetingRepository(BaseRepository[Meeting]):
             query = query.where(extract("year", Meeting.start_time) == year)
 
         statement = (
-            query.options(
-                joinedload(Meeting.participants).joinedload(MeetingParticipant.user)
+            query.outerjoin(
+                MeetingParticipant,
+                (Meeting.id == MeetingParticipant.meeting_id)
+                & (MeetingParticipant.is_deleted == False),
+            )
+            .options(
+                contains_eager(Meeting.participants).joinedload(MeetingParticipant.user)
             )
             .offset(skip)
             .limit(limit)
@@ -52,12 +62,9 @@ class MeetingRepository(BaseRepository[Meeting]):
         return list(self.session.exec(statement).unique().all())
 
     def get_by_date(self, target_date: date) -> List[Meeting]:
-        statement = (
-            select(Meeting)
-            .where(
-                Meeting.is_deleted == False,
-                func.date(Meeting.start_time) == target_date,
-            )
+        statement = select(Meeting).where(
+            Meeting.is_deleted == False,
+            func.date(Meeting.start_time) == target_date,
         )
         return list(self.session.exec(statement).unique().all())
 

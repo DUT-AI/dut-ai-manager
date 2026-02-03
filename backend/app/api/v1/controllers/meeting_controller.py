@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, File, UploadFile, status
+from fastapi import APIRouter, File, Form, UploadFile, status
 
 from app.core.deps import CurrentUser, ServiceFactoryDI
 from app.schemas.meeting import (
@@ -50,17 +50,19 @@ async def get_meeting(
     return ApiResponse.success(data=meeting, message="Meeting retrieved successfully")
 
 
-@router.post("/check-in", response_model=ApiResponse[ParticipantResponse])
+@router.post("/check-in", response_model=ApiResponse[List[ParticipantResponse]])
 async def check_in(
     meeting_id: int,
-    user_id: int,
     service_factory: ServiceFactoryDI,
     _current_user: CurrentUser,
+    user_ids: List[int] = Form(...),
     image: UploadFile = File(...),
 ):
     """Check in to a meeting with an image"""
-    participant = await service_factory.meeting.check_in(meeting_id, user_id, image)
-    return ApiResponse.success(data=participant, message="Check-in successful")
+    participants, message = await service_factory.meeting.check_in(
+        meeting_id, user_ids, image
+    )
+    return ApiResponse.success(data=participants, message=message)
 
 
 @router.put("/{meeting_id}", response_model=ApiResponse[MeetingResponse])

@@ -151,22 +151,14 @@ class MeetingService:
         return self.meeting_repo.delete(meeting)
 
     async def check_in(
-        self, meeting_id: int, user_id: int, image: UploadFile
-    ) -> MeetingParticipant:
-        participant = self.participant_repo.get_by_meeting_and_user(meeting_id, user_id)
-        if not participant:
-            raise BadRequestException("User is not a participant of this meeting")
-
-        if participant.status == ParticipantStatus.JOINED:
-            raise BadRequestException("User already checked in")
-
-        meeting = participant.meeting
+        self, meeting_id: int, user_ids: List[int], image: UploadFile
+    ) -> tuple[List[MeetingParticipant], str]:
+        # Upload image to MinIO once
         now = get_current_utc7_time()
-
-        # Upload image to MinIO
         file_content = await image.read()
         timestamp = now.strftime("%Y%m%d_%H%M%S")
-        filename = f"meetings/{meeting_id}/{user_id}_{timestamp}_{image.filename}"
+        # Use first user_id for filename prefix or just generic
+        filename = f"meetings/{meeting_id}/checkin_{timestamp}_{image.filename}"
 
         image_url = self.minio_service.upload_file(
             file_data=file_content,
@@ -174,48 +166,94 @@ class MeetingService:
             content_type=image.content_type or "image/jpeg",
         )
 
-        # Lateness logic
-        if now > meeting.start_time:
-            # Check for permission request
-            meeting_date = meeting.start_time.date()
-            permissions = self.repo_factory.permission_request.get_by_date(meeting_date)
-            # Filter for this user and 'đi trễ sinh hoạt' category
-            user_permission = next(
-                (
-                    p
-                    for p in permissions
-                    if p.created_by == user_id and p.category == RequestCategory.LATE
-                ),
-                None,
-            )
+        success_names = []
+        error_messages = []
+        updated_participants = []
 
-            check_in_time_str = now.strftime("%H:%M:%S")
-            if not user_permission:
-                # No permission
-                violation_reason = f"Đi trễ không phép buổi sinh hoạt: {meeting.title} (Thời gian check in: {check_in_time_str})"
-                await self.violation_service.create(
-                    ViolationCreate(
-                        user_ids=[user_id], reason=violation_reason, date=now
-                    ),
-                    is_system=True,
+        for user_id in user_ids:
+            participant = self.participant_repo.get_by_meeting_and_user(
+                meeting_id, user_id
+            )
+            if not participant:
+                error_messages.append(
+                    f"Người dùng {user_id} không có trong danh sách tham dự"
                 )
-            else:
-                # Has permission, check if still late beyond permission end_time
-                # Convert permission end_time to datetime for comparison
-                perm_end_time = datetime.combine(meeting_date, user_permission.end_time)
-                if now > perm_end_time:
-                    perm_end_time_str = user_permission.end_time.strftime("%H:%M:%S")
-                    violation_reason = f"Đi trễ có phép buổi sinh hoạt: {meeting.title} (Thời gian xin phép: {perm_end_time_str} Thời gian check in: {check_in_time_str})"
+                continue
+
+            if participant.status == ParticipantStatus.JOINED:
+                error_messages.append(f"Người dùng {user_id} đã checkin rồi")
+                updated_participants.append(participant)
+                continue
+
+            meeting = participant.meeting
+
+            # Lateness logic
+            if now > meeting.start_time:
+                # Check for permission request
+                meeting_date = meeting.start_time.date()
+                permissions = self.repo_factory.permission_request.get_by_date(
+                    meeting_date
+                )
+                # Filter for this user and 'đi trễ sinh hoạt' category
+                user_permission = next(
+                    (
+                        p
+                        for p in permissions
+                        if p.created_by == user_id
+                        and p.category == RequestCategory.LATE
+                    ),
+                    None,
+                )
+
+                check_in_time_str = now.strftime("%H:%M:%S")
+                if not user_permission:
+                    # No permission
+                    violation_reason = f"Đi trễ không phép buổi sinh hoạt: {meeting.title} (Thời gian check in: {check_in_time_str})"
                     await self.violation_service.create(
                         ViolationCreate(
                             user_ids=[user_id], reason=violation_reason, date=now
                         ),
                         is_system=True,
                     )
+                else:
+                    # Has permission, check if still late beyond permission end_time
+                    # Convert permission end_time to datetime for comparison
+                    perm_end_time = datetime.combine(
+                        meeting_date, user_permission.end_time
+                    )
+                    if now > perm_end_time:
+                        perm_end_time_str = user_permission.end_time.strftime(
+                            "%H:%M:%S"
+                        )
+                        violation_reason = f"Đi trễ có phép buổi sinh hoạt: {meeting.title} (Thời gian xin phép: {perm_end_time_str} Thời gian check in: {check_in_time_str})"
+                        await self.violation_service.create(
+                            ViolationCreate(
+                                user_ids=[user_id], reason=violation_reason, date=now
+                            ),
+                            is_system=True,
+                        )
 
-        # Update participant
-        participant.check_in_at = now
-        participant.status = ParticipantStatus.JOINED
-        participant.link_image = image_url
+            # Update participant
+            participant.check_in_at = now
+            participant.status = ParticipantStatus.JOINED
+            participant.link_image = image_url
+            updated_p = self.participant_repo.update(participant)
+            updated_participants.append(updated_p)
 
-        return self.participant_repo.update(participant)
+            # Get user name for message
+            user_name = participant.user.name if participant.user else str(user_id)
+            success_names.append(user_name)
+
+        # Construct message
+        message_parts = []
+        if success_names:
+            message_parts.append(f"Đã ghi nhận {', '.join(success_names)}")
+
+        if error_messages:
+            message_parts.append(". ".join(error_messages))
+
+        full_message = ". ".join(message_parts)
+        if not full_message:
+            full_message = "Không có người dùng nào được checkin"
+
+        return updated_participants, full_message

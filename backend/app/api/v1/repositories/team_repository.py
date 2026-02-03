@@ -1,5 +1,5 @@
 from typing import List, Optional
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import contains_eager, joinedload
 from sqlmodel import Session, select, delete
 from app.api.v1.repositories.base import BaseRepository
 from app.models.team import Team, TeamMember
@@ -12,8 +12,12 @@ class TeamRepository(BaseRepository[Team]):
     def get_all_with_members(self, skip: int = 0, limit: int = 100) -> List[Team]:
         statement = (
             select(Team)
+            .outerjoin(
+                TeamMember,
+                (Team.id == TeamMember.team_id) & (TeamMember.is_deleted == False),
+            )
             .where(Team.is_deleted == False)
-            .options(joinedload(Team.team_members).joinedload(TeamMember.user))
+            .options(contains_eager(Team.team_members).joinedload(TeamMember.user))
             .offset(skip)
             .limit(limit)
         )
@@ -22,13 +26,17 @@ class TeamRepository(BaseRepository[Team]):
     def get_by_id_with_members(self, team_id: int) -> Optional[Team]:
         statement = (
             select(Team)
+            .outerjoin(
+                TeamMember,
+                (Team.id == TeamMember.team_id) & (TeamMember.is_deleted == False),
+            )
             .where(
                 Team.is_deleted == False,
                 Team.id == team_id,
             )
-            .options(joinedload(Team.team_members).joinedload(TeamMember.user))
+            .options(contains_eager(Team.team_members).joinedload(TeamMember.user))
         )
-        return self.session.exec(statement).first()
+        return self.session.exec(statement).unique().first()
 
     def sync_members(self, team_id: int, user_ids: List[int]):
         # Get all existing members (including deleted ones)

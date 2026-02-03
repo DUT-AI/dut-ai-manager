@@ -5,7 +5,7 @@ from typing import Optional, Tuple
 
 from app.api.v1.repositories import UserRepository, AccountRepository
 from app.core.config import settings
-from app.models import User, Account
+from app.models import User, Account, UserStatus
 from app.utils.password import (
     verify_password,
     create_access_token,
@@ -36,6 +36,9 @@ class AuthService:
 
         if not user or not user.account_id:
             raise BadRequestException("User not found or user has no account")
+
+        if user.status == UserStatus.INACTIVE:
+            raise BadRequestException("Account is inactive")
 
         # Get account
         account = self.account_repository.get_by_id(user.account_id)
