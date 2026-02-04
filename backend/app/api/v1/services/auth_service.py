@@ -26,7 +26,7 @@ class AuthService:
         self.user_repository = user_repository
         self.account_repository = account_repository
 
-    def authenticate(self, email: str, password: str) -> Optional[User]:
+    def authenticate(self, email: str, password: str):
         """
         Authenticate user with email and password.
         Returns: (success, user, message)

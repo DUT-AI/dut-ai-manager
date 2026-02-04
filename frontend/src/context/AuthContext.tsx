@@ -6,7 +6,7 @@ interface AuthContextType {
     user: UserResponse | null;
     loading: boolean;
     isAuthenticated: boolean;
-    login: (accessToken: string, refreshToken: string) => Promise<void>;
+    login: () => Promise<void>;
     logout: () => Promise<void>;
     hasPermission: (permission: string) => boolean;
     isAdminOrLeader: () => boolean;
@@ -36,17 +36,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     useEffect(() => {
-        const token = localStorage.getItem('access_token');
-        if (token) {
-            fetchUser();
-        } else {
-            setLoading(false);
-        }
+        fetchUser();
     }, []);
 
-    const login = async (accessToken: string, refreshToken: string) => {
-        localStorage.setItem('access_token', accessToken);
-        localStorage.setItem('refresh_token', refreshToken);
+    const login = async () => {
         await fetchUser();
     };
 
@@ -56,8 +49,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (error) {
             console.error('Logout error:', error);
         } finally {
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
             setUser(null);
         }
     };

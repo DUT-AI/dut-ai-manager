@@ -24,8 +24,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             const response = await authService.login(values);
 
             if (response.is_success && response.data) {
-                const { access_token, refresh_token } = response.data;
-                await login(access_token, refresh_token);
+                await login();
                 messageApi.success('Login successful!');
                 onLoginSuccess();
             } else {

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { message } from 'antd';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -16,12 +17,17 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     if (error.response?.status === 401) {
       // Clear session information
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
+      // Session is effectively cleared by the cookie being invalid or expiried
+
       
       // Only redirect if not already on login page
       if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
-        window.location.href = '/';
+        message.error('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.');
+        // Use setTimeout to allow the message to be seen briefly/process before redirect
+        // although window.location will reload the page immediately usually.
+        // For a smoother experience in a real app we might use react-router's navigate,
+        // but axiosInstance is outside React context.
+        window.location.href = '/login';
       }
     }
 

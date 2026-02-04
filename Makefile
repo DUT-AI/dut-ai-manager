@@ -96,19 +96,19 @@ backend-format: ## Format backend code
 
 # ==================== Frontend ====================
 frontend-install: ## Install frontend dependencies
-	cd frontend && yarn install
+	cd frontend && npm install
 
 frontend-dev: ## Run frontend development server
-	cd frontend && yarn dev
+	cd frontend && npm run dev
 
 frontend-build: ## Build frontend for production
-	cd frontend && yarn build
+	cd frontend && npm run build
 
 frontend-preview: ## Preview production build
-	cd frontend && yarn preview
+	cd frontend && npm run preview
 
 frontend-lint: ## Lint frontend code
-	cd frontend && yarn lint
+	cd frontend && npm run lint
 
 # ==================== All ====================
 install: backend-install frontend-install ## Install all dependencies
