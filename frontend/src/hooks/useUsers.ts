@@ -65,3 +65,14 @@ export const useDeleteUser = () => {
     },
   });
 };
+
+export const useImportUsers = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (file: File) => userService.importUsers(file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: userKeys.all });
+    },
+  });
+};

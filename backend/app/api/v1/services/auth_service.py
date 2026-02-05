@@ -1,17 +1,19 @@
-from app.utils.password import hash_password
-from app.schemas.response import BadRequestException
+import random
+import string
 from datetime import timedelta
 from typing import Optional, Tuple
 
-from app.api.v1.repositories import UserRepository, AccountRepository
+from app.api.v1.repositories import AccountRepository, UserRepository
 from app.core.config import settings
-from app.models import User, Account, UserStatus
+from app.models import Account, User, UserStatus
+from app.schemas.response import BadRequestException
 from app.utils.password import (
-    verify_password,
     create_access_token,
     create_refresh_token,
     decode_token,
     get_password_hash,
+    hash_password,
+    verify_password,
 )
 
 
@@ -120,13 +122,15 @@ class AuthService:
 
         return user
 
-    def create_account(self, password: str) -> Account:
+    def create_account(self) -> Tuple[Account, str]:
         """
         Create a new account.
         Returns: (success, account, message)
         """
+        # Generate strong password
+        password = self.generate_strong_password()
         account = Account(hash_password=hash_password(password))
-        return self.account_repository.create(account)
+        return self.account_repository.create(account), password
 
     def change_password(
         self, user_id: int, old_password: str, new_password: str
@@ -154,3 +158,32 @@ class AuthService:
         if not account:
             raise BadRequestException("Account not found")
         self.account_repository.delete_by_id(account_id)
+
+    def generate_strong_password(self) -> str:
+        """Generate a random strong password specific format: Xyz@123..."""
+
+        # Define character sets
+        lowercase = string.ascii_lowercase
+        uppercase = string.ascii_uppercase
+        digits = string.digits
+        symbols = "@#$!%*?&"
+
+        # Ensure at least one of each required type
+        password_chars = [
+            random.choice(uppercase),
+            random.choice(lowercase),
+            random.choice(digits),
+            random.choice(symbols),
+        ]
+
+        # Fill the rest with a mix
+        all_chars = lowercase + uppercase + digits + symbols
+        # Length between 10 and 12
+        length = random.randint(10, 12)
+
+        for _ in range(length - 4):
+            password_chars.append(random.choice(all_chars))
+
+        # Shuffle
+        random.shuffle(password_chars)
+        return "".join(password_chars)

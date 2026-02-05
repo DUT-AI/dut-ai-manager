@@ -47,6 +47,11 @@ class RoleRepository(BaseRepository[Role]):
         )
         return self.session.exec(statement).first()
 
+    def get_by_name(self, name: str) -> Optional[Role]:
+        """Get role by name"""
+        statement = select(Role).where(Role.is_deleted == False, Role.name == name)
+        return self.session.exec(statement).first()
+
 
 class PermissionRepository(BaseRepository[Permission]):
     """Repository for Permission operations"""

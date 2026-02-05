@@ -126,7 +126,7 @@ export const SubmissionsDrawer = ({ open, homework, onClose }: Props) => {
     return (
         <Drawer
             title={`Danh sách bài nộp: ${homework?.title}`}
-            width={720}
+            size="large"
             open={open}
             onClose={onClose}
         >

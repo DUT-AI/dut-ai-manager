@@ -38,4 +38,12 @@ class UserResponse(UserBase):
 
 class UserSettingsUpdate(BaseModel):
     avatar_url: Optional[str] = None
+    avatar_url: Optional[str] = None
     discord_id: Optional[str] = None
+
+
+class UserImportResult(BaseModel):
+    total: int
+    success_count: int
+    error_count: int
+    errors: list[str] = []

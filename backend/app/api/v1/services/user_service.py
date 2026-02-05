@@ -1,24 +1,132 @@
 from typing import List, Optional, Tuple
-from app.core.minio_service import MinioService
-from fastapi import UploadFile
-from app.utils.datetime import get_current_utc7_time
-from app.api.v1.repositories import UserRepository
+import threading
+
+from app.api.v1.repositories import UserRepository, RoleRepository
 from app.api.v1.services.auth_service import AuthService
-from app.models import User, RoleType
+from app.api.v1.services.email_service import EmailService
+from app.core.minio_service import MinioService
+from app.models import RoleType, User
 from app.schemas.response import BadRequestException
-from app.schemas.user import UserCreate, UserUpdate, UserSettingsUpdate
+from app.schemas.user import (
+    UserCreate,
+    UserSettingsUpdate,
+    UserUpdate,
+    UserImportResult,
+)
+from app.utils.datetime import get_current_utc7_time
+from fastapi import UploadFile, BackgroundTasks
+from loguru import logger
 
 
 class UserService:
     def __init__(
         self,
         user_repo: UserRepository,
+        role_repo: RoleRepository,
         auth_service: AuthService,
         minio_service: MinioService,
+        email_service: EmailService,
     ):
         self.user_repo = user_repo
+        self.role_repo = role_repo
         self.auth_service = auth_service
         self.minio_service = minio_service
+        self.email_service = email_service
+
+    async def import_users(
+        self, file: UploadFile, background_tasks: BackgroundTasks = None
+    ) -> UserImportResult:
+        import pandas as pd
+        from io import BytesIO
+
+        content = await file.read()
+
+        try:
+            if file.filename.endswith(".csv"):
+                df = pd.read_csv(BytesIO(content))
+            else:
+                df = pd.read_excel(BytesIO(content))
+        except Exception as e:
+            raise BadRequestException(f"Invalid file format: {str(e)}")
+
+        # Check columns
+        required_columns = ["name", "email", "phone_number"]
+        # Normalize columns to lowercase
+        df.columns = df.columns.astype(str).str.lower()
+
+        missing_cols = [col for col in required_columns if col not in df.columns]
+        if missing_cols:
+            raise BadRequestException(f"Missing columns: {', '.join(missing_cols)}")
+
+        # Get Teammate Role
+        teammate_role = self.role_repo.get_by_name(RoleType.TEAMMATE.value)
+        if not teammate_role:
+            raise BadRequestException("Default teammate role not found")
+
+        summary = UserImportResult(
+            total=len(df), success_count=0, error_count=0, errors=[]
+        )
+
+        for index, row in df.iterrows():
+            row_num = index + 2
+            try:
+                # Safe get values
+                email_raw = row.get("email", "")
+                name_raw = row.get("name", "")
+                phone_raw = row.get("phone_number", "")
+
+                # Check for empty/NaN
+                if pd.isna(email_raw) or str(email_raw).strip() == "":
+                    summary.error_count += 1
+                    summary.errors.append(f"Row {row_num}: Missing email address")
+                    continue
+
+                if pd.isna(name_raw) or str(name_raw).strip() == "":
+                    summary.error_count += 1
+                    summary.errors.append(f"Row {row_num}: Missing user name")
+                    continue
+
+                email = str(email_raw).strip()
+                name = str(name_raw).strip()
+                phone = (
+                    str(phone_raw).strip()
+                    if pd.notna(phone_raw) and str(phone_raw).strip() != ""
+                    else None
+                )
+
+                # Basic email validation check
+                if "@" not in email:
+                    summary.error_count += 1
+                    summary.errors.append(
+                        f"Row {row_num}: Invalid email format ({email})"
+                    )
+                    continue
+
+                user_data = UserCreate(
+                    name=name, email=email, phone_number=phone, role_id=teammate_role.id
+                )
+
+                # Check email existence manually
+                if self.user_repo.get_by_email(user_data.email):
+                    summary.error_count += 1
+                    summary.errors.append(
+                        f"Row {row_num}: Email already exists ({email})"
+                    )
+                    continue
+
+                self.create_user(user_data, background_tasks)
+                summary.success_count += 1
+
+            except Exception as e:
+                # Simplify generic errors
+                error_msg = str(e)
+                if "validation error" in error_msg:
+                    error_msg = "Invalid data format"
+
+                summary.error_count += 1
+                summary.errors.append(f"Row {row_num}: {error_msg}")
+
+        return summary
 
     async def update_avatar(self, user_id: int, file: UploadFile) -> User:
         user = self.get_user_by_id(user_id)
@@ -66,17 +174,14 @@ class UserService:
             raise BadRequestException("User not found")
         return user
 
-    def create_user(self, user_data: UserCreate) -> Optional[User]:
+    def create_user(
+        self, user_data: UserCreate, background_tasks: BackgroundTasks = None
+    ) -> Optional[User]:
         # Check email exists
         if self.user_repo.get_by_email(user_data.email):
             raise BadRequestException("Email already exists")
 
-        # Use phone_number as password if password is not provided
-        password = user_data.phone_number
-        if not password:
-            raise BadRequestException("Phone Number is required")
-
-        account = self.auth_service.create_account(password)
+        account, password = self.auth_service.create_account()
 
         user = User(
             name=user_data.name,
@@ -86,7 +191,27 @@ class UserService:
             role_id=user_data.role_id,
             account_id=account.id,
         )
-        return self.user_repo.create(user)
+        new_user = self.user_repo.create(user)
+
+        # Send email with credentials
+        if background_tasks:
+            background_tasks.add_task(
+                self.email_service.send_new_account_email,
+                to_email=new_user.email,
+                name=new_user.name,
+                password=password,
+            )
+        else:
+            # Fallback for when no background task context is available
+            try:
+                self.email_service.send_new_account_email(
+                    to_email=new_user.email, name=new_user.name, password=password
+                )
+            except Exception as e:
+                # Log error
+                print(f"Failed to send email to {new_user.email}: {e}")
+
+        return new_user
 
     def update_user(
         self, user_id: int, user_data: UserUpdate, current_user: User

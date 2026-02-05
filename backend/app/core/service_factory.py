@@ -13,13 +13,23 @@ from app.api.v1.services.violation_service import ViolationService
 from app.core.minio_service import MinioService
 from app.core.repository_factory import RepositoryFactory
 from app.core.discord_service import DiscordService
+from app.api.v1.services.email_service import EmailService
 
 
 class ServiceFactory:
     """Factory để tạo các Service."""
 
-    def __init__(self, repo_factory: RepositoryFactory):
+    def __init__(
+        self,
+        repo_factory: RepositoryFactory,
+        minio_service: MinioService,
+        discord_service: DiscordService,
+        email_service: EmailService,
+    ):
         self._repo = repo_factory
+        self._minio_service = minio_service
+        self._discord_service = discord_service
+        self._email_service = email_service
         self._cache: dict = {}
 
     @property
@@ -30,17 +40,17 @@ class ServiceFactory:
 
     @property
     def minio(self) -> MinioService:
-        if "minio" not in self._cache:
-            self._cache["minio"] = MinioService()
-        return self._cache["minio"]
+        return self._minio_service
 
     @property
     def user(self) -> UserService:
         if "user" not in self._cache:
             self._cache["user"] = UserService(
                 user_repo=self._repo.user,
+                role_repo=self._repo.role,
                 auth_service=self.auth,
                 minio_service=self.minio,
+                email_service=self._email_service,
             )
         return self._cache["user"]
 
@@ -66,7 +76,7 @@ class ServiceFactory:
     def notification(self) -> NotificationService:
         if "notification" not in self._cache:
             self._cache["notification"] = NotificationService(
-                discord_service=DiscordService()
+                discord_service=self._discord_service
             )
         return self._cache["notification"]
 
@@ -121,6 +131,7 @@ class ServiceFactory:
                 violation_service=self.violation,
                 permission_request_service=self.permission_request,
                 meeting_service=self.meeting,
+                homework_submission_service=self.homework_submission,
             )
         return self._cache["report"]
 

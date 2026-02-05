@@ -15,7 +15,9 @@ import {
     Badge,
     Row,
     Col,
-    Avatar
+    Avatar,
+    Upload,
+    Alert
 } from 'antd';
 import {
     PlusOutlined,
@@ -30,9 +32,11 @@ import {
     SearchOutlined,
     FilterOutlined,
     DiscordOutlined,
-    PictureOutlined
+    PictureOutlined,
+    UploadOutlined,
+    FileExcelOutlined
 } from '@ant-design/icons';
-import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, useRoles } from '@/hooks';
+import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, useRoles, useImportUsers } from '@/hooks';
 import { useAuth } from '../context/AuthContext';
 import { UserPermission } from '../types/rbac.types';
 import type { UserResponse } from '../types/user.types';
@@ -46,6 +50,7 @@ const UserManagementPage = () => {
     const navigate = useNavigate();
     const { hasPermission } = useAuth();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<UserResponse | null>(null);
     const [form] = Form.useForm();
 
@@ -215,19 +220,28 @@ const UserManagementPage = () => {
                         <Title level={3} className="!m-0">Quản lý Thành viên</Title>
                     </Space>
                     {canCreate && (
-                        <Button
-                            type="primary"
-                            icon={<PlusOutlined />}
-                            onClick={() => {
-                                setEditingUser(null);
-                                form.resetFields();
-                                form.setFieldsValue({ status: 'active' });
-                                setIsModalOpen(true);
-                            }}
-                            className="bg-linear-to-r from-[#667eea] to-[#764ba2] border-none shadow-md h-10 px-6"
-                        >
-                            Add New User
-                        </Button>
+                        <Space>
+                            <Button
+                                icon={<FileExcelOutlined />}
+                                onClick={() => setIsImportModalOpen(true)}
+                                className="border-green-600 text-green-600 hover:!text-green-500 hover:!border-green-500"
+                            >
+                                Import Excel
+                            </Button>
+                            <Button
+                                type="primary"
+                                icon={<PlusOutlined />}
+                                onClick={() => {
+                                    setEditingUser(null);
+                                    form.resetFields();
+                                    form.setFieldsValue({ status: 'active' });
+                                    setIsModalOpen(true);
+                                }}
+                                className="bg-linear-to-r from-[#667eea] to-[#764ba2] border-none shadow-md h-10 px-6"
+                            >
+                                Add New User
+                            </Button>
+                        </Space>
                     )}
                 </div>
 
@@ -370,7 +384,114 @@ const UserManagementPage = () => {
                     </Form.Item>
                 </Form>
             </Modal>
+
+            <ImportUserModal
+                open={isImportModalOpen}
+                onCancel={() => setIsImportModalOpen(false)}
+            />
         </div>
+    );
+};
+
+const ImportUserModal = ({ open, onCancel }: { open: boolean; onCancel: () => void }) => {
+    const importUsers = useImportUsers();
+    const [file, setFile] = useState<File | null>(null);
+    const [result, setResult] = useState<any | null>(null);
+
+    const handleImport = async () => {
+        if (!file) return;
+        try {
+            const res = await importUsers.mutateAsync(file);
+            setResult(res.data);
+            message.success('Import process completed');
+        } catch (error: any) {
+            message.error(error?.response?.data?.message || 'Import failed');
+        }
+    };
+
+    const handleClose = () => {
+        setFile(null);
+        setResult(null);
+        onCancel();
+    };
+
+    return (
+        <Modal
+            title={<Space><UploadOutlined /> Import Users from Excel</Space>}
+            open={open}
+            onCancel={handleClose}
+            footer={[
+                <Button key="close" onClick={handleClose}>Close</Button>,
+                !result && (
+                    <Button
+                        key="import"
+                        type="primary"
+                        onClick={handleImport}
+                        disabled={!file}
+                        loading={importUsers.isPending}
+                    >
+                        Import
+                    </Button>
+                )
+            ]}
+            width={600}
+        >
+            {!result ? (
+                <div className="py-4">
+                    <Alert
+                        message="File Format Requirement"
+                        description={
+                            <ul className="list-disc pl-4 mt-2">
+                                <li>Format: .xlsx or .csv</li>
+                                <li>Required Columns: <b>name</b>, <b>email</b>, <b>phone_number</b></li>
+                                <li>Default Role: <b>Teammate</b></li>
+                            </ul>
+                        }
+                        type="info"
+                        showIcon
+                        className="mb-4"
+                    />
+                    <Upload.Dragger
+                        beforeUpload={(file) => {
+                            setFile(file);
+                            return false;
+                        }}
+                        fileList={file ? [file as any] : []}
+                        onRemove={() => setFile(null)}
+                        accept=".xlsx, .xls, .csv"
+                        maxCount={1}
+                    >
+                        <p className="ant-upload-drag-icon">
+                            <UploadOutlined className="text-4xl text-gray-400" />
+                        </p>
+                        <p className="ant-upload-text">Click or drag file to this area to upload</p>
+                        <p className="ant-upload-hint">
+                            Support for a single upload. Strictly prohibited from uploading company data or other banned files.
+                        </p>
+                    </Upload.Dragger>
+                </div>
+            ) : (
+                <div className="py-4 space-y-4">
+                    <Alert
+                        message="Import Completed"
+                        description={`Total: ${result.total} | Success: ${result.success_count} | Error: ${result.error_count}`}
+                        type={result.error_count > 0 ? "warning" : "success"}
+                        showIcon
+                    />
+
+                    {result.errors && result.errors.length > 0 && (
+                        <div className="max-h-60 overflow-y-auto border rounded p-2 bg-red-50">
+                            <Typography.Text type="danger" strong>Error Details:</Typography.Text>
+                            <ul className="list-disc pl-4 mt-1 text-sm text-red-600">
+                                {result.errors.map((err: string, idx: number) => (
+                                    <li key={idx}>{err}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </div>
+            )}
+        </Modal>
     );
 };
 

@@ -257,3 +257,16 @@ class MeetingService:
             full_message = "Không có người dùng nào được checkin"
 
         return updated_participants, full_message
+
+    def get_participating_meetings(
+        self, user_id: int, month: int, year: int
+    ) -> List[Meeting]:
+        """Get meetings that the user is participating in for a specific month."""
+        all_meetings_in_month = self.get_all(limit=1000, month=month, year=year)
+        user_meetings = []
+        for meeting in all_meetings_in_month:
+            # Check if user is in participants
+            is_participant = any(p.user_id == user_id for p in meeting.participants)
+            if is_participant:
+                user_meetings.append(meeting)
+        return user_meetings

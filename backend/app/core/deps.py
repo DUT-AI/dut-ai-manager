@@ -123,9 +123,16 @@ def get_repo_factory(
 
 
 def get_service_factory(
+    request: Request,
     repo_factory: Annotated[RepositoryFactory, Depends(get_repo_factory)],
 ) -> ServiceFactory:
-    return ServiceFactory(repo_factory)
+    container = request.app.state.container
+    return ServiceFactory(
+        repo_factory,
+        minio_service=container.minio_service,
+        discord_service=container.discord_service,
+        email_service=container.email_service,
+    )
 
 
 ServiceFactoryDI = Annotated[ServiceFactory, Depends(get_service_factory)]

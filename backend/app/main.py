@@ -2,8 +2,9 @@ from contextlib import asynccontextmanager
 
 from app.api.v1.router import api_v1_router
 from app.core.config import settings
+from app.core.container import AppContainer
 from app.core.logging_config import setup_logging
-from app.core.scheduler import start_scheduler, shutdown_scheduler
+from app.core.scheduler import shutdown_scheduler, start_scheduler
 from app.middleware.auth import set_user_context
 from app.middleware.logging import logging_middleware
 from app.schemas.response import BadRequestException
@@ -19,6 +20,10 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown events."""
     # Startup
+    logger.info("🚀 Starting application services...")
+
+    app.state.container = AppContainer()
+
     start_scheduler()
     logger.info("🚀 Application started")
     yield

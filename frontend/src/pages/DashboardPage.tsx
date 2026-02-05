@@ -1,12 +1,4 @@
-import HeaderLayout from '@/components/MainLayout/Header';
-import {
-    BookOutlined,
-    CalendarOutlined,
-    DashboardOutlined,
-    SafetyCertificateOutlined,
-    SettingOutlined,
-    TeamOutlined
-} from '@ant-design/icons';
+import ReportPage from './ReportPage';
 import type { MenuProps } from 'antd';
 import { Layout, Menu, Spin, Tag, Typography } from 'antd';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
@@ -22,7 +14,21 @@ import TeamManagementPage from './TeamManagementPage';
 import { HomeworkPage } from './HomeworkPage';
 import { SettingsPage } from './SettingsPage';
 import { TrashPage } from '@/pages/TrashPage';
-import { WarningOutlined, FileTextOutlined, UserOutlined, DeleteOutlined } from '@ant-design/icons';
+
+import {
+    WarningOutlined,
+    FileTextOutlined,
+    UserOutlined,
+    DeleteOutlined,
+    TrophyOutlined,
+    DashboardOutlined,
+    SafetyCertificateOutlined,
+    TeamOutlined,
+    CalendarOutlined,
+    BookOutlined,
+    SettingOutlined
+} from '@ant-design/icons';
+import HeaderLayout from '@/components/MainLayout/Header';
 const { Content, Sider } = Layout;
 const { Text } = Typography;
 
@@ -45,6 +51,7 @@ const DashboardPage = () => {
         if (path.includes('/profile')) return 'profile_detail';
         if (path.includes('/settings')) return 'settings';
         if (path.includes('/trash')) return 'trash';
+        if (path.includes('/reports')) return 'reports';
         return 'profile';
     };
 
@@ -56,6 +63,12 @@ const DashboardPage = () => {
             icon: <DashboardOutlined />,
             label: 'Tổng quan',
             onClick: () => navigate('/dashboard'),
+        },
+        {
+            key: 'reports',
+            icon: <TrophyOutlined />,
+            label: 'Báo cáo',
+            onClick: () => navigate('/dashboard/reports'),
         },
         {
             key: 'rbac',
@@ -156,6 +169,7 @@ const DashboardPage = () => {
                     <div className="min-h-full relative">
                         <Routes>
                             <Route index element={<HomePage />} />
+                            <Route path="reports" element={<ReportPage />} />
                             <Route path="rbac" element={<RoleManagementPage />} />
                             <Route path="users" element={<UserManagementPage />} />
                             <Route path="activities" element={<ActivityCalendarPage />} />

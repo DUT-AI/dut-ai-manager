@@ -8,8 +8,14 @@ from app.core.deps import (
 )
 from app.core.permissions import UserPermission
 from app.schemas.response import ApiResponse
-from app.schemas.user import UserCreate, UserResponse, UserUpdate, UserSettingsUpdate
-from fastapi import APIRouter, UploadFile
+from app.schemas.user import (
+    UserCreate,
+    UserResponse,
+    UserUpdate,
+    UserSettingsUpdate,
+    UserImportResult,
+)
+from fastapi import APIRouter, UploadFile, BackgroundTasks
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -49,14 +55,30 @@ async def get_user(
 async def create_user(
     user_data: UserCreate,
     service_factory: ServiceFactoryDI,
+    background_tasks: BackgroundTasks,
 ):
     """Create a new user"""
-    user = service_factory.user.create_user(user_data)
+    user = service_factory.user.create_user(user_data, background_tasks)
     return ApiResponse.success(
         data=UserResponse.model_validate(user),
         message="User created successfully",
         status_code=201,
     )
+
+
+@router.post(
+    "/import",
+    response_model=ApiResponse[UserImportResult],
+    dependencies=[hasPermission(UserPermission.CREATE)],
+)
+async def import_users(
+    file: UploadFile,
+    service_factory: ServiceFactoryDI,
+    background_tasks: BackgroundTasks,
+):
+    """Import users from Excel file"""
+    result = await service_factory.user.import_users(file, background_tasks)
+    return ApiResponse.success(data=result, message="User import processed")
 
 
 @router.put(

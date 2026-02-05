@@ -92,7 +92,7 @@ const TeamManagementPage = () => {
             key: 'members',
             render: (_: any, record: TeamResponse) => (
                 <Space direction="vertical" size={4} className="max-w-[300px]">
-                    <Avatar.Group maxCount={5} size="small" maxStyle={{ color: '#f56a00', backgroundColor: '#fde3cf' }}>
+                    <Avatar.Group max={{ count: 5, style: { color: '#f56a00', backgroundColor: '#fde3cf' } }} size="small">
                         {record.members.map(m => (
                             <Tooltip title={m.user_name} key={m.user_id}>
                                 <Avatar src={m.user_avatar} icon={<UserOutlined />} />

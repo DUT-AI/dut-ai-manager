@@ -95,7 +95,7 @@ export const HomeworkFormModal = ({
             onCancel={onCancel}
             onOk={form.submit}
             confirmLoading={loading}
-            destroyOnClose
+            destroyOnHidden
             width={600}
         >
             <Form form={form} layout="vertical" onFinish={handleFinish}>

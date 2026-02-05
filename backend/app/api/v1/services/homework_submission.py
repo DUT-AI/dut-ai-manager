@@ -212,3 +212,13 @@ class HomeworkSubmissionService:
 
         submission.status = status
         return self.repo_factory.homework_submission.update(submission)
+
+    def get_unsubmitted_by_user(self, user_id: int) -> List["Homework"]:  # type: ignore
+        """Get all homeworks that are assigned to user but not submitted."""
+        all_submissions = self.repo_factory.homework_submission.get_all_by_user(user_id)
+        unsubmitted_homeworks = []
+        for sub in all_submissions:
+            if sub.status == HomeworkStatus.NOT_SUBMITTED:
+                if sub.homework:
+                    unsubmitted_homeworks.append(sub.homework)
+        return unsubmitted_homeworks

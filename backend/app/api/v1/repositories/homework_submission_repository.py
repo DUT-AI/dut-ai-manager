@@ -86,3 +86,18 @@ class HomeworkSubmissionRepository(BaseRepository[HomeworkSubmission]):
             )
         )
         return list(self.session.exec(statement).unique().all())
+
+    def get_all_by_user(self, user_id: int) -> List[HomeworkSubmission]:
+        """Get all submissions for a user (owner)"""
+        statement = (
+            select(HomeworkSubmission)
+            .where(
+                HomeworkSubmission.is_deleted == False,
+                HomeworkSubmission.owner_id == user_id,
+            )
+            .options(
+                joinedload(HomeworkSubmission.owner),
+                joinedload(HomeworkSubmission.homework),
+            )
+        )
+        return list(self.session.exec(statement).all())

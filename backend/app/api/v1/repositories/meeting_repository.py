@@ -25,6 +25,7 @@ class MeetingRepository(BaseRepository[Meeting]):
             )
             .where(
                 Meeting.is_deleted == False,
+                Meeting.is_deleted == False,
                 Meeting.id == meeting_id,
             )
             .options(
@@ -62,9 +63,15 @@ class MeetingRepository(BaseRepository[Meeting]):
         return list(self.session.exec(statement).unique().all())
 
     def get_by_date(self, target_date: date) -> List[Meeting]:
-        statement = select(Meeting).where(
-            Meeting.is_deleted == False,
-            func.date(Meeting.start_time) == target_date,
+        statement = (
+            select(Meeting)
+            .where(
+                Meeting.is_deleted == False,
+                func.date(Meeting.start_time) == target_date,
+            )
+            .options(
+                joinedload(Meeting.participants).joinedload(MeetingParticipant.user)
+            )
         )
         return list(self.session.exec(statement).unique().all())
 
@@ -78,6 +85,7 @@ class MeetingParticipantRepository(BaseRepository[MeetingParticipant]):
     ) -> Optional[MeetingParticipant]:
         statement = select(MeetingParticipant).where(
             MeetingParticipant.is_deleted == False,
+            MeetingParticipant.is_deleted == False,
             MeetingParticipant.meeting_id == meeting_id,
             MeetingParticipant.user_id == user_id,
         )
@@ -87,6 +95,7 @@ class MeetingParticipantRepository(BaseRepository[MeetingParticipant]):
         statement = (
             select(MeetingParticipant)
             .where(
+                MeetingParticipant.is_deleted == False,
                 MeetingParticipant.is_deleted == False,
                 MeetingParticipant.meeting_id == meeting_id,
             )
