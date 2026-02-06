@@ -1,5 +1,5 @@
-from typing import List, Optional, Tuple
-import threading
+from typing import List, Optional
+
 
 from app.api.v1.repositories import UserRepository, RoleRepository
 from app.api.v1.services.auth_service import AuthService
@@ -15,7 +15,6 @@ from app.schemas.user import (
 )
 from app.utils.datetime import get_current_utc7_time
 from fastapi import UploadFile, BackgroundTasks
-from loguru import logger
 
 
 class UserService:

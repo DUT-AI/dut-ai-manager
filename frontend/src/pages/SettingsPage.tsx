@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Menu, Typography, Form, Input, Button, Card, message, Avatar, Upload } from 'antd';
+import { Layout, Menu, Typography, Form, Input, Button, Card, message, Avatar, Upload, Grid } from 'antd';
 import { LockOutlined, SettingOutlined, SafetyCertificateOutlined, UserOutlined, DiscordOutlined, UploadOutlined } from '@ant-design/icons';
 import { authService } from '@/services/api/auth.service';
 import { userService } from '@/services/api/user.service';
@@ -10,6 +10,7 @@ const { Title, Text } = Typography;
 
 export const SettingsPage: React.FC = () => {
     const { user, refreshUser } = useAuth();
+    const screens = Grid.useBreakpoint();
     const [activeKey, setActiveKey] = useState('general');
     const [passwordForm] = Form.useForm();
     const [generalForm] = Form.useForm();
@@ -77,7 +78,7 @@ export const SettingsPage: React.FC = () => {
         <Card
             title={<><LockOutlined className="mr-2" />Đổi mật khẩu</>}
             bordered={false}
-            className="shadow-sm w-full max-w-2xl"
+            className="shadow-sm w-full max-w-2xl rounded-xl"
         >
             <Form form={passwordForm} layout="vertical" onFinish={onChangePassword} className="mt-4">
                 <Form.Item
@@ -85,7 +86,7 @@ export const SettingsPage: React.FC = () => {
                     label="Mật khẩu hiện tại"
                     rules={[{ required: true, message: 'Vui lòng nhập mật khẩu cũ' }]}
                 >
-                    <Input.Password prefix={<LockOutlined className="text-gray-400" />} placeholder="Nhập mật khẩu hiện tại" size="large" />
+                    <Input.Password prefix={<LockOutlined className="text-gray-400" />} placeholder="Nhập mật khẩu hiện tại" size="large" className="rounded-lg" />
                 </Form.Item>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Form.Item
@@ -96,7 +97,7 @@ export const SettingsPage: React.FC = () => {
                             { min: 6, message: 'Tối thiểu 6 ký tự' }
                         ]}
                     >
-                        <Input.Password prefix={<SafetyCertificateOutlined className="text-gray-400" />} placeholder="Mật khẩu mới" size="large" />
+                        <Input.Password prefix={<SafetyCertificateOutlined className="text-gray-400" />} placeholder="Mật khẩu mới" size="large" className="rounded-lg" />
                     </Form.Item>
                     <Form.Item
                         name="confirm_password"
@@ -114,12 +115,12 @@ export const SettingsPage: React.FC = () => {
                             }),
                         ]}
                     >
-                        <Input.Password prefix={<SafetyCertificateOutlined className="text-gray-400" />} placeholder="Xác nhận mật khẩu" size="large" />
+                        <Input.Password prefix={<SafetyCertificateOutlined className="text-gray-400" />} placeholder="Xác nhận mật khẩu" size="large" className="rounded-lg" />
                     </Form.Item>
                 </div>
-                <Form.Item className="mb-0 mt-2">
+                <Form.Item className="mb-0 mt-4">
                     <div className="flex justify-end">
-                        <Button type="primary" htmlType="submit" loading={loading} size="large" className="bg-indigo-600 px-8">
+                        <Button type="primary" htmlType="submit" loading={loading} size="large" className="w-full md:w-auto bg-indigo-600 px-8 rounded-lg font-semibold h-11">
                             Cập nhật mật khẩu
                         </Button>
                     </div>
@@ -132,14 +133,14 @@ export const SettingsPage: React.FC = () => {
         <Card
             title={<><UserOutlined className="mr-2" />Thông tin cá nhân</>}
             bordered={false}
-            className="shadow-sm w-full max-w-2xl"
+            className="shadow-sm w-full max-w-2xl rounded-xl"
         >
-            <div className="flex flex-col items-center mb-10 bg-gray-50 p-8 rounded-2xl border border-gray-100">
+            <div className="flex flex-col items-center mb-8 bg-gray-50 p-6 md:p-8 rounded-2xl border border-gray-100">
                 <Avatar
-                    size={100}
+                    size={80}
                     src={user?.avatar_url}
                     icon={<UserOutlined />}
-                    className="shadow-xl border-4 border-white mb-6"
+                    className="shadow-lg border-4 border-white mb-6"
                 />
 
                 <Upload
@@ -155,21 +156,21 @@ export const SettingsPage: React.FC = () => {
                         }
                         return isJpgOrPng && isLt2M;
                     }}
-                    customRequest={({ file, onSuccess }: any) => {
+                    customRequest={({ onSuccess }: any) => {
                         setTimeout(() => onSuccess("ok"), 0);
                     }}
                     onChange={handleAvatarUpload}
                 >
-                    <Button icon={<UploadOutlined />} loading={uploading}>
+                    <Button icon={<UploadOutlined />} loading={uploading} className="rounded-lg">
                         Thay đổi ảnh đại diện
                     </Button>
                 </Upload>
 
                 <div className="mt-6 text-center">
-                    <Title level={5} className="!mb-0">{user?.name}</Title>
-                    <Text type="secondary">{user?.email}</Text>
-                    <div className="mt-2">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 shadow-sm">
+                    <Title level={5} className="!mb-0 text-lg">{user?.name}</Title>
+                    <Text type="secondary" className="text-sm">{user?.email}</Text>
+                    <div className="mt-3">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 shadow-sm uppercase tracking-wider">
                             {user?.role_name?.toUpperCase()}
                         </span>
                     </div>
@@ -186,12 +187,13 @@ export const SettingsPage: React.FC = () => {
                         prefix={<DiscordOutlined className="text-gray-400" />}
                         placeholder="Ví dụ: 123456789012345678"
                         size="large"
+                        className="rounded-lg"
                     />
                 </Form.Item>
 
-                <Form.Item className="mb-0 mt-8">
+                <Form.Item className="mb-0 mt-6">
                     <div className="flex justify-end">
-                        <Button type="primary" htmlType="submit" loading={loading} size="large" className="bg-indigo-600 px-10 rounded-xl shadow-lg shadow-indigo-200">
+                        <Button type="primary" htmlType="submit" loading={loading} size="large" className="w-full md:w-auto bg-indigo-600 px-10 rounded-xl shadow-lg shadow-indigo-100 font-semibold h-11">
                             Lưu thông tin
                         </Button>
                     </div>
@@ -208,44 +210,72 @@ export const SettingsPage: React.FC = () => {
         }
     };
 
+    const menuItems = [
+        {
+            key: 'general',
+            icon: <SettingOutlined />,
+            label: 'Tài khoản',
+        },
+        {
+            key: 'password',
+            icon: <LockOutlined />,
+            label: 'Bảo mật',
+        },
+    ];
+
     return (
-        <div className="absolute inset-0 bg-[#f8fafc]">
-            <Layout className="bg-transparent h-full">
-                <Sider
-                    width={260}
-                    theme="light"
-                    className="bg-white border-r border-gray-200 h-full overflow-y-auto"
-                >
-                    <div className="p-6 border-b border-gray-100">
-                        <Title level={4} className="!mb-1">Cài đặt</Title>
-                        <Text type="secondary" className="text-xs">Quản lý tài khoản của bạn</Text>
+        <div className={screens.md ? "absolute inset-0 bg-[#f8fafc]" : "bg-[#f8fafc] min-h-screen pb-10"}>
+            <Layout className="bg-transparent h-full flex flex-col md:flex-row">
+                {screens.md ? (
+                    <Sider
+                        width={260}
+                        theme="light"
+                        className="bg-white border-r border-gray-200 h-full overflow-y-auto shrink-0"
+                    >
+                        <div className="p-6 border-b border-gray-100">
+                            <Title level={4} className="!mb-1">Cài đặt</Title>
+                            <Text type="secondary" className="text-xs">Quản lý tài khoản của bạn</Text>
+                        </div>
+                        <Menu
+                            mode="inline"
+                            selectedKeys={[activeKey]}
+                            onClick={(e) => setActiveKey(e.key)}
+                            className="border-none mt-2 px-2"
+                            items={menuItems.map(item => ({
+                                ...item,
+                                className: 'rounded-lg mb-1'
+                            }))}
+                        />
+                    </Sider>
+                ) : (
+                    <div className="bg-white border-b border-gray-200 sticky top-0 z-10 p-4">
+                        <div className="mb-4">
+                            <Title level={4} className="!mb-0">Cài đặt</Title>
+                            <Text type="secondary" className="text-xs">Quản lý tài khoản cá nhân</Text>
+                        </div>
+                        <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                            {menuItems.map(item => (
+                                <Button
+                                    key={item.key}
+                                    type={activeKey === item.key ? 'primary' : 'default'}
+                                    icon={item.icon}
+                                    onClick={() => setActiveKey(item.key)}
+                                    className={`rounded-full shadow-none ${activeKey === item.key ? 'bg-indigo-600' : ''}`}
+                                >
+                                    {item.label}
+                                </Button>
+                            ))}
+                        </div>
                     </div>
-                    <Menu
-                        mode="inline"
-                        selectedKeys={[activeKey]}
-                        onClick={(e) => setActiveKey(e.key)}
-                        className="border-none mt-2 px-2"
-                        items={[
-                            {
-                                key: 'general',
-                                icon: <SettingOutlined />,
-                                label: 'Tài khoản',
-                                className: 'mb-1 rounded-lg'
-                            },
-                            { type: 'divider' },
-                            {
-                                key: 'password',
-                                icon: <LockOutlined />,
-                                label: 'Bảo mật & Mật khẩu',
-                                className: 'mt-1 rounded-lg'
-                            },
-                        ]}
-                    />
-                </Sider>
-                <Content className="p-8 overflow-y-auto bg-gray-50 flex justify-center items-start">
-                    {renderContent()}
+                )}
+                <Content className="p-4 md:p-8 overflow-y-auto bg-gray-50 flex justify-center items-start">
+                    <div className="w-full flex justify-center">
+                        {renderContent()}
+                    </div>
                 </Content>
             </Layout>
         </div>
     );
 };
+
+export default SettingsPage;

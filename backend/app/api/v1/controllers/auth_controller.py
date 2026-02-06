@@ -106,6 +106,9 @@ async def get_me(current_user: CurrentUser):
             status=current_user.status.value if current_user.status else "active",
             role_id=current_user.role_id,
             role_name=getattr(current_user, "_jwt_role", None),
+            avatar_url=getattr(current_user, "_jwt_avatar", None)
+            or current_user.avatar_url,
+            discord_id=current_user.discord_id,
             permissions=list(getattr(current_user, "_jwt_permissions", [])),
         ),
     )

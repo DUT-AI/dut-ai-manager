@@ -1,6 +1,6 @@
 import ReportPage from './ReportPage';
 import type { MenuProps } from 'antd';
-import { Layout, Menu, Spin, Tag, Typography } from 'antd';
+import { Layout, Menu, Spin, Tag, Typography, Drawer, Grid } from 'antd';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ActivityCalendarPage from './ActivityCalendarPage';
@@ -14,6 +14,7 @@ import TeamManagementPage from './TeamManagementPage';
 import { HomeworkPage } from './HomeworkPage';
 import { SettingsPage } from './SettingsPage';
 import { TrashPage } from '@/pages/TrashPage';
+import { useState } from 'react';
 
 import {
     WarningOutlined,
@@ -31,6 +32,7 @@ import {
 import HeaderLayout from '@/components/MainLayout/Header';
 const { Content, Sider } = Layout;
 const { Text } = Typography;
+const { useBreakpoint } = Grid;
 
 
 
@@ -38,6 +40,11 @@ const DashboardPage = () => {
     const { loading } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
+    const screens = useBreakpoint();
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+    // Determines if we are on a mobile screen
+    const isMobile = !screens.md;
 
     // Determine active key from path
     const getActiveKey = () => {
@@ -57,72 +64,79 @@ const DashboardPage = () => {
 
     const activeKey = getActiveKey();
 
+    const handleMenuClick = (path: string) => {
+        navigate(path);
+        if (isMobile) {
+            setMobileMenuOpen(false);
+        }
+    };
+
     const sideMenuItems: MenuProps['items'] = [
         {
             key: 'profile',
             icon: <DashboardOutlined />,
             label: 'Tổng quan',
-            onClick: () => navigate('/dashboard'),
+            onClick: () => handleMenuClick('/dashboard'),
         },
         {
             key: 'reports',
             icon: <TrophyOutlined />,
             label: 'Báo cáo',
-            onClick: () => navigate('/dashboard/reports'),
+            onClick: () => handleMenuClick('/dashboard/reports'),
         },
         {
             key: 'rbac',
             icon: <SafetyCertificateOutlined />,
             label: 'Quản lý Quyền',
-            onClick: () => navigate('/dashboard/rbac'),
+            onClick: () => handleMenuClick('/dashboard/rbac'),
         },
         {
             key: 'users',
             icon: <UserOutlined />,
             label: 'Quản lý Thành viên',
-            onClick: () => navigate('/dashboard/users'),
+            onClick: () => handleMenuClick('/dashboard/users'),
         },
         {
             key: 'teams',
             icon: <TeamOutlined />,
             label: 'Quản lý Nhóm (Teams)',
-            onClick: () => navigate('/dashboard/teams'),
+            onClick: () => handleMenuClick('/dashboard/teams'),
         },
         {
             key: 'activities',
             icon: <CalendarOutlined />,
             label: 'Lịch Hoạt động',
-            onClick: () => navigate('/dashboard/activities'),
+            onClick: () => handleMenuClick('/dashboard/activities'),
         },
         {
             key: 'permissions',
             icon: <FileTextOutlined />,
             label: 'Quản lý Đơn phép',
-            onClick: () => navigate('/dashboard/permissions'),
+            onClick: () => handleMenuClick('/dashboard/permissions'),
         },
         {
             key: 'violations',
             icon: <WarningOutlined />,
             label: 'Quản lý Vi phạm',
-            onClick: () => navigate('/dashboard/violations'),
+            onClick: () => handleMenuClick('/dashboard/violations'),
         },
         {
             key: 'homework',
             icon: <BookOutlined />,
             label: 'Bài tập về nhà',
-            onClick: () => navigate('/dashboard/homeworks'),
+            onClick: () => handleMenuClick('/dashboard/homeworks'),
         },
         {
             key: 'settings',
             icon: <SettingOutlined />,
             label: 'Cài đặt',
-            onClick: () => navigate('/dashboard/settings'),
+            onClick: () => handleMenuClick('/dashboard/settings'),
         },
         {
             key: 'trash',
             icon: <DeleteOutlined />,
             label: 'Thùng rác',
-            onClick: () => navigate('/dashboard/trash'),
+            onClick: () => handleMenuClick('/dashboard/trash'),
         },
     ];
 
@@ -134,37 +148,61 @@ const DashboardPage = () => {
         );
     }
 
+    const SidebarContent = () => (
+        <div className="flex flex-col h-full">
+            <div className="flex items-center justify-center py-4">
+                {/* Logo area if needed */}
+            </div>
+            <Menu
+                mode="inline"
+                selectedKeys={[activeKey]}
+                items={sideMenuItems}
+                className="border-none flex-grow mt-4 custom-sidebar-menu"
+            />
+            <div className="p-4 border-t border-gray-50">
+                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                    <Text className="text-[10px] text-gray-400 font-bold uppercase block mb-2 px-1">Trạng thái</Text>
+                    <div className="flex items-center justify-between px-1">
+                        <Tag color="success" className="m-0 rounded-full px-3 text-[10px] font-bold">ONLINE</Tag>
+                        <span className="flex h-2 w-2 relative">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
     return (
         <Layout style={{ height: '100vh', overflow: 'hidden' }}>
-            <HeaderLayout />
+            <HeaderLayout
+                showMenuButton={isMobile}
+                onMenuClick={() => setMobileMenuOpen(true)}
+            />
 
             <Layout style={{ overflow: 'hidden' }}>
-                <Sider
-                    width={260}
-                    className="bg-white border-r border-gray-100 z-10"
-                    theme="light"
+                {!isMobile && (
+                    <Sider
+                        width={260}
+                        className="bg-white border-r border-gray-100 z-10"
+                        theme="light"
+                    >
+                        <SidebarContent />
+                    </Sider>
+                )}
+
+                <Drawer
+                    placement="left"
+                    onClose={() => setMobileMenuOpen(false)}
+                    open={mobileMenuOpen}
+                    width={280}
+                    styles={{ body: { padding: 0 } }}
+                    closable={false}
                 >
-                    <div className="flex flex-col h-full">
-                        <Menu
-                            mode="inline"
-                            selectedKeys={[activeKey]}
-                            items={sideMenuItems}
-                            className="border-none flex-grow mt-4 custom-sidebar-menu"
-                        />
-                        <div className="p-4 border-t border-gray-50">
-                            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                                <Text className="text-[10px] text-gray-400 font-bold uppercase block mb-2 px-1">Trạng thái</Text>
-                                <div className="flex items-center justify-between px-1">
-                                    <Tag color="success" className="m-0 rounded-full px-3 text-[10px] font-bold">ONLINE</Tag>
-                                    <span className="flex h-2 w-2 relative">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </Sider>
+                    <SidebarContent />
+                </Drawer>
+
                 <Content className="p-0 bg-[#f8fafc] overflow-y-auto custom-scrollbar">
                     <div className="min-h-full relative">
                         <Routes>
@@ -197,6 +235,7 @@ const DashboardPage = () => {
                     background: rgba(99, 102, 241, 0.08) !important;
                     color: #4f46e5 !important;
                     font-weight: 600 !important;
+                    
                 }
                 .custom-sidebar-menu .ant-menu-item-selected .ant-menu-item-icon {
                     color: #4f46e5 !important;
@@ -213,6 +252,7 @@ const DashboardPage = () => {
                 }
                 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
                     background: #cbd5e1;
+                    
                 }
             `}</style>
         </Layout>

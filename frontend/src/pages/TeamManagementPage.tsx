@@ -12,7 +12,9 @@ import {
     Typography,
     Select,
     Tooltip,
-    Avatar
+    Avatar,
+    Grid,
+    List
 } from 'antd';
 import {
     PlusOutlined,
@@ -139,17 +141,87 @@ const TeamManagementPage = () => {
         }
     ];
 
+    const screens = Grid.useBreakpoint();
+
+    const MobileListView = () => (
+        <div className="mt-4 px-3">
+            <List
+                dataSource={teams}
+                loading={isLoading}
+                split={false}
+                renderItem={(record) => (
+                    <List.Item className="px-2 !mb-4 !border-0">
+                        <Card
+                            className="w-full shadow-sm border-gray-100 overflow-hidden"
+                            styles={{ body: { padding: '16px' } }}
+                            actions={[
+                                <Button
+                                    type="text"
+                                    icon={<EditOutlined />}
+                                    onClick={() => {
+                                        setEditingItem(record);
+                                        form.setFieldsValue({
+                                            team_name: record.team_name,
+                                            member_ids: record.members.map(m => m.user_id)
+                                        });
+                                        setIsModalOpen(true);
+                                    }}
+                                >
+                                    Sửa
+                                </Button>,
+                                <Popconfirm
+                                    title="Xóa nhóm này?"
+                                    description="Hành động này không thể hoàn tác"
+                                    onConfirm={() => handleDelete(record.id)}
+                                    okText="Xóa"
+                                    cancelText="Hủy"
+                                >
+                                    <Button type="text" danger icon={<DeleteOutlined />}>Xóa</Button>
+                                </Popconfirm>
+                            ]}
+                        >
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500 shrink-0">
+                                    <TeamOutlined className="text-xl" />
+                                </div>
+                                <div className="flex flex-col min-w-0 flex-1">
+                                    <Text strong className="text-base truncate">{record.team_name}</Text>
+                                    <Text type="secondary" className="text-xs">{record.member_count} thành viên</Text>
+                                </div>
+                            </div>
+
+                            <div>
+                                <Text type="secondary" className="block mb-2 text-xs uppercase font-bold tracking-wider">Thành viên</Text>
+                                <Avatar.Group max={{ count: 6, style: { color: '#f56a00', backgroundColor: '#fde3cf' } }}>
+                                    {record.members.map(m => (
+                                        <Tooltip title={m.user_name} key={m.user_id}>
+                                            <Avatar src={m.user_avatar} icon={<UserOutlined />} />
+                                        </Tooltip>
+                                    ))}
+                                </Avatar.Group>
+                            </div>
+
+                            <div className="mt-4 pt-3 border-t border-gray-50 flex justify-between items-center text-gray-400 text-[10px]">
+                                <span>Ngày tạo: {dayjs(record.created_at).format('DD/MM/YYYY')}</span>
+                            </div>
+                        </Card>
+                    </List.Item>
+                )}
+            />
+        </div>
+    );
+
     return (
-        <div className="p-6">
-            <Card className="shadow-sm border-gray-100 rounded-xl overflow-hidden">
-                <div className="flex justify-between items-center mb-6">
+        <div className="p-4 md:p-6">
+            <Card className={!screens.md ? "bg-transparent shadow-none border-none" : "shadow-sm border-gray-100 rounded-xl overflow-hidden"} styles={{ body: { padding: !screens.md ? 0 : undefined } }}>
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 px-3 md:px-0">
                     <Space size="middle">
-                        <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-500">
+                        <div className="hidden md:flex w-12 h-12 rounded-xl bg-indigo-50 items-center justify-center text-indigo-500">
                             <TeamOutlined className="text-2xl" />
                         </div>
                         <div>
-                            <Title level={3} className="!m-0">Quản lý Nhóm</Title>
-                            <Text type="secondary">Tổ chức thành viên vào các nhóm chức năng</Text>
+                            <Title level={3} className="text-xl md:text-2xl mt-4 text-indigo-600">Quản lý Nhóm</Title>
+                            <Text type="secondary" className="text-xs md:text-sm">Tổ chức thành viên vào các nhóm chức năng</Text>
                         </div>
                     </Space>
                     <Button
@@ -160,19 +232,23 @@ const TeamManagementPage = () => {
                             form.resetFields();
                             setIsModalOpen(true);
                         }}
-                        className="bg-linear-to-r from-indigo-500 to-purple-600 border-none shadow-md h-10 px-6 font-semibold"
+                        className="w-full md:w-auto bg-linear-to-r from-indigo-500 to-purple-600 border-none shadow-md h-10 px-6 font-semibold"
                     >
                         Tạo Nhóm mới
                     </Button>
                 </div>
 
-                <Table
-                    columns={columns}
-                    dataSource={teams}
-                    rowKey="id"
-                    loading={isLoading}
-                    className="custom-table"
-                />
+                {!screens.md ? (
+                    <MobileListView />
+                ) : (
+                    <Table
+                        columns={columns}
+                        dataSource={teams}
+                        rowKey="id"
+                        loading={isLoading}
+                        className="custom-table"
+                    />
+                )}
             </Card>
 
             <Modal

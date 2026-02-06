@@ -38,7 +38,6 @@ class UserResponse(UserBase):
 
 class UserSettingsUpdate(BaseModel):
     avatar_url: Optional[str] = None
-    avatar_url: Optional[str] = None
     discord_id: Optional[str] = None
 
 

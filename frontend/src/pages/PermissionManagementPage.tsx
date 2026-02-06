@@ -17,7 +17,9 @@ import {
     Drawer,
     Descriptions,
     Divider,
-    Avatar
+    Avatar,
+    Grid,
+    List
 } from 'antd';
 import {
     PlusOutlined,
@@ -53,6 +55,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 const PermissionManagementPage = () => {
     const { hasPermission } = useAuth();
+    const screens = Grid.useBreakpoint();
 
     // TanStack Query hooks
     const { data: permissions = [], isLoading } = usePermissionRequests();
@@ -192,17 +195,96 @@ const PermissionManagementPage = () => {
         },
     ];
 
+    const MobileListView = () => (
+        <div className="mt-4 px-3">
+            <List
+                dataSource={permissions}
+                loading={isLoading}
+                split={false}
+                renderItem={(record) => (
+                    <List.Item className="px-2 !mb-4 !border-0">
+                        <Card
+                            className="w-full shadow-sm border-gray-100 overflow-hidden"
+                            styles={{ body: { padding: '16px' } }}
+                            onClick={() => {
+                                setDetailItem(record);
+                                setIsDetailOpen(true);
+                            }}
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <Tag color={CATEGORY_COLORS[record.category.toLowerCase()] || 'default'} className="m-0 font-medium px-3 rounded-full">
+                                    {record.category.toUpperCase()}
+                                </Tag>
+                                <Space className="text-gray-400 text-xs">
+                                    <CalendarOutlined />
+                                    <span>{dayjs(record.date).format('DD/MM')}</span>
+                                </Space>
+                            </div>
+
+                            <div className="flex items-center gap-3 mb-4">
+                                <Avatar
+                                    src={record.user_avatar}
+                                    icon={<UserOutlined />}
+                                    className="bg-linear-to-br from-indigo-500 to-purple-500 shadow-sm shrink-0"
+                                    size="large"
+                                />
+                                <div className="flex flex-col min-w-0 flex-1">
+                                    <Text strong className="truncate text-base">
+                                        {record.user_name || (record.created_by ? `#${record.created_by}` : 'N/A')}
+                                    </Text>
+                                    <Text type="secondary" className="text-xs flex items-center gap-1">
+                                        <ClockCircleOutlined />
+                                        {record.start_time.substring(0, 5)} - {record.end_time.substring(0, 5)}
+                                    </Text>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end items-center pt-3 border-t border-gray-50 bg-gray-50 -mx-4 -mb-4 px-4 py-3 gap-2" onClick={(e) => e.stopPropagation()}>
+                                <Button
+                                    icon={<EditOutlined />}
+                                    size="small"
+                                    onClick={() => {
+                                        setEditingItem(record);
+                                        form.setFieldsValue({
+                                            ...record,
+                                            date: dayjs(record.date),
+                                            start_time: dayjs(record.start_time, 'HH:mm:ss'),
+                                            end_time: dayjs(record.end_time, 'HH:mm:ss'),
+                                        });
+                                        setIsModalOpen(true);
+                                    }}
+                                    disabled={!canUpdate}
+                                >
+                                    Sửa
+                                </Button>
+                                <Popconfirm
+                                    title="Xóa đơn này?"
+                                    onConfirm={() => handleDelete(record.id)}
+                                    disabled={!canDelete}
+                                    okText="Xóa"
+                                    cancelText="Hủy"
+                                >
+                                    <Button icon={<DeleteOutlined />} size="small" danger disabled={!canDelete}>Xóa</Button>
+                                </Popconfirm>
+                            </div>
+                        </Card>
+                    </List.Item>
+                )}
+            />
+        </div>
+    );
+
     return (
-        <div className="p-6">
-            <Card className="shadow-sm border-gray-100 rounded-xl overflow-hidden">
-                <div className="flex justify-between items-center mb-6">
+        <div className="p-4 md:p-6">
+            <Card className={!screens.md ? "bg-transparent shadow-none border-none" : "shadow-sm border-gray-100 rounded-xl overflow-hidden"} styles={{ body: { padding: !screens.md ? 0 : undefined } }}>
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 px-3 md:px-0">
                     <Space size="middle">
-                        <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-500">
+                        <div className="hidden md:flex w-12 h-12 rounded-xl bg-indigo-50 items-center justify-center text-indigo-500">
                             <FileTextOutlined className="text-2xl" />
                         </div>
                         <div>
-                            <Title level={3} className="!m-0">Quản lý Đơn xin phép</Title>
-                            <Text type="secondary">Danh sách và công cụ quản lý các yêu cầu xin nghỉ/đến muộn/về sớm</Text>
+                            <Title level={3} className="text-xl md:text-2xl mt-4 text-[#4f46e5]">Quản lý Đơn xin phép</Title>
+                            <Text type="secondary" className="text-xs md:text-sm">Danh sách và công cụ quản lý các yêu cầu</Text>
                         </div>
                     </Space>
                     {canCreate && (
@@ -218,28 +300,32 @@ const PermissionManagementPage = () => {
                                 });
                                 setIsModalOpen(true);
                             }}
-                            className="bg-linear-to-r from-indigo-500 to-purple-600 border-none shadow-md h-10 px-6 font-semibold"
+                            className="w-full md:w-auto bg-linear-to-r from-indigo-500 to-purple-600 border-none shadow-md h-10 px-6 font-semibold"
                         >
                             Tạo Đơn mới
                         </Button>
                     )}
                 </div>
 
-                <Table
-                    columns={columns}
-                    dataSource={permissions}
-                    rowKey="id"
-                    loading={isLoading}
-                    className="border border-gray-100 rounded-lg custom-table cursor-pointer"
-                    pagination={{ pageSize: 10 }}
-                    onRow={(record) => ({
-                        onClick: () => {
-                            setDetailItem(record);
-                            setIsDetailOpen(true);
-                        },
-                        style: { cursor: 'pointer' }
-                    })}
-                />
+                {!screens.md ? (
+                    <MobileListView />
+                ) : (
+                    <Table
+                        columns={columns}
+                        dataSource={permissions}
+                        rowKey="id"
+                        loading={isLoading}
+                        className="border border-gray-100 rounded-lg custom-table cursor-pointer"
+                        pagination={{ pageSize: 10 }}
+                        onRow={(record) => ({
+                            onClick: () => {
+                                setDetailItem(record);
+                                setIsDetailOpen(true);
+                            },
+                            style: { cursor: 'pointer' }
+                        })}
+                    />
+                )}
             </Card>
 
             {/* Create/Edit Modal */}
@@ -253,7 +339,7 @@ const PermissionManagementPage = () => {
                 destroyOnHidden
                 okText={editingItem ? 'Lưu thay đổi' : 'Gửi đơn'}
                 cancelText="Hủy"
-                width={500}
+                width={screens.md ? 500 : '100%'}
             >
                 <Form form={form} layout="vertical" onFinish={handleCreateOrUpdate} className="mt-6">
                     <Form.Item name="category" label="Loại đơn" rules={[{ required: true }]}>
@@ -295,7 +381,7 @@ const PermissionManagementPage = () => {
                 placement="right"
                 onClose={() => setIsDetailOpen(false)}
                 open={isDetailOpen}
-                width={500}
+                width={screens.md ? 500 : '100%'}
             >
                 {detailItem && (
                     <div className="flex flex-col h-full">

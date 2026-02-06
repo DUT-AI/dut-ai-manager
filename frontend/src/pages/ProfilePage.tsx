@@ -110,7 +110,7 @@ const ProfilePage = () => {
 
     // Filter component
     const FilterBar = () => (
-        <div className="flex items-center gap-3 mb-4 p-3 bg-gray-50 rounded-lg">
+        <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-gray-50 rounded-lg">
             <FilterOutlined className="text-gray-500" />
             <Text type="secondary">Lọc theo tháng:</Text>
             <DatePicker
@@ -121,7 +121,7 @@ const ProfilePage = () => {
                 allowClear={false}
                 className="w-32"
             />
-            <Text type="secondary" className="ml-auto text-xs">
+            <Text type="secondary" className="ml-auto text-xs w-full sm:w-auto mt-2 sm:mt-0">
                 Hiển thị dữ liệu tháng {selectedDate.format('MM/YYYY')}
             </Text>
         </div>
@@ -129,7 +129,7 @@ const ProfilePage = () => {
 
     if (usersLoading) {
         return (
-            <div className="p-8">
+            <div className="p-4 md:p-8">
                 <Card className="rounded-2xl shadow-sm border-gray-100">
                     <Skeleton active avatar paragraph={{ rows: 4 }} />
                 </Card>
@@ -139,7 +139,7 @@ const ProfilePage = () => {
 
     if (!user) {
         return (
-            <div className="p-8 flex flex-col items-center">
+            <div className="p-4 md:p-8 flex flex-col items-center">
                 <Text type="secondary">Không tìm thấy thông tin thành viên.</Text>
                 <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} className="mt-4">
                     Quay lại
@@ -149,7 +149,7 @@ const ProfilePage = () => {
     }
 
     return (
-        <div className="p-8 max-w-5xl mx-auto">
+        <div className="p-4 md:p-8 max-w-5xl mx-auto">
             <Button
                 icon={<ArrowLeftOutlined />}
                 onClick={() => navigate(-1)}
@@ -171,12 +171,12 @@ const ProfilePage = () => {
                         />
                     </div>
                     <div className="pt-16 pb-4">
-                        <div className="flex justify-between items-start">
+                        <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
                             <div>
                                 <Title level={2} className="!m-0">{user.name}</Title>
                                 <Tag color="blue" className="mt-2 uppercase font-bold">{user.role_name}</Tag>
                             </div>
-                            <Tag color={user.status === 'active' ? 'success' : 'error'} className="rounded-full px-4">
+                            <Tag color={user.status === 'active' ? 'success' : 'error'} className="rounded-full px-4 sm:self-start">
                                 {user.status.toUpperCase()}
                             </Tag>
                         </div>
@@ -199,7 +199,7 @@ const ProfilePage = () => {
                                             <Space direction="vertical" className="w-full">
                                                 <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-50">
                                                     <MailOutlined className="text-indigo-500" />
-                                                    <Text>{user.email}</Text>
+                                                    <Text className="break-all">{user.email}</Text>
                                                 </div>
                                                 <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-50">
                                                     <PhoneOutlined className="text-indigo-500" />
@@ -251,6 +251,7 @@ const ProfilePage = () => {
                                         rowKey="id"
                                         loading={violationsLoading}
                                         pagination={{ pageSize: 10 }}
+                                        scroll={{ x: 600 }}
                                         onRow={(record) => ({
                                             onClick: () => setSelectedViolation(record),
                                             className: 'cursor-pointer hover:bg-gray-50'
@@ -277,6 +278,7 @@ const ProfilePage = () => {
                                         rowKey="id"
                                         loading={bonusLoading}
                                         pagination={{ pageSize: 10 }}
+                                        scroll={{ x: 600 }}
                                         onRow={(record) => ({
                                             onClick: () => setSelectedBonus(record),
                                             className: 'cursor-pointer hover:bg-gray-50'
@@ -303,6 +305,7 @@ const ProfilePage = () => {
                                         rowKey="id"
                                         loading={permissionsLoading}
                                         pagination={{ pageSize: 10 }}
+                                        scroll={{ x: 600 }}
                                         onRow={(record) => ({
                                             onClick: () => setSelectedPermission(record),
                                             className: 'cursor-pointer hover:bg-gray-50'

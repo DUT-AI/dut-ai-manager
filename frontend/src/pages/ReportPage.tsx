@@ -9,8 +9,8 @@ import {
     DatePicker,
     Tag,
     Avatar,
-    Row,
-    Col
+    Grid, // Added Grid
+    List  // Added List
 } from 'antd';
 import {
     SearchOutlined,
@@ -24,6 +24,7 @@ import type { ReportItem, ReportResponse } from '@/types/report.types';
 import { useDebounce } from '@/hooks/useDebounce';
 
 const { Title, Text } = Typography;
+const { useBreakpoint } = Grid; // Added useBreakpoint hook
 
 const ReportPage = () => {
     const [activeTab, setActiveTab] = useState<'bonus' | 'violation'>('bonus');
@@ -110,42 +111,97 @@ const ReportPage = () => {
         }
     ];
 
+    const screens = useBreakpoint();
+
+    // Helper to render rank badge for list/card view
+    const renderRankBadge = (rank: number) => {
+        if (rank === 1) return <Tag color="gold" className="text-base px-2 py-0.5 m-0">#1 🏆</Tag>;
+        if (rank === 2) return <Tag color="geekblue" className="text-base px-2 py-0.5 m-0">#2 🥈</Tag>;
+        if (rank === 3) return <Tag color="cyan" className="text-base px-2 py-0.5 m-0">#3 🥉</Tag>;
+        return <span className="text-gray-500 font-semibold text-lg">#{rank}</span>;
+    };
+
+    const MobileListView = () => (
+        <div className="mt-4 px-3">
+            <List
+                dataSource={data}
+                loading={loading}
+                split={false}
+                renderItem={(item) => (
+                    <List.Item className="px-2 !border-0">
+                        <Card
+                            className="w-full shadow-sm border-gray-100 overflow-hidden"
+                            styles={{ body: { padding: '16px' } }}
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                {renderRankBadge(item.rank)}
+                                <Tag className="m-0">{item.details_count} records</Tag>
+                            </div>
+                            <div className="flex items-center gap-3 mb-5">
+                                <Avatar size={48} src={item.user?.avatar_url} icon={<UserOutlined />} className="shrink-0" />
+                                <div className="flex flex-col min-w-0 flex-1">
+                                    <Text strong className="truncate text-base">{item.user?.name || 'Unknown'}</Text>
+                                    <Text type="secondary" className="text-xs truncate">{item.user?.email}</Text>
+                                </div>
+                            </div>
+                            <div className="flex justify-between items-center pt-3 border-t border-gray-50 bg-gray-50 -mx-4 -mb-4 px-4 py-3">
+                                <Text type="secondary" className="text-sm">Total {activeTab === 'bonus' ? 'Points' : 'Violations'}</Text>
+                                <Text strong className="text-xl leading-none" type={activeTab === 'bonus' ? 'success' : 'danger'}>
+                                    {activeTab === 'bonus' ? `+${item.total_points}` : item.total_violations}
+                                </Text>
+                            </div>
+                        </Card>
+                    </List.Item>
+                )}
+            />
+        </div>
+    );
+
+    const DesktopTableView = () => (
+        <Table
+            columns={columns}
+            dataSource={data}
+            rowKey={(record) => record.user?.id || Math.random()}
+            loading={loading}
+            pagination={{ pageSize: 10 }}
+            className="p-4"
+        />
+    );
+
     return (
-        <div className="p-6">
-            <Row gutter={[16, 16]} align="middle" className="mb-6">
-                <Col flex="auto">
+        <div className="p-4 md:p-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                <div>
                     <Title level={2} className="!m-0">
                         Detailed Reports
                     </Title>
                     <Text type="secondary">View performance statistics and violations leaderboard</Text>
-                </Col>
-                <Col>
-                    <Space>
-                        <DatePicker
-                            picker="month"
-                            allowClear
-                            value={selectedDate}
-                            onChange={(date) => setSelectedDate(date)}
-                            className="w-40"
-                            placeholder="All Time"
-                        />
-                        <Input
-                            prefix={<SearchOutlined className="text-gray-400" />}
-                            placeholder="Search member..."
-                            value={searchText}
-                            onChange={e => setSearchText(e.target.value)}
-                            allowClear
-                            className="w-64"
-                        />
-                    </Space>
-                </Col>
-            </Row>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                    <DatePicker
+                        picker="month"
+                        allowClear
+                        value={selectedDate}
+                        onChange={(date) => setSelectedDate(date)}
+                        className="w-full sm:w-40"
+                        placeholder="All Time"
+                    />
+                    <Input
+                        prefix={<SearchOutlined className="text-gray-400" />}
+                        placeholder="Search member..."
+                        value={searchText}
+                        onChange={e => setSearchText(e.target.value)}
+                        allowClear
+                        className="w-full sm:w-64"
+                    />
+                </div>
+            </div>
 
-            <Card className="shadow-xs" styles={{ body: { padding: 0 } }}>
+            <Card className={!screens.md ? "bg-transparent shadow-none border-none" : "shadow-xs"} styles={{ body: { padding: !screens.md ? 0 : undefined } }}>
                 <Tabs
                     activeKey={activeTab}
                     onChange={(key) => setActiveTab(key as any)}
-                    tabBarStyle={{ padding: '0 24px', margin: 0 }}
+                    tabBarStyle={{ padding: !screens.md ? '0 12px' : '0 24px', margin: 0 }}
                     size="large"
                     items={[
                         {
@@ -153,38 +209,20 @@ const ReportPage = () => {
                             label: (
                                 <Space>
                                     <TrophyOutlined />
-                                    <span>Bonus Points Leaderboard</span>
+                                    <span>Bonus Points</span>
                                 </Space>
                             ),
-                            children: (
-                                <Table
-                                    columns={columns}
-                                    dataSource={data}
-                                    rowKey={(record) => record.user?.id || Math.random()}
-                                    loading={loading}
-                                    pagination={{ pageSize: 10 }}
-                                    className="p-4"
-                                />
-                            )
+                            children: screens.md ? <DesktopTableView /> : <MobileListView />
                         },
                         {
                             key: 'violation',
                             label: (
                                 <Space>
                                     <WarningOutlined />
-                                    <span>Violations Statistics</span>
+                                    <span>Violations</span>
                                 </Space>
                             ),
-                            children: (
-                                <Table
-                                    columns={columns}
-                                    dataSource={data}
-                                    rowKey={(record) => record.user?.id || Math.random()}
-                                    loading={loading}
-                                    pagination={{ pageSize: 10 }}
-                                    className="p-4"
-                                />
-                            )
+                            children: screens.md ? <DesktopTableView /> : <MobileListView />
                         }
                     ]}
                 />

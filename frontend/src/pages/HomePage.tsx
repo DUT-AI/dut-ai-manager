@@ -51,8 +51,8 @@ const HomePage = () => {
     ];
 
     return (
-        <div className="max-w-7xl mx-auto py-8 px-6">
-            <div className="flex justify-between items-center mb-8">
+        <div className="max-w-7xl mx-auto py-6 px-4 md:px-6 md:py-8">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4">
                 <div>
                     <Title level={3} className="!mb-1">
                         Xin chào, <span className="text-indigo-600">{user?.name}</span> 👋
@@ -64,7 +64,7 @@ const HomePage = () => {
                     value={date}
                     onChange={(val) => val && setDate(val)}
                     allowClear={false}
-                    className="w-40"
+                    className="w-full md:w-40"
                 />
             </div>
 

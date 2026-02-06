@@ -1,5 +1,5 @@
 import React from 'react';
-import { Table, Button, message, Popconfirm, Typography, Card, Tabs } from 'antd';
+import { Table, Button, message, Popconfirm, Typography, Card, Tabs, Grid, List } from 'antd';
 import type { TabsProps } from 'antd';
 import { UndoOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -155,37 +155,135 @@ export const TrashPage: React.FC = () => {
         },
     ];
 
+    const screens = Grid.useBreakpoint();
+
+    const TrashMobileList = ({ dataSource, loading, columns, onRestore }: { dataSource: any[], loading: boolean, columns: string[], onRestore: (id: number) => void }) => (
+        <div className="mt-4 px-3">
+            <List
+                dataSource={dataSource}
+                loading={loading}
+                split={false}
+                locale={{ emptyText: "Thùng rác trống" }}
+                renderItem={(record) => (
+                    <List.Item className="px-2 !mb-4 !border-0">
+                        <Card
+                            className="w-full shadow-sm border-gray-100 overflow-hidden"
+                            styles={{ body: { padding: '16px' } }}
+                        >
+                            <div className="flex flex-col gap-2 mb-4">
+                                {columns.includes('title') && <Text strong className="text-base">{record.title}</Text>}
+                                {columns.includes('user_name') && <Text strong className="text-base">{record.user_name}</Text>}
+                                {columns.includes('description') && <Text type="secondary" className="text-xs italic">{record.description}</Text>}
+                                {columns.includes('reason') && (
+                                    <div className="bg-gray-50 p-2 rounded text-xs border border-gray-100 italic">
+                                        Lý do: {record.reason}
+                                    </div>
+                                )}
+                                {columns.includes('points') && <div className="text-green-600 font-bold">Điểm: +{record.points}</div>}
+                                {columns.includes('category') && <div className="text-xs font-semibold px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full inline-block self-start uppercase">{record.category}</div>}
+                                {columns.includes('note') && <div className="text-xs text-gray-500 italic">Ghi chú: {record.note}</div>}
+                            </div>
+
+                            <div className="flex items-center justify-between pt-3 border-t border-gray-50">
+                                <Text type="secondary" className="text-[10px]">
+                                    Ngày: {dayjs(record.deadline || record.date).format('DD/MM/YYYY')}
+                                </Text>
+                                <Popconfirm title="Khôi phục?" onConfirm={() => onRestore(record.id)}>
+                                    <Button icon={<UndoOutlined />} type="primary" ghost size="small" className="rounded-lg">
+                                        Khôi phục
+                                    </Button>
+                                </Popconfirm>
+                            </div>
+                        </Card>
+                    </List.Item>
+                )}
+            />
+        </div>
+    );
+
     const items: TabsProps['items'] = [
         {
             key: 'homework',
             label: 'Bài tập',
-            children: <Table dataSource={deletedHomeworks || []} columns={homeworkColumns} rowKey="id" loading={homeworkLoading} pagination={{ pageSize: 10 }} locale={{ emptyText: "Thùng rác trống" }} />
+            children: !screens.md ? (
+                <TrashMobileList
+                    dataSource={deletedHomeworks || []}
+                    loading={homeworkLoading}
+                    columns={['title', 'description']}
+                    onRestore={handleRestoreHomework}
+                />
+            ) : (
+                <Table dataSource={deletedHomeworks || []} columns={homeworkColumns} rowKey="id" loading={homeworkLoading} pagination={{ pageSize: 10 }} locale={{ emptyText: "Thùng rác trống" }} />
+            )
         },
         {
             key: 'bonus',
             label: 'Điểm cộng',
-            children: <Table dataSource={deletedBonusPoints || []} columns={bonusColumns} rowKey="id" loading={bonusLoading} pagination={{ pageSize: 10 }} locale={{ emptyText: "Thùng rác trống" }} />
+            children: !screens.md ? (
+                <TrashMobileList
+                    dataSource={deletedBonusPoints || []}
+                    loading={bonusLoading}
+                    columns={['user_name', 'points', 'reason']}
+                    onRestore={handleRestoreBonusPoint}
+                />
+            ) : (
+                <Table dataSource={deletedBonusPoints || []} columns={bonusColumns} rowKey="id" loading={bonusLoading} pagination={{ pageSize: 10 }} locale={{ emptyText: "Thùng rác trống" }} />
+            )
         },
         {
             key: 'violation',
             label: 'Vi phạm',
-            children: <Table dataSource={deletedViolations || []} columns={violationColumns} rowKey="id" loading={violationLoading} pagination={{ pageSize: 10 }} locale={{ emptyText: "Thùng rác trống" }} />
+            children: !screens.md ? (
+                <TrashMobileList
+                    dataSource={deletedViolations || []}
+                    loading={violationLoading}
+                    columns={['user_name', 'reason']}
+                    onRestore={handleRestoreViolation}
+                />
+            ) : (
+                <Table dataSource={deletedViolations || []} columns={violationColumns} rowKey="id" loading={violationLoading} pagination={{ pageSize: 10 }} locale={{ emptyText: "Thùng rác trống" }} />
+            )
         },
         {
             key: 'permission',
             label: 'Đơn phép',
-            children: <Table dataSource={deletedPermissions || []} columns={permissionColumns} rowKey="id" loading={permissionLoading} pagination={{ pageSize: 10 }} locale={{ emptyText: "Thùng rác trống" }} />
+            children: !screens.md ? (
+                <TrashMobileList
+                    dataSource={deletedPermissions || []}
+                    loading={permissionLoading}
+                    columns={['user_name', 'category', 'note']}
+                    onRestore={handleRestorePermission}
+                />
+            ) : (
+                <Table dataSource={deletedPermissions || []} columns={permissionColumns} rowKey="id" loading={permissionLoading} pagination={{ pageSize: 10 }} locale={{ emptyText: "Thùng rác trống" }} />
+            )
         },
     ];
 
     return (
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-            <div className="flex justify-between items-center mb-6">
-                <Title level={3} className="!mb-0">Thùng rác</Title>
+        <div className="p-4 md:p-6 bg-[#f8fafc] min-h-full">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 px-3 md:px-0">
+                <div>
+                    <Title level={3} className="!m-0 text-xl md:text-2xl text-gray-800 mt-4 leading-relaxed">Thùng rác</Title>
+                    <Text type="secondary" className="text-xs md:text-sm">Quản lý và khôi phục các dữ liệu đã xóa</Text>
+                </div>
             </div>
 
-            <Card className="mb-6">
-                <Tabs defaultActiveKey="homework" items={items} />
+            <Card className={!screens.md ? "bg-transparent shadow-none border-none p-0" : "shadow-sm border-gray-100 rounded-xl overflow-hidden"} styles={{ body: { padding: !screens.md ? 0 : undefined } }}>
+                <div className="overflow-x-auto no-scrollbar">
+                    <Tabs
+                        defaultActiveKey="homework"
+                        items={items}
+                        className="trash-tabs"
+                        tabBarStyle={{
+                            paddingLeft: !screens.md ? '16px' : '24px',
+                            paddingRight: !screens.md ? '16px' : '24px',
+                            margin: 0,
+                            minWidth: !screens.md ? 'max-content' : '100%',
+                            borderBottom: '1px solid #f0f0f0'
+                        }}
+                    />
+                </div>
             </Card>
         </div>
     );

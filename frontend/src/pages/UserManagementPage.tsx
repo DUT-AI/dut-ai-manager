@@ -17,7 +17,9 @@ import {
     Col,
     Avatar,
     Upload,
-    Alert
+    Alert,
+    Grid,
+    List
 } from 'antd';
 import {
     PlusOutlined,
@@ -53,6 +55,7 @@ const UserManagementPage = () => {
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<UserResponse | null>(null);
     const [form] = Form.useForm();
+    const screens = Grid.useBreakpoint();
 
     // Search & Filter states
     const [searchText, setSearchText] = useState('');
@@ -118,6 +121,7 @@ const UserManagementPage = () => {
         {
             title: 'Thành viên',
             key: 'user',
+            fixed: 'left' as const,
             render: (_: any, record: UserResponse) => (
                 <Space>
                     <Avatar
@@ -177,6 +181,8 @@ const UserManagementPage = () => {
         {
             title: 'Thao tác',
             key: 'actions',
+            fixed: 'right' as const,
+            width: 150,
             render: (_: any, record: UserResponse) => (
                 <Space>
                     <Button
@@ -211,22 +217,107 @@ const UserManagementPage = () => {
         },
     ];
 
+    const MobileListView = () => (
+        <div className="mt-4 px-3">
+            <List
+                dataSource={filteredUsers}
+                loading={isLoading}
+                split={false}
+                renderItem={(record) => (
+                    <List.Item className="px-2 !mb-4 !border-0" onClick={() => navigate(`/dashboard/profile/${record.id}`)}>
+                        <Card
+                            className="w-full shadow-sm border-gray-100 overflow-hidden"
+                            styles={{ body: { padding: '16px' } }}
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <Tag color={record.role_name === 'admin' ? 'volcano' : record.role_name === 'leader' ? 'blue' : 'green'} className="uppercase font-bold m-0 px-3 rounded-full">
+                                    {record.role_name || 'NO ROLE'}
+                                </Tag>
+                                <Badge
+                                    status={record.status === 'active' ? 'success' : 'error'}
+                                    text={<span className={record.status === 'active' ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>{record.status?.toUpperCase()}</span>}
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-3 mb-4">
+                                <Avatar
+                                    size={52}
+                                    src={record.avatar_url}
+                                    icon={<UserOutlined />}
+                                    className="bg-linear-to-br from-[#4f46e5] to-[#7c3aed] shrink-0 shadow-sm"
+                                />
+                                <div className="flex flex-col min-w-0 flex-1">
+                                    <Text strong className="truncate text-base">{record.name}</Text>
+                                    <div className="flex items-center gap-1.5 text-gray-400">
+                                        <MailOutlined className="text-xs" />
+                                        <Text type="secondary" className="text-xs truncate">{record.email}</Text>
+                                    </div>
+                                    {record.discord_id && (
+                                        <div className="flex items-center gap-1.5 text-indigo-400">
+                                            <DiscordOutlined className="text-xs" />
+                                            <Text className="text-[10px] text-indigo-400">{record.discord_id}</Text>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="flex justify-between items-center pt-3 border-t border-gray-50 bg-gray-50 -mx-4 -mb-4 px-4 py-3 gap-2" onClick={(e) => e.stopPropagation()}>
+                                <Space>
+                                    <PhoneOutlined className="text-gray-400" />
+                                    <Text className="text-xs">{record.phone_number || 'No phone'}</Text>
+                                </Space>
+                                <Space onClick={(e) => e.stopPropagation()}>
+                                    <Button
+                                        icon={<EditOutlined />}
+                                        size="small"
+                                        onClick={() => {
+                                            setEditingUser(record);
+                                            form.setFieldsValue(record);
+                                            setIsModalOpen(true);
+                                        }}
+                                        disabled={!canUpdate}
+                                    >
+                                        Sửa
+                                    </Button>
+                                    <Popconfirm
+                                        title="Xóa thành viên này?"
+                                        onConfirm={() => handleDelete(record.id)}
+                                        disabled={!canDelete}
+                                        okText="Xóa"
+                                        cancelText="Hủy"
+                                    >
+                                        <Button icon={<DeleteOutlined />} size="small" danger disabled={!canDelete} />
+                                    </Popconfirm>
+                                </Space>
+                            </div>
+                        </Card>
+                    </List.Item>
+                )}
+            />
+        </div>
+    );
+
     return (
-        <div className="p-6">
-            <Card className="shadow-sm border-gray-100 rounded-xl overflow-hidden">
-                <div className="flex justify-between items-center mb-6">
-                    <Space>
-                        <UserOutlined className="text-2xl text-[#4f46e5]" />
-                        <Title level={3} className="!m-0">Quản lý Thành viên</Title>
+        <div className="p-4 md:p-6">
+            <Card className={!screens.md ? "bg-transparent shadow-none border-none" : "shadow-sm border-gray-100 rounded-xl overflow-hidden"} styles={{ body: { padding: !screens.md ? 0 : undefined } }}>
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 px-3 md:px-0">
+                    <Space size="middle">
+                        <div className="hidden md:flex w-12 h-12 rounded-xl bg-indigo-50 items-center justify-center text-indigo-500">
+                            <UserOutlined className="text-2xl" />
+                        </div>
+                        <div>
+                            <Title level={3} className="text-xl md:text-2xl mt-3 text-[#4f46e5]">Quản lý Thành viên</Title>
+                            <Text type="secondary" className="text-xs md:text-sm">Quản lý tài khoản, vai trò và thông tin đội ngũ</Text>
+                        </div>
                     </Space>
                     {canCreate && (
-                        <Space>
+                        <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
                             <Button
                                 icon={<FileExcelOutlined />}
                                 onClick={() => setIsImportModalOpen(true)}
-                                className="border-green-600 text-green-600 hover:!text-green-500 hover:!border-green-500"
+                                className="flex-1 md:flex-none border-green-600 text-green-600 hover:!text-green-500 hover:!border-green-500"
                             >
-                                Import Excel
+                                Import
                             </Button>
                             <Button
                                 type="primary"
@@ -237,87 +328,96 @@ const UserManagementPage = () => {
                                     form.setFieldsValue({ status: 'active' });
                                     setIsModalOpen(true);
                                 }}
-                                className="bg-linear-to-r from-[#667eea] to-[#764ba2] border-none shadow-md h-10 px-6"
+                                className="flex-1 md:flex-none bg-linear-to-r from-[#667eea] to-[#764ba2] border-none shadow-md h-10 font-semibold"
                             >
-                                Add New User
+                                {screens.md ? 'Add New User' : 'Add User'}
                             </Button>
-                        </Space>
+                        </div>
                     )}
                 </div>
 
                 {/* Search & Filter Bar */}
-                <Row gutter={16} className="mb-4">
-                    <Col xs={24} sm={12} md={8}>
-                        <Input
-                            placeholder="Tìm kiếm theo tên, email, SĐT..."
-                            prefix={<SearchOutlined className="text-gray-400" />}
-                            value={searchText}
-                            onChange={(e) => setSearchText(e.target.value)}
-                            allowClear
-                            className="w-full"
-                        />
-                    </Col>
-                    <Col xs={12} sm={6} md={4}>
-                        <Select
-                            placeholder="Vai trò"
-                            value={filterRole}
-                            onChange={setFilterRole}
-                            allowClear
-                            className="w-full"
-                            suffixIcon={<FilterOutlined />}
-                        >
-                            {roles.map(role => (
-                                <Option key={role.id} value={role.name}>
-                                    {role.name.toUpperCase()}
-                                </Option>
-                            ))}
-                        </Select>
-                    </Col>
-                    <Col xs={12} sm={6} md={4}>
-                        <Select
-                            placeholder="Trạng thái"
-                            value={filterStatus}
-                            onChange={setFilterStatus}
-                            allowClear
-                            className="w-full"
-                            suffixIcon={<FilterOutlined />}
-                        >
-                            <Option value="active">Active</Option>
-                            <Option value="inactive">Inactive</Option>
-                        </Select>
-                    </Col>
-                    {(searchText || filterRole || filterStatus) && (
-                        <Col>
-                            <Button
-                                onClick={() => {
-                                    setSearchText('');
-                                    setFilterRole(undefined);
-                                    setFilterStatus(undefined);
-                                }}
-                            >
-                                Xóa bộ lọc
-                            </Button>
+                <div className="px-3 md:px-0 mb-4">
+                    <Row gutter={[12, 12]}>
+                        <Col xs={24} md={8}>
+                            <Input
+                                placeholder="Tìm kiếm tên, email, SĐT..."
+                                prefix={<SearchOutlined className="text-gray-400" />}
+                                value={searchText}
+                                onChange={(e) => setSearchText(e.target.value)}
+                                allowClear
+                                className="w-full"
+                            />
                         </Col>
-                    )}
-                </Row>
+                        <Col xs={12} md={5}>
+                            <Select
+                                placeholder="Vai trò"
+                                value={filterRole}
+                                onChange={setFilterRole}
+                                allowClear
+                                className="w-full"
+                                suffixIcon={<FilterOutlined />}
+                            >
+                                {roles.map(role => (
+                                    <Option key={role.id} value={role.name}>
+                                        {role.name.toUpperCase()}
+                                    </Option>
+                                ))}
+                            </Select>
+                        </Col>
+                        <Col xs={12} md={5}>
+                            <Select
+                                placeholder="Trạng thái"
+                                value={filterStatus}
+                                onChange={setFilterStatus}
+                                allowClear
+                                className="w-full"
+                                suffixIcon={<FilterOutlined />}
+                            >
+                                <Option value="active">Active</Option>
+                                <Option value="inactive">Inactive</Option>
+                            </Select>
+                        </Col>
+                        {(searchText || filterRole || filterStatus) && (
+                            <Col xs={24} md={6}>
+                                <Button
+                                    onClick={() => {
+                                        setSearchText('');
+                                        setFilterRole(undefined);
+                                        setFilterStatus(undefined);
+                                    }}
+                                    block
+                                    icon={<DeleteOutlined className="text-xs" />}
+                                >
+                                    Xóa lọc
+                                </Button>
+                            </Col>
+                        )}
+                    </Row>
+                </div>
 
                 {!canUpdate && (
-                    <div className="mb-4 bg-yellow-50 p-4 rounded-lg border border-yellow-100 flex items-center">
+                    <div className="mb-4 bg-yellow-50 p-4 rounded-lg border border-yellow-100 flex items-center mx-3 md:mx-0">
                         <LockOutlined className="text-yellow-600 mr-3 text-lg" />
-                        <Text type="warning">
-                            You have read-only access. You cannot create, edit, or delete users.
+                        <Text type="warning" className="text-xs md:text-base">
+                            Read-only access. Contact admin to modify.
                         </Text>
                     </div>
                 )}
 
-                <Table
-                    columns={columns}
-                    dataSource={filteredUsers}
-                    rowKey="id"
-                    loading={isLoading}
-                    className="border border-gray-100 rounded-lg custom-table"
-                    pagination={{ pageSize: 10 }}
-                />
+                {!screens.md ? (
+                    <MobileListView />
+                ) : (
+                    <Table
+                        columns={columns}
+                        dataSource={filteredUsers}
+                        rowKey="id"
+                        loading={isLoading}
+                        className="border border-gray-100 rounded-lg custom-table"
+                        pagination={{ pageSize: 10 }}
+                        scroll={{ x: 1000 }}
+                    />
+                )}
             </Card>
 
             <Modal
@@ -330,7 +430,7 @@ const UserManagementPage = () => {
                 open={isModalOpen}
                 onCancel={() => setIsModalOpen(false)}
                 onOk={() => form.submit()}
-                width={600}
+                width={screens.xs ? '100%' : 600}
                 centered
                 okText={editingUser ? 'Save Changes' : 'Create User'}
                 confirmLoading={createUser.isPending || updateUser.isPending}

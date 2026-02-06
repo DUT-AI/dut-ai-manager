@@ -40,6 +40,8 @@ class UserResponse(BaseModel):
     status: str
     role_id: int | None = None
     role_name: str | None = None
+    avatar_url: str | None = None
+    discord_id: str | None = None
     permissions: list[str] = []
 
     class Config:

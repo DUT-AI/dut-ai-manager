@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-    Table, Button, Tabs, Space, message, Popconfirm, Typography, Tag
+    Table, Button, Tabs, Space, message, Popconfirm, Typography, Tag, Grid, List, Card
 } from 'antd';
 import {
     PlusOutlined, UploadOutlined, EyeOutlined, EditOutlined, DeleteOutlined
@@ -207,80 +207,171 @@ export const HomeworkPage: React.FC = () => {
         },
     ];
 
+    const screens = Grid.useBreakpoint();
+
+    const HomeworkMobileList = ({ dataSource, loading, emptyText }: { dataSource: Homework[], loading: boolean, emptyText?: string }) => (
+        <div className="mt-4 px-3">
+            <List
+                dataSource={dataSource}
+                loading={loading}
+                split={false}
+                locale={{ emptyText }}
+                renderItem={(record) => (
+                    <List.Item className="px-2 !mb-4 !border-0">
+                        <Card
+                            className="w-full shadow-sm border-gray-100 overflow-hidden"
+                            styles={{ body: { padding: '16px' } }}
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <Text strong className="text-base truncate">{record.title}</Text>
+                                {dayjs().isAfter(dayjs(record.deadline)) && (
+                                    <Tag color="red" className="m-0">Quá hạn</Tag>
+                                )}
+                            </div>
+
+                            <div className="mb-4">
+                                <Text type="secondary" className="block text-xs truncate">
+                                    {record.description || 'Không có mô tả'}
+                                </Text>
+                            </div>
+
+                            <div className="flex items-center gap-2 mb-4 text-xs">
+                                <Text type="secondary">Hạn nộp:</Text>
+                                <Text className={dayjs().isAfter(dayjs(record.deadline)) ? 'text-red-500' : ''}>
+                                    {dayjs(record.deadline).format('DD/MM/YYYY HH:mm')}
+                                </Text>
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-3 border-t border-gray-50 bg-gray-50 -mx-4 -mb-4 px-4 py-3">
+                                {activeTab === '1' ? (
+                                    <Button type="primary" size="small" icon={<UploadOutlined />} onClick={() => handleOpenSubmit(record)}>
+                                        Nộp bài
+                                    </Button>
+                                ) : (
+                                    <Space size="small">
+                                        <Button size="small" icon={<EyeOutlined />} onClick={() => handleViewSubmissions(record)}>
+                                            Bài nộp
+                                        </Button>
+                                        {hasPermission(HomeworkPermission.UPDATE) && (
+                                            <Button size="small" icon={<EditOutlined />} onClick={() => handleOpenEdit(record)} />
+                                        )}
+                                        {hasPermission(HomeworkPermission.DELETE) && (
+                                            <Popconfirm
+                                                title="Xóa bài tập?"
+                                                onConfirm={() => handleDelete(record.id)}
+                                                okText="Xóa"
+                                                cancelText="Hủy"
+                                            >
+                                                <Button size="small" danger icon={<DeleteOutlined />} />
+                                            </Popconfirm>
+                                        )}
+                                    </Space>
+                                )}
+                            </div>
+                        </Card>
+                    </List.Item>
+                )}
+            />
+        </div>
+    );
+
     return (
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-            <div className="flex justify-between items-center mb-6">
-                <Title level={3} className="!mb-0">Quản lý bài tập</Title>
+        <div className="p-4 md:p-6 bg-white md:rounded-xl shadow-xs min-h-full">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 px-3 md:px-0">
+                <div>
+                    <Title level={3} className="!m-0 text-xl md:text-2xl text-[#4f46e5] mt-4">Quản lý bài tập</Title>
+                    <Text type="secondary" className="text-xs md:text-sm">Giao và nộp bài tập, theo dõi tiến độ</Text>
+                </div>
                 {hasPermission(HomeworkPermission.CREATE) && (
                     <Button
                         type="primary"
                         icon={<PlusOutlined />}
                         onClick={handleOpenCreate}
-                        className="bg-indigo-600 hover:bg-indigo-700"
+                        className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 h-10 font-semibold"
                     >
                         Tạo bài tập mới
                     </Button>
                 )}
             </div>
 
-            <Tabs
-                activeKey={activeTab}
-                onChange={setActiveTab}
-                type="card"
-                items={[
-                    {
-                        key: '1',
-                        label: 'Bài tập của tôi',
-                        children: (
-                            <Table
-                                dataSource={myHomeworks}
-                                columns={myColumns}
-                                rowKey="id"
-                                loading={myLoading}
-                                locale={{ emptyText: "Không có bài tập nào được giao" }}
-                            />
-                        )
-                    },
-                    ...(isAdminOrLeader() ? [{
-                        key: '2',
-                        label: 'Tất cả bài tập (Quản lý)',
-                        children: (
-                            <Table
-                                dataSource={allHomeworks}
-                                columns={adminColumns}
-                                rowKey="id"
-                                loading={allLoading}
-                            />
-                        )
-                    }] : [])
-                ]}
-            />
+            <div className="overflow-x-auto no-scrollbar">
+                <Tabs
+                    activeKey={activeTab}
+                    onChange={setActiveTab}
+                    type="card"
+                    className="homework-tabs"
+                    tabBarStyle={{
+                        paddingLeft: !screens.md ? '16px' : '0',
+                        paddingRight: !screens.md ? '16px' : '0',
+                        marginBottom: 0,
+                        minWidth: !screens.md ? 'max-content' : '100%'
+                    }}
+                    items={[
+                        {
+                            key: '1',
+                            label: 'Bài tập của tôi',
+                            children: !screens.md ? (
+                                <HomeworkMobileList
+                                    dataSource={myHomeworks}
+                                    loading={myLoading}
+                                    emptyText="Không có bài tập nào được giao"
+                                />
+                            ) : (
+                                <Table
+                                    dataSource={myHomeworks}
+                                    columns={myColumns}
+                                    rowKey="id"
+                                    loading={myLoading}
+                                    locale={{ emptyText: "Không có bài tập nào được giao" }}
+                                />
+                            )
+                        },
+                        ...(isAdminOrLeader() ? [{
+                            key: '2',
+                            label: 'Quản lý bài tập',
+                            children: !screens.md ? (
+                                <HomeworkMobileList
+                                    dataSource={allHomeworks}
+                                    loading={allLoading}
+                                />
+                            ) : (
+                                <Table
+                                    dataSource={allHomeworks}
+                                    columns={adminColumns}
+                                    rowKey="id"
+                                    loading={allLoading}
+                                />
+                            )
+                        }] : [])
+                    ]}
+                />
 
-            {/* Create/Edit Modal */}
-            <HomeworkFormModal
-                open={isFormModalOpen}
-                editingItem={editingHomework}
-                users={users}
-                teams={teams}
-                currentAssignees={currentAssignees}
-                onSuccess={handleFormSuccess}
-                onCancel={() => setIsFormModalOpen(false)}
-            />
+                {/* Create/Edit Modal */}
+                <HomeworkFormModal
+                    open={isFormModalOpen}
+                    editingItem={editingHomework}
+                    users={users}
+                    teams={teams}
+                    currentAssignees={currentAssignees}
+                    onSuccess={handleFormSuccess}
+                    onCancel={() => setIsFormModalOpen(false)}
+                />
 
-            {/* Submit Modal */}
-            <SubmitHomeworkModal
-                open={isSubmitModalOpen}
-                homework={selectedHomework}
-                onSuccess={handleSubmitSuccess}
-                onCancel={() => setIsSubmitModalOpen(false)}
-            />
+                {/* Submit Modal */}
+                <SubmitHomeworkModal
+                    open={isSubmitModalOpen}
+                    homework={selectedHomework}
+                    onSuccess={handleSubmitSuccess}
+                    onCancel={() => setIsSubmitModalOpen(false)}
+                />
 
-            {/* Submissions Drawer */}
-            <SubmissionsDrawer
-                open={isSubmissionsDrawerOpen}
-                homework={selectedHomework}
-                onClose={() => setIsSubmissionsDrawerOpen(false)}
-            />
+                {/* Submissions Drawer */}
+                <SubmissionsDrawer
+                    open={isSubmissionsDrawerOpen}
+                    homework={selectedHomework}
+                    onClose={() => setIsSubmissionsDrawerOpen(false)}
+                />
+            </div>
         </div>
     );
 };

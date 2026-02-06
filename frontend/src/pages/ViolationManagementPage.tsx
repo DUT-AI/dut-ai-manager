@@ -15,7 +15,9 @@ import {
     Drawer,
     Descriptions,
     Divider,
-    Avatar
+    Avatar,
+    Grid,
+    List
 } from 'antd';
 import {
     PlusOutlined,
@@ -38,6 +40,7 @@ const { TextArea } = Input;
 
 const ViolationManagementPage = () => {
     const { hasPermission } = useAuth();
+    const screens = Grid.useBreakpoint();
 
     // TanStack Query hooks
     const { data: violations = [], isLoading } = useViolations();
@@ -171,17 +174,91 @@ const ViolationManagementPage = () => {
         },
     ];
 
+    const MobileListView = () => (
+        <div className="mt-4 px-3">
+            <List
+                dataSource={violations}
+                loading={isLoading}
+                split={false}
+                renderItem={(record) => (
+                    <List.Item className="px-2 !mb-4 !border-0">
+                        <Card
+                            className="w-full shadow-sm border-gray-100 overflow-hidden"
+                            styles={{ body: { padding: '16px' } }}
+                            onClick={() => {
+                                setDetailItem(record);
+                                setIsDetailOpen(true);
+                            }}
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <Space className="text-gray-400 text-xs">
+                                    <CalendarOutlined />
+                                    <span>{dayjs(record.date).format('DD/MM/YYYY HH:mm')}</span>
+                                </Space>
+                            </div>
+
+                            <div className="flex items-center gap-3 mb-4">
+                                <Avatar
+                                    src={record.user_avatar}
+                                    icon={<UserOutlined />}
+                                    className="bg-linear-to-br from-red-500 to-orange-500 shadow-sm shrink-0"
+                                    size="large"
+                                />
+                                <div className="flex flex-col min-w-0 flex-1">
+                                    <Text strong className="truncate text-base">
+                                        {record.user_name || 'Unknown'}
+                                    </Text>
+                                    <Text type="danger" className="text-xs italic truncate">
+                                        {record.reason}
+                                    </Text>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end items-center pt-3 border-t border-gray-50 bg-gray-50 -mx-4 -mb-4 px-4 py-3 gap-2" onClick={(e) => e.stopPropagation()}>
+                                <Button
+                                    icon={<EditOutlined />}
+                                    size="small"
+                                    onClick={() => {
+                                        setEditingItem(record);
+                                        form.setFieldsValue({
+                                            ...record,
+                                            user_name: record.user_name || 'Unknown',
+                                            date: dayjs(record.date)
+                                        });
+                                        setIsModalOpen(true);
+                                    }}
+                                    disabled={!canUpdate}
+                                >
+                                    Sửa
+                                </Button>
+                                <Popconfirm
+                                    title="Xóa vi phạm này?"
+                                    onConfirm={() => handleDelete(record.id)}
+                                    disabled={!canDelete}
+                                    okText="Xóa"
+                                    cancelText="Hủy"
+                                >
+                                    <Button icon={<DeleteOutlined />} size="small" danger disabled={!canDelete}>Xóa</Button>
+                                </Popconfirm>
+                            </div>
+                        </Card>
+                    </List.Item>
+                )}
+            />
+        </div>
+    );
+
     return (
-        <div className="p-6">
-            <Card className="shadow-sm border-gray-100 rounded-xl overflow-hidden">
-                <div className="flex justify-between items-center mb-6">
+        <div className="p-4 md:p-6">
+            <Card className={!screens.md ? "bg-transparent shadow-none border-none" : "shadow-sm border-gray-100 rounded-xl overflow-hidden"} styles={{ body: { padding: !screens.md ? 0 : undefined } }}>
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 px-3 md:px-0">
                     <Space size="middle">
-                        <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center text-red-500">
+                        <div className="hidden md:flex w-12 h-12 rounded-xl bg-red-50 items-center justify-center text-red-500">
                             <WarningOutlined className="text-2xl" />
                         </div>
                         <div>
-                            <Title level={3} className="!m-0">Quản lý Vi phạm</Title>
-                            <Text type="secondary">Danh sách và công cụ xử lý các vi phạm của thành viên</Text>
+                            <Title level={3} className="text-xl md:text-2xl mt-4 text-red-600">Quản lý Vi phạm</Title>
+                            <Text type="secondary" className="text-xs md:text-sm">Danh sách và công cụ xử lý các vi phạm</Text>
                         </div>
                     </Space>
                     {canCreate && (
@@ -194,28 +271,32 @@ const ViolationManagementPage = () => {
                                 form.setFieldsValue({ date: dayjs() });
                                 setIsModalOpen(true);
                             }}
-                            className="bg-linear-to-r from-red-500 to-orange-500 border-none shadow-md h-10 px-6 font-semibold"
+                            className="w-full md:w-auto bg-linear-to-r from-red-500 to-orange-500 border-none shadow-md h-10 px-6 font-semibold"
                         >
                             Thêm Vi phạm
                         </Button>
                     )}
                 </div>
 
-                <Table
-                    columns={columns}
-                    dataSource={violations}
-                    rowKey="id"
-                    loading={isLoading}
-                    className="border border-gray-100 rounded-lg custom-table cursor-pointer"
-                    pagination={{ pageSize: 10 }}
-                    onRow={(record) => ({
-                        onClick: () => {
-                            setDetailItem(record);
-                            setIsDetailOpen(true);
-                        },
-                        style: { cursor: 'pointer' }
-                    })}
-                />
+                {!screens.md ? (
+                    <MobileListView />
+                ) : (
+                    <Table
+                        columns={columns}
+                        dataSource={violations}
+                        rowKey="id"
+                        loading={isLoading}
+                        className="border border-gray-100 rounded-lg custom-table cursor-pointer"
+                        pagination={{ pageSize: 10 }}
+                        onRow={(record) => ({
+                            onClick: () => {
+                                setDetailItem(record);
+                                setIsDetailOpen(true);
+                            },
+                            style: { cursor: 'pointer' }
+                        })}
+                    />
+                )}
             </Card>
 
             {/* Create/Edit Modal */}
@@ -229,7 +310,7 @@ const ViolationManagementPage = () => {
                 destroyOnHidden
                 okText={editingItem ? 'Lưu thay đổi' : 'Ghi nhận'}
                 cancelText="Hủy"
-                width={500}
+                width={screens.md ? 500 : '100%'}
             >
                 <Form form={form} layout="vertical" onFinish={handleCreateOrUpdate} className="mt-6">
                     {editingItem ? (
@@ -275,7 +356,7 @@ const ViolationManagementPage = () => {
                 placement="right"
                 onClose={() => setIsDetailOpen(false)}
                 open={isDetailOpen}
-                width={500}
+                width={screens.md ? 500 : '100%'}
             >
                 {detailItem && (
                     <div className="flex flex-col h-full">

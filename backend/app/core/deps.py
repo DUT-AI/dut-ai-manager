@@ -69,6 +69,8 @@ def get_current_user(
         user._jwt_permissions = set(permissions)
     if name := payload.get("name"):
         user._jwt_name = name
+    if avatar := payload.get("avatar"):
+        user._jwt_avatar = avatar
 
     # Set current user ID in context for audit fields
     set_current_user_id(user.id)

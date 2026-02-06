@@ -62,6 +62,7 @@ class AuthService:
         extra_claims = {
             "name": user.name,
             "role": user.role.name if user.role else None,
+            "avatar": user.avatar_url,
             "permissions": list(user.permissions) if user.role else [],
         }
 
