@@ -11,6 +11,7 @@ from app.utils.password import decode_token
 from fastapi import Depends, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlmodel import Session
+from app.utils.password import verify_password
 
 security = HTTPBearer(auto_error=False)
 
@@ -47,24 +48,7 @@ def get_current_user(
     """
     # 1. Check for API Key format (sk-...)
     if token.startswith("sk-"):
-        # We need to manually get service_factory here because we can't inject it easily
-        # into a dependency that is used by other dependencies without circular issues or complexity.
-        # However, `get_service_factory` requires `request`.
-        # Best way: Use the repo factory directly or service factory if possible.
-        # Actually, `get_current_user` doesn't have `request` injected, but `get_token...` had `request`.
-        # Let's inject `ServiceFactory` or `RepositoryFactory`.
-        # Constraint: `get_current_user` signature is used in many places.
-        # Better: use `RepositoryFactory` which is lighter.
-
-        # NOTE: WE NEED TO INJECT REPO FACTORY HERE.
-        # But wait, `get_current_user` currently only depends on `token` and `session`.
-        # We can use `session` to create `RepositoryFactory`.
-
         repo_factory = RepositoryFactory(session)
-        # We need `RoleApiKeyService` logic to verify.
-        # Re-implement verification logic here or use Service?
-        # Service needs Repo.
-        # Let's keep it simple: Use Repo directly to find key.
 
         prefix = token[:6]  # Match the prefix length in model
         # Use the specific repo method we added
@@ -72,9 +56,6 @@ def get_current_user(
 
         matched_key = None
         for key in candidates:
-            # We need `verify_password` from utils
-            from app.utils.password import verify_password
-
             if verify_password(token, key.key_hash):
                 matched_key = key
                 break
@@ -82,11 +63,8 @@ def get_current_user(
         if not matched_key:
             raise BadRequestException("Invalid API Key", status.HTTP_401_UNAUTHORIZED)
 
-        # Create a "System User" stub
-        # We need to fetch the role's permissions
         role = matched_key.role
 
-        # Create a fake user object
         system_user = User(
             id=0,  # System ID
             name=f"System: {matched_key.name}",
@@ -95,18 +73,20 @@ def get_current_user(
             role=role,
         )
 
-        # Attach permissions similarly to JWT
-        # Since we have the full Role object loaded (eagerly in repo), we can access permissions
-        # But `User.permissions` property relies on `self.role.role_permissions`.
-        # Ensure `matched_key.role` has `role_permissions` loaded?
-        # `selectinload(RoleApiKey.role)` loads Role, but maybe not Role.role_permissions.
-        # We might need to fetch Role with permissions.
-
         full_role = repo_factory.role.get_role_with_permissions(role.id)
         if full_role:
             system_user.role = full_role  # Replace with fully loaded role
 
-        # Set context
+        system_user._jwt_role = system_user.role.name
+
+        perms = set()
+        if system_user.role.role_permissions:
+            for rp in system_user.role.role_permissions:
+                if rp.permission:
+                    perms.add(rp.permission.name)
+
+        system_user._jwt_permissions = perms
+
         set_current_user_id(0)
 
         return system_user
