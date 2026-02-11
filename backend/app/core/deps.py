@@ -39,7 +39,79 @@ def get_current_user(
     token: Annotated[str, Depends(get_token_from_cookie_or_header)],
     session: Annotated[Session, Depends(get_session)],
 ) -> User:
-    """Get current user from token. Uses JWT claims for role/permissions to avoid DB queries."""
+    """
+    Get current user from token.
+    Supports:
+    1. JWT Access Token (User login)
+    2. API Key (Role-based system access)
+    """
+    # 1. Check for API Key format (sk-...)
+    if token.startswith("sk-"):
+        # We need to manually get service_factory here because we can't inject it easily
+        # into a dependency that is used by other dependencies without circular issues or complexity.
+        # However, `get_service_factory` requires `request`.
+        # Best way: Use the repo factory directly or service factory if possible.
+        # Actually, `get_current_user` doesn't have `request` injected, but `get_token...` had `request`.
+        # Let's inject `ServiceFactory` or `RepositoryFactory`.
+        # Constraint: `get_current_user` signature is used in many places.
+        # Better: use `RepositoryFactory` which is lighter.
+
+        # NOTE: WE NEED TO INJECT REPO FACTORY HERE.
+        # But wait, `get_current_user` currently only depends on `token` and `session`.
+        # We can use `session` to create `RepositoryFactory`.
+
+        repo_factory = RepositoryFactory(session)
+        # We need `RoleApiKeyService` logic to verify.
+        # Re-implement verification logic here or use Service?
+        # Service needs Repo.
+        # Let's keep it simple: Use Repo directly to find key.
+
+        prefix = token[:6]  # Match the prefix length in model
+        # Use the specific repo method we added
+        candidates = repo_factory.role_api_key.get_candidates_by_prefix(prefix)
+
+        matched_key = None
+        for key in candidates:
+            # We need `verify_password` from utils
+            from app.utils.password import verify_password
+
+            if verify_password(token, key.key_hash):
+                matched_key = key
+                break
+
+        if not matched_key:
+            raise BadRequestException("Invalid API Key", status.HTTP_401_UNAUTHORIZED)
+
+        # Create a "System User" stub
+        # We need to fetch the role's permissions
+        role = matched_key.role
+
+        # Create a fake user object
+        system_user = User(
+            id=0,  # System ID
+            name=f"System: {matched_key.name}",
+            email=f"system+{matched_key.id}@dutai.site",
+            role_id=role.id,
+            role=role,
+        )
+
+        # Attach permissions similarly to JWT
+        # Since we have the full Role object loaded (eagerly in repo), we can access permissions
+        # But `User.permissions` property relies on `self.role.role_permissions`.
+        # Ensure `matched_key.role` has `role_permissions` loaded?
+        # `selectinload(RoleApiKey.role)` loads Role, but maybe not Role.role_permissions.
+        # We might need to fetch Role with permissions.
+
+        full_role = repo_factory.role.get_role_with_permissions(role.id)
+        if full_role:
+            system_user.role = full_role  # Replace with fully loaded role
+
+        # Set context
+        set_current_user_id(0)
+
+        return system_user
+
+    # 2. Regular JWT processing
     payload = decode_token(token)
 
     if not payload:

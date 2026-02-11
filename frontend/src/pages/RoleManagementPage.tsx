@@ -39,6 +39,7 @@ import { RolePermission } from '@/types/rbac.types';
 import type { RoleResponse } from '@/types/rbac.types';
 import { useAuth } from '@/context/AuthContext';
 import useToggle from '@/hooks/useToggle';
+import ApiKeyModal from '@/components/Role/ApiKeyModal';
 
 const { Title, Text } = Typography;
 
@@ -62,6 +63,10 @@ const RoleManagementPage = () => {
     const [currentRoleForPerms, setCurrentRoleForPerms] = useState<RoleResponse | null>(null);
     const [targetKeys, setTargetKeys] = useState<string[]>([]);
     const [permLoading, setPermLoading] = useState(false);
+
+    // API Key Modal state
+    const [isApiKeyModalOpen, toggleApiKeyModal] = useToggle(false);
+    const [currentRoleForApiKeys, setCurrentRoleForApiKeys] = useState<RoleResponse | null>(null);
 
     const canCreateRole = hasPermission(RolePermission.CREATE);
     const canUpdateRole = hasPermission(RolePermission.UPDATE);
@@ -97,6 +102,11 @@ const RoleManagementPage = () => {
         const assignedKeys = role.permissions.map(p => p.id.toString());
         setTargetKeys(assignedKeys);
         togglePermModal(true);
+    };
+
+    const openApiKeyModal = (role: RoleResponse) => {
+        setCurrentRoleForApiKeys(role);
+        toggleApiKeyModal(true);
     };
 
     const handlePermTransfer: TransferProps['onChange'] = async (nextTargetKeys, direction, moveKeys) => {
@@ -188,6 +198,13 @@ const RoleManagementPage = () => {
                         Manage Perms
                     </Button>
                     <Button
+                        icon={<SafetyCertificateOutlined />}
+                        onClick={() => openApiKeyModal(record)}
+                        disabled={!canUpdateRole}
+                    >
+                        API Keys
+                    </Button>
+                    <Button
                         icon={<EditOutlined />}
                         onClick={() => {
                             setEditingRole(record);
@@ -229,6 +246,14 @@ const RoleManagementPage = () => {
                                     disabled={!canUpdateRole}
                                 >
                                     Perms
+                                </Button>,
+                                <Button
+                                    type="text"
+                                    icon={<SafetyCertificateOutlined />}
+                                    onClick={() => openApiKeyModal(role)}
+                                    disabled={!canUpdateRole}
+                                >
+                                    API Keys
                                 </Button>,
                                 <Button
                                     type="text"
@@ -404,6 +429,13 @@ const RoleManagementPage = () => {
                     )}
                 </div>
             </Modal>
+
+            {/* API Key Management Modal */}
+            <ApiKeyModal
+                role={currentRoleForApiKeys}
+                open={isApiKeyModalOpen}
+                onClose={() => toggleApiKeyModal(false)}
+            />
         </div>
     );
 };

@@ -12,6 +12,7 @@ from app.api.v1.services.user_service import UserService
 from app.api.v1.services.violation_service import ViolationService
 from app.core.minio_service import MinioService
 from app.core.repository_factory import RepositoryFactory
+from app.api.v1.services.role_api_key_service import RoleApiKeyService
 from app.core.discord_service import DiscordService
 from app.api.v1.services.email_service import EmailService
 
@@ -147,3 +148,11 @@ class ServiceFactory:
                 minio_service=self.minio,
             )
         return self._cache["meeting"]
+
+    @property
+    def role_api_key(self) -> RoleApiKeyService:
+        if "role_api_key" not in self._cache:
+            self._cache["role_api_key"] = RoleApiKeyService(
+                self._repo.role_api_key, self._repo.role
+            )
+        return self._cache["role_api_key"]

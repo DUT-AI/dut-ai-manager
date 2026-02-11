@@ -11,8 +11,11 @@ from app.api.v1.repositories.base import BaseRepository
 from .account_repo import AccountRepository
 from .user_repo import UserRepository
 from .base import BaseRepository
+from .role_api_key_repository import RoleApiKeyRepository
 
 __all__ = [
+    "RolePermissionRepository",
+    "RoleApiKeyRepository",
     "BaseRepository",
     "AccountRepository",
     "UserRepository",

@@ -13,6 +13,7 @@ from app.api.v1.repositories import (
     BonusPointRepository,
     PermissionRepository,
     PermissionRequestRepository,
+    RoleApiKeyRepository,  # Added this line
     RolePermissionRepository,
     RoleRepository,
     UserRepository,
@@ -57,6 +58,12 @@ class RepositoryFactory:
         if "role_permission" not in self._cache:
             self._cache["role_permission"] = RolePermissionRepository(self._session)
         return self._cache["role_permission"]
+
+    @property
+    def role_api_key(self) -> RoleApiKeyRepository:  # Added this property
+        if "role_api_key" not in self._cache:
+            self._cache["role_api_key"] = RoleApiKeyRepository(self._session)
+        return self._cache["role_api_key"]
 
     @property
     def permission_request(self) -> PermissionRequestRepository:

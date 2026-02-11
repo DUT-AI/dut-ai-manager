@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from app.models.user import User
     from app.models.permission import Permission
     from app.models.role_permission import RolePermission
+    from app.models.role_api_key import RoleApiKey
 
 
 class RoleType(str, Enum):
@@ -32,6 +33,7 @@ class Role(TimestampMixin, table=True):
         back_populates="role", sa_relationship_kwargs={"foreign_keys": "[User.role_id]"}
     )
     role_permissions: List["RolePermission"] = Relationship(back_populates="role")
+    api_keys: List["RoleApiKey"] = Relationship(back_populates="role")
 
     @property
     def permissions(self) -> List["Permission"]:
