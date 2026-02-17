@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Modal, Form, Select, DatePicker, Input, message } from 'antd';
+import { Modal, Form, Select, DatePicker, Input, message, Switch } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import type { UserResponse } from '@/types/user.types';
@@ -32,6 +32,7 @@ export const MeetingModal = ({ open, editingItem, initialDate, users, onSubmit, 
                 form.setFieldsValue({
                     title: editingItem.title,
                     content: editingItem.content,
+                    require_check_in: editingItem.require_check_in,
                     time_range: [dayjs(editingItem.start_time), dayjs(editingItem.end_time)],
                     // For editing, we don't know the team_ids/user_ids from MeetingResponse easily 
                     // unless we store them or the backend returns them. 
@@ -45,7 +46,8 @@ export const MeetingModal = ({ open, editingItem, initialDate, users, onSubmit, 
                 const start = initialDate.hour(19).minute(0).second(0);
                 const end = initialDate.hour(21).minute(0).second(0);
                 form.setFieldsValue({
-                    time_range: [start, end]
+                    time_range: [start, end],
+                    require_check_in: true,
                 });
             }
             fetchTeams();
@@ -71,8 +73,9 @@ export const MeetingModal = ({ open, editingItem, initialDate, users, onSubmit, 
         const formattedValues = {
             title: values.title,
             content: values.content,
-            start_time: start.toISOString(),
-            end_time: end.toISOString(),
+            start_time: start.format('YYYY-MM-DDTHH:mm:ss'),
+            end_time: end.format('YYYY-MM-DDTHH:mm:ss'),
+            require_check_in: values.require_check_in ?? true,
             team_ids: values.team_ids || [],
             user_ids: values.user_ids || []
         };
@@ -133,6 +136,10 @@ export const MeetingModal = ({ open, editingItem, initialDate, users, onSubmit, 
 
                 <Form.Item name="content" label="Nội dung / Ghi chú">
                     <TextArea rows={3} placeholder="Mô tả chi tiết buổi sinh hoạt..." />
+                </Form.Item>
+
+                <Form.Item name="require_check_in" label="Kiểm tra checkin đúng giờ" valuePropName="checked">
+                    <Switch checkedChildren="Bật" unCheckedChildren="Tắt" />
                 </Form.Item>
             </Form>
         </Modal>

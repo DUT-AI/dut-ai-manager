@@ -12,6 +12,7 @@ import fcntl
 import os
 
 from app.jobs.homework_checker_job import check_overdue_homework_submissions
+from app.jobs.meeting_checker_job import check_meeting_attendance
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from loguru import logger
@@ -82,8 +83,21 @@ def start_scheduler() -> None:
         replace_existing=True,
     )
 
+    # Schedule meeting attendance check every hour from 8:00 to 23:00
+    scheduler.add_job(
+        check_meeting_attendance,
+        CronTrigger(hour="8-23", minute=5, timezone="Asia/Ho_Chi_Minh"),
+        id="meeting_attendance_check",
+        name="Check meeting attendance",
+        replace_existing=True,
+    )
+
     scheduler.start()
-    logger.info("📅 Scheduler started - Homework check scheduled for 23:00 daily")
+    logger.info(
+        "📅 Scheduler started - "
+        "Homework check at 23:00, "
+        "Meeting attendance check hourly (8:05-23:05)"
+    )
 
 
 def shutdown_scheduler() -> None:

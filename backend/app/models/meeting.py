@@ -54,6 +54,7 @@ class Meeting(TimestampMixin, table=True):
     content: Optional[str] = Field(default=None, max_length=1000)
     start_time: datetime = Field(index=True)
     end_time: datetime = Field(index=True)
+    require_check_in: bool = Field(default=True)
 
     # Relationships
     participants: List[MeetingParticipant] = Relationship(

@@ -10,6 +10,7 @@ class MeetingBase(BaseModel):
     content: Optional[str] = None
     start_time: datetime
     end_time: datetime
+    require_check_in: bool = True
 
 
 class MeetingCreate(MeetingBase):
@@ -22,6 +23,7 @@ class MeetingUpdate(BaseModel):
     content: Optional[str] = None
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
+    require_check_in: Optional[bool] = None
     team_ids: Optional[List[int]] = None
     user_ids: Optional[List[int]] = None
 

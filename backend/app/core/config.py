@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     MINIO_BUCKET_NAME: str = "homework-submissions"
     MINIO_SECURE: bool = False
 
+    # Meeting Configuration
+    MAX_SEATS: int = 30
+
     # Discord Bot Configuration
     DISCORD_BOT_TOKEN: str = ""
     DISCORD_PERMISSION_ROOM_ID: str = ""

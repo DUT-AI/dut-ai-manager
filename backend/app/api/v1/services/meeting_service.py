@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import List, Optional
 
 from fastapi import UploadFile, status
@@ -42,8 +42,12 @@ class MeetingService:
         limit: int = 100,
         month: Optional[int] = None,
         year: Optional[int] = None,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None,
     ) -> List[Meeting]:
-        return self.meeting_repo.get_all_with_participants(skip, limit, month, year)
+        return self.meeting_repo.get_all_with_participants(
+            skip, limit, month, year, start_date, end_date
+        )
 
     def get_by_id(self, meeting_id: int) -> Optional[Meeting]:
         meeting = self.meeting_repo.get_with_participants(meeting_id)
@@ -57,16 +61,9 @@ class MeetingService:
         return self.meeting_repo.get_by_date(target_date)
 
     def create_meeting(self, data: MeetingCreate) -> Meeting:
-        # Create meeting
-        meeting = Meeting(
-            title=data.title,
-            content=data.content,
-            start_time=data.start_time,
-            end_time=data.end_time,
-        )
-        new_meeting = self.meeting_repo.create(meeting)
+        # Validate seat availability
 
-        # Collect user IDs
+        # Calculate participants count for new meeting
         user_ids = set()
         if data.user_ids:
             user_ids.update(data.user_ids)
@@ -74,6 +71,50 @@ class MeetingService:
         if data.team_ids:
             team_user_ids = self.repo_factory.team.get_user_ids_by_teams(data.team_ids)
             user_ids.update(team_user_ids)
+
+        current_meeting_participants_count = len(user_ids)
+
+        # Check overlapped meetings
+        concurrent_participants = self.meeting_repo.get_concurrent_participants_count(
+            data.start_time, data.end_time
+        )
+
+        from app.core.config import settings
+
+        total_seats_needed = (
+            concurrent_participants + current_meeting_participants_count
+        )
+        remaining_seats = settings.MAX_SEATS - concurrent_participants
+
+        if total_seats_needed > settings.MAX_SEATS:
+            # Ensure remaining seats is not negative in message
+            display_remaining = max(0, remaining_seats)
+            raise BadRequestException(
+                f"Chỗ ngồi không đủ, chỉ còn {display_remaining} chỗ ngồi"
+            )
+
+        # Create meeting
+        meeting = Meeting(
+            title=data.title,
+            content=data.content,
+            start_time=data.start_time,
+            end_time=data.end_time,
+            require_check_in=data.require_check_in,
+        )
+        new_meeting = self.meeting_repo.create(meeting)
+
+        # Create participants (reuse user_ids from validation)
+        # We already resolved user_ids and team_ids above into `user_ids` set.
+        # But wait, original code did:
+        # 75:         user_ids = set()
+        # 76:         if data.user_ids:
+        # 77:             user_ids.update(data.user_ids)
+        # 78:
+        # 79:         if data.team_ids:
+        # 80:             team_user_ids = self.repo_factory.team.get_user_ids_by_teams(data.team_ids)
+        # 81:             user_ids.update(team_user_ids)
+
+        # We can just remove the redundant resolution block below.
 
         # Create participants
         for user_id in user_ids:
@@ -91,6 +132,71 @@ class MeetingService:
         if not meeting:
             raise BadRequestException("Meeting not found")
 
+        # Validate seat availability
+        # Calculate new participants count
+        new_user_ids = set()
+        if data.user_ids:
+            new_user_ids.update(data.user_ids)
+        if data.team_ids:
+            new_user_ids.update(
+                self.repo_factory.team.get_user_ids_by_teams(data.team_ids)
+            )
+
+        # If updating, we need to know the participant count difference or total
+        # The logic here replaces participants, so new_user_ids count is the new count for THIS meeting.
+
+        # However, for update, data.user_ids/team_ids might be None (partial update).
+        # We need to handle that. If not provided, use existing participants count?
+        # But wait, existing logic deletes and recreates if either is provided.
+        # If both are None, participant set doesn't change.
+
+        if data.team_ids is not None or data.user_ids is not None:
+            # Logic to calculate new count is complex because we need to check overlap with OTHER meetings.
+            # So effectively:
+            # 1. Calculate count for THIS meeting (resolving new set).
+            # 2. Query DB for sum of participants of ALL OTHER overlapping meetings.
+            # 3. Sum (1) + (2) <= MAX_SEATS.
+            pass
+
+        # Actually proper implementation requires resolving the final list of user_ids for the meeting
+        # THEN checking total concurrently.
+
+        current_meeting_participants_count = 0
+        if data.team_ids is not None or data.user_ids is not None:
+            user_ids = set()
+            if data.user_ids:
+                user_ids.update(data.user_ids)
+            if data.team_ids:
+                user_ids.update(
+                    self.repo_factory.team.get_user_ids_by_teams(data.team_ids)
+                )
+            current_meeting_participants_count = len(user_ids)
+        else:
+            # Use existing count if not changing participants
+            current_meeting_participants_count = len(meeting.participants)
+
+        # Check for overlap with NEW time (or existing time if not changed)
+        check_start_time = data.start_time if data.start_time else meeting.start_time
+        check_end_time = data.end_time if data.end_time else meeting.end_time
+
+        concurrent_participants = self.meeting_repo.get_concurrent_participants_count(
+            check_start_time, check_end_time, exclude_meeting_id=meeting_id
+        )
+
+        from app.core.config import settings
+
+        total_seats_needed = (
+            concurrent_participants + current_meeting_participants_count
+        )
+        remaining_seats = settings.MAX_SEATS - concurrent_participants
+
+        if total_seats_needed > settings.MAX_SEATS:
+            # Ensure remaining seats is not negative in message
+            display_remaining = max(0, remaining_seats)
+            raise BadRequestException(
+                f"Chỗ ngồi không đủ, chỉ còn {display_remaining} chỗ ngồi"
+            )
+
         # Update meeting fields
         if data.title is not None:
             meeting.title = data.title
@@ -100,28 +206,25 @@ class MeetingService:
             meeting.start_time = data.start_time
         if data.end_time is not None:
             meeting.end_time = data.end_time
+        if data.require_check_in is not None:
+            meeting.require_check_in = data.require_check_in
 
         self.meeting_repo.update(meeting)
 
         # Update participants if team_ids or user_ids are provided
-        # The requirement says if adjusting members, replacement should happen.
-        # We check if either team_ids or user_ids is provided (even if empty list)
         if data.team_ids is not None or data.user_ids is not None:
             # Delete existing participants
             existing_participants = self.participant_repo.get_by_meeting(meeting_id)
             for p in existing_participants:
                 self.participant_repo.delete(p)
 
-            # Collect new user IDs
-            user_ids = set()
-            if data.user_ids:
-                user_ids.update(data.user_ids)
+            # Since we resolved user_ids for validation above, use it if available, else re-resolve?
+            # We resolved it into `user_ids` variable in the if block above.
+            # But variable scope in python is function-level, so `user_ids` set should be available.
+            # Let's be safe and re-use logic or variable carefully.
 
-            if data.team_ids:
-                team_user_ids = self.repo_factory.team.get_user_ids_by_teams(
-                    data.team_ids
-                )
-                user_ids.update(team_user_ids)
+            # Re-collect logic to be safe and clean or reuse
+            # reusing `user_ids` set from above validation block
 
             # Create new participants
             for user_id in user_ids:
@@ -187,8 +290,8 @@ class MeetingService:
 
             meeting = participant.meeting
 
-            # Lateness logic
-            if now > meeting.start_time:
+            # Lateness logic - only check if meeting requires check-in
+            if meeting.require_check_in and now > meeting.start_time:
                 # Check for permission request
                 meeting_date = meeting.start_time.date()
                 permissions = self.repo_factory.permission_request.get_by_date(

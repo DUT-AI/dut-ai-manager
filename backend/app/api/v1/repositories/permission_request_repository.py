@@ -133,3 +133,21 @@ class PermissionRequestRepository(BaseRepository[PermissionRequest]):
         )
         count = self.session.exec(statement).one()
         return count > 0
+
+    def has_absence_request_for_date(self, user_id: int, target_date) -> bool:
+        """
+        Check if user has an ABSENCE permission request for specific date.
+        Used by the scheduled meeting checker job.
+        """
+        statement = (
+            select(func.count())
+            .select_from(PermissionRequest)
+            .where(
+                PermissionRequest.is_deleted == False,
+                PermissionRequest.created_by == user_id,
+                PermissionRequest.category == RequestCategory.ABSENCE,
+                PermissionRequest.date == target_date,
+            )
+        )
+        count = self.session.exec(statement).one()
+        return count > 0

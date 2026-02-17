@@ -14,6 +14,7 @@ import TeamManagementPage from './TeamManagementPage';
 import { HomeworkPage } from './HomeworkPage';
 import { SettingsPage } from './SettingsPage';
 import { TrashPage } from '@/pages/TrashPage';
+import MeetingCalendarPage from './MeetingCalendarPage';
 import { useState } from 'react';
 
 import {
@@ -27,7 +28,8 @@ import {
     TeamOutlined,
     CalendarOutlined,
     BookOutlined,
-    SettingOutlined
+    SettingOutlined,
+    VideoCameraOutlined,
 } from '@ant-design/icons';
 import HeaderLayout from '@/components/MainLayout/Header';
 const { Content, Sider } = Layout;
@@ -49,6 +51,7 @@ const DashboardPage = () => {
     // Determine active key from path
     const getActiveKey = () => {
         const path = location.pathname;
+        if (path.includes('/meetings')) return 'meetings';
         if (path.includes('/rbac')) return 'rbac';
         if (path.includes('/users')) return 'users';
         if (path.includes('/activities')) return 'activities';
@@ -107,6 +110,12 @@ const DashboardPage = () => {
             icon: <CalendarOutlined />,
             label: 'Lịch Hoạt động',
             onClick: () => handleMenuClick('/dashboard/activities'),
+        },
+        {
+            key: 'meetings',
+            icon: <VideoCameraOutlined />,
+            label: 'Lịch Meeting',
+            onClick: () => handleMenuClick('/dashboard/meetings'),
         },
         {
             key: 'permissions',
@@ -215,6 +224,7 @@ const DashboardPage = () => {
                             <Route path="violations" element={<ViolationManagementPage />} />
                             <Route path="teams" element={<TeamManagementPage />} />
                             <Route path="homeworks" element={<HomeworkPage />} />
+                            <Route path="meetings" element={<MeetingCalendarPage />} />
                             <Route path="settings" element={<SettingsPage />} />
                             <Route path="trash" element={<TrashPage />} />
                             <Route path="profile/:userId" element={<ProfilePage />} />

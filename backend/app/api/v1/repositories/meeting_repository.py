@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import List, Optional
 from sqlalchemy import extract
 
@@ -25,7 +25,6 @@ class MeetingRepository(BaseRepository[Meeting]):
             )
             .where(
                 Meeting.is_deleted == False,
-                Meeting.is_deleted == False,
                 Meeting.id == meeting_id,
             )
             .options(
@@ -40,6 +39,8 @@ class MeetingRepository(BaseRepository[Meeting]):
         limit: int = 100,
         month: Optional[int] = None,
         year: Optional[int] = None,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None,
     ) -> List[Meeting]:
         query = select(Meeting).where(Meeting.is_deleted == False)
 
@@ -47,6 +48,10 @@ class MeetingRepository(BaseRepository[Meeting]):
             query = query.where(extract("month", Meeting.start_time) == month)
         if year:
             query = query.where(extract("year", Meeting.start_time) == year)
+        if start_date:
+            query = query.where(func.date(Meeting.start_time) >= start_date)
+        if end_date:
+            query = query.where(func.date(Meeting.start_time) <= end_date)
 
         statement = (
             query.outerjoin(
@@ -57,6 +62,7 @@ class MeetingRepository(BaseRepository[Meeting]):
             .options(
                 contains_eager(Meeting.participants).joinedload(MeetingParticipant.user)
             )
+            .order_by(Meeting.start_time)
             .offset(skip)
             .limit(limit)
         )
@@ -74,6 +80,49 @@ class MeetingRepository(BaseRepository[Meeting]):
             )
         )
         return list(self.session.exec(statement).unique().all())
+
+    def get_ended_meetings_requiring_checkin(self, target_date: date) -> List[Meeting]:
+        """Get meetings that ended today and require check-in."""
+        now = datetime.now()
+        statement = (
+            select(Meeting)
+            .where(
+                Meeting.is_deleted == False,
+                Meeting.require_check_in == True,
+                func.date(Meeting.start_time) == target_date,
+                Meeting.end_time <= now,
+            )
+            .options(
+                joinedload(Meeting.participants).joinedload(MeetingParticipant.user)
+            )
+        )
+        return list(self.session.exec(statement).unique().all())
+        return list(self.session.exec(statement).unique().all())
+
+    def get_concurrent_participants_count(
+        self,
+        start_time: datetime,
+        end_time: datetime,
+        exclude_meeting_id: Optional[int] = None,
+    ) -> int:
+        """Get the total number of participants in meetings that overlap with the given time range."""
+        statement = (
+            select(func.count(MeetingParticipant.id))
+            .join(Meeting)
+            .where(
+                Meeting.is_deleted == False,
+                MeetingParticipant.is_deleted == False,
+                # Overlap condition: (StartA < EndB) and (EndA > StartB)
+                Meeting.start_time < end_time,
+                Meeting.end_time > start_time,
+            )
+        )
+
+        if exclude_meeting_id:
+            statement = statement.where(Meeting.id != exclude_meeting_id)
+
+        result = self.session.exec(statement).first()
+        return result if result else 0
 
 
 class MeetingParticipantRepository(BaseRepository[MeetingParticipant]):

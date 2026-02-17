@@ -1,4 +1,5 @@
-from typing import List
+from typing import List, Optional
+from datetime import date
 
 from fastapi import APIRouter, File, Form, UploadFile, status
 
@@ -33,9 +34,13 @@ async def get_meetings(
     _current_user: CurrentUser,
     skip: int = 0,
     limit: int = 100,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
 ):
-    """Get all meetings"""
-    meetings = service_factory.meeting.get_all(skip, limit)
+    """Get all meetings, optionally filtered by date range"""
+    meetings = service_factory.meeting.get_all(
+        skip, limit, start_date=start_date, end_date=end_date
+    )
     return ApiResponse.success(data=meetings, message="Meetings retrieved successfully")
 
 
