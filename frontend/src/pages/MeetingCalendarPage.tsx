@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useReducer } from 'react';
 import { Button, Typography, Tooltip, Spin, message } from 'antd';
 import {
     LeftOutlined,
@@ -52,15 +52,49 @@ interface PositionedMeeting {
     color: (typeof MEETING_COLORS)[number];
 }
 
+// --- Modal state management via useReducer ---
+type MeetingModalState = {
+    selectedMeeting: MeetingResponse | null;
+    drawerOpen: boolean;
+    modalOpen: boolean;
+    editingMeeting: MeetingResponse | null;
+};
+
+type MeetingModalAction =
+    | { type: 'OPEN_DRAWER'; payload: MeetingResponse }
+    | { type: 'CLOSE_DRAWER' }
+    | { type: 'OPEN_MODAL'; payload?: { meeting?: MeetingResponse } }
+    | { type: 'CLOSE_MODAL' };
+
+const meetingModalInitialState: MeetingModalState = {
+    selectedMeeting: null,
+    drawerOpen: false,
+    modalOpen: false,
+    editingMeeting: null,
+};
+
+function meetingModalReducer(state: MeetingModalState, action: MeetingModalAction): MeetingModalState {
+    switch (action.type) {
+        case 'OPEN_DRAWER':
+            return { ...state, drawerOpen: true, selectedMeeting: action.payload };
+        case 'CLOSE_DRAWER':
+            return { ...state, drawerOpen: false };
+        case 'OPEN_MODAL':
+            return { ...state, modalOpen: true, editingMeeting: action.payload?.meeting ?? null };
+        case 'CLOSE_MODAL':
+            return { ...state, modalOpen: false, editingMeeting: null };
+        default:
+            return state;
+    }
+}
+
 const MeetingCalendarPage = () => {
     const [currentWeekStart, setCurrentWeekStart] = useState<Dayjs>(() =>
         dayjs().startOf('isoWeek')
     );
-    const [selectedMeeting, setSelectedMeeting] = useState<MeetingResponse | null>(null);
-    const [drawerOpen, setDrawerOpen] = useState(false);
-    const [modalOpen, setModalOpen] = useState(false);
-    const [editingMeeting, setEditingMeeting] = useState<MeetingResponse | null>(null);
     const [modalInitialDate, setModalInitialDate] = useState<Dayjs>(() => dayjs());
+    const [modalState, dispatch] = useReducer(meetingModalReducer, meetingModalInitialState);
+    const { selectedMeeting, drawerOpen, modalOpen, editingMeeting } = modalState;
 
     const weekEnd = currentWeekStart.add(6, 'day');
     const startDateStr = currentWeekStart.format('YYYY-MM-DD');
@@ -160,23 +194,20 @@ const MeetingCalendarPage = () => {
 
     // Handle meeting click
     const handleMeetingClick = (meeting: MeetingResponse) => {
-        setSelectedMeeting(meeting);
-        setDrawerOpen(true);
+        dispatch({ type: 'OPEN_DRAWER', payload: meeting });
     };
 
     // Handle create
     const handleCreate = (dayDate: Dayjs) => {
-        setEditingMeeting(null);
         setModalInitialDate(dayDate);
-        setModalOpen(true);
+        dispatch({ type: 'OPEN_MODAL' });
     };
 
     // Handle edit from drawer
     const handleEdit = (meeting: MeetingResponse) => {
-        setDrawerOpen(false);
-        setEditingMeeting(meeting);
+        dispatch({ type: 'CLOSE_DRAWER' });
         setModalInitialDate(dayjs(meeting.start_time));
-        setModalOpen(true);
+        dispatch({ type: 'OPEN_MODAL', payload: { meeting } });
     };
 
     // Handle delete
@@ -184,7 +215,7 @@ const MeetingCalendarPage = () => {
         deleteMutation.mutate(id, {
             onSuccess: () => {
                 message.success('Đã xóa buổi sinh hoạt');
-                setDrawerOpen(false);
+                dispatch({ type: 'CLOSE_DRAWER' });
             },
             onError: () => message.error('Không thể xóa'),
         });
@@ -198,7 +229,7 @@ const MeetingCalendarPage = () => {
                 {
                     onSuccess: () => {
                         message.success('Đã cập nhật');
-                        setModalOpen(false);
+                        dispatch({ type: 'CLOSE_MODAL' });
                     },
                     onError: () => message.error('Không thể cập nhật'),
                 }
@@ -207,7 +238,7 @@ const MeetingCalendarPage = () => {
             createMutation.mutate(values, {
                 onSuccess: () => {
                     message.success('Đã tạo buổi sinh hoạt');
-                    setModalOpen(false);
+                    dispatch({ type: 'CLOSE_MODAL' });
                 },
                 onError: () => message.error('Không thể tạo'),
             });
@@ -460,21 +491,23 @@ const MeetingCalendarPage = () => {
 
             {/* Meeting Detail Drawer */}
             <MeetingDetailDrawer
+                key={selectedMeeting?.id ?? 'drawer'}
                 open={drawerOpen}
                 meeting={selectedMeeting}
-                onClose={() => setDrawerOpen(false)}
+                onClose={() => dispatch({ type: 'CLOSE_DRAWER' })}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
             />
 
             {/* Meeting Modal (Create/Edit) */}
             <MeetingModal
+                key={editingMeeting?.id ?? 'create'}
                 open={modalOpen}
                 editingItem={editingMeeting}
                 initialDate={modalInitialDate}
                 users={users}
                 onSubmit={handleSubmit}
-                onCancel={() => setModalOpen(false)}
+                onCancel={() => dispatch({ type: 'CLOSE_MODAL' })}
             />
         </div>
     );

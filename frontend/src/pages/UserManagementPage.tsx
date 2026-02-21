@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useReducer } from 'react';
 import {
     Table,
     Button,
@@ -134,12 +134,45 @@ const MobileListView = ({ filteredUsers, isLoading, canUpdate, canDelete, onNavi
     </div>
 );
 
+// --- Modal state management via useReducer ---
+type ModalState = {
+    isUserModalOpen: boolean;
+    isImportModalOpen: boolean;
+    editingUser: UserResponse | null;
+};
+
+type ModalAction =
+    | { type: 'OPEN_USER_MODAL'; payload?: UserResponse }
+    | { type: 'CLOSE_USER_MODAL' }
+    | { type: 'OPEN_IMPORT_MODAL' }
+    | { type: 'CLOSE_IMPORT_MODAL' };
+
+const modalInitialState: ModalState = {
+    isUserModalOpen: false,
+    isImportModalOpen: false,
+    editingUser: null,
+};
+
+function modalReducer(state: ModalState, action: ModalAction): ModalState {
+    switch (action.type) {
+        case 'OPEN_USER_MODAL':
+            return { ...state, isUserModalOpen: true, editingUser: action.payload ?? null };
+        case 'CLOSE_USER_MODAL':
+            return { ...state, isUserModalOpen: false, editingUser: null };
+        case 'OPEN_IMPORT_MODAL':
+            return { ...state, isImportModalOpen: true };
+        case 'CLOSE_IMPORT_MODAL':
+            return { ...state, isImportModalOpen: false };
+        default:
+            return state;
+    }
+}
+
 const UserManagementPage = () => {
     const navigate = useNavigate();
     const { hasPermission } = useAuth();
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-    const [editingUser, setEditingUser] = useState<UserResponse | null>(null);
+    const [modalState, dispatch] = useReducer(modalReducer, modalInitialState);
+    const { isUserModalOpen, isImportModalOpen, editingUser } = modalState;
     const [form] = Form.useForm();
     const screens = Grid.useBreakpoint();
 
@@ -187,7 +220,7 @@ const UserManagementPage = () => {
                 await createUser.mutateAsync(values);
                 message.success('User created successfully');
             }
-            setIsModalOpen(false);
+            dispatch({ type: 'CLOSE_USER_MODAL' });
             form.resetFields();
         } catch (error: any) {
             message.error(error?.response?.data?.message || 'Operation failed');
@@ -280,9 +313,8 @@ const UserManagementPage = () => {
                     <Button
                         icon={<EditOutlined />}
                         onClick={() => {
-                            setEditingUser(record);
                             form.setFieldsValue(record);
-                            setIsModalOpen(true);
+                            dispatch({ type: 'OPEN_USER_MODAL', payload: record });
                         }}
                         disabled={!canUpdate}
                         className="hover:text-blue-500 hover:border-blue-500"
@@ -320,7 +352,7 @@ const UserManagementPage = () => {
                         <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
                             <Button
                                 icon={<FileExcelOutlined />}
-                                onClick={() => setIsImportModalOpen(true)}
+                                onClick={() => dispatch({ type: 'OPEN_IMPORT_MODAL' })}
                                 className="flex-1 md:flex-none border-green-600 text-green-600 hover:!text-green-500 hover:!border-green-500"
                             >
                                 Import
@@ -329,10 +361,9 @@ const UserManagementPage = () => {
                                 type="primary"
                                 icon={<PlusOutlined />}
                                 onClick={() => {
-                                    setEditingUser(null);
                                     form.resetFields();
                                     form.setFieldsValue({ status: 'active' });
-                                    setIsModalOpen(true);
+                                    dispatch({ type: 'OPEN_USER_MODAL' });
                                 }}
                                 className="flex-1 md:flex-none bg-linear-to-r from-[#667eea] to-[#764ba2] border-none shadow-md h-10 font-semibold"
                             >
@@ -419,9 +450,8 @@ const UserManagementPage = () => {
                         canDelete={canDelete}
                         onNavigate={(id) => navigate(`/dashboard/profile/${id}`)}
                         onEdit={(user) => {
-                            setEditingUser(user);
                             form.setFieldsValue(user);
-                            setIsModalOpen(true);
+                            dispatch({ type: 'OPEN_USER_MODAL', payload: user });
                         }}
                         onDelete={handleDelete}
                     />
@@ -445,8 +475,8 @@ const UserManagementPage = () => {
                         <span>{editingUser ? 'Edit User Information' : 'Create New User Account'}</span>
                     </Space>
                 }
-                open={isModalOpen}
-                onCancel={() => setIsModalOpen(false)}
+                open={isUserModalOpen}
+                onCancel={() => dispatch({ type: 'CLOSE_USER_MODAL' })}
                 onOk={() => form.submit()}
                 width={screens.xs ? '100%' : 600}
                 centered
@@ -505,7 +535,7 @@ const UserManagementPage = () => {
 
             <ImportUserModal
                 open={isImportModalOpen}
-                onCancel={() => setIsImportModalOpen(false)}
+                onCancel={() => dispatch({ type: 'CLOSE_IMPORT_MODAL' })}
             />
         </div>
     );
@@ -601,8 +631,8 @@ const ImportUserModal = ({ open, onCancel }: { open: boolean; onCancel: () => vo
                         <div className="max-h-60 overflow-y-auto border rounded p-2 bg-red-50">
                             <Typography.Text type="danger" strong>Error Details:</Typography.Text>
                             <ul className="list-disc pl-4 mt-1 text-sm text-red-600">
-                                {result.errors.map((err: string, idx: number) => (
-                                    <li key={`${idx}-${err}`}>{err}</li>
+                                {result.errors.map((err: string) => (
+                                    <li key={err}>{err}</li>
                                 ))}
                             </ul>
                         </div>

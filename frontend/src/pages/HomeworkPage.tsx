@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useReducer } from 'react';
 import {
     Table, Button, Tabs, Space, message, Popconfirm, Typography, Tag, Grid, List, Card
 } from 'antd';
@@ -88,6 +88,57 @@ const HomeworkMobileList = ({ dataSource, loading, emptyText, activeTab, hasPerm
     </div>
 );
 
+// --- Modal state management via useReducer ---
+type HomeworkModalState = {
+    isFormModalOpen: boolean;
+    isSubmitModalOpen: boolean;
+    isSubmissionsDrawerOpen: boolean;
+    selectedHomework: Homework | null;
+    editingHomework: Homework | null;
+    currentAssignees: number[];
+    assigneesLoading: boolean;
+};
+
+type HomeworkModalAction =
+    | { type: 'OPEN_FORM'; payload?: Homework }
+    | { type: 'CLOSE_FORM' }
+    | { type: 'OPEN_SUBMIT'; payload: Homework }
+    | { type: 'CLOSE_SUBMIT' }
+    | { type: 'OPEN_SUBMISSIONS'; payload: Homework }
+    | { type: 'CLOSE_SUBMISSIONS' }
+    | { type: 'SET_ASSIGNEES'; payload: number[] };
+
+const homeworkModalInitialState: HomeworkModalState = {
+    isFormModalOpen: false,
+    isSubmitModalOpen: false,
+    isSubmissionsDrawerOpen: false,
+    selectedHomework: null,
+    editingHomework: null,
+    currentAssignees: [],
+    assigneesLoading: false,
+};
+
+function homeworkModalReducer(state: HomeworkModalState, action: HomeworkModalAction): HomeworkModalState {
+    switch (action.type) {
+        case 'OPEN_FORM':
+            return { ...state, isFormModalOpen: true, editingHomework: action.payload ?? null, currentAssignees: [], assigneesLoading: !!action.payload };
+        case 'CLOSE_FORM':
+            return { ...state, isFormModalOpen: false, editingHomework: null };
+        case 'OPEN_SUBMIT':
+            return { ...state, isSubmitModalOpen: true, selectedHomework: action.payload };
+        case 'CLOSE_SUBMIT':
+            return { ...state, isSubmitModalOpen: false, selectedHomework: null };
+        case 'OPEN_SUBMISSIONS':
+            return { ...state, isSubmissionsDrawerOpen: true, selectedHomework: action.payload };
+        case 'CLOSE_SUBMISSIONS':
+            return { ...state, isSubmissionsDrawerOpen: false, selectedHomework: null };
+        case 'SET_ASSIGNEES':
+            return { ...state, currentAssignees: action.payload, assigneesLoading: false };
+        default:
+            return state;
+    }
+}
+
 export const HomeworkPage: React.FC = () => {
     const { hasPermission, isAdminOrLeader } = useAuth();
     const [activeTab, setActiveTab] = useState('1');
@@ -105,15 +156,9 @@ export const HomeworkPage: React.FC = () => {
 
     const deleteHomework = useDeleteHomework();
 
-    // Modal States
-    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-    const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
-    const [isSubmissionsDrawerOpen, setIsSubmissionsDrawerOpen] = useState(false);
-
-    // Selected Items
-    const [selectedHomework, setSelectedHomework] = useState<Homework | null>(null);
-    const [editingHomework, setEditingHomework] = useState<Homework | null>(null);
-    const [currentAssignees, setCurrentAssignees] = useState<number[]>([]);
+    // Modal state via useReducer
+    const [modalState, dispatch] = useReducer(homeworkModalReducer, homeworkModalInitialState);
+    const { isFormModalOpen, isSubmitModalOpen, isSubmissionsDrawerOpen, selectedHomework, editingHomework, currentAssignees, assigneesLoading } = modalState;
 
     const refreshData = () => {
         if (activeTab === '1') {
@@ -124,23 +169,17 @@ export const HomeworkPage: React.FC = () => {
     };
 
     // Open Create Modal
-    const handleOpenCreate = () => {
-        setEditingHomework(null);
-        setCurrentAssignees([]);
-        setIsFormModalOpen(true);
-    };
+    const handleOpenCreate = () => dispatch({ type: 'OPEN_FORM' });
 
-    // Open Edit Modal
+    // Open Edit Modal - open immediately, fetch assignees async
     const handleOpenEdit = async (homework: Homework) => {
-        setEditingHomework(homework);
-        // Fetch current assignees from submissions
+        dispatch({ type: 'OPEN_FORM', payload: homework });
         try {
             const submissions = await homeworkService.getSubmissions(homework.id);
-            setCurrentAssignees(submissions?.map((s: any) => s.owner_id) || []);
+            dispatch({ type: 'SET_ASSIGNEES', payload: submissions?.map((s: any) => s.owner_id) || [] });
         } catch {
-            setCurrentAssignees([]);
+            dispatch({ type: 'SET_ASSIGNEES', payload: [] });
         }
-        setIsFormModalOpen(true);
     };
 
     // Delete Homework
@@ -154,27 +193,20 @@ export const HomeworkPage: React.FC = () => {
     };
 
     // Open Submit Modal
-    const handleOpenSubmit = (homework: Homework) => {
-        setSelectedHomework(homework);
-        setIsSubmitModalOpen(true);
-    };
+    const handleOpenSubmit = (homework: Homework) => dispatch({ type: 'OPEN_SUBMIT', payload: homework });
 
     // Open Submissions Drawer
-    const handleViewSubmissions = (homework: Homework) => {
-        setSelectedHomework(homework);
-        setIsSubmissionsDrawerOpen(true);
-    };
+    const handleViewSubmissions = (homework: Homework) => dispatch({ type: 'OPEN_SUBMISSIONS', payload: homework });
 
     // Form Modal Success
     const handleFormSuccess = () => {
-        setIsFormModalOpen(false);
-        setEditingHomework(null);
+        dispatch({ type: 'CLOSE_FORM' });
         refreshData();
     };
 
     // Submit Modal Success
     const handleSubmitSuccess = () => {
-        setIsSubmitModalOpen(false);
+        dispatch({ type: 'CLOSE_SUBMIT' });
         refetchMyHomeworks();
     };
 
@@ -360,28 +392,32 @@ export const HomeworkPage: React.FC = () => {
 
                 {/* Create/Edit Modal */}
                 <HomeworkFormModal
+                    key={`form-${editingHomework?.id ?? 'create'}`}
                     open={isFormModalOpen}
                     editingItem={editingHomework}
                     users={users}
                     teams={teams}
                     currentAssignees={currentAssignees}
+                    assigneesLoading={assigneesLoading}
                     onSuccess={handleFormSuccess}
-                    onCancel={() => setIsFormModalOpen(false)}
+                    onCancel={() => dispatch({ type: 'CLOSE_FORM' })}
                 />
 
                 {/* Submit Modal */}
                 <SubmitHomeworkModal
+                    key={`submit-${selectedHomework?.id ?? 'new'}`}
                     open={isSubmitModalOpen}
                     homework={selectedHomework}
                     onSuccess={handleSubmitSuccess}
-                    onCancel={() => setIsSubmitModalOpen(false)}
+                    onCancel={() => dispatch({ type: 'CLOSE_SUBMIT' })}
                 />
 
                 {/* Submissions Drawer */}
                 <SubmissionsDrawer
+                    key={`drawer-${selectedHomework?.id ?? 'new'}`}
                     open={isSubmissionsDrawerOpen}
                     homework={selectedHomework}
-                    onClose={() => setIsSubmissionsDrawerOpen(false)}
+                    onClose={() => dispatch({ type: 'CLOSE_SUBMISSIONS' })}
                 />
             </div>
         </div>

@@ -43,7 +43,9 @@ async def get_submissions(
     result = service_factory.homework_submission.get_all_by_homework(
         homework_id, current_user
     )
-    return ApiResponse.success(data=result)
+    # Serialize while session is still active to access lazy-loaded relationships
+    data = [HomeworkSubmissionResponse.model_validate(item) for item in result]
+    return ApiResponse.success(data=data)
 
 
 @router.get(

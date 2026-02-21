@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useReducer } from 'react';
 import {
     Calendar,
     Badge,
@@ -157,10 +157,10 @@ const GridMonthCalendar = ({ selectedDate, activeDates, onSelectDate, onNavigate
                             onClick={() => onSelectDate(day)}
                             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelectDate(day); }}
                             className={`aspect-square flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all border ${isSelected
-                                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-md scale-110 z-10'
-                                    : isToday
-                                        ? 'bg-indigo-50 text-indigo-600 border-indigo-200 font-black'
-                                        : 'bg-white text-gray-700 border-gray-50'
+                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-md scale-110 z-10'
+                                : isToday
+                                    ? 'bg-indigo-50 text-indigo-600 border-indigo-200 font-black'
+                                    : 'bg-white text-gray-700 border-gray-50'
                                 }`}
                         >
                             <span className="text-sm font-semibold">{day.format('D')}</span>
@@ -175,6 +175,72 @@ const GridMonthCalendar = ({ selectedDate, activeDates, onSelectDate, onNavigate
     );
 };
 
+// --- Modal state management via useReducer ---
+type ActivityModalState = {
+    isPermissionModalOpen: boolean;
+    isBonusModalOpen: boolean;
+    isViolationModalOpen: boolean;
+    editingPermission: PermissionRequestResponse | null;
+    editingBonus: BonusPointResponse | null;
+    editingViolation: ViolationResponse | null;
+    isMeetingModalOpen: boolean;
+    isParticipantModalOpen: boolean;
+    selectedMeeting: any | null;
+    editingMeeting: any | null;
+};
+
+type ActivityModalAction =
+    | { type: 'OPEN_PERMISSION'; payload?: PermissionRequestResponse }
+    | { type: 'CLOSE_PERMISSION' }
+    | { type: 'OPEN_BONUS'; payload?: BonusPointResponse }
+    | { type: 'CLOSE_BONUS' }
+    | { type: 'OPEN_VIOLATION'; payload?: ViolationResponse }
+    | { type: 'CLOSE_VIOLATION' }
+    | { type: 'OPEN_MEETING'; payload?: any }
+    | { type: 'CLOSE_MEETING' }
+    | { type: 'OPEN_PARTICIPANTS'; payload: any }
+    | { type: 'CLOSE_PARTICIPANTS' };
+
+const activityModalInitialState: ActivityModalState = {
+    isPermissionModalOpen: false,
+    isBonusModalOpen: false,
+    isViolationModalOpen: false,
+    editingPermission: null,
+    editingBonus: null,
+    editingViolation: null,
+    isMeetingModalOpen: false,
+    isParticipantModalOpen: false,
+    selectedMeeting: null,
+    editingMeeting: null,
+};
+
+function activityModalReducer(state: ActivityModalState, action: ActivityModalAction): ActivityModalState {
+    switch (action.type) {
+        case 'OPEN_PERMISSION':
+            return { ...state, isPermissionModalOpen: true, editingPermission: action.payload ?? null };
+        case 'CLOSE_PERMISSION':
+            return { ...state, isPermissionModalOpen: false, editingPermission: null };
+        case 'OPEN_BONUS':
+            return { ...state, isBonusModalOpen: true, editingBonus: action.payload ?? null };
+        case 'CLOSE_BONUS':
+            return { ...state, isBonusModalOpen: false, editingBonus: null };
+        case 'OPEN_VIOLATION':
+            return { ...state, isViolationModalOpen: true, editingViolation: action.payload ?? null };
+        case 'CLOSE_VIOLATION':
+            return { ...state, isViolationModalOpen: false, editingViolation: null };
+        case 'OPEN_MEETING':
+            return { ...state, isMeetingModalOpen: true, editingMeeting: action.payload ?? null };
+        case 'CLOSE_MEETING':
+            return { ...state, isMeetingModalOpen: false, editingMeeting: null };
+        case 'OPEN_PARTICIPANTS':
+            return { ...state, isParticipantModalOpen: true, selectedMeeting: action.payload };
+        case 'CLOSE_PARTICIPANTS':
+            return { ...state, isParticipantModalOpen: false };
+        default:
+            return state;
+    }
+}
+
 const ActivityCalendarPage = () => {
     const { hasPermission } = useAuth();
     // State
@@ -185,19 +251,13 @@ const ActivityCalendarPage = () => {
     const [activeDates, setActiveDates] = useState<string[]>([]);
     const [users, setUsers] = useState<UserResponse[]>([]);
 
-    // Modals State
-    const [isPermissionModalOpen, setIsPermissionModalOpen] = useToggle(false);
-    const [isBonusModalOpen, setIsBonusModalOpen] = useToggle(false);
-    const [isViolationModalOpen, setIsViolationModalOpen] = useToggle(false);
-    const [editingPermission, setEditingPermission] = useState<PermissionRequestResponse | null>(null);
-    const [editingBonus, setEditingBonus] = useState<BonusPointResponse | null>(null);
-    const [editingViolation, setEditingViolation] = useState<ViolationResponse | null>(null);
-
-    // Meeting States
-    const [isMeetingModalOpen, setIsMeetingModalOpen] = useToggle(false);
-    const [isParticipantModalOpen, setIsParticipantModalOpen] = useToggle(false);
-    const [selectedMeeting, setSelectedMeeting] = useState<any | null>(null);
-    const [editingMeeting, setEditingMeeting] = useState<any | null>(null);
+    // Modal state via useReducer
+    const [modalState, dispatch] = useReducer(activityModalReducer, activityModalInitialState);
+    const {
+        isPermissionModalOpen, isBonusModalOpen, isViolationModalOpen,
+        editingPermission, editingBonus, editingViolation,
+        isMeetingModalOpen, isParticipantModalOpen, selectedMeeting, editingMeeting,
+    } = modalState;
 
     // Fetch Data
     const fetchMonthlyData = async (date: Dayjs) => {
@@ -286,8 +346,7 @@ const ActivityCalendarPage = () => {
                 await permissionService.createPermission(values);
                 message.success('Đã tạo đơn xin phép');
             }
-            setIsPermissionModalOpen(false);
-            setEditingPermission(null);
+            dispatch({ type: 'CLOSE_PERMISSION' });
             refreshData();
         } catch (error) {
             message.error('Thao tác thất bại');
@@ -303,8 +362,7 @@ const ActivityCalendarPage = () => {
                 await bonusPointService.createBonusPoint(values);
                 message.success('Đã thêm điểm cộng');
             }
-            setIsBonusModalOpen(false);
-            setEditingBonus(null);
+            dispatch({ type: 'CLOSE_BONUS' });
             refreshData();
         } catch (error) {
             message.error('Thao tác thất bại');
@@ -320,8 +378,7 @@ const ActivityCalendarPage = () => {
                 await violationService.createViolation(values);
                 message.success('Đã ghi nhận vi phạm');
             }
-            setIsViolationModalOpen(false);
-            setEditingViolation(null);
+            dispatch({ type: 'CLOSE_VIOLATION' });
             refreshData();
         } catch (error) {
             message.error('Thao tác thất bại');
@@ -337,8 +394,7 @@ const ActivityCalendarPage = () => {
                 await meetingService.createMeeting(values);
                 message.success('Đã tạo buổi sinh hoạt');
             }
-            setIsMeetingModalOpen(false);
-            setEditingMeeting(null);
+            dispatch({ type: 'CLOSE_MEETING' });
             refreshData();
         } catch (error) {
             message.error(editingMeeting ? 'Cập nhật thất bại' : 'Tạo buổi sinh hoạt thất bại');
@@ -365,50 +421,16 @@ const ActivityCalendarPage = () => {
     };
 
     // Open Modals
-    const openAddPermission = () => {
-        setEditingPermission(null);
-        setIsPermissionModalOpen(true);
-    };
+    const openAddPermission = () => dispatch({ type: 'OPEN_PERMISSION' });
+    const openAddBonus = () => dispatch({ type: 'OPEN_BONUS' });
+    const openAddViolation = () => dispatch({ type: 'OPEN_VIOLATION' });
 
-    const openAddBonus = () => {
-        setEditingBonus(null);
-        setIsBonusModalOpen(true);
-    };
-
-    const openAddViolation = () => {
-        setEditingViolation(null);
-        setIsViolationModalOpen(true);
-    };
-
-    const openEditPermission = (item: PermissionRequestResponse) => {
-        setEditingPermission(item);
-        setIsPermissionModalOpen(true);
-    };
-
-    const openEditBonus = (item: BonusPointResponse) => {
-        setEditingBonus(item);
-        setIsBonusModalOpen(true);
-    };
-
-    const openEditViolation = (item: ViolationResponse) => {
-        setEditingViolation(item);
-        setIsViolationModalOpen(true);
-    };
-
-    const openAddMeeting = () => {
-        setEditingMeeting(null);
-        setIsMeetingModalOpen(true);
-    };
-
-    const openEditMeeting = (meeting: any) => {
-        setEditingMeeting(meeting);
-        setIsMeetingModalOpen(true);
-    };
-
-    const openViewParticipants = (meeting: any) => {
-        setSelectedMeeting(meeting);
-        setIsParticipantModalOpen(true);
-    };
+    const openEditPermission = (item: PermissionRequestResponse) => dispatch({ type: 'OPEN_PERMISSION', payload: item });
+    const openEditBonus = (item: BonusPointResponse) => dispatch({ type: 'OPEN_BONUS', payload: item });
+    const openEditViolation = (item: ViolationResponse) => dispatch({ type: 'OPEN_VIOLATION', payload: item });
+    const openAddMeeting = () => dispatch({ type: 'OPEN_MEETING' });
+    const openEditMeeting = (meeting: any) => dispatch({ type: 'OPEN_MEETING', payload: meeting });
+    const openViewParticipants = (meeting: any) => dispatch({ type: 'OPEN_PARTICIPANTS', payload: meeting });
 
     const screens = Grid.useBreakpoint();
 
@@ -527,46 +549,48 @@ const ActivityCalendarPage = () => {
 
             {/* Modals */}
             <MeetingModal
+                key={editingMeeting?.id ?? 'meeting-create'}
                 open={isMeetingModalOpen}
                 editingItem={editingMeeting}
                 initialDate={getInitialDate()}
                 users={users}
                 onSubmit={handleMeetingSubmit}
-                onCancel={() => {
-                    setIsMeetingModalOpen(false);
-                    setEditingMeeting(null);
-                }}
+                onCancel={() => dispatch({ type: 'CLOSE_MEETING' })}
             />
 
             <ParticipantListModal
+                key={selectedMeeting?.id ?? 'participants'}
                 open={isParticipantModalOpen}
                 meeting={selectedMeeting}
-                onCancel={() => setIsParticipantModalOpen(false)}
+                onCancel={() => dispatch({ type: 'CLOSE_PARTICIPANTS' })}
             />
             <PermissionRequestModal
+                key={editingPermission?.id ?? 'perm-create'}
                 open={isPermissionModalOpen}
                 editingItem={editingPermission}
                 initialDate={getInitialDate()}
                 onSubmit={handlePermissionSubmit}
-                onCancel={() => setIsPermissionModalOpen(false)}
+                onCancel={() => dispatch({ type: 'CLOSE_PERMISSION' })}
             />
 
             <BonusPointModal
+                key={editingBonus?.id ?? 'bonus-create'}
                 open={isBonusModalOpen}
                 editingItem={editingBonus}
                 initialDate={getInitialDate()}
                 users={users}
                 onSubmit={handleBonusSubmit}
-                onCancel={() => setIsBonusModalOpen(false)}
+                onCancel={() => dispatch({ type: 'CLOSE_BONUS' })}
             />
 
             <ViolationModal
+                key={editingViolation?.id ?? 'violation-create'}
                 open={isViolationModalOpen}
                 editingItem={editingViolation}
                 initialDate={getInitialDate()}
                 users={users}
                 onSubmit={handleViolationSubmit}
-                onCancel={() => setIsViolationModalOpen(false)}
+                onCancel={() => dispatch({ type: 'CLOSE_VIOLATION' })}
             />
 
             <style>{`

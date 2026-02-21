@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Modal, Form, Input, DatePicker, Select, message, Divider, Upload, Button } from 'antd';
 import { TeamOutlined, UserOutlined, UploadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -16,7 +16,8 @@ interface Props {
     editingItem: Homework | null;
     users: UserResponse[];
     teams: TeamResponse[];
-    currentAssignees?: number[];  // Current assignee IDs when editing
+    currentAssignees?: number[];
+    assigneesLoading?: boolean;
     onSuccess: () => void;
     onCancel: () => void;
 }
@@ -27,12 +28,20 @@ export const HomeworkFormModal = ({
     users,
     teams,
     currentAssignees = EMPTY_ASSIGNEES,
+    assigneesLoading = false,
     onSuccess,
     onCancel
 }: Props) => {
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
     const isEditing = !!editingItem;
+
+    // Update assignee_ids when async loading completes
+    useEffect(() => {
+        if (isEditing && currentAssignees.length > 0) {
+            form.setFieldsValue({ assignee_ids: currentAssignees });
+        }
+    }, [currentAssignees, isEditing, form]);
 
     const normFile = (e: any) => {
         if (Array.isArray(e)) {
@@ -144,6 +153,8 @@ export const HomeworkFormModal = ({
                         mode="multiple"
                         placeholder="Chọn thành viên cụ thể..."
                         allowClear
+                        loading={assigneesLoading}
+                        disabled={assigneesLoading}
                         filterOption={(input: string, option: any) =>
                             (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
                         }

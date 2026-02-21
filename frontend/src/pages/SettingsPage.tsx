@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Layout, Menu, Typography, Form, Input, Button, Card, message, Avatar, Upload, Grid } from 'antd';
 import { LockOutlined, SettingOutlined, SafetyCertificateOutlined, UserOutlined, DiscordOutlined, UploadOutlined } from '@ant-design/icons';
 import { authService } from '@/services/api/auth.service';
@@ -8,6 +8,160 @@ import { useAuth } from '@/context/AuthContext';
 const { Content, Sider } = Layout;
 const { Title, Text } = Typography;
 
+// --- Sub-components extracted for proper React reconciliation ---
+
+interface PasswordContentProps {
+    loading: boolean;
+    onFinish: (values: any) => void;
+    form: ReturnType<typeof Form.useForm>[0];
+}
+
+const PasswordContent: React.FC<PasswordContentProps> = ({ loading, onFinish, form }) => (
+    <Card
+        title={<><LockOutlined className="mr-2" />Đổi mật khẩu</>}
+        bordered={false}
+        className="shadow-sm w-full max-w-2xl rounded-xl"
+    >
+        <Form form={form} layout="vertical" onFinish={onFinish} className="mt-4">
+            <Form.Item
+                name="old_password"
+                label="Mật khẩu hiện tại"
+                rules={[{ required: true, message: 'Vui lòng nhập mật khẩu cũ' }]}
+            >
+                <Input.Password prefix={<LockOutlined className="text-gray-400" />} placeholder="Nhập mật khẩu hiện tại" size="large" className="rounded-lg" />
+            </Form.Item>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Form.Item
+                    name="new_password"
+                    label="Mật khẩu mới"
+                    rules={[
+                        { required: true, message: 'Vui lòng nhập mật khẩu mới' },
+                        { min: 6, message: 'Tối thiểu 6 ký tự' }
+                    ]}
+                >
+                    <Input.Password prefix={<SafetyCertificateOutlined className="text-gray-400" />} placeholder="Mật khẩu mới" size="large" className="rounded-lg" />
+                </Form.Item>
+                <Form.Item
+                    name="confirm_password"
+                    label="Xác nhận mật khẩu"
+                    dependencies={['new_password']}
+                    rules={[
+                        { required: true, message: 'Vui lòng xác nhận mật khẩu' },
+                        ({ getFieldValue }) => ({
+                            validator(_, value) {
+                                if (!value || getFieldValue('new_password') === value) {
+                                    return Promise.resolve();
+                                }
+                                return Promise.reject(new Error('Mật khẩu không khớp!'));
+                            },
+                        }),
+                    ]}
+                >
+                    <Input.Password prefix={<SafetyCertificateOutlined className="text-gray-400" />} placeholder="Xác nhận mật khẩu" size="large" className="rounded-lg" />
+                </Form.Item>
+            </div>
+            <Form.Item className="mb-0 mt-4">
+                <div className="flex justify-end">
+                    <Button type="primary" htmlType="submit" loading={loading} size="large" className="w-full md:w-auto bg-indigo-600 px-8 rounded-lg font-semibold h-11">
+                        Cập nhật mật khẩu
+                    </Button>
+                </div>
+            </Form.Item>
+        </Form>
+    </Card>
+);
+
+interface GeneralContentProps {
+    user: any;
+    loading: boolean;
+    uploading: boolean;
+    onFinish: (values: any) => void;
+    onAvatarUpload: (info: any) => void;
+    form: ReturnType<typeof Form.useForm>[0];
+}
+
+const GeneralContent: React.FC<GeneralContentProps> = ({ user, loading, uploading, onFinish, onAvatarUpload, form }) => (
+    <Card
+        title={<><UserOutlined className="mr-2" />Thông tin cá nhân</>}
+        bordered={false}
+        className="shadow-sm w-full max-w-2xl rounded-xl"
+    >
+        <div className="flex flex-col items-center mb-8 bg-gray-50 p-6 md:p-8 rounded-2xl border border-gray-100">
+            <Avatar
+                size={80}
+                src={user?.avatar_url}
+                icon={<UserOutlined />}
+                className="shadow-lg border-4 border-white mb-6"
+            />
+
+            <Upload
+                showUploadList={false}
+                beforeUpload={(file) => {
+                    const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png';
+                    if (!isJpgOrPng) {
+                        message.error('Bạn chỉ có thể upload file JPG/PNG!');
+                    }
+                    const isLt2M = file.size / 1024 / 1024 < 2;
+                    if (!isLt2M) {
+                        message.error('Ảnh phải nhỏ hơn 2MB!');
+                    }
+                    return isJpgOrPng && isLt2M;
+                }}
+                customRequest={({ onSuccess }: any) => {
+                    setTimeout(() => onSuccess("ok"), 0);
+                }}
+                onChange={onAvatarUpload}
+            >
+                <Button icon={<UploadOutlined />} loading={uploading} className="rounded-lg">
+                    Thay đổi ảnh đại diện
+                </Button>
+            </Upload>
+
+            <div className="mt-6 text-center">
+                <Title level={5} className="!mb-0 text-lg">{user?.name}</Title>
+                <Text type="secondary" className="text-sm">{user?.email}</Text>
+                <div className="mt-3">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 shadow-sm uppercase tracking-wider">
+                        {user?.role_name?.toUpperCase()}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        {/* Use key to reinitialize form when user data changes after refresh */}
+        <Form
+            key={user?.discord_id ?? 'no-discord'}
+            form={form}
+            layout="vertical"
+            onFinish={onFinish}
+            initialValues={{ discord_id: user?.discord_id }}
+        >
+            <Form.Item
+                name="discord_id"
+                label="Discord ID"
+                tooltip="ID người dùng Discord của bạn để nhận thông báo trực tiếp"
+            >
+                <Input
+                    prefix={<DiscordOutlined className="text-gray-400" />}
+                    placeholder="Ví dụ: 123456789012345678"
+                    size="large"
+                    className="rounded-lg"
+                />
+            </Form.Item>
+
+            <Form.Item className="mb-0 mt-6">
+                <div className="flex justify-end">
+                    <Button type="primary" htmlType="submit" loading={loading} size="large" className="w-full md:w-auto bg-indigo-600 px-10 rounded-xl shadow-lg shadow-indigo-100 font-semibold h-11">
+                        Lưu thông tin
+                    </Button>
+                </div>
+            </Form.Item>
+        </Form>
+    </Card>
+);
+
+// --- Main page component ---
+
 export const SettingsPage: React.FC = () => {
     const { user, refreshUser } = useAuth();
     const screens = Grid.useBreakpoint();
@@ -16,14 +170,6 @@ export const SettingsPage: React.FC = () => {
     const [generalForm] = Form.useForm();
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
-
-    useEffect(() => {
-        if (user) {
-            generalForm.setFieldsValue({
-                discord_id: user.discord_id,
-            });
-        }
-    }, [user, generalForm]);
 
     const onChangePassword = async (values: any) => {
         setLoading(true);
@@ -53,7 +199,7 @@ export const SettingsPage: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    }
+    };
 
     const handleAvatarUpload = async (info: any) => {
         if (info.file.status === 'uploading') {
@@ -71,142 +217,6 @@ export const SettingsPage: React.FC = () => {
             } finally {
                 setUploading(false);
             }
-        }
-    };
-
-    const renderPasswordContent = () => (
-        <Card
-            title={<><LockOutlined className="mr-2" />Đổi mật khẩu</>}
-            bordered={false}
-            className="shadow-sm w-full max-w-2xl rounded-xl"
-        >
-            <Form form={passwordForm} layout="vertical" onFinish={onChangePassword} className="mt-4">
-                <Form.Item
-                    name="old_password"
-                    label="Mật khẩu hiện tại"
-                    rules={[{ required: true, message: 'Vui lòng nhập mật khẩu cũ' }]}
-                >
-                    <Input.Password prefix={<LockOutlined className="text-gray-400" />} placeholder="Nhập mật khẩu hiện tại" size="large" className="rounded-lg" />
-                </Form.Item>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Form.Item
-                        name="new_password"
-                        label="Mật khẩu mới"
-                        rules={[
-                            { required: true, message: 'Vui lòng nhập mật khẩu mới' },
-                            { min: 6, message: 'Tối thiểu 6 ký tự' }
-                        ]}
-                    >
-                        <Input.Password prefix={<SafetyCertificateOutlined className="text-gray-400" />} placeholder="Mật khẩu mới" size="large" className="rounded-lg" />
-                    </Form.Item>
-                    <Form.Item
-                        name="confirm_password"
-                        label="Xác nhận mật khẩu"
-                        dependencies={['new_password']}
-                        rules={[
-                            { required: true, message: 'Vui lòng xác nhận mật khẩu' },
-                            ({ getFieldValue }) => ({
-                                validator(_, value) {
-                                    if (!value || getFieldValue('new_password') === value) {
-                                        return Promise.resolve();
-                                    }
-                                    return Promise.reject(new Error('Mật khẩu không khớp!'));
-                                },
-                            }),
-                        ]}
-                    >
-                        <Input.Password prefix={<SafetyCertificateOutlined className="text-gray-400" />} placeholder="Xác nhận mật khẩu" size="large" className="rounded-lg" />
-                    </Form.Item>
-                </div>
-                <Form.Item className="mb-0 mt-4">
-                    <div className="flex justify-end">
-                        <Button type="primary" htmlType="submit" loading={loading} size="large" className="w-full md:w-auto bg-indigo-600 px-8 rounded-lg font-semibold h-11">
-                            Cập nhật mật khẩu
-                        </Button>
-                    </div>
-                </Form.Item>
-            </Form>
-        </Card>
-    );
-
-    const renderGeneralContent = () => (
-        <Card
-            title={<><UserOutlined className="mr-2" />Thông tin cá nhân</>}
-            bordered={false}
-            className="shadow-sm w-full max-w-2xl rounded-xl"
-        >
-            <div className="flex flex-col items-center mb-8 bg-gray-50 p-6 md:p-8 rounded-2xl border border-gray-100">
-                <Avatar
-                    size={80}
-                    src={user?.avatar_url}
-                    icon={<UserOutlined />}
-                    className="shadow-lg border-4 border-white mb-6"
-                />
-
-                <Upload
-                    showUploadList={false}
-                    beforeUpload={(file) => {
-                        const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png';
-                        if (!isJpgOrPng) {
-                            message.error('Bạn chỉ có thể upload file JPG/PNG!');
-                        }
-                        const isLt2M = file.size / 1024 / 1024 < 2;
-                        if (!isLt2M) {
-                            message.error('Ảnh phải nhỏ hơn 2MB!');
-                        }
-                        return isJpgOrPng && isLt2M;
-                    }}
-                    customRequest={({ onSuccess }: any) => {
-                        setTimeout(() => onSuccess("ok"), 0);
-                    }}
-                    onChange={handleAvatarUpload}
-                >
-                    <Button icon={<UploadOutlined />} loading={uploading} className="rounded-lg">
-                        Thay đổi ảnh đại diện
-                    </Button>
-                </Upload>
-
-                <div className="mt-6 text-center">
-                    <Title level={5} className="!mb-0 text-lg">{user?.name}</Title>
-                    <Text type="secondary" className="text-sm">{user?.email}</Text>
-                    <div className="mt-3">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 shadow-sm uppercase tracking-wider">
-                            {user?.role_name?.toUpperCase()}
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <Form form={generalForm} layout="vertical" onFinish={onUpdateSettings}>
-                <Form.Item
-                    name="discord_id"
-                    label="Discord ID"
-                    tooltip="ID người dùng Discord của bạn để nhận thông báo trực tiếp"
-                >
-                    <Input
-                        prefix={<DiscordOutlined className="text-gray-400" />}
-                        placeholder="Ví dụ: 123456789012345678"
-                        size="large"
-                        className="rounded-lg"
-                    />
-                </Form.Item>
-
-                <Form.Item className="mb-0 mt-6">
-                    <div className="flex justify-end">
-                        <Button type="primary" htmlType="submit" loading={loading} size="large" className="w-full md:w-auto bg-indigo-600 px-10 rounded-xl shadow-lg shadow-indigo-100 font-semibold h-11">
-                            Lưu thông tin
-                        </Button>
-                    </div>
-                </Form.Item>
-            </Form>
-        </Card>
-    );
-
-    const renderContent = () => {
-        switch (activeKey) {
-            case 'password': return renderPasswordContent();
-            case 'general': return renderGeneralContent();
-            default: return null;
         }
     };
 
@@ -270,11 +280,25 @@ export const SettingsPage: React.FC = () => {
                 )}
                 <Content className="p-4 md:p-8 overflow-y-auto bg-gray-50 flex justify-center items-start">
                     <div className="w-full flex justify-center">
-                        {renderContent()}
+                        {activeKey === 'password' ? (
+                            <PasswordContent
+                                loading={loading}
+                                onFinish={onChangePassword}
+                                form={passwordForm}
+                            />
+                        ) : (
+                            <GeneralContent
+                                user={user}
+                                loading={loading}
+                                uploading={uploading}
+                                onFinish={onUpdateSettings}
+                                onAvatarUpload={handleAvatarUpload}
+                                form={generalForm}
+                            />
+                        )}
                     </div>
                 </Content>
             </Layout>
         </div>
     );
 };
-

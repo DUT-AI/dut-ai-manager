@@ -45,7 +45,9 @@ class HomeworkSubmissionService:
             self.repo_factory.homework_submission.get_all_by_homework(homework_id)
         )
         logger.debug(homework_submissions)
-        match current_user.role.name:
+        logger.debug(current_user.role.name)
+        role_name = current_user.role.name.lower()
+        match role_name:
             case RoleType.ADMIN.value:
                 return homework_submissions
             case RoleType.LEADER.value:
@@ -71,7 +73,7 @@ class HomeworkSubmissionService:
                 ]
                 return filter_submissions
             case _:
-                return []
+                raise BadRequestException("Không có quyền xem bài nộp")
 
     async def submit(self, homework_id: int, file: UploadFile) -> HomeworkSubmission:
         """Submit homework by uploading a file to MinIO."""
