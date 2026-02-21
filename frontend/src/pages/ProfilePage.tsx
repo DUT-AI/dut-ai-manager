@@ -36,13 +36,36 @@ import type { ColumnsType } from 'antd/es/table';
 
 const { Title, Text } = Typography;
 
+interface FilterBarProps {
+    selectedDate: Dayjs;
+    onChange: (date: Dayjs) => void;
+}
+
+const FilterBar = ({ selectedDate, onChange }: FilterBarProps) => (
+    <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-gray-50 rounded-lg">
+        <FilterOutlined className="text-gray-500" />
+        <Text type="secondary">Lọc theo tháng:</Text>
+        <DatePicker
+            picker="month"
+            value={selectedDate}
+            onChange={(date) => date && onChange(date)}
+            format="MM/YYYY"
+            allowClear={false}
+            className="w-32"
+        />
+        <Text type="secondary" className="ml-auto text-xs w-full sm:w-auto mt-2 sm:mt-0">
+            Hiển thị dữ liệu tháng {selectedDate.format('MM/YYYY')}
+        </Text>
+    </div>
+);
+
 const ProfilePage = () => {
     const { userId } = useParams();
     const navigate = useNavigate();
     const uid = userId ? parseInt(userId) : undefined;
 
     const [activeTab, setActiveTab] = useState('info');
-    const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
+    const [selectedDate, setSelectedDate] = useState<Dayjs>(() => dayjs());
 
     // Detail modal states
     const [selectedViolation, setSelectedViolation] = useState<ViolationResponse | null>(null);
@@ -107,25 +130,6 @@ const ProfilePage = () => {
         { title: 'Thời gian', key: 'time', width: 140, render: (_, r) => `${r.start_time} - ${r.end_time}` },
         { title: 'Ngày', dataIndex: 'date', key: 'date', width: 120, render: d => dayjs(d).format('DD/MM/YYYY') }
     ];
-
-    // Filter component
-    const FilterBar = () => (
-        <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-gray-50 rounded-lg">
-            <FilterOutlined className="text-gray-500" />
-            <Text type="secondary">Lọc theo tháng:</Text>
-            <DatePicker
-                picker="month"
-                value={selectedDate}
-                onChange={(date) => date && setSelectedDate(date)}
-                format="MM/YYYY"
-                allowClear={false}
-                className="w-32"
-            />
-            <Text type="secondary" className="ml-auto text-xs w-full sm:w-auto mt-2 sm:mt-0">
-                Hiển thị dữ liệu tháng {selectedDate.format('MM/YYYY')}
-            </Text>
-        </div>
-    );
 
     if (usersLoading) {
         return (
@@ -244,7 +248,7 @@ const ProfilePage = () => {
                             ),
                             children: (
                                 <>
-                                    <FilterBar />
+                                    <FilterBar selectedDate={selectedDate} onChange={setSelectedDate} />
                                     <Table
                                         dataSource={sortedViolations}
                                         columns={violationColumns}
@@ -271,7 +275,7 @@ const ProfilePage = () => {
                             ),
                             children: (
                                 <>
-                                    <FilterBar />
+                                    <FilterBar selectedDate={selectedDate} onChange={setSelectedDate} />
                                     <Table
                                         dataSource={sortedBonusPoints}
                                         columns={bonusColumns}
@@ -298,7 +302,7 @@ const ProfilePage = () => {
                             ),
                             children: (
                                 <>
-                                    <FilterBar />
+                                    <FilterBar selectedDate={selectedDate} onChange={setSelectedDate} />
                                     <Table
                                         dataSource={sortedPermissions}
                                         columns={permissionColumns}

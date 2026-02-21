@@ -3,7 +3,7 @@ import { userService } from '@/services/api/user.service';
 import type { UserCreate, UserUpdate } from '@/types/user.types';
 
 // Query Keys
-export const userKeys = {
+const userKeys = {
   all: ['users'] as const,
   detail: (id: number) => ['users', id] as const,
 };

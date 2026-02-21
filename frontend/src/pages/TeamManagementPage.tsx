@@ -31,6 +31,76 @@ import dayjs from 'dayjs';
 const { Title, Text } = Typography;
 const { Option } = Select;
 
+interface MobileListViewProps {
+    teams: TeamResponse[];
+    isLoading: boolean;
+    onEdit: (item: TeamResponse) => void;
+    onDelete: (id: number) => void;
+}
+
+const MobileListView = ({ teams, isLoading, onEdit, onDelete }: MobileListViewProps) => (
+    <div className="mt-4 px-3">
+        <List
+            dataSource={teams}
+            loading={isLoading}
+            split={false}
+            renderItem={(record) => (
+                <List.Item className="px-2 !mb-4 !border-0">
+                    <Card
+                        className="w-full shadow-sm border-gray-100 overflow-hidden"
+                        styles={{ body: { padding: '16px' } }}
+                        actions={[
+                            <Button
+                                key="edit"
+                                type="text"
+                                icon={<EditOutlined />}
+                                onClick={() => onEdit(record)}
+                            >
+                                Sửa
+                            </Button>,
+                            <Popconfirm
+                                key="delete"
+                                title="Xóa nhóm này?"
+                                description="Hành động này không thể hoàn tác"
+                                onConfirm={() => onDelete(record.id)}
+                                okText="Xóa"
+                                cancelText="Hủy"
+                            >
+                                <Button type="text" danger icon={<DeleteOutlined />}>Xóa</Button>
+                            </Popconfirm>
+                        ]}
+                    >
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500 shrink-0">
+                                <TeamOutlined className="text-xl" />
+                            </div>
+                            <div className="flex flex-col min-w-0 flex-1">
+                                <Text strong className="text-base truncate">{record.team_name}</Text>
+                                <Text type="secondary" className="text-xs">{record.member_count} thành viên</Text>
+                            </div>
+                        </div>
+
+                        <div>
+                            <Text type="secondary" className="block mb-2 text-xs uppercase font-bold tracking-wider">Thành viên</Text>
+                            <Avatar.Group max={{ count: 6, style: { color: '#f56a00', backgroundColor: '#fde3cf' } }}>
+                                {record.members.map(m => (
+                                    <Tooltip title={m.user_name} key={m.user_id}>
+                                        <Avatar src={m.user_avatar} icon={<UserOutlined />} />
+                                    </Tooltip>
+                                ))}
+                            </Avatar.Group>
+                        </div>
+
+                        <div className="mt-4 pt-3 border-t border-gray-50 flex justify-between items-center text-gray-400 text-[10px]">
+                            <span>Ngày tạo: {dayjs(record.created_at).format('DD/MM/YYYY')}</span>
+                        </div>
+                    </Card>
+                </List.Item>
+            )}
+        />
+    </div>
+);
+
 const TeamManagementPage = () => {
     useAuth();
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -143,74 +213,6 @@ const TeamManagementPage = () => {
 
     const screens = Grid.useBreakpoint();
 
-    const MobileListView = () => (
-        <div className="mt-4 px-3">
-            <List
-                dataSource={teams}
-                loading={isLoading}
-                split={false}
-                renderItem={(record) => (
-                    <List.Item className="px-2 !mb-4 !border-0">
-                        <Card
-                            className="w-full shadow-sm border-gray-100 overflow-hidden"
-                            styles={{ body: { padding: '16px' } }}
-                            actions={[
-                                <Button
-                                    type="text"
-                                    icon={<EditOutlined />}
-                                    onClick={() => {
-                                        setEditingItem(record);
-                                        form.setFieldsValue({
-                                            team_name: record.team_name,
-                                            member_ids: record.members.map(m => m.user_id)
-                                        });
-                                        setIsModalOpen(true);
-                                    }}
-                                >
-                                    Sửa
-                                </Button>,
-                                <Popconfirm
-                                    title="Xóa nhóm này?"
-                                    description="Hành động này không thể hoàn tác"
-                                    onConfirm={() => handleDelete(record.id)}
-                                    okText="Xóa"
-                                    cancelText="Hủy"
-                                >
-                                    <Button type="text" danger icon={<DeleteOutlined />}>Xóa</Button>
-                                </Popconfirm>
-                            ]}
-                        >
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500 shrink-0">
-                                    <TeamOutlined className="text-xl" />
-                                </div>
-                                <div className="flex flex-col min-w-0 flex-1">
-                                    <Text strong className="text-base truncate">{record.team_name}</Text>
-                                    <Text type="secondary" className="text-xs">{record.member_count} thành viên</Text>
-                                </div>
-                            </div>
-
-                            <div>
-                                <Text type="secondary" className="block mb-2 text-xs uppercase font-bold tracking-wider">Thành viên</Text>
-                                <Avatar.Group max={{ count: 6, style: { color: '#f56a00', backgroundColor: '#fde3cf' } }}>
-                                    {record.members.map(m => (
-                                        <Tooltip title={m.user_name} key={m.user_id}>
-                                            <Avatar src={m.user_avatar} icon={<UserOutlined />} />
-                                        </Tooltip>
-                                    ))}
-                                </Avatar.Group>
-                            </div>
-
-                            <div className="mt-4 pt-3 border-t border-gray-50 flex justify-between items-center text-gray-400 text-[10px]">
-                                <span>Ngày tạo: {dayjs(record.created_at).format('DD/MM/YYYY')}</span>
-                            </div>
-                        </Card>
-                    </List.Item>
-                )}
-            />
-        </div>
-    );
-
     return (
         <div className="p-4 md:p-6">
             <Card className={!screens.md ? "bg-transparent shadow-none border-none" : "shadow-sm border-gray-100 rounded-xl overflow-hidden"} styles={{ body: { padding: !screens.md ? 0 : undefined } }}>
@@ -239,7 +241,19 @@ const TeamManagementPage = () => {
                 </div>
 
                 {!screens.md ? (
-                    <MobileListView />
+                    <MobileListView
+                        teams={teams}
+                        isLoading={isLoading}
+                        onEdit={(item) => {
+                            setEditingItem(item);
+                            form.setFieldsValue({
+                                team_name: item.team_name,
+                                member_ids: item.members.map(m => m.user_id)
+                            });
+                            setIsModalOpen(true);
+                        }}
+                        onDelete={handleDelete}
+                    />
                 ) : (
                     <Table
                         columns={columns}

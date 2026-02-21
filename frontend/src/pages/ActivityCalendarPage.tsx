@@ -46,10 +46,139 @@ import { BonusPointPermission, PermissionRequestPermission, ViolationPermission 
 
 const { Title, Text } = Typography;
 
+interface DailyDetailListProps {
+    dailyData: DailySummaryResponse | null;
+    onEditPermission: (item: PermissionRequestResponse) => void;
+    onEditBonus: (item: BonusPointResponse) => void;
+    onEditViolation: (item: ViolationResponse) => void;
+    onViewParticipants: (meeting: any) => void;
+    onEditMeeting: (meeting: any) => void;
+    onDeleteMeeting: (id: number) => void;
+    onRefresh: () => void;
+}
+
+const DailyDetailList = ({ dailyData, onEditPermission, onEditBonus, onEditViolation, onViewParticipants, onEditMeeting, onDeleteMeeting, onRefresh }: DailyDetailListProps) => (
+    <div className="flex flex-col gap-8">
+        <PermissionRequestSection
+            data={dailyData?.permission_requests || []}
+            onEdit={onEditPermission}
+            onRefresh={onRefresh}
+        />
+
+        <Divider className="!m-0 border-gray-100" />
+
+        <BonusPointSection
+            data={dailyData?.bonus_points || []}
+            onEdit={onEditBonus}
+            onRefresh={onRefresh}
+        />
+
+        <Divider className="!m-0 border-gray-100" />
+
+        <ViolationSection
+            data={dailyData?.violations || []}
+            onEdit={onEditViolation}
+            onRefresh={onRefresh}
+        />
+
+        <Divider className="!m-0 border-gray-100" />
+
+        <MeetingSection
+            data={dailyData?.meetings || []}
+            onViewParticipants={onViewParticipants}
+            onEdit={onEditMeeting}
+            onDelete={onDeleteMeeting}
+        />
+    </div>
+);
+
+interface GridMonthCalendarProps {
+    selectedDate: Dayjs;
+    activeDates: string[];
+    onSelectDate: (date: Dayjs) => void;
+    onNavigateMonth: (date: Dayjs) => void;
+}
+
+const GridMonthCalendar = ({ selectedDate, activeDates, onSelectDate, onNavigateMonth }: GridMonthCalendarProps) => {
+    const daysInMonth = selectedDate.daysInMonth();
+    const startOfMonth = selectedDate.startOf('month');
+    const startDayOfWeek = startOfMonth.day();
+
+    const days = [];
+    for (let i = 0; i < startDayOfWeek; i++) {
+        days.push(null);
+    }
+    for (let i = 0; i < daysInMonth; i++) {
+        days.push(startOfMonth.add(i, 'day'));
+    }
+
+    const weekdayLabels = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+
+    return (
+        <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between mb-4">
+                <Button
+                    type="text"
+                    onClick={() => onNavigateMonth(selectedDate.subtract(1, 'month'))}
+                    className="text-gray-400 hover:text-indigo-600 flex items-center p-0"
+                >
+                    <span className="text-lg">&larr;</span> <span className="ml-1">Trước</span>
+                </Button>
+                <div className="text-center">
+                    <Text strong className="text-indigo-600 text-lg">Tháng {selectedDate.format('MM/YYYY')}</Text>
+                </div>
+                <Button
+                    type="text"
+                    onClick={() => onNavigateMonth(selectedDate.add(1, 'month'))}
+                    className="text-gray-400 hover:text-indigo-600 flex items-center p-0"
+                >
+                    <span className="mr-1">Sau</span> <span className="text-lg">&rarr;</span>
+                </Button>
+            </div>
+
+            <div className="grid grid-cols-7 gap-2">
+                {weekdayLabels.map(label => (
+                    <div key={label} className="text-center py-1 text-[10px] font-bold text-gray-400 uppercase">
+                        {label}
+                    </div>
+                ))}
+                {days.map((day, index) => {
+                    if (!day) return <div key={`empty-${index}`} className="aspect-square" />;
+
+                    const isSelected = day.isSame(selectedDate, 'day');
+                    const isToday = day.isSame(dayjs(), 'day');
+                    const hasActivity = activeDates.includes(day.format('YYYY-MM-DD'));
+
+                    return (
+                        <div
+                            key={day.toString()}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => onSelectDate(day)}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelectDate(day); }}
+                            className={`aspect-square flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all border ${isSelected
+                                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-md scale-110 z-10'
+                                    : isToday
+                                        ? 'bg-indigo-50 text-indigo-600 border-indigo-200 font-black'
+                                        : 'bg-white text-gray-700 border-gray-50'
+                                }`}
+                        >
+                            <span className="text-sm font-semibold">{day.format('D')}</span>
+                            {hasActivity && (
+                                <div className={`w-1 h-1 rounded-full mt-1 ${isSelected ? 'bg-white shadow-[0_0_4px_white]' : 'bg-indigo-500'}`} />
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
 const ActivityCalendarPage = () => {
     const { hasPermission } = useAuth();
     // State
-    const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
+    const [selectedDate, setSelectedDate] = useState<Dayjs>(() => dayjs());
     const [drawerVisible, setDrawerVisible] = useToggle(false);
     const [dailyData, setDailyData] = useState<DailySummaryResponse | null>(null);
     const [loading, setLoading] = useToggle(false);
@@ -283,119 +412,6 @@ const ActivityCalendarPage = () => {
 
     const screens = Grid.useBreakpoint();
 
-    const DailyDetailList = () => (
-        <div className="flex flex-col gap-8">
-            <PermissionRequestSection
-                data={dailyData?.permission_requests || []}
-                onEdit={openEditPermission}
-                onRefresh={refreshData}
-            />
-
-            <Divider className="!m-0 border-gray-100" />
-
-            <BonusPointSection
-                data={dailyData?.bonus_points || []}
-                onEdit={openEditBonus}
-                onRefresh={refreshData}
-            />
-
-            <Divider className="!m-0 border-gray-100" />
-
-            <ViolationSection
-                data={dailyData?.violations || []}
-                onEdit={openEditViolation}
-                onRefresh={refreshData}
-            />
-
-            <Divider className="!m-0 border-gray-100" />
-
-            <MeetingSection
-                data={dailyData?.meetings || []}
-                onViewParticipants={openViewParticipants}
-                onEdit={openEditMeeting}
-                onDelete={handleDeleteMeeting}
-            />
-        </div>
-    );
-
-    const GridMonthCalendar = () => {
-        const daysInMonth = selectedDate.daysInMonth();
-        const startOfMonth = selectedDate.startOf('month');
-        const startDayOfWeek = startOfMonth.day(); // 0 (Sun) to 6 (Sat)
-
-        const days = [];
-        // Pad for the start of the month
-        for (let i = 0; i < startDayOfWeek; i++) {
-            days.push(null);
-        }
-        for (let i = 0; i < daysInMonth; i++) {
-            days.push(startOfMonth.add(i, 'day'));
-        }
-
-        const weekdayLabels = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-
-        return (
-            <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between mb-4">
-                    <Button
-                        type="text"
-                        onClick={() => setSelectedDate(selectedDate.subtract(1, 'month'))}
-                        className="text-gray-400 hover:text-indigo-600 flex items-center p-0"
-                    >
-                        <span className="text-lg">&larr;</span> <span className="ml-1">Trước</span>
-                    </Button>
-                    <div className="text-center">
-                        <Text strong className="text-indigo-600 text-lg">Tháng {selectedDate.format('MM/YYYY')}</Text>
-                    </div>
-                    <Button
-                        type="text"
-                        onClick={() => setSelectedDate(selectedDate.add(1, 'month'))}
-                        className="text-gray-400 hover:text-indigo-600 flex items-center p-0"
-                    >
-                        <span className="mr-1">Sau</span> <span className="text-lg">&rarr;</span>
-                    </Button>
-                </div>
-
-                <div className="grid grid-cols-7 gap-2">
-                    {weekdayLabels.map(label => (
-                        <div key={label} className="text-center py-1 text-[10px] font-bold text-gray-400 uppercase">
-                            {label}
-                        </div>
-                    ))}
-                    {days.map((day, index) => {
-                        if (!day) return <div key={`empty-${index}`} className="aspect-square" />;
-
-                        const isSelected = day.isSame(selectedDate, 'day');
-                        const isToday = day.isSame(dayjs(), 'day');
-                        const hasActivity = activeDates.includes(day.format('YYYY-MM-DD'));
-
-                        return (
-                            <div
-                                key={day.toString()}
-                                onClick={() => {
-                                    setSelectedDate(day);
-                                    fetchDailyDetail(day);
-                                    setDrawerVisible(true);
-                                }}
-                                className={`aspect-square flex flex-col items-center justify-center rounded-xl cursor-pointer transition-all border ${isSelected
-                                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-md scale-110 z-10'
-                                        : isToday
-                                            ? 'bg-indigo-50 text-indigo-600 border-indigo-200 font-black'
-                                            : 'bg-white text-gray-700 border-gray-50'
-                                    }`}
-                            >
-                                <span className="text-sm font-semibold">{day.format('D')}</span>
-                                {hasActivity && (
-                                    <div className={`w-1 h-1 rounded-full mt-1 ${isSelected ? 'bg-white shadow-[0_0_4px_white]' : 'bg-indigo-500'}`} />
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
-        );
-    };
-
     return (
         <div className="md:p-6 pb-20 md:pb-6 min-h-full">
             <Card
@@ -457,7 +473,16 @@ const ActivityCalendarPage = () => {
 
                 <div className={`${screens.md ? 'bg-gray-50/50 p-6 border border-gray-100' : 'bg-transparent p-0 border-none'} rounded-2xl`}>
                     {!screens.md ? (
-                        <GridMonthCalendar />
+                        <GridMonthCalendar
+                            selectedDate={selectedDate}
+                            activeDates={activeDates}
+                            onSelectDate={(day) => {
+                                setSelectedDate(day);
+                                fetchDailyDetail(day);
+                                setDrawerVisible(true);
+                            }}
+                            onNavigateMonth={setSelectedDate}
+                        />
                     ) : (
                         <Calendar
                             onSelect={onSelect}
@@ -487,7 +512,16 @@ const ActivityCalendarPage = () => {
                         <Spin size="large" tip="Đang tải dữ liệu..." />
                     </div>
                 ) : (
-                    <DailyDetailList />
+                    <DailyDetailList
+                        dailyData={dailyData}
+                        onEditPermission={openEditPermission}
+                        onEditBonus={openEditBonus}
+                        onEditViolation={openEditViolation}
+                        onViewParticipants={openViewParticipants}
+                        onEditMeeting={openEditMeeting}
+                        onDeleteMeeting={handleDeleteMeeting}
+                        onRefresh={refreshData}
+                    />
                 )}
             </Drawer>
 

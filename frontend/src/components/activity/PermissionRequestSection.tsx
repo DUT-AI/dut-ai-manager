@@ -71,7 +71,7 @@ export const PermissionRequestSection = ({ data, onEdit, onRefresh }: Props) => 
                         >
                             <div className="flex justify-between items-start mb-2">
                                 <Tag color="blue">{item.category.toUpperCase()}</Tag>
-                                <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                                <div role="presentation" className="flex gap-2" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                                     <Tooltip title="Sửa">
                                         <EditOutlined
                                             className="text-gray-400 hover:text-blue-600 cursor-pointer"

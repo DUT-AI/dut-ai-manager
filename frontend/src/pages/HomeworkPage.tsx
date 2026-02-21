@@ -22,6 +22,72 @@ import { HomeworkFormModal, SubmitHomeworkModal, SubmissionsDrawer } from '@/com
 
 const { Title, Text } = Typography;
 
+const HomeworkMobileList = ({ dataSource, loading, emptyText, activeTab, hasPermission, handleOpenSubmit, handleViewSubmissions, handleOpenEdit, handleDelete }: { dataSource: Homework[], loading: boolean, emptyText?: string, activeTab: string, hasPermission: (permission: HomeworkPermission) => boolean, handleOpenSubmit: (homework: Homework) => void, handleViewSubmissions: (homework: Homework) => void, handleOpenEdit: (homework: Homework) => void, handleDelete: (id: number) => void }) => (
+    <div className="mt-4 px-3">
+        <List
+            dataSource={dataSource}
+            loading={loading}
+            split={false}
+            locale={{ emptyText }}
+            renderItem={(record) => (
+                <List.Item className="px-2 !mb-4 !border-0">
+                    <Card
+                        className="w-full shadow-sm border-gray-100 overflow-hidden"
+                        styles={{ body: { padding: '16px' } }}
+                    >
+                        <div className="flex items-center justify-between mb-4">
+                            <Text strong className="text-base truncate">{record.title}</Text>
+                            {dayjs().isAfter(dayjs(record.deadline)) && (
+                                <Tag color="red" className="m-0">Quá hạn</Tag>
+                            )}
+                        </div>
+
+                        <div className="mb-4">
+                            <Text type="secondary" className="block text-xs truncate">
+                                {record.description || 'Không có mô tả'}
+                            </Text>
+                        </div>
+
+                        <div className="flex items-center gap-2 mb-4 text-xs">
+                            <Text type="secondary">Hạn nộp:</Text>
+                            <Text className={dayjs().isAfter(dayjs(record.deadline)) ? 'text-red-500' : ''}>
+                                {dayjs(record.deadline).format('DD/MM/YYYY HH:mm')}
+                            </Text>
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-3 border-t border-gray-50 bg-gray-50 -mx-4 -mb-4 px-4 py-3">
+                            {activeTab === '1' ? (
+                                <Button type="primary" size="small" icon={<UploadOutlined />} onClick={() => handleOpenSubmit(record)}>
+                                    Nộp bài
+                                </Button>
+                            ) : (
+                                <Space size="small">
+                                    <Button size="small" icon={<EyeOutlined />} onClick={() => handleViewSubmissions(record)}>
+                                        Bài nộp
+                                    </Button>
+                                    {hasPermission(HomeworkPermission.UPDATE) && (
+                                        <Button size="small" icon={<EditOutlined />} onClick={() => handleOpenEdit(record)} />
+                                    )}
+                                    {hasPermission(HomeworkPermission.DELETE) && (
+                                        <Popconfirm
+                                            title="Xóa bài tập?"
+                                            onConfirm={() => handleDelete(record.id)}
+                                            okText="Xóa"
+                                            cancelText="Hủy"
+                                        >
+                                            <Button size="small" danger icon={<DeleteOutlined />} />
+                                        </Popconfirm>
+                                    )}
+                                </Space>
+                            )}
+                        </div>
+                    </Card>
+                </List.Item>
+            )}
+        />
+    </div>
+);
+
 export const HomeworkPage: React.FC = () => {
     const { hasPermission, isAdminOrLeader } = useAuth();
     const [activeTab, setActiveTab] = useState('1');
@@ -209,72 +275,6 @@ export const HomeworkPage: React.FC = () => {
 
     const screens = Grid.useBreakpoint();
 
-    const HomeworkMobileList = ({ dataSource, loading, emptyText }: { dataSource: Homework[], loading: boolean, emptyText?: string }) => (
-        <div className="mt-4 px-3">
-            <List
-                dataSource={dataSource}
-                loading={loading}
-                split={false}
-                locale={{ emptyText }}
-                renderItem={(record) => (
-                    <List.Item className="px-2 !mb-4 !border-0">
-                        <Card
-                            className="w-full shadow-sm border-gray-100 overflow-hidden"
-                            styles={{ body: { padding: '16px' } }}
-                        >
-                            <div className="flex items-center justify-between mb-4">
-                                <Text strong className="text-base truncate">{record.title}</Text>
-                                {dayjs().isAfter(dayjs(record.deadline)) && (
-                                    <Tag color="red" className="m-0">Quá hạn</Tag>
-                                )}
-                            </div>
-
-                            <div className="mb-4">
-                                <Text type="secondary" className="block text-xs truncate">
-                                    {record.description || 'Không có mô tả'}
-                                </Text>
-                            </div>
-
-                            <div className="flex items-center gap-2 mb-4 text-xs">
-                                <Text type="secondary">Hạn nộp:</Text>
-                                <Text className={dayjs().isAfter(dayjs(record.deadline)) ? 'text-red-500' : ''}>
-                                    {dayjs(record.deadline).format('DD/MM/YYYY HH:mm')}
-                                </Text>
-                            </div>
-
-                            <div className="flex justify-end gap-2 pt-3 border-t border-gray-50 bg-gray-50 -mx-4 -mb-4 px-4 py-3">
-                                {activeTab === '1' ? (
-                                    <Button type="primary" size="small" icon={<UploadOutlined />} onClick={() => handleOpenSubmit(record)}>
-                                        Nộp bài
-                                    </Button>
-                                ) : (
-                                    <Space size="small">
-                                        <Button size="small" icon={<EyeOutlined />} onClick={() => handleViewSubmissions(record)}>
-                                            Bài nộp
-                                        </Button>
-                                        {hasPermission(HomeworkPermission.UPDATE) && (
-                                            <Button size="small" icon={<EditOutlined />} onClick={() => handleOpenEdit(record)} />
-                                        )}
-                                        {hasPermission(HomeworkPermission.DELETE) && (
-                                            <Popconfirm
-                                                title="Xóa bài tập?"
-                                                onConfirm={() => handleDelete(record.id)}
-                                                okText="Xóa"
-                                                cancelText="Hủy"
-                                            >
-                                                <Button size="small" danger icon={<DeleteOutlined />} />
-                                            </Popconfirm>
-                                        )}
-                                    </Space>
-                                )}
-                            </div>
-                        </Card>
-                    </List.Item>
-                )}
-            />
-        </div>
-    );
-
     return (
         <div className="p-4 md:p-6 bg-white md:rounded-xl shadow-xs min-h-full">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 px-3 md:px-0">
@@ -315,6 +315,12 @@ export const HomeworkPage: React.FC = () => {
                                     dataSource={myHomeworks}
                                     loading={myLoading}
                                     emptyText="Không có bài tập nào được giao"
+                                    activeTab={activeTab}
+                                    hasPermission={hasPermission}
+                                    handleOpenSubmit={handleOpenSubmit}
+                                    handleViewSubmissions={handleViewSubmissions}
+                                    handleOpenEdit={handleOpenEdit}
+                                    handleDelete={handleDelete}
                                 />
                             ) : (
                                 <Table
@@ -333,6 +339,12 @@ export const HomeworkPage: React.FC = () => {
                                 <HomeworkMobileList
                                     dataSource={allHomeworks}
                                     loading={allLoading}
+                                    activeTab={activeTab}
+                                    hasPermission={hasPermission}
+                                    handleOpenSubmit={handleOpenSubmit}
+                                    handleViewSubmissions={handleViewSubmissions}
+                                    handleOpenEdit={handleOpenEdit}
+                                    handleDelete={handleDelete}
                                 />
                             ) : (
                                 <Table
@@ -376,4 +388,3 @@ export const HomeworkPage: React.FC = () => {
     );
 };
 
-export default HomeworkPage;

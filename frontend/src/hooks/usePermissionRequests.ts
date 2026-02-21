@@ -3,7 +3,7 @@ import { permissionService } from '@/services/api/permission.service';
 import type { PermissionCreate, PermissionUpdate } from '@/types/activity.types';
 
 // Query Keys
-export const permissionRequestKeys = {
+const permissionRequestKeys = {
   all: ['permissionRequests'] as const,
   list: (filters: { userId?: number; month?: number; year?: number }) => 
     ['permissionRequests', filters] as const,

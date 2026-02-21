@@ -48,6 +48,92 @@ import { useNavigate } from 'react-router-dom';
 const { Title, Text } = Typography;
 const { Option } = Select;
 
+interface MobileListViewProps {
+    filteredUsers: UserResponse[];
+    isLoading: boolean;
+    canUpdate: boolean;
+    canDelete: boolean;
+    onNavigate: (userId: number) => void;
+    onEdit: (user: UserResponse) => void;
+    onDelete: (id: number) => void;
+}
+
+const MobileListView = ({ filteredUsers, isLoading, canUpdate, canDelete, onNavigate, onEdit, onDelete }: MobileListViewProps) => (
+    <div className="mt-4 px-3">
+        <List
+            dataSource={filteredUsers}
+            loading={isLoading}
+            split={false}
+            renderItem={(record) => (
+                <List.Item className="px-2 !mb-4 !border-0" onClick={() => onNavigate(record.id)}>
+                    <Card
+                        className="w-full shadow-sm border-gray-100 overflow-hidden"
+                        styles={{ body: { padding: '16px' } }}
+                    >
+                        <div className="flex items-center justify-between mb-4">
+                            <Tag color={record.role_name === 'admin' ? 'volcano' : record.role_name === 'leader' ? 'blue' : 'green'} className="uppercase font-bold m-0 px-3 rounded-full">
+                                {record.role_name || 'NO ROLE'}
+                            </Tag>
+                            <Badge
+                                status={record.status === 'active' ? 'success' : 'error'}
+                                text={<span className={record.status === 'active' ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>{record.status?.toUpperCase()}</span>}
+                            />
+                        </div>
+
+                        <div className="flex items-center gap-3 mb-4">
+                            <Avatar
+                                size={52}
+                                src={record.avatar_url}
+                                icon={<UserOutlined />}
+                                className="bg-linear-to-br from-[#4f46e5] to-[#7c3aed] shrink-0 shadow-sm"
+                            />
+                            <div className="flex flex-col min-w-0 flex-1">
+                                <Text strong className="truncate text-base">{record.name}</Text>
+                                <div className="flex items-center gap-1.5 text-gray-400">
+                                    <MailOutlined className="text-xs" />
+                                    <Text type="secondary" className="text-xs truncate">{record.email}</Text>
+                                </div>
+                                {record.discord_id && (
+                                    <div className="flex items-center gap-1.5 text-indigo-400">
+                                        <DiscordOutlined className="text-xs" />
+                                        <Text className="text-[10px] text-indigo-400">{record.discord_id}</Text>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div role="presentation" className="flex justify-between items-center pt-3 border-t border-gray-50 bg-gray-50 -mx-4 -mb-4 px-4 py-3 gap-2" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                            <Space>
+                                <PhoneOutlined className="text-gray-400" />
+                                <Text className="text-xs">{record.phone_number || 'No phone'}</Text>
+                            </Space>
+                            <Space onClick={(e) => e.stopPropagation()}>
+                                <Button
+                                    icon={<EditOutlined />}
+                                    size="small"
+                                    onClick={() => onEdit(record)}
+                                    disabled={!canUpdate}
+                                >
+                                    Sửa
+                                </Button>
+                                <Popconfirm
+                                    title="Xóa thành viên này?"
+                                    onConfirm={() => onDelete(record.id)}
+                                    disabled={!canDelete}
+                                    okText="Xóa"
+                                    cancelText="Hủy"
+                                >
+                                    <Button icon={<DeleteOutlined />} size="small" danger disabled={!canDelete} />
+                                </Popconfirm>
+                            </Space>
+                        </div>
+                    </Card>
+                </List.Item>
+            )}
+        />
+    </div>
+);
+
 const UserManagementPage = () => {
     const navigate = useNavigate();
     const { hasPermission } = useAuth();
@@ -217,86 +303,6 @@ const UserManagementPage = () => {
         },
     ];
 
-    const MobileListView = () => (
-        <div className="mt-4 px-3">
-            <List
-                dataSource={filteredUsers}
-                loading={isLoading}
-                split={false}
-                renderItem={(record) => (
-                    <List.Item className="px-2 !mb-4 !border-0" onClick={() => navigate(`/dashboard/profile/${record.id}`)}>
-                        <Card
-                            className="w-full shadow-sm border-gray-100 overflow-hidden"
-                            styles={{ body: { padding: '16px' } }}
-                        >
-                            <div className="flex items-center justify-between mb-4">
-                                <Tag color={record.role_name === 'admin' ? 'volcano' : record.role_name === 'leader' ? 'blue' : 'green'} className="uppercase font-bold m-0 px-3 rounded-full">
-                                    {record.role_name || 'NO ROLE'}
-                                </Tag>
-                                <Badge
-                                    status={record.status === 'active' ? 'success' : 'error'}
-                                    text={<span className={record.status === 'active' ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>{record.status?.toUpperCase()}</span>}
-                                />
-                            </div>
-
-                            <div className="flex items-center gap-3 mb-4">
-                                <Avatar
-                                    size={52}
-                                    src={record.avatar_url}
-                                    icon={<UserOutlined />}
-                                    className="bg-linear-to-br from-[#4f46e5] to-[#7c3aed] shrink-0 shadow-sm"
-                                />
-                                <div className="flex flex-col min-w-0 flex-1">
-                                    <Text strong className="truncate text-base">{record.name}</Text>
-                                    <div className="flex items-center gap-1.5 text-gray-400">
-                                        <MailOutlined className="text-xs" />
-                                        <Text type="secondary" className="text-xs truncate">{record.email}</Text>
-                                    </div>
-                                    {record.discord_id && (
-                                        <div className="flex items-center gap-1.5 text-indigo-400">
-                                            <DiscordOutlined className="text-xs" />
-                                            <Text className="text-[10px] text-indigo-400">{record.discord_id}</Text>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="flex justify-between items-center pt-3 border-t border-gray-50 bg-gray-50 -mx-4 -mb-4 px-4 py-3 gap-2" onClick={(e) => e.stopPropagation()}>
-                                <Space>
-                                    <PhoneOutlined className="text-gray-400" />
-                                    <Text className="text-xs">{record.phone_number || 'No phone'}</Text>
-                                </Space>
-                                <Space onClick={(e) => e.stopPropagation()}>
-                                    <Button
-                                        icon={<EditOutlined />}
-                                        size="small"
-                                        onClick={() => {
-                                            setEditingUser(record);
-                                            form.setFieldsValue(record);
-                                            setIsModalOpen(true);
-                                        }}
-                                        disabled={!canUpdate}
-                                    >
-                                        Sửa
-                                    </Button>
-                                    <Popconfirm
-                                        title="Xóa thành viên này?"
-                                        onConfirm={() => handleDelete(record.id)}
-                                        disabled={!canDelete}
-                                        okText="Xóa"
-                                        cancelText="Hủy"
-                                    >
-                                        <Button icon={<DeleteOutlined />} size="small" danger disabled={!canDelete} />
-                                    </Popconfirm>
-                                </Space>
-                            </div>
-                        </Card>
-                    </List.Item>
-                )}
-            />
-        </div>
-    );
-
     return (
         <div className="p-4 md:p-6">
             <Card className={!screens.md ? "bg-transparent shadow-none border-none" : "shadow-sm border-gray-100 rounded-xl overflow-hidden"} styles={{ body: { padding: !screens.md ? 0 : undefined } }}>
@@ -406,7 +412,19 @@ const UserManagementPage = () => {
                 )}
 
                 {!screens.md ? (
-                    <MobileListView />
+                    <MobileListView
+                        filteredUsers={filteredUsers}
+                        isLoading={isLoading}
+                        canUpdate={canUpdate}
+                        canDelete={canDelete}
+                        onNavigate={(id) => navigate(`/dashboard/profile/${id}`)}
+                        onEdit={(user) => {
+                            setEditingUser(user);
+                            form.setFieldsValue(user);
+                            setIsModalOpen(true);
+                        }}
+                        onDelete={handleDelete}
+                    />
                 ) : (
                     <Table
                         columns={columns}
@@ -584,7 +602,7 @@ const ImportUserModal = ({ open, onCancel }: { open: boolean; onCancel: () => vo
                             <Typography.Text type="danger" strong>Error Details:</Typography.Text>
                             <ul className="list-disc pl-4 mt-1 text-sm text-red-600">
                                 {result.errors.map((err: string, idx: number) => (
-                                    <li key={idx}>{err}</li>
+                                    <li key={`${idx}-${err}`}>{err}</li>
                                 ))}
                             </ul>
                         </div>

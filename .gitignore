@@ -36,5 +36,5 @@ __pycache__/
 
 
 .agent/
-
+.agents/
 docs/

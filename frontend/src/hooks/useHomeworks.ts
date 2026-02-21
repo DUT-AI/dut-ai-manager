@@ -3,7 +3,7 @@ import { homeworkService } from '@/services/api/homework.service';
 import type { HomeworkCreate, HomeworkUpdate, HomeworkStatus } from '@/types/homework.types';
 
 // Query Keys
-export const homeworkKeys = {
+const homeworkKeys = {
   all: ['homeworks'] as const,
   my: ['homeworks', 'me'] as const,
   detail: (id: number) => ['homeworks', id] as const,

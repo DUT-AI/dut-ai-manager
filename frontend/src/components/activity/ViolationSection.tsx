@@ -72,7 +72,7 @@ export const ViolationSection = ({ data, onEdit, onRefresh }: Props) => {
                                     <Text strong className="text-red-700">Vi phạm</Text>
                                     <WarningOutlined className="text-red-500 text-xs" />
                                 </div>
-                                <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                                <div role="presentation" className="flex gap-2" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                                     <Tooltip title="Sửa">
                                         <EditOutlined
                                             className="text-gray-400 hover:text-red-600 cursor-pointer"

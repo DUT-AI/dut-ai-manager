@@ -6,18 +6,16 @@ Creates violations for users who haven't submitted their homework and don't have
 a postponement permission request.
 """
 
-from datetime import date
-
-from loguru import logger
-from sqlmodel import Session
-
+from app.api.v1.services.email_service import EmailService
 from app.core.database import engine
+from app.core.discord_service import DiscordService
+from app.core.minio_service import MinioService
 from app.core.repository_factory import RepositoryFactory
 from app.core.service_factory import ServiceFactory
-from app.models.homework_submission import HomeworkStatus
-from app.models.permission_request import RequestCategory
 from app.schemas.activity import ViolationCreate
 from app.utils.datetime import get_current_utc7_time
+from loguru import logger
+from sqlmodel import Session
 
 
 async def check_overdue_homework_submissions() -> None:
@@ -42,7 +40,12 @@ async def check_overdue_homework_submissions() -> None:
     # Create a new session for this job (not using request context)
     with Session(engine) as session:
         repo_factory = RepositoryFactory(session)
-        service_factory = ServiceFactory(repo_factory)
+        minio_service = MinioService()
+        discord_service = DiscordService()
+        email_service = EmailService()
+        service_factory = ServiceFactory(
+            repo_factory, minio_service, discord_service, email_service
+        )
 
         # Get all submissions that are not submitted and have deadline today
         overdue_submissions = (

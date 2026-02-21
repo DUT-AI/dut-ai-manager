@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { Modal, Form, Select, DatePicker, Input } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
@@ -20,20 +19,11 @@ interface Props {
 export const ViolationModal = ({ open, editingItem, initialDate, users, onSubmit, onCancel }: Props) => {
     const [form] = Form.useForm();
 
-    useEffect(() => {
-        if (open) {
-            if (editingItem) {
-                form.setFieldsValue({
-                    user_id: editingItem.user_id,
-                    reason: editingItem.reason,
-                    date: dayjs(editingItem.date)
-                });
-            } else {
-                form.resetFields();
-                form.setFieldValue('date', initialDate);
-            }
-        }
-    }, [open, editingItem, initialDate, form]);
+    const initialValues = editingItem ? {
+        user_id: editingItem.user_id,
+        reason: editingItem.reason,
+        date: dayjs(editingItem.date),
+    } : { date: initialDate };
 
     const handleFinish = (values: any) => {
         if (editingItem) {
@@ -62,7 +52,7 @@ export const ViolationModal = ({ open, editingItem, initialDate, users, onSubmit
             onOk={form.submit}
             destroyOnClose
         >
-            <Form form={form} layout="vertical" onFinish={handleFinish}>
+            <Form form={form} initialValues={initialValues} layout="vertical" onFinish={handleFinish}>
                 {editingItem ? (
                     <Form.Item name="user_id" label="Thành viên" rules={[{ required: true, message: 'Vui lòng chọn thành viên!' }]}>
                         <Select

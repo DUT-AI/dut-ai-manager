@@ -43,6 +43,101 @@ import ApiKeyModal from '@/components/Role/ApiKeyModal';
 
 const { Title, Text } = Typography;
 
+interface MobileListViewProps {
+    roles: RoleResponse[];
+    isLoading: boolean;
+    canUpdateRole: boolean;
+    canDeleteRole: boolean;
+    onOpenPerms: (role: RoleResponse) => void;
+    onOpenApiKeys: (role: RoleResponse) => void;
+    onEdit: (role: RoleResponse) => void;
+    onDelete: (id: number) => void;
+}
+
+const MobileListView = ({ roles, isLoading, canUpdateRole, canDeleteRole, onOpenPerms, onOpenApiKeys, onEdit, onDelete }: MobileListViewProps) => (
+    <div className="mt-4 px-3">
+        <List
+            dataSource={roles}
+            loading={isLoading}
+            split={false}
+            renderItem={(role) => (
+                <List.Item className="px-2 !mb-4 !border-0">
+                    <Card
+                        className="w-full shadow-sm border-gray-100 overflow-hidden"
+                        styles={{ body: { padding: '16px' } }}
+                        actions={[
+                            <Button
+                                key="perms"
+                                type="text"
+                                icon={<KeyOutlined />}
+                                onClick={() => onOpenPerms(role)}
+                                disabled={!canUpdateRole}
+                            >
+                                Perms
+                            </Button>,
+                            <Button
+                                key="api-keys"
+                                type="text"
+                                icon={<SafetyCertificateOutlined />}
+                                onClick={() => onOpenApiKeys(role)}
+                                disabled={!canUpdateRole}
+                            >
+                                API Keys
+                            </Button>,
+                            <Button
+                                key="edit"
+                                type="text"
+                                icon={<EditOutlined />}
+                                onClick={() => onEdit(role)}
+                                disabled={!canUpdateRole}
+                            >
+                                Edit
+                            </Button>,
+                            <Popconfirm
+                                key="delete"
+                                title="Delete this role?"
+                                onConfirm={() => onDelete(role.id)}
+                                disabled={!canDeleteRole}
+                            >
+                                <Button type="text" danger icon={<DeleteOutlined />} disabled={!canDeleteRole}>Delete</Button>
+                            </Popconfirm>
+                        ]}
+                    >
+                        <div className="flex items-center justify-between mb-4">
+                            <Tag color={role.name === 'admin' ? 'volcano' : role.name === 'leader' ? 'blue' : 'green'} className="uppercase font-bold m-0 text-base py-1 px-3">
+                                {role.name}
+                            </Tag>
+                        </div>
+
+                        <div className="mb-4">
+                            <Text type="secondary" className="block mb-1 text-xs uppercase font-bold tracking-wider">Description</Text>
+                            <Text>{role.description || 'No description provided.'}</Text>
+                        </div>
+
+                        <div>
+                            <Text type="secondary" className="block mb-2 text-xs uppercase font-bold tracking-wider">Permissions ({role.permissions.length})</Text>
+                            <div className="flex flex-wrap gap-1">
+                                {role.permissions.length > 0 ? (
+                                    role.permissions.slice(0, 5).map(p => (
+                                        <Tag key={p.id} color="blue" className="mr-0 mb-1">
+                                            {p.resource}:{p.action}
+                                        </Tag>
+                                    ))
+                                ) : (
+                                    <Text type="secondary" italic className="text-xs">No permissions assigned</Text>
+                                )}
+                                {role.permissions.length > 5 && (
+                                    <Tag className="mr-0 mb-1">+{role.permissions.length - 5} more</Tag>
+                                )}
+                            </div>
+                        </div>
+                    </Card>
+                </List.Item>
+            )}
+        />
+    </div>
+);
+
 const RoleManagementPage = () => {
     const { hasPermission } = useAuth();
     const [form] = Form.useForm();
@@ -227,90 +322,6 @@ const RoleManagementPage = () => {
 
     const screens = Grid.useBreakpoint();
 
-    const MobileListView = () => (
-        <div className="mt-4 px-3">
-            <List
-                dataSource={roles}
-                loading={isLoading}
-                split={false}
-                renderItem={(role) => (
-                    <List.Item className="px-2 !mb-4 !border-0">
-                        <Card
-                            className="w-full shadow-sm border-gray-100 overflow-hidden"
-                            styles={{ body: { padding: '16px' } }}
-                            actions={[
-                                <Button
-                                    type="text"
-                                    icon={<KeyOutlined />}
-                                    onClick={() => openPermissionModal(role)}
-                                    disabled={!canUpdateRole}
-                                >
-                                    Perms
-                                </Button>,
-                                <Button
-                                    type="text"
-                                    icon={<SafetyCertificateOutlined />}
-                                    onClick={() => openApiKeyModal(role)}
-                                    disabled={!canUpdateRole}
-                                >
-                                    API Keys
-                                </Button>,
-                                <Button
-                                    type="text"
-                                    icon={<EditOutlined />}
-                                    onClick={() => {
-                                        setEditingRole(role);
-                                        form.setFieldsValue(role);
-                                        toggleModal(true);
-                                    }}
-                                    disabled={!canUpdateRole}
-                                >
-                                    Edit
-                                </Button>,
-                                <Popconfirm
-                                    title="Delete this role?"
-                                    onConfirm={() => handleDelete(role.id)}
-                                    disabled={!canDeleteRole}
-                                >
-                                    <Button type="text" danger icon={<DeleteOutlined />} disabled={!canDeleteRole}>Delete</Button>
-                                </Popconfirm>
-                            ]}
-                        >
-                            <div className="flex items-center justify-between mb-4">
-                                <Tag color={role.name === 'admin' ? 'volcano' : role.name === 'leader' ? 'blue' : 'green'} className="uppercase font-bold m-0 text-base py-1 px-3">
-                                    {role.name}
-                                </Tag>
-                            </div>
-
-                            <div className="mb-4">
-                                <Text type="secondary" className="block mb-1 text-xs uppercase font-bold tracking-wider">Description</Text>
-                                <Text>{role.description || 'No description provided.'}</Text>
-                            </div>
-
-                            <div>
-                                <Text type="secondary" className="block mb-2 text-xs uppercase font-bold tracking-wider">Permissions ({role.permissions.length})</Text>
-                                <div className="flex flex-wrap gap-1">
-                                    {role.permissions.length > 0 ? (
-                                        role.permissions.slice(0, 5).map(p => (
-                                            <Tag key={p.id} color="blue" className="mr-0 mb-1">
-                                                {p.resource}:{p.action}
-                                            </Tag>
-                                        ))
-                                    ) : (
-                                        <Text type="secondary" italic className="text-xs">No permissions assigned</Text>
-                                    )}
-                                    {role.permissions.length > 5 && (
-                                        <Tag className="mr-0 mb-1">+{role.permissions.length - 5} more</Tag>
-                                    )}
-                                </div>
-                            </div>
-                        </Card>
-                    </List.Item>
-                )}
-            />
-        </div>
-    );
-
     return (
         <div className="p-4 md:p-6">
             <Card className={!screens.md ? "bg-transparent shadow-none border-none" : "shadow-sm border-gray-100 rounded-xl overflow-hidden"} styles={{ body: { padding: !screens.md ? 0 : undefined } }}>
@@ -345,7 +356,20 @@ const RoleManagementPage = () => {
                 )}
 
                 {!screens.md ? (
-                    <MobileListView />
+                    <MobileListView
+                        roles={roles}
+                        isLoading={isLoading}
+                        canUpdateRole={canUpdateRole}
+                        canDeleteRole={canDeleteRole}
+                        onOpenPerms={openPermissionModal}
+                        onOpenApiKeys={openApiKeyModal}
+                        onEdit={(role) => {
+                            setEditingRole(role);
+                            form.setFieldsValue(role);
+                            toggleModal(true);
+                        }}
+                        onDelete={handleDelete}
+                    />
                 ) : (
                     <Table
                         columns={columns}

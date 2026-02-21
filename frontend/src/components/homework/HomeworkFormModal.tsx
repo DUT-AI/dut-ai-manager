@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Modal, Form, Input, DatePicker, Select, message, Divider, Upload, Button } from 'antd';
 import { TeamOutlined, UserOutlined, UploadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -8,6 +8,8 @@ import type { TeamResponse } from '@/types/team.types';
 import { homeworkService } from '@/services/api/homework.service';
 
 const { TextArea } = Input;
+
+const EMPTY_ASSIGNEES: number[] = [];
 
 interface Props {
     open: boolean;
@@ -24,7 +26,7 @@ export const HomeworkFormModal = ({
     editingItem,
     users,
     teams,
-    currentAssignees = [],
+    currentAssignees = EMPTY_ASSIGNEES,
     onSuccess,
     onCancel
 }: Props) => {
@@ -39,20 +41,12 @@ export const HomeworkFormModal = ({
         return e?.fileList;
     };
 
-    useEffect(() => {
-        if (open) {
-            if (editingItem) {
-                form.setFieldsValue({
-                    title: editingItem.title,
-                    description: editingItem.description,
-                    deadline: dayjs(editingItem.deadline),
-                    assignee_ids: currentAssignees,
-                });
-            } else {
-                form.resetFields();
-            }
-        }
-    }, [open, editingItem, form, currentAssignees]);
+    const initialValues = editingItem ? {
+        title: editingItem.title,
+        description: editingItem.description,
+        deadline: dayjs(editingItem.deadline),
+        assignee_ids: currentAssignees,
+    } : undefined;
 
     const handleFinish = async (values: any) => {
         setLoading(true);
@@ -98,7 +92,7 @@ export const HomeworkFormModal = ({
             destroyOnHidden
             width={600}
         >
-            <Form form={form} layout="vertical" onFinish={handleFinish}>
+            <Form form={form} initialValues={initialValues} layout="vertical" onFinish={handleFinish}>
                 <Form.Item name="title" label="Tiêu đề" rules={[{ required: true, message: 'Vui lòng nhập tiêu đề' }]}>
                     <Input placeholder="Nhập tiêu đề bài tập..." />
                 </Form.Item>

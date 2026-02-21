@@ -16,7 +16,7 @@ const { Title, Text } = Typography;
 
 const HomePage = () => {
     const { user } = useAuth();
-    const [date, setDate] = useState(dayjs());
+    const [date, setDate] = useState(() => dayjs());
 
     const { data, isLoading } = useQuery({
         queryKey: ['dashboard-overview', date.month(), date.year()],
@@ -76,8 +76,8 @@ const HomePage = () => {
                 <>
                     {/* Stats Cards */}
                     <Row gutter={[16, 16]} className="mb-8">
-                        {stats.map((stat, index) => (
-                            <Col xs={24} sm={12} md={6} key={index}>
+                        {stats.map((stat) => (
+                            <Col xs={24} sm={12} md={6} key={stat.title}>
                                 <Card variant="borderless" className="shadow-sm hover:shadow-md transition-shadow">
                                     <div className="flex items-center gap-4">
                                         <div className={`p-3 rounded-xl ${stat.color}`}>

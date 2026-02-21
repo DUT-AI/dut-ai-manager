@@ -3,7 +3,7 @@ import { meetingService } from '@/services/api/meeting.service';
 import type { MeetingCreate, MeetingUpdate } from '@/types/meeting.types';
 
 // Query Keys
-export const meetingKeys = {
+const meetingKeys = {
   all: ['meetings'] as const,
   list: (filters: Record<string, unknown>) =>
     ['meetings', filters] as const,

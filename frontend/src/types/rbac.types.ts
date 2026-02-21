@@ -1,10 +1,3 @@
-export const AccountPermission = {
-  CREATE: 'account:create',
-  READ: 'account:read',
-  UPDATE: 'account:update',
-  DELETE: 'account:delete',
-} as const;
-
 export const RolePermission = {
   CREATE: 'role:create',
   READ: 'role:read',

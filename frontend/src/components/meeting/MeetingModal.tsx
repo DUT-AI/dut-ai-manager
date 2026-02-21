@@ -26,33 +26,23 @@ export const MeetingModal = ({ open, editingItem, initialDate, users, onSubmit, 
     const [teams, setTeams] = useState<TeamResponse[]>([]);
     const [loadingTeams, setLoadingTeams] = useState(false);
 
+    const initialValues = editingItem ? {
+        title: editingItem.title,
+        content: editingItem.content,
+        require_check_in: editingItem.require_check_in,
+        time_range: [dayjs(editingItem.start_time), dayjs(editingItem.end_time)],
+        user_ids: editingItem.participants.map(p => p.user_id),
+    } : {
+        time_range: [
+            initialDate.hour(19).minute(0).second(0),
+            initialDate.hour(21).minute(0).second(0),
+        ],
+        require_check_in: true,
+    };
+
     useEffect(() => {
-        if (open) {
-            if (editingItem) {
-                form.setFieldsValue({
-                    title: editingItem.title,
-                    content: editingItem.content,
-                    require_check_in: editingItem.require_check_in,
-                    time_range: [dayjs(editingItem.start_time), dayjs(editingItem.end_time)],
-                    // For editing, we don't know the team_ids/user_ids from MeetingResponse easily 
-                    // unless we store them or the backend returns them. 
-                    // Current MeetingResponse only has participants.
-                    // We can pre-fill user_ids from participants.
-                    user_ids: editingItem.participants.map(p => p.user_id)
-                });
-            } else {
-                form.resetFields();
-                // Default start time to initialDate at 19:00, end time at 21:00 (for example)
-                const start = initialDate.hour(19).minute(0).second(0);
-                const end = initialDate.hour(21).minute(0).second(0);
-                form.setFieldsValue({
-                    time_range: [start, end],
-                    require_check_in: true,
-                });
-            }
-            fetchTeams();
-        }
-    }, [open, editingItem, initialDate, form]);
+        fetchTeams();
+    }, []);
 
     const fetchTeams = async () => {
         setLoadingTeams(true);
@@ -97,7 +87,7 @@ export const MeetingModal = ({ open, editingItem, initialDate, users, onSubmit, 
             destroyOnClose
             width={600}
         >
-            <Form form={form} layout="vertical" onFinish={handleFinish}>
+            <Form form={form} initialValues={initialValues} layout="vertical" onFinish={handleFinish}>
                 <Form.Item name="title" label="Tiêu đề" rules={[{ required: true, message: 'Vui lòng nhập tiêu đề!' }]}>
                     <Input placeholder="Ví dụ: Sinh hoạt định kỳ tuần 1" />
                 </Form.Item>

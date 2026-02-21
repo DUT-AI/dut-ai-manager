@@ -46,12 +46,89 @@ const { Title, Text } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
 
+interface MobileListViewProps {
+    permissions: PermissionRequestResponse[];
+    isLoading: boolean;
+    canUpdate: boolean;
+    canDelete: boolean;
+    onViewDetail: (item: PermissionRequestResponse) => void;
+    onEdit: (item: PermissionRequestResponse) => void;
+    onDelete: (id: number) => void;
+}
+
 const CATEGORY_COLORS: Record<string, string> = {
     'vắng sinh hoạt': 'volcano',
     'đi trễ sinh hoạt': 'gold',
     'tạm hoãn bài tập': 'geekblue',
     'khác': 'default',
 };
+
+const MobileListView = ({ permissions, isLoading, canUpdate, canDelete, onViewDetail, onEdit, onDelete }: MobileListViewProps) => (
+    <div className="mt-4 px-3">
+        <List
+            dataSource={permissions}
+            loading={isLoading}
+            split={false}
+            renderItem={(record) => (
+                <List.Item className="px-2 !mb-4 !border-0">
+                    <Card
+                        className="w-full shadow-sm border-gray-100 overflow-hidden"
+                        styles={{ body: { padding: '16px' } }}
+                        onClick={() => onViewDetail(record)}
+                    >
+                        <div className="flex items-center justify-between mb-4">
+                            <Tag color={CATEGORY_COLORS[record.category.toLowerCase()] || 'default'} className="m-0 font-medium px-3 rounded-full">
+                                {record.category.toUpperCase()}
+                            </Tag>
+                            <Space className="text-gray-400 text-xs">
+                                <CalendarOutlined />
+                                <span>{dayjs(record.date).format('DD/MM')}</span>
+                            </Space>
+                        </div>
+
+                        <div className="flex items-center gap-3 mb-4">
+                            <Avatar
+                                src={record.user_avatar}
+                                icon={<UserOutlined />}
+                                className="bg-linear-to-br from-indigo-500 to-purple-500 shadow-sm shrink-0"
+                                size="large"
+                            />
+                            <div className="flex flex-col min-w-0 flex-1">
+                                <Text strong className="truncate text-base">
+                                    {record.user_name || (record.created_by ? `#${record.created_by}` : 'N/A')}
+                                </Text>
+                                <Text type="secondary" className="text-xs flex items-center gap-1">
+                                    <ClockCircleOutlined />
+                                    {record.start_time.substring(0, 5)} - {record.end_time.substring(0, 5)}
+                                </Text>
+                            </div>
+                        </div>
+
+                        <div role="presentation" className="flex justify-end items-center pt-3 border-t border-gray-50 bg-gray-50 -mx-4 -mb-4 px-4 py-3 gap-2" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                            <Button
+                                icon={<EditOutlined />}
+                                size="small"
+                                onClick={() => onEdit(record)}
+                                disabled={!canUpdate}
+                            >
+                                Sửa
+                            </Button>
+                            <Popconfirm
+                                title="Xóa đơn này?"
+                                onConfirm={() => onDelete(record.id)}
+                                disabled={!canDelete}
+                                okText="Xóa"
+                                cancelText="Hủy"
+                            >
+                                <Button icon={<DeleteOutlined />} size="small" danger disabled={!canDelete}>Xóa</Button>
+                            </Popconfirm>
+                        </div>
+                    </Card>
+                </List.Item>
+            )}
+        />
+    </div>
+);
 
 const PermissionManagementPage = () => {
     const { hasPermission } = useAuth();
@@ -195,85 +272,6 @@ const PermissionManagementPage = () => {
         },
     ];
 
-    const MobileListView = () => (
-        <div className="mt-4 px-3">
-            <List
-                dataSource={permissions}
-                loading={isLoading}
-                split={false}
-                renderItem={(record) => (
-                    <List.Item className="px-2 !mb-4 !border-0">
-                        <Card
-                            className="w-full shadow-sm border-gray-100 overflow-hidden"
-                            styles={{ body: { padding: '16px' } }}
-                            onClick={() => {
-                                setDetailItem(record);
-                                setIsDetailOpen(true);
-                            }}
-                        >
-                            <div className="flex items-center justify-between mb-4">
-                                <Tag color={CATEGORY_COLORS[record.category.toLowerCase()] || 'default'} className="m-0 font-medium px-3 rounded-full">
-                                    {record.category.toUpperCase()}
-                                </Tag>
-                                <Space className="text-gray-400 text-xs">
-                                    <CalendarOutlined />
-                                    <span>{dayjs(record.date).format('DD/MM')}</span>
-                                </Space>
-                            </div>
-
-                            <div className="flex items-center gap-3 mb-4">
-                                <Avatar
-                                    src={record.user_avatar}
-                                    icon={<UserOutlined />}
-                                    className="bg-linear-to-br from-indigo-500 to-purple-500 shadow-sm shrink-0"
-                                    size="large"
-                                />
-                                <div className="flex flex-col min-w-0 flex-1">
-                                    <Text strong className="truncate text-base">
-                                        {record.user_name || (record.created_by ? `#${record.created_by}` : 'N/A')}
-                                    </Text>
-                                    <Text type="secondary" className="text-xs flex items-center gap-1">
-                                        <ClockCircleOutlined />
-                                        {record.start_time.substring(0, 5)} - {record.end_time.substring(0, 5)}
-                                    </Text>
-                                </div>
-                            </div>
-
-                            <div className="flex justify-end items-center pt-3 border-t border-gray-50 bg-gray-50 -mx-4 -mb-4 px-4 py-3 gap-2" onClick={(e) => e.stopPropagation()}>
-                                <Button
-                                    icon={<EditOutlined />}
-                                    size="small"
-                                    onClick={() => {
-                                        setEditingItem(record);
-                                        form.setFieldsValue({
-                                            ...record,
-                                            date: dayjs(record.date),
-                                            start_time: dayjs(record.start_time, 'HH:mm:ss'),
-                                            end_time: dayjs(record.end_time, 'HH:mm:ss'),
-                                        });
-                                        setIsModalOpen(true);
-                                    }}
-                                    disabled={!canUpdate}
-                                >
-                                    Sửa
-                                </Button>
-                                <Popconfirm
-                                    title="Xóa đơn này?"
-                                    onConfirm={() => handleDelete(record.id)}
-                                    disabled={!canDelete}
-                                    okText="Xóa"
-                                    cancelText="Hủy"
-                                >
-                                    <Button icon={<DeleteOutlined />} size="small" danger disabled={!canDelete}>Xóa</Button>
-                                </Popconfirm>
-                            </div>
-                        </Card>
-                    </List.Item>
-                )}
-            />
-        </div>
-    );
-
     return (
         <div className="p-4 md:p-6">
             <Card className={!screens.md ? "bg-transparent shadow-none border-none" : "shadow-sm border-gray-100 rounded-xl overflow-hidden"} styles={{ body: { padding: !screens.md ? 0 : undefined } }}>
@@ -308,7 +306,24 @@ const PermissionManagementPage = () => {
                 </div>
 
                 {!screens.md ? (
-                    <MobileListView />
+                    <MobileListView
+                        permissions={permissions}
+                        isLoading={isLoading}
+                        canUpdate={canUpdate}
+                        canDelete={canDelete}
+                        onViewDetail={(item) => { setDetailItem(item); setIsDetailOpen(true); }}
+                        onEdit={(item) => {
+                            setEditingItem(item);
+                            form.setFieldsValue({
+                                ...item,
+                                date: dayjs(item.date),
+                                start_time: dayjs(item.start_time, 'HH:mm:ss'),
+                                end_time: dayjs(item.end_time, 'HH:mm:ss'),
+                            });
+                            setIsModalOpen(true);
+                        }}
+                        onDelete={handleDelete}
+                    />
                 ) : (
                     <Table
                         columns={columns}

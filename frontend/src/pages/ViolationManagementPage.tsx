@@ -38,6 +38,79 @@ const { Title, Text } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
 
+interface MobileListViewProps {
+    violations: ViolationResponse[];
+    isLoading: boolean;
+    canUpdate: boolean;
+    canDelete: boolean;
+    onViewDetail: (item: ViolationResponse) => void;
+    onEdit: (item: ViolationResponse) => void;
+    onDelete: (id: number) => void;
+}
+
+const MobileListView = ({ violations, isLoading, canUpdate, canDelete, onViewDetail, onEdit, onDelete }: MobileListViewProps) => (
+    <div className="mt-4 px-3">
+        <List
+            dataSource={violations}
+            loading={isLoading}
+            split={false}
+            renderItem={(record) => (
+                <List.Item className="px-2 !mb-4 !border-0">
+                    <Card
+                        className="w-full shadow-sm border-gray-100 overflow-hidden"
+                        styles={{ body: { padding: '16px' } }}
+                        onClick={() => onViewDetail(record)}
+                    >
+                        <div className="flex items-center justify-between mb-4">
+                            <Space className="text-gray-400 text-xs">
+                                <CalendarOutlined />
+                                <span>{dayjs(record.date).format('DD/MM/YYYY HH:mm')}</span>
+                            </Space>
+                        </div>
+
+                        <div className="flex items-center gap-3 mb-4">
+                            <Avatar
+                                src={record.user_avatar}
+                                icon={<UserOutlined />}
+                                className="bg-linear-to-br from-red-500 to-orange-500 shadow-sm shrink-0"
+                                size="large"
+                            />
+                            <div className="flex flex-col min-w-0 flex-1">
+                                <Text strong className="truncate text-base">
+                                    {record.user_name || 'Unknown'}
+                                </Text>
+                                <Text type="danger" className="text-xs italic truncate">
+                                    {record.reason}
+                                </Text>
+                            </div>
+                        </div>
+
+                        <div role="presentation" className="flex justify-end items-center pt-3 border-t border-gray-50 bg-gray-50 -mx-4 -mb-4 px-4 py-3 gap-2" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                            <Button
+                                icon={<EditOutlined />}
+                                size="small"
+                                onClick={() => onEdit(record)}
+                                disabled={!canUpdate}
+                            >
+                                Sửa
+                            </Button>
+                            <Popconfirm
+                                title="Xóa vi phạm này?"
+                                onConfirm={() => onDelete(record.id)}
+                                disabled={!canDelete}
+                                okText="Xóa"
+                                cancelText="Hủy"
+                            >
+                                <Button icon={<DeleteOutlined />} size="small" danger disabled={!canDelete}>Xóa</Button>
+                            </Popconfirm>
+                        </div>
+                    </Card>
+                </List.Item>
+            )}
+        />
+    </div>
+);
+
 const ViolationManagementPage = () => {
     const { hasPermission } = useAuth();
     const screens = Grid.useBreakpoint();
@@ -174,80 +247,6 @@ const ViolationManagementPage = () => {
         },
     ];
 
-    const MobileListView = () => (
-        <div className="mt-4 px-3">
-            <List
-                dataSource={violations}
-                loading={isLoading}
-                split={false}
-                renderItem={(record) => (
-                    <List.Item className="px-2 !mb-4 !border-0">
-                        <Card
-                            className="w-full shadow-sm border-gray-100 overflow-hidden"
-                            styles={{ body: { padding: '16px' } }}
-                            onClick={() => {
-                                setDetailItem(record);
-                                setIsDetailOpen(true);
-                            }}
-                        >
-                            <div className="flex items-center justify-between mb-4">
-                                <Space className="text-gray-400 text-xs">
-                                    <CalendarOutlined />
-                                    <span>{dayjs(record.date).format('DD/MM/YYYY HH:mm')}</span>
-                                </Space>
-                            </div>
-
-                            <div className="flex items-center gap-3 mb-4">
-                                <Avatar
-                                    src={record.user_avatar}
-                                    icon={<UserOutlined />}
-                                    className="bg-linear-to-br from-red-500 to-orange-500 shadow-sm shrink-0"
-                                    size="large"
-                                />
-                                <div className="flex flex-col min-w-0 flex-1">
-                                    <Text strong className="truncate text-base">
-                                        {record.user_name || 'Unknown'}
-                                    </Text>
-                                    <Text type="danger" className="text-xs italic truncate">
-                                        {record.reason}
-                                    </Text>
-                                </div>
-                            </div>
-
-                            <div className="flex justify-end items-center pt-3 border-t border-gray-50 bg-gray-50 -mx-4 -mb-4 px-4 py-3 gap-2" onClick={(e) => e.stopPropagation()}>
-                                <Button
-                                    icon={<EditOutlined />}
-                                    size="small"
-                                    onClick={() => {
-                                        setEditingItem(record);
-                                        form.setFieldsValue({
-                                            ...record,
-                                            user_name: record.user_name || 'Unknown',
-                                            date: dayjs(record.date)
-                                        });
-                                        setIsModalOpen(true);
-                                    }}
-                                    disabled={!canUpdate}
-                                >
-                                    Sửa
-                                </Button>
-                                <Popconfirm
-                                    title="Xóa vi phạm này?"
-                                    onConfirm={() => handleDelete(record.id)}
-                                    disabled={!canDelete}
-                                    okText="Xóa"
-                                    cancelText="Hủy"
-                                >
-                                    <Button icon={<DeleteOutlined />} size="small" danger disabled={!canDelete}>Xóa</Button>
-                                </Popconfirm>
-                            </div>
-                        </Card>
-                    </List.Item>
-                )}
-            />
-        </div>
-    );
-
     return (
         <div className="p-4 md:p-6">
             <Card className={!screens.md ? "bg-transparent shadow-none border-none" : "shadow-sm border-gray-100 rounded-xl overflow-hidden"} styles={{ body: { padding: !screens.md ? 0 : undefined } }}>
@@ -279,7 +278,23 @@ const ViolationManagementPage = () => {
                 </div>
 
                 {!screens.md ? (
-                    <MobileListView />
+                    <MobileListView
+                        violations={violations}
+                        isLoading={isLoading}
+                        canUpdate={canUpdate}
+                        canDelete={canDelete}
+                        onViewDetail={(item) => { setDetailItem(item); setIsDetailOpen(true); }}
+                        onEdit={(item) => {
+                            setEditingItem(item);
+                            form.setFieldsValue({
+                                ...item,
+                                user_name: item.user_name || 'Unknown',
+                                date: dayjs(item.date)
+                            });
+                            setIsModalOpen(true);
+                        }}
+                        onDelete={handleDelete}
+                    />
                 ) : (
                     <Table
                         columns={columns}

@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { violationService } from '@/services/api/violation.service';
 
 // Query Keys
-export const violationKeys = {
+const violationKeys = {
   all: ['violations'] as const,
   list: (filters: { userId?: number; month?: number; year?: number }) => 
     ['violations', filters] as const,

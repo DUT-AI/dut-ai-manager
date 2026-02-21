@@ -3,7 +3,7 @@ import { bonusPointService } from '@/services/api/bonus-point.service';
 import type { BonusPointCreate, BonusPointUpdate } from '@/types/activity.types';
 
 // Query Keys
-export const bonusPointKeys = {
+const bonusPointKeys = {
   all: ['bonusPoints'] as const,
   list: (filters: { userId?: number; month?: number; year?: number }) => 
     ['bonusPoints', filters] as const,

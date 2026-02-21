@@ -1,7 +1,7 @@
 import axiosInstance from '../axiosInstance';
 import type { ApiResponse } from '@/types/api.types';
 
-export interface RoleApiKey {
+interface RoleApiKey {
     id: number;
     name: string;
     prefix: string;

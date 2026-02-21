@@ -3,7 +3,7 @@ import { teamService } from '@/services/api/team.service';
 import type { TeamCreate, TeamUpdate } from '@/types/team.types';
 
 // Query Keys
-export const teamKeys = {
+const teamKeys = {
   all: ['teams'] as const,
   detail: (id: number) => ['teams', id] as const,
 };

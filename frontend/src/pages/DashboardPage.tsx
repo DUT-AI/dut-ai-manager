@@ -38,6 +38,37 @@ const { useBreakpoint } = Grid;
 
 
 
+interface SidebarContentProps {
+    activeKey: string;
+    sideMenuItems: MenuProps['items'];
+}
+
+const SidebarContent = ({ activeKey, sideMenuItems }: SidebarContentProps) => (
+    <div className="flex flex-col h-full">
+        <div className="flex items-center justify-center py-4">
+            {/* Logo area if needed */}
+        </div>
+        <Menu
+            mode="inline"
+            selectedKeys={[activeKey]}
+            items={sideMenuItems}
+            className="border-none flex-grow mt-4 custom-sidebar-menu"
+        />
+        <div className="p-4 border-t border-gray-50">
+            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                <Text className="text-[10px] text-gray-400 font-bold uppercase block mb-2 px-1">Trạng thái</Text>
+                <div className="flex items-center justify-between px-1">
+                    <Tag color="success" className="m-0 rounded-full px-3 text-[10px] font-bold">ONLINE</Tag>
+                    <span className="flex h-2 w-2 relative">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+);
+
 const DashboardPage = () => {
     const { loading } = useAuth();
     const navigate = useNavigate();
@@ -157,32 +188,6 @@ const DashboardPage = () => {
         );
     }
 
-    const SidebarContent = () => (
-        <div className="flex flex-col h-full">
-            <div className="flex items-center justify-center py-4">
-                {/* Logo area if needed */}
-            </div>
-            <Menu
-                mode="inline"
-                selectedKeys={[activeKey]}
-                items={sideMenuItems}
-                className="border-none flex-grow mt-4 custom-sidebar-menu"
-            />
-            <div className="p-4 border-t border-gray-50">
-                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                    <Text className="text-[10px] text-gray-400 font-bold uppercase block mb-2 px-1">Trạng thái</Text>
-                    <div className="flex items-center justify-between px-1">
-                        <Tag color="success" className="m-0 rounded-full px-3 text-[10px] font-bold">ONLINE</Tag>
-                        <span className="flex h-2 w-2 relative">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-
     return (
         <Layout style={{ height: '100vh', overflow: 'hidden' }}>
             <HeaderLayout
@@ -197,7 +202,7 @@ const DashboardPage = () => {
                         className="bg-white border-r border-gray-100 z-10"
                         theme="light"
                     >
-                        <SidebarContent />
+                        <SidebarContent activeKey={activeKey} sideMenuItems={sideMenuItems} />
                     </Sider>
                 )}
 
@@ -209,7 +214,7 @@ const DashboardPage = () => {
                     styles={{ body: { padding: 0 } }}
                     closable={false}
                 >
-                    <SidebarContent />
+                    <SidebarContent activeKey={activeKey} sideMenuItems={sideMenuItems} />
                 </Drawer>
 
                 <Content className="p-0 bg-[#f8fafc] overflow-y-auto custom-scrollbar">

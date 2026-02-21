@@ -60,7 +60,7 @@ const MeetingCalendarPage = () => {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
     const [editingMeeting, setEditingMeeting] = useState<MeetingResponse | null>(null);
-    const [modalInitialDate, setModalInitialDate] = useState<Dayjs>(dayjs());
+    const [modalInitialDate, setModalInitialDate] = useState<Dayjs>(() => dayjs());
 
     const weekEnd = currentWeekStart.add(6, 'day');
     const startDateStr = currentWeekStart.format('YYYY-MM-DD');
@@ -275,7 +275,7 @@ const MeetingCalendarPage = () => {
                             <div className="relative" style={{ height: TOTAL_HOURS * HOUR_HEIGHT }}>
                                 {Array.from({ length: TOTAL_HOURS + 1 }, (_, i) => (
                                     <div
-                                        key={i}
+                                        key={HOUR_START + i}
                                         className="absolute w-full text-right pr-2 text-[11px] text-gray-400 font-medium"
                                         style={{ top: i * HOUR_HEIGHT - 7 }}
                                     >
@@ -301,9 +301,12 @@ const MeetingCalendarPage = () => {
                                 >
                                     {/* Day header */}
                                     <div
+                                        role="button"
+                                        tabIndex={0}
                                         className={`h-16 flex flex-col items-center justify-center border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 ${today ? 'bg-indigo-50' : ''
                                             }`}
                                         onClick={() => handleCreate(day)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCreate(day); }}
                                     >
                                         <Text
                                             className={`text-xs font-semibold uppercase tracking-wide ${today ? '!text-indigo-600' : '!text-gray-500'
@@ -329,7 +332,7 @@ const MeetingCalendarPage = () => {
                                         {/* Hour grid lines */}
                                         {Array.from({ length: TOTAL_HOURS }, (_, i) => (
                                             <div
-                                                key={i}
+                                                key={HOUR_START + i}
                                                 className="absolute w-full border-b border-gray-100"
                                                 style={{ top: i * HOUR_HEIGHT, height: HOUR_HEIGHT }}
                                             />
@@ -363,7 +366,7 @@ const MeetingCalendarPage = () => {
                                             </div>
                                         )}
 
-                                        {positioned.map((pm, idx) => {
+                                        {positioned.map((pm) => {
                                             const checkedIn = pm.meeting.participants.filter(
                                                 p => p.status === ParticipantStatus.JOINED
                                             ).length;
@@ -372,7 +375,7 @@ const MeetingCalendarPage = () => {
 
                                             return (
                                                 <Tooltip
-                                                    key={idx}
+                                                    key={pm.meeting.id}
                                                     title={
                                                         <div>
                                                             <div className="font-semibold">{pm.meeting.title}</div>
@@ -388,6 +391,8 @@ const MeetingCalendarPage = () => {
                                                     placement="right"
                                                 >
                                                     <div
+                                                        role="button"
+                                                        tabIndex={0}
                                                         className="absolute rounded-lg cursor-pointer transition-all hover:shadow-md hover:scale-[1.02] overflow-hidden"
                                                         style={{
                                                             top: pm.top + 1,
@@ -398,6 +403,7 @@ const MeetingCalendarPage = () => {
                                                             borderLeft: `3px solid ${pm.color.border}`,
                                                         }}
                                                         onClick={() => handleMeetingClick(pm.meeting)}
+                                                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleMeetingClick(pm.meeting); }}
                                                     >
                                                         <div
                                                             className={`px-2 ${isCompact ? 'py-0.5' : 'py-1.5'} h-full flex flex-col justify-between`}

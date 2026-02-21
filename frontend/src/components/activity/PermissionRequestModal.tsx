@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { Modal, Form, Select, DatePicker, TimePicker, Input } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
@@ -18,22 +17,13 @@ interface Props {
 export const PermissionRequestModal = ({ open, editingItem, initialDate, onSubmit, onCancel }: Props) => {
     const [form] = Form.useForm();
 
-    useEffect(() => {
-        if (open) {
-            if (editingItem) {
-                form.setFieldsValue({
-                    category: editingItem.category,
-                    note: editingItem.note,
-                    date: dayjs(editingItem.date),
-                    start_time: dayjs(editingItem.start_time, 'HH:mm:ss'),
-                    end_time: dayjs(editingItem.end_time, 'HH:mm:ss'),
-                });
-            } else {
-                form.resetFields();
-                form.setFieldValue('date', initialDate);
-            }
-        }
-    }, [open, editingItem, initialDate, form]);
+    const initialValues = editingItem ? {
+        category: editingItem.category,
+        note: editingItem.note,
+        date: dayjs(editingItem.date),
+        start_time: dayjs(editingItem.start_time, 'HH:mm:ss'),
+        end_time: dayjs(editingItem.end_time, 'HH:mm:ss'),
+    } : { date: initialDate };
 
     const handleFinish = (values: any) => {
         const formattedValues = {
@@ -53,7 +43,7 @@ export const PermissionRequestModal = ({ open, editingItem, initialDate, onSubmi
             onOk={form.submit}
             destroyOnClose
         >
-            <Form form={form} layout="vertical" onFinish={handleFinish}>
+            <Form form={form} initialValues={initialValues} layout="vertical" onFinish={handleFinish}>
                 <Form.Item name="category" label="Loại" rules={[{ required: true }]}>
                     <Select>
                         <Option value="vắng sinh hoạt">Vắng sinh hoạt</Option>

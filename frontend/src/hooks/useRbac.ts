@@ -3,7 +3,7 @@ import { rbacService } from '@/services/api/rbac.service';
 import type { RoleCreate, RoleUpdate, PermissionCreate, PermissionUpdate } from '@/types/rbac.types';
 
 // Query Keys
-export const rbacKeys = {
+const rbacKeys = {
   roles: ['roles'] as const,
   permissions: ['permissions'] as const,
 };
