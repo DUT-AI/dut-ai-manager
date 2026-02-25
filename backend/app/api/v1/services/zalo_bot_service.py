@@ -45,17 +45,23 @@ class ZaloBotService:
         try:
             logger.info(f"Received Zalo Bot webhook: {body}")
 
-            # Webhook Payload từ Zalo Bot hoặc test script
-            # Format chuẩn webhook: {"event_name": "user_send_text", "sender": {"id": "123"}, "message": {"text": "TEXT"}}
-
+            # Giải mã Payload chuẩn theo thực tế Zalo Bot Platform gửi về Server
+            # Vd: {'event_name': 'user_send_text', 'sender': {'id': '6b3eb5...'}, 'message': {'text': '11D00L'}}
             event_name = body.get("event_name", "")
             sender_id = None
             text = None
 
-            if "sender" in body and isinstance(body["sender"], dict):
-                sender_id = body["sender"].get("id")
-            if "message" in body and isinstance(body["message"], dict):
-                text = body["message"].get("text")
+            # Xử lý sự kiện người dùng gửi text
+            if event_name in ["user_send_text", "message.text.received"]:
+                if "sender" in body and isinstance(body["sender"], dict):
+                    sender_id = body["sender"].get("id")
+                elif "from" in body.get("message", {}) and isinstance(
+                    body.get("message", {}).get("from"), dict
+                ):  # Fallback doc
+                    sender_id = body["message"]["from"].get("id")
+
+                if "message" in body and isinstance(body["message"], dict):
+                    text = body["message"].get("text")
 
             if sender_id and text:
                 bind_code = text.strip()
