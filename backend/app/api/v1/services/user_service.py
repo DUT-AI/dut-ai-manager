@@ -1,20 +1,15 @@
 from typing import List, Optional
 
-
-from app.api.v1.repositories import UserRepository, RoleRepository
+from app.api.v1.repositories import RoleRepository, UserRepository
 from app.api.v1.services.auth_service import AuthService
 from app.api.v1.services.email_service import EmailService
 from app.core.minio_service import MinioService
 from app.models import RoleType, User
 from app.schemas.response import BadRequestException
-from app.schemas.user import (
-    UserCreate,
-    UserSettingsUpdate,
-    UserUpdate,
-    UserImportResult,
-)
+from app.schemas.user import (UserCreate, UserImportResult, UserSettingsUpdate,
+                              UserUpdate)
 from app.utils.datetime import get_current_utc7_time
-from fastapi import UploadFile, BackgroundTasks
+from fastapi import BackgroundTasks, UploadFile
 
 
 class UserService:
@@ -35,8 +30,9 @@ class UserService:
     async def import_users(
         self, file: UploadFile, background_tasks: BackgroundTasks = None
     ) -> UserImportResult:
-        import pandas as pd
         from io import BytesIO
+
+        import pandas as pd
 
         content = await file.read()
 
@@ -252,4 +248,11 @@ class UserService:
         for key, value in update_dict.items():
             setattr(user, key, value)
 
+        return self.user_repo.update(user)
+
+    def get_by_zalo_bind_code(self, bind_code: str) -> Optional[User]:
+        return self.user_repo.get_by_zalo_bind_code(bind_code)
+
+    def update_raw_user(self, user: User) -> User:
+        """Update a direct user model instance (Used for internal auth/bot updates)"""
         return self.user_repo.update(user)

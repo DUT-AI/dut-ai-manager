@@ -24,7 +24,7 @@ async def create_meeting(
     _current_user: CurrentUser,
 ):
     """Create a new meeting (Admin/Leader only usually, but current requirement doesn't specify permissions)"""
-    meeting = service_factory.meeting.create_meeting(data)
+    meeting = await service_factory.meeting.create_meeting(data)
     return ApiResponse.success(data=meeting, message="Meeting created successfully")
 
 
@@ -78,7 +78,7 @@ async def update_meeting(
     _current_user: CurrentUser,
 ):
     """Update meeting and optionally replace participants"""
-    meeting = service_factory.meeting.update_meeting(meeting_id, data)
+    meeting = await service_factory.meeting.update_meeting(meeting_id, data)
     return ApiResponse.success(data=meeting, message="Meeting updated successfully")
 
 

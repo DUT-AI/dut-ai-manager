@@ -45,6 +45,13 @@ class Settings(BaseSettings):
     DISCORD_BOT_TOKEN: str = ""
     DISCORD_PERMISSION_ROOM_ID: str = ""
 
+    # Zalo Bot Configuration
+    ZALO_APP_ID: str = ""
+    ZALO_APP_SECRET: str = ""
+    ZALO_OA_ACCESS_TOKEN: str = ""
+    ZALO_OA_REFRESH_TOKEN: str = ""
+    ZALO_BOT_TOKEN: str = ""
+
     # Email / SMTP Configuration
     SMTP_SERVER: str = "smtp.gmail.com"
     SMTP_PORT: int = 587

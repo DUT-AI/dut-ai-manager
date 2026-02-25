@@ -14,6 +14,8 @@ from app.core.minio_service import MinioService
 from app.core.repository_factory import RepositoryFactory
 from app.api.v1.services.role_api_key_service import RoleApiKeyService
 from app.core.discord_service import DiscordService
+from app.api.v1.services.zalo_service import ZaloService
+from app.api.v1.services.zalo_bot_service import ZaloBotService
 from app.api.v1.services.email_service import EmailService
 
 
@@ -74,10 +76,24 @@ class ServiceFactory:
         return self._cache["permission_request"]
 
     @property
+    def zalo(self) -> ZaloService:
+        if "zalo" not in self._cache:
+            self._cache["zalo"] = ZaloService()
+        return self._cache["zalo"]
+
+    @property
+    def zalo_bot(self) -> ZaloBotService:
+        if "zalo_bot" not in self._cache:
+            self._cache["zalo_bot"] = ZaloBotService(user_service=self.user)
+        return self._cache["zalo_bot"]
+
+    @property
     def notification(self) -> NotificationService:
         if "notification" not in self._cache:
             self._cache["notification"] = NotificationService(
-                discord_service=self._discord_service
+                discord_service=self._discord_service,
+                zalo_service=self.zalo,
+                zalo_bot_service=self.zalo_bot,
             )
         return self._cache["notification"]
 
@@ -146,6 +162,7 @@ class ServiceFactory:
                 user_service=self.user,
                 violation_service=self.violation,
                 minio_service=self.minio,
+                notification_service=self.notification,
             )
         return self._cache["meeting"]
 

@@ -66,3 +66,12 @@ class UserRepository(BaseRepository[User]):
             .where(User.name.contains(keyword))
         )
         return self.session.exec(statement).all()
+
+    def get_by_zalo_bind_code(self, bind_code: str) -> Optional[User]:
+        """Get user by zalo bind code"""
+        statement = (
+            select(User)
+            .where(User.is_deleted == False)
+            .where(User.zalo_bind_code == bind_code)
+        )
+        return self.session.exec(statement).first()

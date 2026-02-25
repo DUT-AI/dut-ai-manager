@@ -13,7 +13,8 @@ import {
     DatePicker,
     Badge,
     Modal,
-    Descriptions
+    Descriptions,
+    message
 } from 'antd';
 import {
     UserOutlined,
@@ -30,6 +31,7 @@ import {
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { useUsers, useViolations, useBonusPoints, usePermissionRequests } from '@/hooks';
+import { zaloService } from '@/services/api/zalo.service';
 
 import type { BonusPointResponse, ViolationResponse, PermissionRequestResponse } from '../types/activity.types';
 import type { ColumnsType } from 'antd/es/table';
@@ -67,10 +69,13 @@ const ProfilePage = () => {
     const [activeTab, setActiveTab] = useState('info');
     const [selectedDate, setSelectedDate] = useState<Dayjs>(() => dayjs());
 
-    // Detail modal states
     const [selectedViolation, setSelectedViolation] = useState<ViolationResponse | null>(null);
     const [selectedBonus, setSelectedBonus] = useState<BonusPointResponse | null>(null);
     const [selectedPermission, setSelectedPermission] = useState<PermissionRequestResponse | null>(null);
+    const [loadingZalo, setLoadingZalo] = useState(false);
+    const [loadingBotCode, setLoadingBotCode] = useState(false);
+    const [botModalVisible, setBotModalVisible] = useState(false);
+    const [botBindCode, setBotBindCode] = useState('');
 
     // Get user from cached users list
     const { data: users = [], isLoading: usersLoading } = useUsers();
@@ -130,6 +135,42 @@ const ProfilePage = () => {
         { title: 'Thời gian', key: 'time', width: 140, render: (_, r) => `${r.start_time} - ${r.end_time}` },
         { title: 'Ngày', dataIndex: 'date', key: 'date', width: 120, render: d => dayjs(d).format('DD/MM/YYYY') }
     ];
+
+    const handleZaloLogin = async () => {
+        try {
+            setLoadingZalo(true);
+            const data = await zaloService.getLoginUrl();
+            if (data.data?.login_url && data.data?.code_verifier) {
+                // Store code_verifier to local storage for the callback page to use
+                localStorage.setItem('zalo_code_verifier', data.data.code_verifier);
+                // Redirect to Zalo Auth window
+                window.location.href = data.data.login_url;
+            } else {
+                message.error('Không thể tạo Link đăng nhập Zalo');
+            }
+        } catch (error: any) {
+            message.error(error.message || 'Có lỗi xảy ra khi gọi Zalo API');
+        } finally {
+            setLoadingZalo(false);
+        }
+    };
+
+    const handleGenerateBotCode = async () => {
+        try {
+            setLoadingBotCode(true);
+            const data = await zaloService.getBotBindCode();
+            if (data.data?.bind_code) {
+                setBotBindCode(data.data.bind_code);
+                setBotModalVisible(true);
+            } else {
+                message.error('Không thể tạo mã liên kết Zalo Bot');
+            }
+        } catch (error: any) {
+            message.error(error.message || 'Có lỗi xảy ra khi gọi Zalo Bot API');
+        } finally {
+            setLoadingBotCode(false);
+        }
+    };
 
     if (usersLoading) {
         return (
@@ -208,6 +249,28 @@ const ProfilePage = () => {
                                                 <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-50">
                                                     <PhoneOutlined className="text-indigo-500" />
                                                     <Text>{user.phone_number || 'Chưa cập nhật số điện thoại'}</Text>
+                                                </div>
+                                                <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-50">
+                                                    <div className="flex items-center gap-3">
+                                                        <Avatar src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Icon_of_Zalo.svg/120px-Icon_of_Zalo.svg.png" size="small" />
+                                                        <Text>Liên kết Zalo (Qua Ứng dụng)</Text>
+                                                    </div>
+                                                    {user.zalo_id ? (
+                                                        <Tag color="green">Đã liên kết</Tag>
+                                                    ) : (
+                                                        <Button type="primary" size="small" className="bg-[#0068ff]" onClick={handleZaloLogin} loading={loadingZalo}>Liên kết</Button>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-50">
+                                                    <div className="flex items-center gap-3">
+                                                        <Avatar src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Icon_of_Zalo.svg/120px-Icon_of_Zalo.svg.png" size="small" />
+                                                        <Text>Liên kết Zalo (Chatbot <Tag color="green" className="ml-1 border-none shadow-sm rounded-md">Miễn phí</Tag>)</Text>
+                                                    </div>
+                                                    {(user as any).zalo_bot_id ? (
+                                                        <Tag color="green">Đã liên kết</Tag>
+                                                    ) : (
+                                                        <Button type="primary" size="small" className="bg-[#0068ff]" onClick={handleGenerateBotCode} loading={loadingBotCode}>Lấy mã</Button>
+                                                    )}
                                                 </div>
                                             </Space>
                                         </div>
@@ -392,7 +455,36 @@ const ProfilePage = () => {
                     </Descriptions>
                 )}
             </Modal>
-        </div>
+            
+            <Modal
+                title={<><Avatar src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Icon_of_Zalo.svg/120px-Icon_of_Zalo.svg.png" size="small" className="mr-2" /> Liên kết Zalo Bot (Miễn phí)</>}
+                open={botModalVisible}
+                onCancel={() => setBotModalVisible(false)}
+                footer={null}
+            >
+                <div className="flex flex-col items-center p-4">
+                    <Text className="mb-4 text-center">
+                        Để nhận thông báo qua Zalo (miễn phí), vui lòng thực hiện các bước sau:
+                    </Text>
+                    <div className="w-full bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
+                        <Text strong className="block mb-2">Bước 1:</Text>
+                        <Text>Mở ứng dụng Zalo trên điện thoại, tìm kiếm <b>DUT AI Bot</b> (hoặc tên Bot bạn đã tạo).</Text>
+                    </div>
+                    <div className="w-full bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
+                        <Text strong className="block mb-2">Bước 2:</Text>
+                        <Text className="block mb-2">Gửi tin nhắn chính xác bằng đoạn mã sau cho Bot:</Text>
+                        <div className="bg-white border-2 border-dashed border-[#0068ff] rounded-lg p-4 text-center">
+                            <Text className="text-3xl font-bold tracking-[0.2em] text-[#0068ff]">
+                                {botBindCode}
+                            </Text>
+                        </div>
+                    </div>
+                    <Text type="secondary" className="text-center italic mt-2">
+                        Vui lòng làm mới trang (F5) sau khi bot báo liên kết thành công để cập nhật trạng thái.
+                    </Text>
+                </div>
+            </Modal>
+        </div >
     );
 };
 

@@ -31,6 +31,9 @@ class User(TimestampMixin, table=True):
     email: str = Field(max_length=255, unique=True, index=True)
     status: UserStatus = Field(default=UserStatus.ACTIVE)
     discord_id: Optional[str] = Field(default=None, max_length=255, index=True)
+    zalo_id: Optional[str] = Field(default=None, max_length=255, index=True)
+    zalo_bot_id: Optional[str] = Field(default=None, max_length=255, index=True)
+    zalo_bind_code: Optional[str] = Field(default=None, max_length=10, index=True)
     avatar_url: Optional[str] = Field(default=None)
 
     # Foreign keys

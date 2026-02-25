@@ -1,6 +1,7 @@
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import DashboardPage from '@/pages/DashboardPage';
 import LoginPage from '@/pages/LoginPage';
+import ZaloCallback from '@/pages/Auth/ZaloCallback';
 import { queryClient } from '@/lib/queryClient';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
@@ -25,6 +26,10 @@ const AppContent = () => {
         element={
           isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage onLoginSuccess={() => { }} />
         }
+      />
+      <Route
+        path="/auth/zalo/callback"
+        element={<ZaloCallback />}
       />
       <Route
         path="/dashboard/*"

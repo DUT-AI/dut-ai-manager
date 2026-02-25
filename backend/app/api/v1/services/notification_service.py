@@ -1,6 +1,9 @@
 from app.models import Violation, Homework, User
+from app.models.meeting import Meeting
 from app.core.config import settings
 from app.core.discord_service import DiscordService
+from app.api.v1.services.zalo_service import ZaloService
+from app.api.v1.services.zalo_bot_service import ZaloBotService
 from app.models.permission_request import PermissionRequest, RequestCategory
 from loguru import logger
 
@@ -8,8 +11,15 @@ from loguru import logger
 class NotificationService:
     """Service for handling system-wide notifications."""
 
-    def __init__(self, discord_service: DiscordService):
+    def __init__(
+        self,
+        discord_service: DiscordService,
+        zalo_service: ZaloService,
+        zalo_bot_service: ZaloBotService,
+    ):
         self.discord_service = discord_service
+        self.zalo_service = zalo_service
+        self.zalo_bot_service = zalo_bot_service
 
     async def send_permission_request_notification(
         self, request: PermissionRequest
@@ -180,3 +190,113 @@ class NotificationService:
             )
         except Exception as e:
             logger.error(f"Failed to send homework notification: {e}")
+
+    async def send_meeting_notification(
+        self, users: list[User], meeting: Meeting, is_update: bool = False
+    ) -> None:
+        """Send a direct message to users about a new or updated meeting."""
+        try:
+            if not users:
+                return
+
+            action = "cập nhật" if is_update else "tạo mới"
+            title_prefix = "🔄" if is_update else "📅"
+
+            description = meeting.content or "Không có nội dung"
+            if len(description) > 300:
+                description = description[:297] + "..."
+
+            embed = {
+                "title": f"{title_prefix} Lịch sinh hoạt {action}",
+                "description": f"Một lịch sinh hoạt đã được {action}.",
+                "color": (
+                    0xF39C12 if is_update else 0x2ECC71
+                ),  # Orange for update, Green for new
+                "fields": [
+                    {"name": "📌 Tiêu đề", "value": meeting.title, "inline": False},
+                    {
+                        "name": "⏰ Bắt đầu",
+                        "value": (
+                            meeting.start_time.strftime("%H:%M %d/%m/%Y")
+                            if meeting.start_time
+                            else "N/A"
+                        ),
+                        "inline": True,
+                    },
+                    {
+                        "name": "⏱️ Kết thúc",
+                        "value": (
+                            meeting.end_time.strftime("%H:%M %d/%m/%Y")
+                            if meeting.end_time
+                            else "N/A"
+                        ),
+                        "inline": True,
+                    },
+                    {
+                        "name": "📖 Nội dung",
+                        "value": description,
+                        "inline": False,
+                    },
+                ],
+                "footer": {"text": "DUT AI Manager • Hệ thống quản lý lịch sinh hoạt"},
+            }
+
+            count = 0
+            for user in users:
+                if not user or (
+                    not user.discord_id and not user.zalo_id and not user.zalo_bot_id
+                ):  # Modified condition to check all three
+                    continue
+
+                custom_embed = embed.copy()
+                custom_embed["description"] = (
+                    f"Chào **{user.name}**, một lịch sinh hoạt đã được {action}."
+                )
+
+                # Send Discord Notification
+                if user.discord_id:
+                    await self.discord_service.send_message_to_user(
+                        user_id=user.discord_id,
+                        content="",
+                        embed=custom_embed,
+                    )
+
+                # Send Zalo OA Notification
+                zalo_sent = False
+                if user.zalo_id:
+                    zalo_text = (
+                        f"👋 Chào {user.name},\n\n"
+                        f"{title_prefix} Lịch sinh hoạt vừa được {action}.\n"
+                        f"📌 Tiêu đề: {meeting.title}\n"
+                        f"⏰ Bắt đầu: {meeting.start_time.strftime('%H:%M %d/%m/%Y') if meeting.start_time else 'N/A'}\n"
+                        f"⏱️ Kết thúc: {meeting.end_time.strftime('%H:%M %d/%m/%Y') if meeting.end_time else 'N/A'}\n"
+                        f"📖 Nội dung: {description}"
+                    )
+                    resp = await self.zalo_service.send_message_to_user(
+                        user_id=user.zalo_id, text=zalo_text
+                    )
+                    if resp and resp.get("error") == 0:
+                        zalo_sent = True
+
+                # Send Zalo Bot Notification (Fallback or Primary if OA not linked)
+                if not zalo_sent and user.zalo_bot_id:
+                    zalo_bot_text = (
+                        f"👋 Chào {user.name},\n\n"
+                        f"{title_prefix} Lịch sinh hoạt vừa được {action}.\n"
+                        f"📌 Tiêu đề: {meeting.title}\n"
+                        f"⏰ Bắt đầu: {meeting.start_time.strftime('%H:%M %d/%m/%Y') if meeting.start_time else 'N/A'}\n"
+                        f"⏱️ Kết thúc: {meeting.end_time.strftime('%H:%M %d/%m/%Y') if meeting.end_time else 'N/A'}\n"
+                        f"📖 Nội dung: {description}"
+                    )
+                    await self.zalo_bot_service.send_message_to_user(
+                        chat_id=user.zalo_bot_id, text=zalo_bot_text
+                    )
+
+                count += 1
+
+            if count > 0:
+                logger.info(
+                    f"Sent meeting notification to {count} users for meeting '{meeting.title}'"
+                )
+        except Exception as e:
+            logger.error(f"Failed to send meeting notification: {e}")

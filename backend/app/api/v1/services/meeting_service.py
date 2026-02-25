@@ -1,14 +1,14 @@
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from typing import List, Optional
-
-from fastapi import UploadFile, status
 
 from app.api.v1.repositories.meeting_repository import (
     MeetingParticipantRepository,
     MeetingRepository,
 )
+from app.api.v1.services.notification_service import NotificationService
 from app.api.v1.services.user_service import UserService
 from app.api.v1.services.violation_service import ViolationService
+from app.core.config import settings
 from app.core.minio_service import MinioService
 from app.core.repository_factory import RepositoryFactory
 from app.models.meeting import Meeting, MeetingParticipant, ParticipantStatus
@@ -17,6 +17,7 @@ from app.schemas.activity import ViolationCreate
 from app.schemas.meeting import MeetingCreate, MeetingUpdate
 from app.schemas.response import BadRequestException
 from app.utils.datetime import get_current_utc7_time
+from fastapi import UploadFile, status
 
 
 class MeetingService:
@@ -28,6 +29,7 @@ class MeetingService:
         user_service: UserService,
         violation_service: ViolationService,
         minio_service: MinioService,
+        notification_service: NotificationService,
     ):
         self.repo_factory = repo_factory
         self.meeting_repo = meeting_repo
@@ -35,6 +37,7 @@ class MeetingService:
         self.user_service = user_service
         self.violation_service = violation_service
         self.minio_service = minio_service
+        self.notification_service = notification_service
 
     def get_all(
         self,
@@ -60,7 +63,7 @@ class MeetingService:
     def get_by_date(self, target_date: date) -> List[Meeting]:
         return self.meeting_repo.get_by_date(target_date)
 
-    def create_meeting(self, data: MeetingCreate) -> Meeting:
+    async def create_meeting(self, data: MeetingCreate) -> Meeting:
         # Validate seat availability
 
         # Calculate participants count for new meeting
@@ -78,8 +81,6 @@ class MeetingService:
         concurrent_participants = self.meeting_repo.get_concurrent_participants_count(
             data.start_time, data.end_time
         )
-
-        from app.core.config import settings
 
         total_seats_needed = (
             concurrent_participants + current_meeting_participants_count
@@ -103,20 +104,8 @@ class MeetingService:
         )
         new_meeting = self.meeting_repo.create(meeting)
 
-        # Create participants (reuse user_ids from validation)
-        # We already resolved user_ids and team_ids above into `user_ids` set.
-        # But wait, original code did:
-        # 75:         user_ids = set()
-        # 76:         if data.user_ids:
-        # 77:             user_ids.update(data.user_ids)
-        # 78:
-        # 79:         if data.team_ids:
-        # 80:             team_user_ids = self.repo_factory.team.get_user_ids_by_teams(data.team_ids)
-        # 81:             user_ids.update(team_user_ids)
-
-        # We can just remove the redundant resolution block below.
-
         # Create participants
+        users_to_notify = []
         for user_id in user_ids:
             participant = MeetingParticipant(
                 meeting_id=new_meeting.id,
@@ -125,9 +114,19 @@ class MeetingService:
             )
             self.participant_repo.create(participant)
 
+            u = self.user_service.get_by_id(user_id)
+            if u:
+                users_to_notify.append(u)
+
+        # Send Discord notifications
+        if users_to_notify:
+            await self.notification_service.send_meeting_notification(
+                users_to_notify, new_meeting, is_update=False
+            )
+
         return self.get_by_id(new_meeting.id)
 
-    def update_meeting(self, meeting_id: int, data: MeetingUpdate) -> Meeting:
+    async def update_meeting(self, meeting_id: int, data: MeetingUpdate) -> Meeting:
         meeting = self.meeting_repo.get_by_id(meeting_id)
         if not meeting:
             raise BadRequestException("Meeting not found")
@@ -141,25 +140,6 @@ class MeetingService:
             new_user_ids.update(
                 self.repo_factory.team.get_user_ids_by_teams(data.team_ids)
             )
-
-        # If updating, we need to know the participant count difference or total
-        # The logic here replaces participants, so new_user_ids count is the new count for THIS meeting.
-
-        # However, for update, data.user_ids/team_ids might be None (partial update).
-        # We need to handle that. If not provided, use existing participants count?
-        # But wait, existing logic deletes and recreates if either is provided.
-        # If both are None, participant set doesn't change.
-
-        if data.team_ids is not None or data.user_ids is not None:
-            # Logic to calculate new count is complex because we need to check overlap with OTHER meetings.
-            # So effectively:
-            # 1. Calculate count for THIS meeting (resolving new set).
-            # 2. Query DB for sum of participants of ALL OTHER overlapping meetings.
-            # 3. Sum (1) + (2) <= MAX_SEATS.
-            pass
-
-        # Actually proper implementation requires resolving the final list of user_ids for the meeting
-        # THEN checking total concurrently.
 
         current_meeting_participants_count = 0
         if data.team_ids is not None or data.user_ids is not None:
@@ -183,15 +163,12 @@ class MeetingService:
             check_start_time, check_end_time, exclude_meeting_id=meeting_id
         )
 
-        from app.core.config import settings
-
         total_seats_needed = (
             concurrent_participants + current_meeting_participants_count
         )
         remaining_seats = settings.MAX_SEATS - concurrent_participants
 
         if total_seats_needed > settings.MAX_SEATS:
-            # Ensure remaining seats is not negative in message
             display_remaining = max(0, remaining_seats)
             raise BadRequestException(
                 f"Chỗ ngồi không đủ, chỉ còn {display_remaining} chỗ ngồi"
@@ -211,20 +188,14 @@ class MeetingService:
 
         self.meeting_repo.update(meeting)
 
+        users_to_notify = []
+
         # Update participants if team_ids or user_ids are provided
         if data.team_ids is not None or data.user_ids is not None:
             # Delete existing participants
             existing_participants = self.participant_repo.get_by_meeting(meeting_id)
             for p in existing_participants:
                 self.participant_repo.delete(p)
-
-            # Since we resolved user_ids for validation above, use it if available, else re-resolve?
-            # We resolved it into `user_ids` variable in the if block above.
-            # But variable scope in python is function-level, so `user_ids` set should be available.
-            # Let's be safe and re-use logic or variable carefully.
-
-            # Re-collect logic to be safe and clean or reuse
-            # reusing `user_ids` set from above validation block
 
             # Create new participants
             for user_id in user_ids:
@@ -234,6 +205,20 @@ class MeetingService:
                     status=ParticipantStatus.NOT_JOINED,
                 )
                 self.participant_repo.create(participant)
+                u = self.user_service.get_by_id(user_id)
+                if u:
+                    users_to_notify.append(u)
+        else:
+            # If not updating participants, notify existing participants who are expected to attend
+            for p in meeting.participants:
+                if p.user:
+                    users_to_notify.append(p.user)
+
+        # Send Discord notifications
+        if users_to_notify:
+            await self.notification_service.send_meeting_notification(
+                users_to_notify, meeting, is_update=True
+            )
 
         return self.get_by_id(meeting_id)
 
@@ -241,11 +226,6 @@ class MeetingService:
         meeting = self.meeting_repo.get_by_id(meeting_id)
         if not meeting:
             raise BadRequestException("Meeting not found")
-
-        # Delete participants first (although cascade should handle it if set up in DB,
-        # but let's be explicit if not sure about DB level foreign key constraint)
-        # Actually, SQLModel relationship with cascade="all, delete-orphan" usually handles it in memory,
-        # but for DB delete we might need to be careful.
 
         participants = self.participant_repo.get_by_meeting(meeting_id)
         for p in participants:

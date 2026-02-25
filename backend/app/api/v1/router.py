@@ -11,6 +11,8 @@ from app.api.v1.controllers import (
     homework_controller,
     homework_submission_controller,
     meeting_controller,
+    zalo_controller,
+    zalo_bot_controller,
 )
 from fastapi import APIRouter
 
@@ -30,6 +32,8 @@ routers = [
     homework_controller.router,
     homework_submission_controller.router,
     meeting_controller.router,
+    zalo_controller.router,
+    zalo_bot_controller.router,
 ]
 
 # Include all routers in a single loop

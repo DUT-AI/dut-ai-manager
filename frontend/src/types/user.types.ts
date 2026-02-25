@@ -10,6 +10,7 @@ export interface UserResponse {
   role_name: string | null;
   permissions: string[];
   discord_id: string | null;
+  zalo_id: string | null;
   avatar_url: string | null;
 }
 
@@ -21,6 +22,7 @@ export interface UserCreate {
   status?: UserStatus;
   role_id?: number;
   discord_id?: string;
+  zalo_id?: string;
   avatar_url?: string;
 }
 
@@ -32,10 +34,12 @@ export interface UserUpdate {
   status?: UserStatus;
   role_id?: number;
   discord_id?: string;
+  zalo_id?: string;
   avatar_url?: string;
 }
 
 export interface UserSettingsUpdate {
   discord_id?: string;
+  zalo_id?: string;
   avatar_url?: string;
 }
