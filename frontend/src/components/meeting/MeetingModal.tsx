@@ -105,7 +105,7 @@ export const MeetingModal = ({ open, editingItem, initialDate, users, onSubmit, 
                             allowClear
                         >
                             {teams.map(t => (
-                                <Option key={t.id} value={t.id}>{t.name}</Option>
+                                <Option key={t.id} value={t.id}>{t.team_name}</Option>
                             ))}
                         </Select>
                     </Form.Item>
