@@ -203,8 +203,6 @@ class NotificationService:
             title_prefix = "🔄" if is_update else "📅"
 
             description = meeting.content or "Không có nội dung"
-            if len(description) > 300:
-                description = description[:297] + "..."
 
             embed = {
                 "title": f"{title_prefix} Lịch sinh hoạt {action}",
