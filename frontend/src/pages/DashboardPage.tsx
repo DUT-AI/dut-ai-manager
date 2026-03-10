@@ -44,17 +44,19 @@ interface SidebarContentProps {
 }
 
 const SidebarContent = ({ activeKey, sideMenuItems }: SidebarContentProps) => (
-    <div className="flex flex-col h-full">
-        <div className="flex items-center justify-center py-4">
+    <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex items-center justify-center py-4 shrink-0">
             {/* Logo area if needed */}
         </div>
-        <Menu
-            mode="inline"
-            selectedKeys={[activeKey]}
-            items={sideMenuItems}
-            className="border-none flex-grow mt-4 custom-sidebar-menu"
-        />
-        <div className="p-4 border-t border-gray-50">
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+            <Menu
+                mode="inline"
+                selectedKeys={[activeKey]}
+                items={sideMenuItems}
+                className="border-none mt-4 custom-sidebar-menu"
+            />
+        </div>
+        <div className="p-4 border-t border-gray-50 shrink-0">
             <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
                 <Text className="text-[10px] text-gray-400 font-bold uppercase block mb-2 px-1">Trạng thái</Text>
                 <div className="flex items-center justify-between px-1">

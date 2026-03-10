@@ -22,10 +22,6 @@ async def generate_zalo_bot_bind_code(
 @router.post("/webhook")
 async def zalo_bot_webhook(request: Request, service_factory: ServiceFactoryDI):
     """Handle incoming messages from Zalo Bot Server."""
-    try:
-        body = await request.json()
-        result = await service_factory.zalo_bot.handle_webhook(body)
-        return result
-    except Exception as e:
-        logger.error(f"Error handling Zalo Bot webhook in controller: {e}")
-        return {"error": str(e)}
+    body = await request.json()
+    result = await service_factory.zalo_bot.handle_webhook(body)
+    return result

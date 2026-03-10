@@ -1,16 +1,15 @@
-from fastapi import APIRouter, Body, status
-from typing import Annotated
-import aiohttp
-
-from pydantic import BaseModel
-import secrets
 import base64
 import hashlib
+import secrets
+import urllib.parse
 
-from app.core.deps import CurrentUser, ServiceFactoryDI
-from app.schemas.response import ApiResponse, BadRequestException
-from app.models.user import User
+import aiohttp
 from app.core.config import settings
+from app.core.deps import CurrentUser, ServiceFactoryDI
+from app.models.user import User
+from app.schemas.response import ApiResponse, BadRequestException
+from fastapi import APIRouter, Body, status
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/zalo", tags=["zalo"])
 
@@ -36,7 +35,7 @@ async def get_zalo_login_url():
     digest = hashlib.sha256(code_verifier.encode("ascii")).digest()
     code_challenge = base64.urlsafe_b64encode(digest).decode("ascii").rstrip("=")
 
-    import urllib.parse
+    
 
     callback_url = f"{settings.FRONTEND_HOST}/auth/zalo/callback"
     encoded_callback_url = urllib.parse.quote(callback_url, safe="")
