@@ -32,50 +32,26 @@ docker-clean: ## Remove all containers and volumes
 docker-build: ## Build all docker images
 	docker compose build
 
-# ==================== Database Tunnel ====================
-db-tunnel-start: ## Start Cloudflare Tunnel to remote dev database (run in background)
-	@echo "🔗 Starting Cloudflare Tunnel to remote dev database..."
-	@. .env 2>/dev/null; cloudflared access tcp --hostname $${CLOUDFLARE_DB_TUNNEL_HOST} --url localhost:5432 &
-	@sleep 3
-	@echo "✅ Tunnel started on localhost:5432"
 
-db-tunnel-stop: ## Stop Cloudflare Tunnel
-	@pkill -f "cloudflared access tcp" 2>/dev/null || true
-	@echo "✅ Tunnel stopped"
-
-# Helper: Run command with tunnel (internal use)
-define with_tunnel
-	@. .env 2>/dev/null; \
-	cloudflared access tcp --hostname $${CLOUDFLARE_DB_TUNNEL_HOST} --url localhost:5432 & \
-	TUNNEL_PID=$$!; \
-	sleep 3; \
-	cd backend && POSTGRES_SERVER=localhost $(1); \
-	EXIT_CODE=$$?; \
-	kill $$TUNNEL_PID 2>/dev/null || true; \
-	exit $$EXIT_CODE
-endef
 
 # ==================== Migrations (auto-starts tunnel) ====================
 migrate-create: ## Create a new migration (usage: make migrate-create msg="description")
-	$(call with_tunnel,uv run alembic revision --autogenerate -m "$(msg)")
+	cd backend && uv run alembic revision --autogenerate -m "$(msg)"
 
 migrate-up: ## Apply all migrations
-	$(call with_tunnel,uv run alembic upgrade head)
-
-migrate-up-prod: ## Apply all migrations
-	cd backend && uv run alembic upgrade head	
+	cd backend && uv run alembic upgrade head
 
 migrate-down: ## Rollback last migration
-	$(call with_tunnel,uv run alembic downgrade -1)
+	cd backend && uv run alembic downgrade -1
 
 migrate-history: ## Show migration history
-	$(call with_tunnel,uv run alembic history)
+	cd backend && uv run alembic history
 
 migrate-current: ## Show current migration
-	$(call with_tunnel,uv run alembic current)
+	cd backend && uv run alembic current
 
 seed-db: ## Seed permissions from enums into database
-	$(call with_tunnel,uv run python -m app.scripts.seed_permissions)
+	cd backend && uv run python -m app.scripts.seed_permissions
 
 # ==================== Backend ====================
 backend-install: ## Install backend dependencies
@@ -120,3 +96,16 @@ dev: ## Run all development servers (requires tmux or run in separate terminals)
 
 clean: docker-clean ## Clean all docker resources
 	@echo "Cleaned!"
+
+# ==================== Backend V2 (Clean Architecture) ====================
+backend-v2-install: ## Install backend-v2 dependencies
+	cd backend_v2 && uv sync
+
+backend-v2-dev: ## Run backend-v2 discovery
+	cd backend_v2 && uv run uvicorn app.main:app --reload --port 8032
+
+backend-v2-quality: ## Run quality checks for backend-v2
+	make -C backend_v2 quality
+
+backend-v2-test: ## Run backend-v2 tests
+	make -C backend_v2 test

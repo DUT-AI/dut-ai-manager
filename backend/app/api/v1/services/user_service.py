@@ -6,8 +6,12 @@ from app.api.v1.services.email_service import EmailService
 from app.core.minio_service import MinioService
 from app.models import RoleType, User
 from app.schemas.response import BadRequestException
-from app.schemas.user import (UserCreate, UserImportResult, UserSettingsUpdate,
-                              UserUpdate)
+from app.schemas.user import (
+    UserCreate,
+    UserImportResult,
+    UserSettingsUpdate,
+    UserUpdate,
+)
 from app.utils.datetime import get_current_utc7_time
 from fastapi import BackgroundTasks, UploadFile
 
@@ -170,7 +174,7 @@ class UserService:
         return user
 
     def create_user(
-        self, user_data: UserCreate, background_tasks: BackgroundTasks = None
+        self, user_data: UserCreate, background_tasks: BackgroundTasks
     ) -> Optional[User]:
         # Check email exists
         if self.user_repo.get_by_email(user_data.email):
@@ -189,22 +193,13 @@ class UserService:
         new_user = self.user_repo.create(user)
 
         # Send email with credentials
-        if background_tasks:
-            background_tasks.add_task(
-                self.email_service.send_new_account_email,
-                to_email=new_user.email,
-                name=new_user.name,
-                password=password,
-            )
-        else:
-            # Fallback for when no background task context is available
-            try:
-                self.email_service.send_new_account_email(
-                    to_email=new_user.email, name=new_user.name, password=password
-                )
-            except Exception as e:
-                # Log error
-                print(f"Failed to send email to {new_user.email}: {e}")
+
+        background_tasks.add_task(
+            self.email_service.send_new_account_email,
+            to_email=new_user.email,
+            name=new_user.name,
+            password=password,
+        )
 
         return new_user
 
