@@ -16,7 +16,7 @@ from app.violation.domain.entity import Violation
 from sqlmodel import Field, Relationship
 
 if TYPE_CHECKING:
-    from app.models.user import User
+    from app.user.infrastructure.model import UserModel as User
     from app.violation.domain.entity import Violation
 
 
@@ -63,44 +63,38 @@ class ViolationModel(TimestampMixin, table=True):
             date=self.date,
             user_id=self.user_id,
             created_by=self.created_by,
-            updated_by=self.updated_by, # type: ignore
-            created_at=self.created_at, # type: ignore
-            updated_at=self.updated_at, # type: ignore
-            is_deleted=self.is_deleted, # type: ignore
+            updated_by=self.updated_by,  # type: ignore
+            created_at=self.created_at,  # type: ignore
+            updated_at=self.updated_at,  # type: ignore
+            is_deleted=self.is_deleted,  # type: ignore
             owner=(
                 UserRef(
-                    id=self.user.id, # type: ignore
-                    name=self.user.name, # type: ignore
-                    avatar=self.user.avatar_url, # type: ignore
-                    discord_id=self.user.discord_id, # type: ignore
+                    id=self.user.id,  # type: ignore
+                    name=self.user.name,  # type: ignore
+                    avatar=self.user.avatar_url,  # type: ignore
+                    discord_id=self.user.discord_id,  # type: ignore
                 )
                 if self.user
                 else None
             ),
             creator=(
                 UserRef(
-                    id=self.creator_rel.id, # type: ignore
-                    name=self.creator_rel.name, # type: ignore
-                    avatar=self.creator_rel.avatar_url, # type: ignore
-                    discord_id=self.creator_rel.discord_id, # type: ignore
+                    id=self.creator_rel.id,  # type: ignore
+                    name=self.creator_rel.name,  # type: ignore
+                    avatar=self.creator_rel.avatar_url,  # type: ignore
+                    discord_id=self.creator_rel.discord_id,  # type: ignore
                 )
                 if self.creator_rel
                 else None
             ),
             updater=(
                 UserRef(
-                    id=self.updater_rel.id, # type: ignore
-                    name=self.updater_rel.name, # type: ignore
-                    avatar=self.updater_rel.avatar_url, # type: ignore
-                    discord_id=self.updater_rel.discord_id, # type: ignore
+                    id=self.updater_rel.id,  # type: ignore
+                    name=self.updater_rel.name,  # type: ignore
+                    avatar=self.updater_rel.avatar_url,  # type: ignore
+                    discord_id=self.updater_rel.discord_id,  # type: ignore
                 )
                 if self.updater_rel
                 else None
             ),
         )
-
-from app.models.user import User  # Exported to registry
-# SQLModel Registry check
-ViolationModel.model_rebuild()
-
-
