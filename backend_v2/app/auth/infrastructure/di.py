@@ -2,14 +2,15 @@ from app.auth.application.use_cases.change_password import \
   ChangePasswordUseCase
 from app.auth.application.use_cases.login import LoginUseCase
 from app.auth.application.use_cases.refresh_token import RefreshTokenUseCase
-from app.auth.domain.interfaces import (IAccountCreator, IAuthUserRepository,
-                                        IPasswordHasher,
-                                        ITokenService, IAuthQueryService)
+from app.auth.domain.interfaces import (IAccountCreator, IAuthQueryService,
+                                        IAuthUserRepository, IPasswordHasher,
+                                        ITokenService)
 from app.auth.infrastructure.account_creator import AccountCreatorService
+from app.auth.infrastructure.auth_query_service import \
+  SQLAlchemyAuthQueryService
 from app.auth.infrastructure.auth_user_repository import AuthUserRepository
 from app.auth.infrastructure.bcrypt_hasher import BcryptPasswordHasher
 from app.auth.infrastructure.jwt_service import JwtTokenService
-from app.auth.infrastructure.auth_query_service import SQLAlchemyAuthQueryService
 from app.settings import JWTSetting
 from dishka import Provider, Scope, provide
 from sqlalchemy.ext.asyncio import AsyncSession

@@ -1,13 +1,14 @@
-from app.auth.application.dtos import (ChangePasswordRequestDTO,
-                                       CurrentUserDTO, LoginRequestDTO,
-                                       RefreshTokenRequestDTO,
-                                       TokenResponseDTO)
-from app.auth.application.use_cases.change_password import \
-  ChangePasswordUseCase
+from app.auth.application.dtos import (
+    ChangePasswordRequestDTO,
+    CurrentUserDTO,
+    LoginRequestDTO,
+    RefreshTokenRequestDTO,
+    TokenResponseDTO,
+)
+from app.auth.application.use_cases.change_password import ChangePasswordUseCase
 from app.auth.application.use_cases.login import LoginUseCase
 from app.auth.application.use_cases.refresh_token import RefreshTokenUseCase
-from app.auth.infrastructure.security import (get_current_user,
-                                               get_current_user_id)
+from app.auth.infrastructure.security import get_current_user
 from app.settings import JWTSetting
 from app.shared.api_response import ApiResponse
 from app.user.application.dtos import UserResponseDTO
@@ -90,9 +91,9 @@ async def logout(response: Response):
 async def change_password(
     payload: ChangePasswordRequestDTO,
     use_case: FromDishka[ChangePasswordUseCase],
-    user_id: int = Depends(get_current_user_id),
+    user_request: CurrentUserDTO = Depends(get_current_user),
 ):
-    await use_case.execute(user_id, payload)
+    await use_case.execute(user_request.id, payload)
     return ApiResponse.success(data=True)
 
 

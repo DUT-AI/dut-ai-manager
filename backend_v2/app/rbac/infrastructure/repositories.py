@@ -51,6 +51,7 @@ class SQLAlchemyRoleRepository(IRoleRepository):
         model = RoleModel(name=role.name, description=role.description)
         self.session.add(model)
         await self.session.flush()
+        await self.session.refresh(model, ["permissions"])
         return model.to_entity()
 
     async def update(self, role: Role) -> Role:

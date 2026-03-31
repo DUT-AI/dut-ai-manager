@@ -1,7 +1,7 @@
 from typing import Optional, Protocol
 
-from app.auth.domain.auth_user_entity import AuthUser
 from app.auth.application.dtos import UserAuthContextDTO
+from app.auth.domain.auth_user_entity import AuthUser
 
 
 class IAuthUserRepository(Protocol):

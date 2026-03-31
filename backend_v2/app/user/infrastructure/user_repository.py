@@ -44,14 +44,14 @@ class SQLAlchemyUserRepository(IUserRepository):
     async def create(self, user: User) -> User:
         model = UserModel.from_entity(user)
         self.session.add(model)
-        await self.session.commit()
+        await self.session.flush()
         await self.session.refresh(model)
         return model.to_entity()
 
     async def update(self, user: User) -> User:
         model = UserModel.from_entity(user)
         model = await self.session.merge(model)
-        await self.session.commit()
+        await self.session.flush()
         return model.to_entity()
 
     async def delete(self, user_id: int) -> None:
@@ -61,7 +61,7 @@ class SQLAlchemyUserRepository(IUserRepository):
             .values(is_deleted=True)
         )
         await self.session.execute(stmt)
-        await self.session.commit()
+        await self.session.flush()
 
     async def list(
         self,
@@ -83,7 +83,6 @@ class SQLAlchemyUserRepository(IUserRepository):
             )
 
         if role:
-            # Tham chiếu tới RoleModel thay vì UserRoleModel (lỗi cũ)
             stmt = stmt.join(
                 RoleModel, col(UserModel.role_id) == col(RoleModel.id)
             ).where(col(RoleModel.name) == role)

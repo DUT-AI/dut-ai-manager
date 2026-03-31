@@ -1,6 +1,6 @@
 import secrets
-import bcrypt
 
+import bcrypt
 from app.rbac.application.dtos import RoleApiKeyCreate, RoleApiKeySecret
 from app.rbac.domain.entities import RoleApiKey
 from app.rbac.domain.exceptions import RoleNotFoundException
@@ -25,9 +25,9 @@ class CreateRoleApiKeyUseCase:
         # Generate API key
         raw_key = f"sk-{secrets.token_urlsafe(32)}"
         prefix = raw_key[:10]
-        hashed_key = bcrypt.hashpw(
-            raw_key.encode("utf-8"), bcrypt.gensalt()
-        ).decode("utf-8")
+        hashed_key = bcrypt.hashpw(raw_key.encode("utf-8"), bcrypt.gensalt()).decode(
+            "utf-8"
+        )
 
         api_key_entity = RoleApiKey(
             id=0,  # Will be set by DB
@@ -39,6 +39,7 @@ class CreateRoleApiKeyUseCase:
         )
 
         saved_api_key = await self.api_key_repo.create(api_key_entity)
+        assert saved_api_key.id is not None, "API key ID must be set after save"
 
         # Build response with the raw key (only returned here)
         return RoleApiKeySecret(

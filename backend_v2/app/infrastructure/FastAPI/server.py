@@ -1,9 +1,7 @@
-from app.auth.presentation.router import router as auth_router
 from app.infrastructure.FastAPI import setup_provider
 from app.infrastructure.FastAPI.handlers import setup_exception_handlers
-from app.infrastructure.FastAPI.router import setup_router
-from app.user.presentation.router import router as user_router
-from dishka import make_async_container
+from app.infrastructure.FastAPI.provider import setup_router
+from app.infrastructure.middleware.audit_context import AuditContextMiddleware
 from dishka.integrations.fastapi import setup_dishka
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,6 +25,9 @@ def create_app() -> FastAPI:
     # Wire container
     setup_dishka(container, app)
 
+    # Audit context middleware (sets current_user_id from JWT)
+    app.add_middleware(AuditContextMiddleware)
+
     # CORS middleware
     app.add_middleware(
         CORSMiddleware,
@@ -44,3 +45,4 @@ def create_app() -> FastAPI:
         return {"status": "ok"}
 
     return app
+

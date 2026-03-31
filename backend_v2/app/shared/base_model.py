@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 from sqlmodel import Field, SQLModel
 
@@ -19,7 +19,7 @@ def _utc_now() -> datetime:
 
 
 class TimestampMixin(Base):
-    """Mixin for created_at and updated_at timestamps."""
+    """Mixin for timestamps and audit fields."""
 
     created_at: datetime = Field(default_factory=_utc_now)
     updated_at: datetime = Field(
@@ -27,6 +27,8 @@ class TimestampMixin(Base):
         sa_column_kwargs={"onupdate": _utc_now},
     )
     is_deleted: bool = Field(default=False)
+    created_by: Optional[int] = Field(default=None)
+    updated_by: Optional[int] = Field(default=None)
 
     @abstractmethod
     def to_entity(self) -> Any:

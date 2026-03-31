@@ -1,5 +1,6 @@
 from app.auth.application.dtos import RefreshTokenRequestDTO, TokenResponseDTO
-from app.auth.domain.exceptions import InvalidTokenException, UserInactiveException
+from app.auth.domain.exceptions import (InvalidTokenException,
+                                        UserInactiveException)
 from app.auth.domain.interfaces import IAuthUserRepository, ITokenService
 
 

@@ -47,6 +47,8 @@ class UserModel(TimestampMixin, table=True):
             created_at=self.created_at,
             updated_at=self.updated_at,
             is_deleted=self.is_deleted,
+            created_by=self.created_by,
+            updated_by=self.updated_by,
         )
 
     @classmethod
@@ -67,4 +69,6 @@ class UserModel(TimestampMixin, table=True):
             created_at=user.created_at,
             updated_at=user.updated_at,
             is_deleted=user.is_deleted,
+            created_by=user.created_by,
+            updated_by=user.updated_by,
         )

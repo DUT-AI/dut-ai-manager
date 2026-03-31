@@ -1,13 +1,9 @@
-from app.rbac.application.dtos import (
-    RoleApiKeyCreate,
-    RoleApiKeyResponse,
-    RoleApiKeySecret,
-)
-from app.rbac.application.use_cases.create_role_api_key import CreateRoleApiKeyUseCase
+from app.rbac.application.dtos import (RoleApiKeyCreate, RoleApiKeyResponse,
+                                       RoleApiKeySecret)
+from app.rbac.application.use_cases.create_role_api_key import \
+  CreateRoleApiKeyUseCase
 from app.rbac.application.use_cases.manage_role_api_key import (
-    GetRoleApiKeysUseCase,
-    RevokeRoleApiKeyUseCase,
-)
+  GetRoleApiKeysUseCase, RevokeRoleApiKeyUseCase)
 from app.shared.api_response import ApiResponse
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter

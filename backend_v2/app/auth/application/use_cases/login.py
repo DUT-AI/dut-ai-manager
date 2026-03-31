@@ -1,8 +1,17 @@
 from typing import Tuple
-from app.auth.application.dtos import LoginRequestDTO, TokenResponseDTO, UserAuthContextDTO
-from app.auth.domain.exceptions import (InvalidCredentialsException,
-                                        UserInactiveException)
-from app.auth.domain.interfaces import (IPasswordHasher, ITokenService, IAuthQueryService)
+
+from app.auth.application.dtos import (
+    LoginRequestDTO,
+    TokenResponseDTO,
+    UserAuthContextDTO,
+)
+from app.auth.domain.exceptions import (
+    InvalidCredentialsException,
+    UserInactiveException,
+)
+from app.auth.domain.interfaces import IAuthQueryService, IPasswordHasher, ITokenService
+
+from app.auth.application.dtos import JWTPayload
 
 
 class LoginUseCase:
@@ -18,7 +27,7 @@ class LoginUseCase:
 
     async def execute(self, payload: LoginRequestDTO) -> TokenResponseDTO:
         user_auth = await self.auth_query.get_user_auth_context_by_email(payload.email)
-        
+
         if not user_auth:
             raise InvalidCredentialsException()
 
@@ -40,15 +49,17 @@ class LoginUseCase:
         """Create access and refresh tokens for user with embedded user info"""
 
         # Build extra claims for JWT
-        extra_claims = {
-            "sub": str(user_auth.id),
-            "email": user_auth.email,
-            "name": user_auth.name,
-            "role": user_auth.role_name,
-            "avatar": user_auth.avatar_url,
-            "permissions": user_auth.permissions,
-        }
+        extra_claims = JWTPayload(
+            sub=str(user_auth.id),
+            email=user_auth.email,
+            name=user_auth.name,
+            role=user_auth.role_name,
+            avatar=user_auth.avatar_url,
+            permissions=user_auth.permissions,
+        )
 
         access_token = self.token_service.create_access_token(extra_claims)
-        refresh_token = self.token_service.create_refresh_token({"sub": str(user_auth.id)})
+        refresh_token = self.token_service.create_refresh_token(
+            {"sub": str(user_auth.id)}
+        )
         return access_token, refresh_token

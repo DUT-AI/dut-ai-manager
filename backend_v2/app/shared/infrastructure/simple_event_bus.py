@@ -14,11 +14,9 @@ class SimpleEventBus:
     """
 
     def __init__(self) -> None:
-        self._handlers: dict[type[DomainEvent], list[IEventHandler]] = defaultdict(list)
+        self._handlers: dict[type[DomainEvent], list[IEventHandler[DomainEvent]]] = defaultdict(list)
 
-    def subscribe(
-        self, event_type: type[DomainEvent], handler: IEventHandler
-    ) -> None:
+    def subscribe(self, event_type: type[DomainEvent], handler: IEventHandler[DomainEvent]) -> None:
         """Register a handler for an event type."""
         self._handlers[event_type].append(handler)
         logger.debug(
@@ -45,7 +43,7 @@ class SimpleEventBus:
                 )
 
     @staticmethod
-    async def _safe_handle(handler: IEventHandler, event: DomainEvent) -> None:
+    async def _safe_handle(handler: IEventHandler[DomainEvent], event: DomainEvent) -> None:
         """Safely execute handler, catching and logging any errors."""
         try:
             await handler.handle(event)

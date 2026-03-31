@@ -21,32 +21,6 @@ def _extract_token(request: Request) -> str:
     )
 
 
-async def get_current_user_id(request: Request) -> int:
-    """Get user ID from JWT (cookie or header)."""
-    token = _extract_token(request)
-
-    try:
-        container = request.state.dishka_container
-        token_service = await container.get(ITokenService)
-        token_data = token_service.decode_token(token)
-
-        user_id_str = token_data.get("sub")
-        if not user_id_str:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token does not contain user ID",
-            )
-
-        return int(user_id_str)
-    except HTTPException:
-        raise
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-        )
-
-
 async def get_current_user(request: Request) -> CurrentUserDTO:
     """Get full user info from JWT claims (cookie or header)."""
     token = _extract_token(request)
@@ -66,9 +40,8 @@ async def get_current_user(request: Request) -> CurrentUserDTO:
         )
     except HTTPException:
         raise
-    except Exception:
+    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
-        )
-
+        ) from e

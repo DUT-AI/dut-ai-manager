@@ -1,9 +1,27 @@
-from typing import AsyncIterable
+from typing import Any, AsyncIterable
 
 from app.settings import DatabaseSettings
+from app.shared.request_context import current_user_id_var
 from dishka import Provider, Scope, provide
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (AsyncEngine, AsyncSession,
                                     async_sessionmaker, create_async_engine)
+from sqlalchemy.orm import Session
+
+
+def _set_audit_fields(session: Session, flush_context: Any, instances: Any) -> None:
+    """Auto-populate created_by/updated_by from request context."""
+    user_id = current_user_id_var.get(None)
+
+    for obj in session.new:
+        if hasattr(obj, "created_by") and obj.created_by is None:
+            obj.created_by = user_id
+        if hasattr(obj, "updated_by"):
+            obj.updated_by = user_id
+
+    for obj in session.dirty:
+        if hasattr(obj, "updated_by"):
+            obj.updated_by = user_id
 
 
 class DatabaseProvider(Provider):
@@ -32,4 +50,11 @@ class DatabaseProvider(Provider):
         self, session_maker: async_sessionmaker[AsyncSession]
     ) -> AsyncIterable[AsyncSession]:
         async with session_maker() as session:
-            yield session
+            # Register audit event for this session
+            event.listen(session.sync_session, "before_flush", _set_audit_fields)
+            try:
+                yield session
+                await session.commit()
+            except Exception:
+                await session.rollback()
+                raise

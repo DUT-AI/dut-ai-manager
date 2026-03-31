@@ -27,6 +27,8 @@ class AccountModel(TimestampMixin, table=True):
             created_at=self.created_at,
             updated_at=self.updated_at,
             is_deleted=self.is_deleted,
+            created_by=self.created_by,
+            updated_by=self.updated_by,
         )
 
     @classmethod
@@ -37,4 +39,6 @@ class AccountModel(TimestampMixin, table=True):
             created_at=entity.created_at,
             updated_at=entity.updated_at,
             is_deleted=entity.is_deleted,
+            created_by=entity.created_by,
+            updated_by=entity.updated_by,
         )

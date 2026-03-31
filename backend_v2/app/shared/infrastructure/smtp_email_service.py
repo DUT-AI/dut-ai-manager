@@ -11,9 +11,7 @@ from loguru import logger
 class SmtpEmailService:
     """Send emails via SMTP. Ported from backend v1."""
 
-    def __init__(self) -> None:
-        smtp = SMTPSetting()
-        common = CommonSettings()
+    def __init__(self, smtp: SMTPSetting, common: CommonSettings) -> None:
         self.server = smtp.SMTP_SERVER
         self.port = smtp.SMTP_PORT
         self.username = smtp.SMTP_USER
@@ -22,9 +20,7 @@ class SmtpEmailService:
         self.from_name = smtp.EMAILS_FROM_NAME
         self.frontend_host = common.FRONTEND_HOST.rstrip("/")
 
-    def _send_email(
-        self, to_email: str, subject: str, html_content: str
-    ) -> None:
+    def _send_email(self, to_email: str, subject: str, html_content: str) -> None:
         if not self.username or not self.password:
             logger.warning("SMTP credentials not set. Email not sent.")
             return
@@ -48,9 +44,7 @@ class SmtpEmailService:
         except Exception as e:
             logger.error(f"Failed to send email to {to_email}: {e}")
 
-    async def send_welcome_email(
-        self, to_email: str, name: str, password: str
-    ) -> None:
+    async def send_welcome_email(self, to_email: str, name: str, password: str) -> None:
         """Send welcome email with credentials (runs sync SMTP in async context)."""
         subject = "Chào mừng đến với DUT AI Manager"
         html_content = f"""

@@ -46,7 +46,7 @@ class AuthUserRepository(IAuthUserRepository):
             account_model = await self.session.get(AccountModel, user_model.account_id)
             if account_model:
                 account_model.hash_password = new_hashed_password
-                await self.session.commit()
+                await self.session.flush()
 
     def _to_domain(
         self, user_model: UserModel, account_model: Optional[AccountModel]

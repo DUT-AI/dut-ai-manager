@@ -1,5 +1,6 @@
 import pytest
 
+
 @pytest.mark.asyncio
 async def test_full_login_and_password_change_flow():
     # E2E test simulating:

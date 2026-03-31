@@ -25,7 +25,7 @@ class JWTSetting(Settings):
 
 
 class CommonSettings(Settings):
-    FRONTEND_HOST: str
+    FRONTEND_HOST: str = "http://localhost:5173"
     # Meeting Configuration
     MAX_SEATS: int = 30
 

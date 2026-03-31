@@ -1,15 +1,14 @@
 from typing import Optional
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
-
 from app.auth.application.dtos import UserAuthContextDTO
 from app.auth.domain.interfaces import IAuthQueryService
 from app.auth.infrastructure.account_model import AccountModel
+from app.rbac.infrastructure.models import RoleModel
 from app.user.domain.user_entity import UserStatus
 from app.user.infrastructure.user_model import UserModel
-from app.rbac.infrastructure.models import RoleModel
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 
 class SQLAlchemyAuthQueryService(IAuthQueryService):
@@ -21,11 +20,11 @@ class SQLAlchemyAuthQueryService(IAuthQueryService):
     ) -> Optional[UserAuthContextDTO]:
         stmt = (
             select(UserModel, AccountModel, RoleModel)
-            .outerjoin(AccountModel, UserModel.account_id == AccountModel.id)
-            .outerjoin(RoleModel, UserModel.role_id == RoleModel.id)
-            .options(selectinload(RoleModel.permissions))
-            .where(UserModel.email == email)
-            .where(UserModel.is_deleted == False)  # skip deleted users
+            .outerjoin(AccountModel, UserModel.account_id == AccountModel.id)  # type: ignore[arg-type]
+            .outerjoin(RoleModel, UserModel.role_id == RoleModel.id)  # type: ignore[arg-type]
+            .options(selectinload(RoleModel.permissions))  # type: ignore[arg-type]
+            .where(UserModel.email == email)  # type: ignore[arg-type]
+            .where(UserModel.is_deleted == False)  # type: ignore[arg-type]  # noqa: E712
         )
         result = await self.session.execute(stmt)
         row = result.first()

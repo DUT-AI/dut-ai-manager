@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Protocol, runtime_checkable
+from typing import Protocol, TypeVar, runtime_checkable
 from uuid import uuid4
 
 
@@ -14,21 +14,25 @@ class DomainEvent:
     occurred_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
-@runtime_checkable
-class IEventHandler(Protocol):
-    """Interface for event handlers."""
+T_Event = TypeVar("T_Event", bound=DomainEvent, contravariant=True)
 
-    async def handle(self, event: DomainEvent) -> None: ...
+
+@runtime_checkable
+class IEventHandler(Protocol[T_Event]):
+    """Interface for event handlers. Generic over the event type."""
+
+    async def handle(self, event: T_Event) -> None: ...
 
 
 @runtime_checkable
 class IEventBus(Protocol):
     """Interface for publishing domain events."""
 
-    def subscribe(self, event_type: type[DomainEvent], handler: IEventHandler) -> None:
+    def subscribe(self, event_type: type[DomainEvent], handler: "IEventHandler[DomainEvent]") -> None:
         """Register a handler for an event type."""
         ...
 
     async def publish(self, event: DomainEvent) -> None:
         """Publish an event to all registered handlers."""
         ...
+
