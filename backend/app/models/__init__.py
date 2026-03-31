@@ -4,7 +4,8 @@ from app.models.account import Account
 from app.models.role import Role, RoleType
 from app.models.role_permission import RolePermission
 from app.models.user import User, UserStatus
-from app.models.violation import Violation
+from app.violation.infrastructure.model import ViolationModel as Violation
+
 from app.models.bonus_points import BonusPoint
 from app.models.permission import Permission
 from app.models.permission_request import PermissionRequest, RequestCategory

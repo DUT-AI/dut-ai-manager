@@ -1,19 +1,13 @@
-from app.core.config import settings
-from sqlmodel import Session, SQLModel, create_engine
+"""
+Backward compatibility — re-exports from shared infrastructure.
 
-# Create engine
-engine = create_engine(
-    str(settings.SQLALCHEMY_DATABASE_URI),
-    echo=settings.ENVIRONMENT == "local",
+New modules should import from: app.shared.infrastructure.database
+"""
+
+from app.shared.infrastructure.database import (
+    create_db_and_tables,
+    engine,
+    get_session,
 )
 
-
-def create_db_and_tables():
-    """Create all database tables"""
-    SQLModel.metadata.create_all(engine)
-
-
-def get_session():
-    """Get database session"""
-    with Session(engine) as session:
-        yield session
+__all__ = ["engine", "create_db_and_tables", "get_session"]

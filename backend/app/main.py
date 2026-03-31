@@ -15,6 +15,9 @@ from fastapi.responses import JSONResponse
 from loguru import logger
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+# Pre-load all models to avoid SQLAlchemy mapper errors
+from app.models import User, Violation  # noqa: F401
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

@@ -6,7 +6,6 @@ from app.api.v1.controllers import (
     report_controller,
     role_permission_controller,
     user_controller,
-    violation_controller,
     team_controller,
     homework_controller,
     homework_submission_controller,
@@ -14,6 +13,7 @@ from app.api.v1.controllers import (
     zalo_controller,
     zalo_bot_controller,
 )
+from app.violation.controller import router as violation_router  # NEW: domain module
 from fastapi import APIRouter
 
 api_v1_router = APIRouter(prefix="/api/v1")
@@ -27,7 +27,7 @@ routers = [
     report_controller.router,
     role_permission_controller.router,
     user_controller.router,
-    violation_controller.router,
+    violation_router,  # NEW: from app.violation.controller
     team_controller.router,
     homework_controller.router,
     homework_submission_controller.router,

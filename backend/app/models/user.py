@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from app.models.account import Account
     from app.models.role import Role
     from app.models.permission_request import PermissionRequest
-    from app.models.activity import BonusPoint, Violation
+    from app.violation.infrastructure.model import ViolationModel
     from app.models.team import TeamMember
     from app.models.meeting import MeetingParticipant
 
@@ -55,9 +55,9 @@ class User(TimestampMixin, table=True):
         back_populates="user",
         sa_relationship_kwargs={"foreign_keys": "[BonusPoint.user_id]"},
     )
-    violations: list["Violation"] = Relationship(
+    violations: list["ViolationModel"] = Relationship(
         back_populates="user",
-        sa_relationship_kwargs={"foreign_keys": "[Violation.user_id]"},
+        sa_relationship_kwargs={"foreign_keys": "[ViolationModel.user_id]"},
     )
     team_members: list["TeamMember"] = Relationship(
         back_populates="user",
@@ -86,3 +86,5 @@ class User(TimestampMixin, table=True):
         if self.role and self.role.name == "admin":
             return True
         return permission_name in self.permissions
+
+
