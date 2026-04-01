@@ -6,27 +6,21 @@ Handles HTTP routes and mapping requests to Use Cases.
 
 from typing import Annotated, Optional
 
-from app.bonus_point.application.use_cases import (
-    CreateBonusPointsUseCase,
-    DeleteBonusPointUseCase,
-    GetBonusPointsUseCase,
-    RestoreBonusPointUseCase,
-    UpdateBonusPointUseCase,
-)
-from app.bonus_point.deps import (
-    get_bonus_points_uc,
-    get_create_bonus_points_uc,
-    get_delete_bonus_point_uc,
-    get_restore_bonus_point_uc,
-    get_update_bonus_point_uc,
-)
+from app.bonus_point.application.dtos import (BonusPointCreate,
+                                              BonusPointResponse,
+                                              BonusPointUpdate)
+from app.bonus_point.application.use_cases import (CreateBonusPointsUseCase,
+                                                   DeleteBonusPointUseCase,
+                                                   GetBonusPointsUseCase,
+                                                   RestoreBonusPointUseCase,
+                                                   UpdateBonusPointUseCase)
+from app.bonus_point.deps import (get_bonus_points_uc,
+                                  get_create_bonus_points_uc,
+                                  get_delete_bonus_point_uc,
+                                  get_restore_bonus_point_uc,
+                                  get_update_bonus_point_uc)
 from app.core.deps import hasPermission, hasTeamLeaderAccess
 from app.core.permissions import BonusPointPermission
-from app.bonus_point.application.dtos import (
-    BonusPointCreate,
-    BonusPointResponse,
-    BonusPointUpdate,
-)
 from app.schemas.response import ApiResponse
 from fastapi import APIRouter, Depends, HTTPException
 

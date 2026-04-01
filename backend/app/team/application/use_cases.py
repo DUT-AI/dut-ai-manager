@@ -1,11 +1,7 @@
 from typing import List, Optional
 
-from app.team.application.dtos import (
-    TeamCreate,
-    TeamMemberResponse,
-    TeamResponse,
-    TeamUpdate,
-)
+from app.team.application.dtos import (TeamCreate, TeamMemberResponse,
+                                       TeamResponse, TeamUpdate)
 from app.team.domain.entity import Team as TeamEntity
 from app.team.infrastructure.repository import TeamRepository
 from loguru import logger

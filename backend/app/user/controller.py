@@ -6,29 +6,16 @@ from typing import Annotated, Optional
 
 from app.core.deps import CurrentUser
 from app.schemas.response import ApiResponse
-from app.user.application.dtos import (
-    UserCreate,
-    UserImportResult,
-    UserResponse,
-    UserSettingsUpdate,
-    UserUpdate,
-)
-from app.user.application.use_cases import (
-    CreateUserUseCase,
-    DeleteUserUseCase,
-    GetUserUseCase,
-    ImportUsersUseCase,
-    UpdateAvatarUseCase,
-    UpdateUserUseCase,
-)
-from app.user.deps import (
-    create_user_uc,
-    delete_user_uc,
-    get_user_uc,
-    import_users_uc,
-    update_avatar_uc,
-    update_user_uc,
-)
+from app.user.application.dtos import (UserCreate, UserImportResult,
+                                       UserResponse, UserSettingsUpdate,
+                                       UserUpdate)
+from app.user.application.use_cases import (CreateUserUseCase,
+                                            DeleteUserUseCase, GetUserUseCase,
+                                            ImportUsersUseCase,
+                                            UpdateAvatarUseCase,
+                                            UpdateUserUseCase)
+from app.user.deps import (create_user_uc, delete_user_uc, get_user_uc,
+                           import_users_uc, update_avatar_uc, update_user_uc)
 from fastapi import APIRouter, BackgroundTasks, Depends, Query, UploadFile
 
 router = APIRouter(prefix="/users", tags=["users"])

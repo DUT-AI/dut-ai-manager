@@ -1,8 +1,8 @@
 from typing import List, Optional
 
+from app.bonus_point.application.dtos import BonusPointCreate, BonusPointUpdate
 from app.bonus_point.domain.entity import BonusPoint
 from app.bonus_point.infrastructure.repository import BonusPointRepository
-from app.bonus_point.application.dtos import BonusPointCreate, BonusPointUpdate
 from app.shared.domain.event_bus import EventBus
 
 

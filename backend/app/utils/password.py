@@ -2,11 +2,12 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Literal
 
 import jwt
+from app.core.config import settings
 from jwt.exceptions import PyJWTError
 from loguru import logger
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
-from app.core.config import settings
 from passlib.context import CryptContext
+from pydantic import (BaseModel, ConfigDict, Field, ValidationError,
+                      field_validator)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

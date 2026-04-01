@@ -12,9 +12,10 @@ from app.auth.infrastructure.repository import AccountRepository
 from app.core.config import settings
 from app.user.domain.entity import UserEntity, UserStatus
 from app.user.infrastructure.repository import UserRepository
-from app.utils.password import (TokenPayload, create_access_token, create_refresh_token,
-                                decode_access_token, decode_refresh_token,
-                                get_password_hash, hash_password, verify_password)
+from app.utils.password import (TokenPayload, create_access_token,
+                                create_refresh_token, decode_access_token,
+                                decode_refresh_token, get_password_hash,
+                                hash_password, verify_password)
 from fastapi import HTTPException
 from loguru import logger
 

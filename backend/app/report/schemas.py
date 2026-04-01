@@ -1,9 +1,9 @@
 from datetime import date, datetime
 from typing import List, Optional
 
+from app.homework.application.dtos import HomeworkResponse
 from app.meeting.schemas import MeetingResponse
 from app.permission_request.schemas import PermissionRequestResponse
-from app.homework.application.dtos import HomeworkResponse
 from app.user.application.dtos import UserResponse
 from pydantic import BaseModel
 

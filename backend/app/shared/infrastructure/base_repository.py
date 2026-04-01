@@ -37,7 +37,11 @@ class BaseRepository(Generic[TModel]):
         return entity
 
     def get_all(
-        self, skip: int = 0, limit: int = 100, deleted: bool = False, user_id: int | None = None
+        self,
+        skip: int = 0,
+        limit: int = 100,
+        deleted: bool = False,
+        user_id: int | None = None,
     ) -> list[TModel]:
         """Get all models with optional user_id filter and pagination."""
         query = select(self.model)

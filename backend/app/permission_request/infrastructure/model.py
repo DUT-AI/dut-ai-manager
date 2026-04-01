@@ -2,7 +2,8 @@ from datetime import date as dt_date
 from datetime import time as dt_time
 from typing import Optional
 
-from app.permission_request.domain.entity import PermissionRequest as PermissionRequestEntity
+from app.permission_request.domain.entity import \
+  PermissionRequest as PermissionRequestEntity
 from app.permission_request.domain.value_objects import RequestCategory
 from app.shared.infrastructure.base_model import TimestampMixin
 from sqlmodel import Field, Index, SQLModel

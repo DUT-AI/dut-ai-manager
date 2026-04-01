@@ -3,24 +3,18 @@ Auth Web Controller — API routes for authentication.
 """
 
 from typing import Annotated
-from loguru import logger
-from app.auth.application.use_cases import (
-    AuthenticateUseCase,
-    ChangePasswordUseCase,
-    RefreshTokenUseCase,
-)
+
+from app.auth.application.use_cases import (AuthenticateUseCase,
+                                            ChangePasswordUseCase,
+                                            RefreshTokenUseCase)
 from app.auth.deps import authenticate_uc, change_password_uc, refresh_token_uc
 from app.core.config import settings
 from app.core.deps import CurrentUser
-from app.schemas.auth import (
-    ChangePasswordRequest,
-    LoginRequest,
-    RefreshTokenRequest,
-    TokenResponse,
-    UserResponse,
-)
+from app.schemas.auth import (ChangePasswordRequest, LoginRequest,
+                              RefreshTokenRequest, TokenResponse, UserResponse)
 from app.schemas.response import ApiResponse
 from fastapi import APIRouter, Depends, Response
+from loguru import logger
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

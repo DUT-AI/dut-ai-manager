@@ -4,7 +4,8 @@ from typing import Annotated
 from app.core.context import set_current_user_id
 from app.core.database import get_session
 from app.rbac.domain.entity import RoleType
-from app.rbac.infrastructure.repository import RoleApiKeyRepository, RoleRepository
+from app.rbac.infrastructure.repository import (RoleApiKeyRepository,
+                                                RoleRepository)
 from app.schemas.response import BadRequestException
 from app.user.domain.entity import UserEntity
 from app.user.infrastructure.repository import UserRepository
@@ -50,7 +51,7 @@ def get_current_user(
     if token.startswith("sk-"):
         role_api_key = RoleApiKeyRepository(session)
 
-        prefix = token[:6] 
+        prefix = token[:6]
         candidates = role_api_key.get_candidates_by_prefix(prefix)
 
         matched_key = None

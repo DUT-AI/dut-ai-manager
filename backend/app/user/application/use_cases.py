@@ -6,12 +6,11 @@ from datetime import datetime
 from typing import List
 
 from app.api.v1.services.email_service import EmailService
-
 # External imports for complex use cases
 from app.auth.application.use_cases import CreateAccountUseCase
-from app.user.application.dtos import UserCreate, UserImportResult
 from app.shared.domain.event_bus import EventBus
 from app.shared.infrastructure.minio_service import MinioService
+from app.user.application.dtos import UserCreate, UserImportResult
 from app.user.domain.entity import UserEntity, UserStatus
 from app.user.infrastructure.repository import UserRepository
 from fastapi import BackgroundTasks, HTTPException, UploadFile
