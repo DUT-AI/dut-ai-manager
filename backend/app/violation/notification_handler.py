@@ -43,9 +43,7 @@ def create_violation_notification_handler(discord_service: DiscordService):
                         "inline": False,
                     },
                 ],
-                "footer": {
-                    "text": "DUT AI Manager • Hệ thống nhắc nhở tự động"
-                },
+                "footer": {"text": "DUT AI Manager • Hệ thống nhắc nhở tự động"},
             }
 
             await discord_service.send_message_to_user(

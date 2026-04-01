@@ -37,16 +37,16 @@ class BaseRepository(Generic[TModel]):
         return entity
 
     def get_all(
-        self, skip: int = 0, limit: int = 100, deleted: bool = False
+        self, skip: int = 0, limit: int = 100, deleted: bool = False, user_id: int | None = None
     ) -> list[TModel]:
-        """Get all models with pagination."""
-        statement = (
-            select(self.model)
-            .where(getattr(self.model, "is_deleted", False) == deleted)
-            .offset(skip)
-            .limit(limit)
-        )
-        return list(self.session.exec(statement).all())
+        """Get all models with optional user_id filter and pagination."""
+        query = select(self.model)
+        if user_id:
+            query = query.where(getattr(self.model, "user_id") == user_id)
+        if deleted:
+            query = query.where(getattr(self.model, "is_deleted", False) == deleted)
+        query = query.offset(skip).limit(limit)
+        return list(self.session.exec(query).all())
 
     def update(self, model: TModel) -> TModel:
         """Update a model (add to session and flush)."""

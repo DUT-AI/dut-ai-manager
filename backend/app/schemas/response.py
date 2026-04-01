@@ -1,5 +1,4 @@
-from typing import Any
-from typing import Generic, Optional, TypeVar
+from typing import Any, Generic, Optional, TypeVar
 
 from pydantic import BaseModel
 

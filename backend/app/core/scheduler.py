@@ -11,8 +11,8 @@ the lock will run the scheduler.
 import fcntl
 import os
 
-from app.jobs.homework_checker_job import check_overdue_homework_submissions
-from app.jobs.meeting_checker_job import check_meeting_attendance
+# from app.jobs.homework_checker_job import check_overdue_homework_submissions
+# from app.jobs.meeting_checker_job import check_meeting_attendance
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from loguru import logger
@@ -75,22 +75,22 @@ def start_scheduler() -> None:
     scheduler = AsyncIOScheduler(timezone="Asia/Ho_Chi_Minh")
 
     # Schedule homework check job at 23:00 (11 PM) every day
-    scheduler.add_job(
-        check_overdue_homework_submissions,
-        CronTrigger(hour=23, minute=0, timezone="Asia/Ho_Chi_Minh"),
-        id="homework_deadline_check",
-        name="Check overdue homework submissions",
-        replace_existing=True,
-    )
+    # scheduler.add_job(
+    #     check_overdue_homework_submissions,
+    #     CronTrigger(hour=23, minute=0, timezone="Asia/Ho_Chi_Minh"),
+    #     id="homework_deadline_check",
+    #     name="Check overdue homework submissions",
+    #     replace_existing=True,
+    # )
 
-    # Schedule meeting attendance check every hour from 8:00 to 23:00
-    scheduler.add_job(
-        check_meeting_attendance,
-        CronTrigger(hour="8-23", minute=5, timezone="Asia/Ho_Chi_Minh"),
-        id="meeting_attendance_check",
-        name="Check meeting attendance",
-        replace_existing=True,
-    )
+    # # Schedule meeting attendance check every hour from 8:00 to 23:00
+    # scheduler.add_job(
+    #     check_meeting_attendance,
+    #     CronTrigger(hour="8-23", minute=5, timezone="Asia/Ho_Chi_Minh"),
+    #     id="meeting_attendance_check",
+    #     name="Check meeting attendance",
+    #     replace_existing=True,
+    # )
 
     scheduler.start()
     logger.info(

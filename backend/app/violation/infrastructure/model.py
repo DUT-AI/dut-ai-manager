@@ -5,10 +5,8 @@ Only used for database mapping and entity conversion.
 Domain entity: app.violation.domain.entity.Violation
 """
 
-from __future__ import annotations
-
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional, List
+from typing import TYPE_CHECKING, List, Optional
 
 from app.shared.domain.value_objects import UserRef
 from app.shared.infrastructure.base_model import TimestampMixin
@@ -16,7 +14,7 @@ from app.violation.domain.entity import Violation
 from sqlmodel import Field, Relationship
 
 if TYPE_CHECKING:
-    from app.user.infrastructure.model import UserModel as User
+    from app.user.infrastructure.model import UserModel
     from app.violation.domain.entity import Violation
 
 
@@ -33,22 +31,22 @@ class ViolationModel(TimestampMixin, table=True):
     user_id: int = Field(foreign_key="users.id", index=True)
 
     # Relationships (ORM concern only)
-    user: "User" = Relationship(
+    user: "UserModel" = Relationship(
         back_populates="violations",
         sa_relationship_kwargs={"foreign_keys": "[ViolationModel.user_id]"},
     )
-    creator_rel: Optional["User"] = Relationship(
+    creator_rel: Optional["UserModel"] = Relationship(
         sa_relationship_kwargs={
-            "primaryjoin": "ViolationModel.created_by==User.id",
+            "primaryjoin": "ViolationModel.created_by==UserModel.id",
             "foreign_keys": "[ViolationModel.created_by]",
             "overlaps": "violations",
         }
     )
-    updater_rel: Optional["User"] = Relationship(
+    updater_rel: Optional["UserModel"] = Relationship(
         sa_relationship_kwargs={
-            "primaryjoin": "ViolationModel.updated_by==User.id",
+            "primaryjoin": "ViolationModel.updated_by==UserModel.id",
             "foreign_keys": "[ViolationModel.updated_by]",
-            "overlaps": "violations",
+            "overlaps": "violations,creator_rel",
         }
     )
 

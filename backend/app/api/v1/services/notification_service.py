@@ -1,10 +1,9 @@
-from app.models import Violation, Homework, User
-from app.models.meeting import Meeting
 from app.core.config import settings
 from app.core.discord_service import DiscordService
-from app.api.v1.services.zalo_service import ZaloService
-from app.api.v1.services.zalo_bot_service import ZaloBotService
+from app.models import Homework, User, Violation
+from app.models.meeting import Meeting
 from app.models.permission_request import PermissionRequest, RequestCategory
+from app.zalo.application.use_cases import SendZaloNotificationUseCase
 from loguru import logger
 
 
@@ -14,12 +13,10 @@ class NotificationService:
     def __init__(
         self,
         discord_service: DiscordService,
-        zalo_service: ZaloService,
-        zalo_bot_service: ZaloBotService,
+        send_zalo_notification: SendZaloNotificationUseCase,
     ):
         self.discord_service = discord_service
-        self.zalo_service = zalo_service
-        self.zalo_bot_service = zalo_bot_service
+        self.send_zalo_notification = send_zalo_notification
 
     async def send_permission_request_notification(
         self, request: PermissionRequest
@@ -259,9 +256,8 @@ class NotificationService:
                         embed=custom_embed,
                     )
 
-                # Send Zalo OA Notification
-                zalo_sent = False
-                if user.zalo_id:
+                # Send Zalo Notification (Internal logic handles OA or Bot)
+                if user.zalo_id or user.zalo_bot_id:
                     zalo_text = (
                         f"👋 Chào {user.name},\n\n"
                         f"{title_prefix} Lịch sinh hoạt vừa được {action}.\n"
@@ -270,24 +266,10 @@ class NotificationService:
                         f"⏱️ Kết thúc: {meeting.end_time.strftime('%H:%M %d/%m/%Y') if meeting.end_time else 'N/A'}\n"
                         f"📖 Nội dung: {description}"
                     )
-                    resp = await self.zalo_service.send_message_to_user(
-                        user_id=user.zalo_id, text=zalo_text
-                    )
-                    if resp and resp.get("error") == 0:
-                        zalo_sent = True
-
-                # Send Zalo Bot Notification (Fallback or Primary if OA not linked)
-                if not zalo_sent and user.zalo_bot_id:
-                    zalo_bot_text = (
-                        f"👋 Chào {user.name},\n\n"
-                        f"{title_prefix} Lịch sinh hoạt vừa được {action}.\n"
-                        f"📌 Tiêu đề: {meeting.title}\n"
-                        f"⏰ Bắt đầu: {meeting.start_time.strftime('%H:%M %d/%m/%Y') if meeting.start_time else 'N/A'}\n"
-                        f"⏱️ Kết thúc: {meeting.end_time.strftime('%H:%M %d/%m/%Y') if meeting.end_time else 'N/A'}\n"
-                        f"📖 Nội dung: {description}"
-                    )
-                    await self.zalo_bot_service.send_message_to_user(
-                        chat_id=user.zalo_bot_id, text=zalo_bot_text
+                    await self.send_zalo_notification.execute(
+                        zalo_id=user.zalo_id,
+                        zalo_bot_id=user.zalo_bot_id,
+                        text=zalo_text,
                     )
 
                 count += 1

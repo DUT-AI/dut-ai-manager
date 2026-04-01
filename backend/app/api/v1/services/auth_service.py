@@ -7,14 +7,9 @@ from app.api.v1.repositories import AccountRepository, UserRepository
 from app.core.config import settings
 from app.models import Account, User, UserStatus
 from app.schemas.response import BadRequestException
-from app.utils.password import (
-    create_access_token,
-    create_refresh_token,
-    decode_token,
-    get_password_hash,
-    hash_password,
-    verify_password,
-)
+from app.utils.password import (create_access_token, create_refresh_token,
+                                decode_token, get_password_hash, hash_password,
+                                verify_password)
 
 
 class AuthService:

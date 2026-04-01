@@ -1,17 +1,14 @@
 from typing import List, Optional
 
-from app.api.v1.repositories import RoleRepository, UserRepository
+from app.api.v1.repositories import UserRepository
 from app.api.v1.services.auth_service import AuthService
 from app.api.v1.services.email_service import EmailService
-from app.core.minio_service import MinioService
 from app.models import RoleType, User
+from app.rbac.infrastructure.repository import RoleRepository
 from app.schemas.response import BadRequestException
-from app.schemas.user import (
-    UserCreate,
-    UserImportResult,
-    UserSettingsUpdate,
-    UserUpdate,
-)
+from app.schemas.user import (UserCreate, UserImportResult, UserSettingsUpdate,
+                              UserUpdate)
+from app.shared.infrastructure.minio_service import MinioService
 from app.utils.datetime import get_current_utc7_time
 from fastapi import BackgroundTasks, UploadFile
 

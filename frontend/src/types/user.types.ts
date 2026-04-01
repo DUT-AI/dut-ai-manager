@@ -12,6 +12,8 @@ export interface UserResponse {
   discord_id: string | null;
   zalo_id: string | null;
   avatar_url: string | null;
+  /** API không trả về mã thật; chỉ biết đã lưu hay chưa */
+  check_in_card_code_configured?: boolean;
 }
 
 export interface UserCreate {
@@ -42,4 +44,5 @@ export interface UserSettingsUpdate {
   discord_id?: string;
   zalo_id?: string;
   avatar_url?: string;
+  check_in_card_code?: string;
 }

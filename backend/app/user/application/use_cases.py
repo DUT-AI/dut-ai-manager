@@ -2,18 +2,20 @@
 User Application Use Cases — business logic layer.
 """
 
-from typing import List
 from datetime import datetime
-from app.shared.domain.event_bus import EventBus
-from app.user.domain.entity import User, UserStatus
-from app.user.infrastructure.repository import UserRepository
+from typing import List
+
+from app.api.v1.services.email_service import EmailService
 
 # External imports for complex use cases
-from app.api.v1.services.auth_service import AuthService
-from app.api.v1.services.email_service import EmailService
-from app.core.minio_service import MinioService
-from app.schemas.user import UserCreate, UserImportResult
-from fastapi import BackgroundTasks, UploadFile
+from app.auth.application.use_cases import CreateAccountUseCase
+from app.user.application.dtos import UserCreate, UserImportResult
+from app.shared.domain.event_bus import EventBus
+from app.shared.infrastructure.minio_service import MinioService
+from app.user.domain.entity import UserEntity, UserStatus
+from app.user.infrastructure.repository import UserRepository
+from fastapi import BackgroundTasks, HTTPException, UploadFile
+from loguru import logger
 
 
 class GetUserUseCase:
@@ -22,16 +24,16 @@ class GetUserUseCase:
     def __init__(self, repo: UserRepository):
         self.repo = repo
 
-    def execute(self, user_id: int) -> User:
+    def execute(self, user_id: int) -> UserEntity:
         user = self.repo.get_by_id(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         return user
 
-    def get_all(self) -> List[User]:
+    def get_all(self) -> List[UserEntity]:
         return self.repo.get_all()
 
-    def search(self, keyword: str) -> List[User]:
+    def search(self, keyword: str) -> List[UserEntity]:
         return self.repo.search_user(keyword)
 
 
@@ -41,10 +43,24 @@ class UpdateUserUseCase:
     def __init__(self, repo: UserRepository):
         self.repo = repo
 
-    def execute(self, user_id: int, **update_data) -> User:
+    def execute(self, user_id: int, **update_data) -> UserEntity:
         user = self.repo.get_by_id(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
+
+        if "check_in_card_code" in update_data:
+            raw = update_data["check_in_card_code"]
+            if raw is None or (isinstance(raw, str) and not raw.strip()):
+                update_data["check_in_card_code"] = None
+            else:
+                code = raw.strip()
+                update_data["check_in_card_code"] = code
+                other = self.repo.get_by_check_in_card_code(code)
+                if other and other.id != user_id:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Mã thẻ check-in đã được người khác sử dụng",
+                    )
 
         # Update entity with new data
         updated_entity = user.model_copy(update=update_data)
@@ -78,25 +94,25 @@ class CreateUserUseCase:
     def __init__(
         self,
         repo: UserRepository,
-        auth_service: AuthService,
+        create_account_uc: CreateAccountUseCase,
         email_service: EmailService,
     ):
         self.repo = repo
-        self.auth_service = auth_service
+        self.create_account_uc = create_account_uc
         self.email_service = email_service
 
     async def execute(
         self, user_data: UserCreate, background_tasks: BackgroundTasks
-    ) -> User:
+    ) -> UserEntity:
         # Check email exists
         if self.repo.get_by_email(user_data.email):
             raise HTTPException(status_code=400, detail="Email already exists")
 
         # Create auth account
-        account, password = self.auth_service.create_account()
+        account, password = self.create_account_uc.execute()
 
         # Build Domain Entity
-        new_user = User(
+        new_user = UserEntity(
             name=user_data.name,
             email=user_data.email,
             phone_number=user_data.phone_number,
@@ -132,6 +148,7 @@ class ImportUsersUseCase:
         self, file: UploadFile, background_tasks: BackgroundTasks
     ) -> UserImportResult:
         from io import BytesIO
+
         import pandas as pd
 
         content = await file.read()
@@ -187,7 +204,7 @@ class UpdateAvatarUseCase:
         self.repo = repo
         self.minio = minio
 
-    async def execute(self, user_id: int, file: UploadFile) -> User:
+    async def execute(self, user_id: int, file: UploadFile) -> UserEntity:
         user = self.repo.get_by_id(user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")

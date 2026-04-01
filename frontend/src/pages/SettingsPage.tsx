@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Layout, Menu, Typography, Form, Input, Button, Card, message, Avatar, Upload, Grid } from 'antd';
-import { LockOutlined, SettingOutlined, SafetyCertificateOutlined, UserOutlined, DiscordOutlined, UploadOutlined } from '@ant-design/icons';
+import { LockOutlined, SettingOutlined, SafetyCertificateOutlined, UserOutlined, DiscordOutlined, UploadOutlined, IdcardOutlined } from '@ant-design/icons';
 import { authService } from '@/services/api/auth.service';
 import { userService } from '@/services/api/user.service';
 import { useAuth } from '@/context/AuthContext';
@@ -130,11 +130,11 @@ const GeneralContent: React.FC<GeneralContentProps> = ({ user, loading, uploadin
 
         {/* Use key to reinitialize form when user data changes after refresh */}
         <Form
-            key={user?.discord_id ?? 'no-discord'}
+            key={`${user?.discord_id ?? 'nd'}-${user?.check_in_card_code_configured ? 'card-y' : 'card-n'}`}
             form={form}
             layout="vertical"
             onFinish={onFinish}
-            initialValues={{ discord_id: user?.discord_id }}
+            initialValues={{ discord_id: user?.discord_id, check_in_card_code: '' }}
         >
             <Form.Item
                 name="discord_id"
@@ -147,6 +147,37 @@ const GeneralContent: React.FC<GeneralContentProps> = ({ user, loading, uploadin
                     size="large"
                     className="rounded-lg"
                 />
+            </Form.Item>
+
+            <Form.Item
+                label="Mã thẻ check-in"
+                tooltip="Mã duy nhất dùng khi điểm danh. Sau khi lưu, mã không hiển thị lại trên giao diện."
+            >
+                {user?.check_in_card_code_configured ? (
+                    <Text type="secondary" className="block mb-2">
+                        Mã thẻ đã được lưu. Để đổi mã, nhập mã mới bên dưới (mã cũ sẽ bị thay thế).
+                    </Text>
+                ) : (
+                    <Text type="secondary" className="block mb-2">
+                        Chưa có mã. Nhập mã thẻ của bạn (mỗi tài khoản một mã, không trùng).
+                    </Text>
+                )}
+                <Form.Item
+                    name="check_in_card_code"
+                    noStyle
+                    rules={[
+                        { max: 64, message: 'Tối đa 64 ký tự' },
+                    ]}
+                >
+                    <Input.Password
+                        prefix={<IdcardOutlined className="text-gray-400" />}
+                        placeholder="Nhập mã thẻ (chỉ gửi khi thêm hoặc đổi mã)"
+                        size="large"
+                        className="rounded-lg"
+                        maxLength={64}
+                        autoComplete="off"
+                    />
+                </Form.Item>
             </Form.Item>
 
             <Form.Item className="mb-0 mt-6">
@@ -191,9 +222,17 @@ export const SettingsPage: React.FC = () => {
     const onUpdateSettings = async (values: any) => {
         setLoading(true);
         try {
-            await userService.updateSettings(values);
+            const payload: import('@/types/user.types').UserSettingsUpdate = {
+                discord_id: values.discord_id,
+            };
+            const card = typeof values.check_in_card_code === 'string' ? values.check_in_card_code.trim() : '';
+            if (card) {
+                payload.check_in_card_code = card;
+            }
+            await userService.updateSettings(payload);
             message.success('Cập nhật thông tin thành công');
             await refreshUser();
+            generalForm.setFieldsValue({ check_in_card_code: '' });
         } catch (error: any) {
             console.error(error);
         } finally {

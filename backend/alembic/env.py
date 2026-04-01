@@ -1,12 +1,26 @@
 from logging.config import fileConfig
 
 from alembic import context
+
 # Import settings for database URL
 from app.core.config import settings
+
 # Import all models to register them with SQLModel
-from app.models import (Account, BonusPoint, Permission, PermissionRequest,
-                        Role, RolePermission, Team, TeamMember, User,
-                        Violation)
+from app.auth.infrastructure.model import AccountModel
+from app.user.infrastructure.model import UserModel
+from app.rbac.infrastructure.model import (
+    PermissionModel,
+    RoleApiKeyModel,
+    RoleModel,
+    RolePermissionModel,
+)
+from app.bonus_point.infrastructure.model import BonusPointModel
+from app.team.infrastructure.model import TeamMemberModel, TeamModel
+from app.permission_request.infrastructure.model import PermissionRequest
+from app.violation.infrastructure.model import ViolationModel
+from app.meeting.infrastructure.model import MeetingParticipant, Meeting
+from app.homework.infrastructure.model import HomeworkSubmissionModel, HomeworkModel
+
 from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
 

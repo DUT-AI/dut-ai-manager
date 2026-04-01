@@ -1,4 +1,4 @@
-.PHONY: help install dev build start stop restart logs clean
+.PHONY: help install dev build start stop restart logs clean backend-quality backend-test
 
 # Colors
 GREEN := \033[0;32m
@@ -57,9 +57,8 @@ seed-db: ## Seed permissions from enums into database
 backend-install: ## Install backend dependencies
 	cd backend && uv sync
 
-backend-dev: ## Run backend with remote dev database via Cloudflare Tunnel
-	@cd backend && POSTGRES_SERVER=localhost uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8001; \
-
+backend-dev: ## Backend dev server — Postgres lấy từ .env (dùng tunnel: đặt POSTGRES_SERVER=localhost trong .env)
+	cd backend && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
 
 backend-test: ## Run backend tests
 	cd backend && uv run pytest
@@ -97,15 +96,5 @@ dev: ## Run all development servers (requires tmux or run in separate terminals)
 clean: docker-clean ## Clean all docker resources
 	@echo "Cleaned!"
 
-# ==================== Backend V2 (Clean Architecture) ====================
-backend-v2-install: ## Install backend-v2 dependencies
-	cd backend_v2 && uv sync
-
-backend-v2-dev: ## Run backend-v2 discovery
-	cd backend_v2 && uv run uvicorn app.main:app --reload --port 8032
-
-backend-v2-quality: ## Run quality checks for backend-v2
-	make -C backend_v2 quality
-
-backend-v2-test: ## Run backend-v2 tests
-	make -C backend_v2 test
+backend-quality: ## Run quality checks for backend
+	cd backend && make quality

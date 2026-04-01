@@ -8,13 +8,12 @@ Use cases orchestrate: repository + domain logic + events.
 from datetime import datetime
 from typing import Optional
 
-from fastapi import HTTPException
-from loguru import logger
-
 from app.shared.domain.event_bus import EventBus
 from app.violation.domain.entity import Violation
 from app.violation.domain.events import ViolationCreated
 from app.violation.infrastructure.repository import ViolationRepository
+from fastapi import HTTPException
+from loguru import logger
 
 
 class CreateViolationUseCase:

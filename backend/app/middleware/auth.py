@@ -1,6 +1,6 @@
-from fastapi import Request
 from app.core.context import set_current_user_id
 from app.utils.password import decode_token
+from fastapi import Request
 
 
 async def set_user_context(request: Request, call_next):
@@ -13,7 +13,7 @@ async def set_user_context(request: Request, call_next):
 
     if token:
         payload = decode_token(token)
-        if payload and "sub" in payload:
+        if payload and payload.get("sub") is not None:
             try:
                 set_current_user_id(int(payload["sub"]))
             except (ValueError, TypeError):

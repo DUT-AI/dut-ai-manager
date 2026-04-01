@@ -1,19 +1,19 @@
-from typing import Optional
-from app.schemas.homework import HomeworkResponse
 from datetime import date
-from typing import List
+from typing import TYPE_CHECKING, List, Optional
 
 from app.api.v1.services.bonus_point_service import BonusPointService
+from app.api.v1.services.permission_request_service import \
+  PermissionRequestService
 from app.api.v1.services.violation_service import ViolationService
-from app.api.v1.services.meeting_service import MeetingService
-from app.api.v1.services.permission_request_service import PermissionRequestService
-from app.schemas.activity import (
-    BonusPointResponse,
-    DailySummaryResponse,
-    ViolationResponse,
-)
+from app.meeting.application.use_cases import MeetingUseCases
+from app.schemas.activity import (BonusPointResponse, DailySummaryResponse,
+                                  ViolationResponse)
+from app.schemas.homework import HomeworkResponse
 from app.schemas.meeting import MeetingResponse
 from app.schemas.permission_request import PermissionRequestResponse
+
+if TYPE_CHECKING:
+    from app.homework.application.use_cases import HomeworkUseCases
 
 
 class ReportService:
@@ -24,14 +24,14 @@ class ReportService:
         bonus_point_service: BonusPointService,
         violation_service: ViolationService,
         permission_request_service: PermissionRequestService,
-        meeting_service: MeetingService,
-        homework_submission_service: "HomeworkSubmissionService",  # Type hint string to avoid circular import if needed
+        meeting_service: MeetingUseCases,
+        homework_use_cases: "HomeworkUseCases",
     ):
         self.bonus_point_service = bonus_point_service
         self.violation_service = violation_service
         self.permission_request_service = permission_request_service
         self.meeting_service = meeting_service
-        self.homework_submission_service = homework_submission_service
+        self.homework_use_cases = homework_use_cases
 
     def get_daily_summary(self, target_date: date) -> DailySummaryResponse:
         """Get daily summary of all activities"""
@@ -84,7 +84,6 @@ class ReportService:
     ) -> "DashboardOverviewResponse":
         """Get dashboard overview for a specific user and month"""
         from app.schemas.report import DashboardOverviewResponse
-        from app.models.homework_submission import HomeworkStatus
 
         # 1. Permission Requests
         permissions = self.permission_request_service.get_by_user(
@@ -100,9 +99,7 @@ class ReportService:
         violations = self.violation_service.get(month=month, year=year, user_id=user_id)
 
         # 4. Unsubmitted Homework
-        unsubmitted_homeworks = (
-            self.homework_submission_service.get_unsubmitted_by_user(user_id)
-        )
+        unsubmitted_homeworks = self.homework_use_cases.get_unsubmitted_by_user(user_id)
 
         # 5. Meetings (Participating, in month)
         user_meetings = self.meeting_service.get_participating_meetings(
@@ -128,7 +125,7 @@ class ReportService:
         keyword: Optional[str] = None,
     ) -> "ReportResponse":
         """Get aggregated bonus point report"""
-        from app.schemas.report import ReportResponse, ReportItem
+        from app.schemas.report import ReportItem, ReportResponse
         from app.schemas.user import UserResponse
 
         # Fetch all records (potentially filtered by month/year)
@@ -182,7 +179,7 @@ class ReportService:
         keyword: Optional[str] = None,
     ) -> "ReportResponse":
         """Get aggregated violation report"""
-        from app.schemas.report import ReportResponse, ReportItem
+        from app.schemas.report import ReportItem, ReportResponse
         from app.schemas.user import UserResponse
 
         # Fetch all records

@@ -9,10 +9,10 @@ a postponement permission request.
 from app.api.v1.services.email_service import EmailService
 from app.core.database import engine
 from app.core.discord_service import DiscordService
-from app.core.minio_service import MinioService
 from app.core.repository_factory import RepositoryFactory
 from app.core.service_factory import ServiceFactory
 from app.schemas.activity import ViolationCreate
+from app.shared.infrastructure.minio_service import MinioService
 from app.utils.datetime import get_current_utc7_time
 from loguru import logger
 from sqlmodel import Session

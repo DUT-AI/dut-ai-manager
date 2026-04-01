@@ -10,7 +10,6 @@ import asyncio
 
 # Import __init__ first to setup sys.path
 import tests  # noqa: F401
-
 from app.jobs.homework_checker_job import check_overdue_homework_submissions
 
 

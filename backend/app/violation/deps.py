@@ -7,13 +7,11 @@ Provides Use Case instances to controller endpoints.
 from typing import Annotated
 
 from app.shared.infrastructure.database import get_session
-from app.violation.application.use_cases import (
-    CreateViolationUseCase,
-    DeleteViolationUseCase,
-    GetViolationsUseCase,
-    RestoreViolationUseCase,
-    UpdateViolationUseCase,
-)
+from app.violation.application.use_cases import (CreateViolationUseCase,
+                                                 DeleteViolationUseCase,
+                                                 GetViolationsUseCase,
+                                                 RestoreViolationUseCase,
+                                                 UpdateViolationUseCase)
 from app.violation.infrastructure.repository import ViolationRepository
 from fastapi import Depends
 from sqlmodel import Session

@@ -1,8 +1,8 @@
-from app.api.v1.services.notification_service import NotificationService
-from app.api.v1.services.user_service import UserService
 from typing import Optional
 
 from app.api.v1.repositories.violation_repository import ViolationRepository
+from app.api.v1.services.notification_service import NotificationService
+from app.api.v1.services.user_service import UserService
 from app.models import Violation
 from app.schemas.activity import ViolationCreate, ViolationUpdate
 from fastapi.exceptions import HTTPException

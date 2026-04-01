@@ -3,15 +3,15 @@ from typing import Annotated
 
 from app.core.context import set_current_user_id
 from app.core.database import get_session
-from app.core.repository_factory import RepositoryFactory
-from app.core.service_factory import ServiceFactory
-from app.models import RoleType, User
+from app.rbac.domain.entity import RoleType
+from app.rbac.infrastructure.repository import RoleApiKeyRepository, RoleRepository
 from app.schemas.response import BadRequestException
-from app.utils.password import decode_token
+from app.user.domain.entity import UserEntity
+from app.user.infrastructure.repository import UserRepository
+from app.utils.password import decode_access_token, verify_password
 from fastapi import Depends, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlmodel import Session
-from app.utils.password import verify_password
 
 security = HTTPBearer(auto_error=False)
 
@@ -39,7 +39,7 @@ def get_token_from_cookie_or_header(
 def get_current_user(
     token: Annotated[str, Depends(get_token_from_cookie_or_header)],
     session: Annotated[Session, Depends(get_session)],
-) -> User:
+) -> UserEntity:
     """
     Get current user from token.
     Supports:
@@ -48,11 +48,10 @@ def get_current_user(
     """
     # 1. Check for API Key format (sk-...)
     if token.startswith("sk-"):
-        repo_factory = RepositoryFactory(session)
+        role_api_key = RoleApiKeyRepository(session)
 
-        prefix = token[:6]  # Match the prefix length in model
-        # Use the specific repo method we added
-        candidates = repo_factory.role_api_key.get_candidates_by_prefix(prefix)
+        prefix = token[:6] 
+        candidates = role_api_key.get_candidates_by_prefix(prefix)
 
         matched_key = None
         for key in candidates:
@@ -65,19 +64,16 @@ def get_current_user(
 
         role = matched_key.role
 
-        system_user = User(
-            id=0,  # System ID
+        system_user = UserEntity(
+            id=0,
             name=f"System: {matched_key.name}",
             email=f"system+{matched_key.id}@dutai.site",
             role_id=role.id,
-            role=role,
         )
 
-        full_role = repo_factory.role.get_role_with_permissions(role.id)
+        full_role = RoleRepository(session).get_role_with_permissions(role.id)
         if full_role:
             system_user.role = full_role  # Replace with fully loaded role
-
-        system_user._jwt_role = system_user.role.name
 
         perms = set()
         if system_user.role.role_permissions:
@@ -85,44 +81,35 @@ def get_current_user(
                 if rp.permission:
                     perms.add(rp.permission.name)
 
-        system_user._jwt_permissions = perms
+        system_user.permissions = perms
 
         set_current_user_id(0)
 
         return system_user
 
     # 2. Regular JWT processing
-    payload = decode_token(token)
+    payload = decode_access_token(token)
 
     if not payload:
         raise BadRequestException(
             "Invalid or expired token", status.HTTP_401_UNAUTHORIZED
         )
 
-    # Check token type
-    if payload.get("type") != "access":
-        raise BadRequestException("Invalid token type", status.HTTP_401_UNAUTHORIZED)
-
-    user_id = payload.get("sub")
-    if not user_id:
-        raise BadRequestException("Invalid token payload", status.HTTP_401_UNAUTHORIZED)
-
     # Get basic user info from DB (minimal query)
-    user = session.get(User, int(user_id))
+    user = UserRepository(session).get_by_id(payload.sub)
 
     if not user:
         raise BadRequestException("User not found", status.HTTP_401_UNAUTHORIZED)
 
-    # Attach JWT claims to user for permission checking (avoid DB queries)
-    # These are cached from login time
-    if role := payload.get("role"):
-        user._jwt_role = role
-    if permissions := payload.get("permissions"):
-        user._jwt_permissions = set(permissions)
-    if name := payload.get("name"):
-        user._jwt_name = name
-    if avatar := payload.get("avatar"):
-        user._jwt_avatar = avatar
+    # Claims lúc đăng nhập — dùng cho quyền và các dep đọc _jwt_*
+    user.role_name = payload.role or user.role_name
+    user.permissions = set(payload.permissions)
+    user._jwt_role = user.role_name
+    user._jwt_permissions = user.permissions
+    if payload.name:
+        user._jwt_name = payload.name
+    if payload.avatar:
+        user._jwt_avatar = payload.avatar
 
     # Set current user ID in context for audit fields
     set_current_user_id(user.id)
@@ -131,7 +118,7 @@ def get_current_user(
 
 
 # Type alias for dependency injection
-CurrentUser = Annotated[User, Depends(get_current_user)]
+CurrentUser = Annotated[UserEntity, Depends(get_current_user)]
 
 
 class PermissionChecker:
@@ -140,23 +127,9 @@ class PermissionChecker:
             permission.value if isinstance(permission, Enum) else permission
         )
 
-    def __call__(self, current_user: CurrentUser) -> User:
+    def __call__(self, current_user: CurrentUser) -> UserEntity:
         # Use JWT claims for role/permissions (no DB query needed)
-        jwt_role = getattr(current_user, "_jwt_role", None)
-        jwt_permissions = getattr(current_user, "_jwt_permissions", set())
-
-        if not jwt_role:
-            raise BadRequestException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                message="User has no role assigned",
-            )
-
-        # Check if user is admin (admin has all permissions)
-        if jwt_role == RoleType.ADMIN.value:
-            return current_user
-
-        # Check specific permission using JWT claims
-        if self.permission not in jwt_permissions:
+        if not current_user.has_permission(self.permission):
             raise BadRequestException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 message=f"Missing required permission: {self.permission}",
@@ -170,32 +143,8 @@ def hasPermission(permission: str):
     return Depends(PermissionChecker(permission))
 
 
-def get_repo_factory(
-    session: Annotated[Session, Depends(get_session)],
-) -> RepositoryFactory:
-    return RepositoryFactory(session)
-
-
-def get_service_factory(
-    request: Request,
-    repo_factory: Annotated[RepositoryFactory, Depends(get_repo_factory)],
-) -> ServiceFactory:
-    container = request.app.state.container
-    return ServiceFactory(
-        repo_factory,
-        minio_service=container.minio_service,
-        discord_service=container.discord_service,
-        email_service=container.email_service,
-    )
-
-
-ServiceFactoryDI = Annotated[ServiceFactory, Depends(get_service_factory)]
-
-
 def hasTeamLeaderAccess(target_user_id_param: str = "user_id"):
-    async def dependency(
-        request: Request, current_user: CurrentUser, service_factory: ServiceFactoryDI
-    ):
+    async def dependency(request: Request, current_user: CurrentUser):
         jwt_role = getattr(current_user, "_jwt_role", None)
         if jwt_role != RoleType.LEADER.value:
             return  # Admin/other roles bypass
@@ -205,10 +154,9 @@ def hasTeamLeaderAccess(target_user_id_param: str = "user_id"):
         if not target_user_id:
             data = await request.json()
             target_user_id = data.get(target_user_id_param)
-        # Check team membership...
-        in_same_team = service_factory.team.is_in_same_team(
-            current_user.id, int(target_user_id)
-        )
+
+        in_same_team = False
+
         if not in_same_team:
             raise BadRequestException(
                 "Không có quyền vì không chung team",

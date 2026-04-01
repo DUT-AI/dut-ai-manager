@@ -10,8 +10,8 @@ Session lifecycle:
 
 from app.core.config import settings
 from loguru import logger
-from sqlmodel import Session, SQLModel, create_engine
 from sqlalchemy.orm import configure_mappers
+from sqlmodel import Session, SQLModel, create_engine
 
 # Create engine
 engine = create_engine(

@@ -1,13 +1,15 @@
 import secrets
+from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from pydantic import (
-    AnyUrl,
-    BeforeValidator,
-    PostgresDsn,
-    computed_field,
-)
+from loguru import logger
+from pydantic import AnyUrl, BeforeValidator, PostgresDsn, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# .env ở thư mục gốc repo, không phụ thuộc cwd.
+# .../backend/app/core/config.py -> .parent x4 = <repo_root> (core → app → backend → repo)
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+_ENV_FILE = _REPO_ROOT / ".env"
 
 
 def parse_cors(v: Any) -> list[str] | str:
@@ -19,9 +21,9 @@ def parse_cors(v: Any) -> list[str] | str:
 
 
 class Settings(BaseSettings):
+    # Biến môi trường của process (shell, IDE, Docker) ghi đè giá trị trong .env.
     model_config = SettingsConfigDict(
-        # Use top level .env file (one level above ./backend/)
-        env_file="../.env",
+        env_file=str(_ENV_FILE) if _ENV_FILE.is_file() else None,
         env_ignore_empty=True,
         extra="ignore",
     )

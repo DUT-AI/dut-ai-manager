@@ -8,13 +8,12 @@ Mapping delegated to ViolationModel.to_entity() / .from_entity().
 from datetime import datetime
 from typing import Optional
 
+from app.violation.domain.entity import Violation
+from app.violation.infrastructure.model import ViolationModel
 from loguru import logger
 from sqlalchemy import desc, extract
 from sqlalchemy.orm import joinedload
 from sqlmodel import Session, select
-
-from app.violation.domain.entity import Violation
-from app.violation.infrastructure.model import ViolationModel
 
 
 class ViolationRepository:
@@ -28,15 +27,19 @@ class ViolationRepository:
         model = ViolationModel.from_entity(entity)
         self.session.add(model)
         self.session.flush()
-        
+
         # Refresh to get ID and also load relationships for the entity
-        statement = select(ViolationModel).where(ViolationModel.id == model.id).options(
-            joinedload(ViolationModel.user),
-            joinedload(ViolationModel.creator_rel),
-            joinedload(ViolationModel.updater_rel),
+        statement = (
+            select(ViolationModel)
+            .where(ViolationModel.id == model.id)
+            .options(
+                joinedload(ViolationModel.user),
+                joinedload(ViolationModel.creator_rel),
+                joinedload(ViolationModel.updater_rel),
+            )
         )
         model = self.session.exec(statement).first()
-        
+
         logger.debug(f"Saved violation: id={model.id}")
         return model.to_entity()
 
@@ -75,20 +78,19 @@ class ViolationRepository:
         return [m.to_entity() for m in self.session.exec(statement).all()]
 
     def get_by_month(
-        self, month: int, year: int, user_id: Optional[int] = None
+        self,
+        month: Optional[int] = None,
+        year: Optional[int] = None,
+        user_id: Optional[int] = None,
     ) -> list[Violation]:
-        """Get violations filtered by month/year."""
+        """Get violations filtered by month/year (bỏ qua filter nếu month/year là None)."""
         statement = select(ViolationModel).where(ViolationModel.is_deleted == False)
         if user_id:
             statement = statement.where(ViolationModel.user_id == user_id)
-        if month:
-            statement = statement.where(
-                extract("month", ViolationModel.date) == month
-            )
-        if year:
-            statement = statement.where(
-                extract("year", ViolationModel.date) == year
-            )
+        if month is not None:
+            statement = statement.where(extract("month", ViolationModel.date) == month)
+        if year is not None:
+            statement = statement.where(extract("year", ViolationModel.date) == year)
         statement = statement.options(
             joinedload(ViolationModel.user),
             joinedload(ViolationModel.creator_rel),
@@ -172,4 +174,3 @@ class ViolationRepository:
         self.session.flush()
         self.session.refresh(model)
         return model.to_entity()
-

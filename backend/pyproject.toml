@@ -26,6 +26,7 @@ dependencies = [
     "python-zalo-bot>=0.1.9",
     "sqlmodel>=0.0.31",
     "uvicorn[standard]>=0.40.0",
+    "dishka>=1.9.1", 
 ]
 
 [tool.pylint.main]

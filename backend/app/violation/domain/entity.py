@@ -6,10 +6,9 @@ Contains business rules and validation for violations.
 
 from datetime import datetime
 
-from pydantic import field_validator
-
 from app.shared.domain.base_entity import BaseEntity
 from app.shared.domain.value_objects import UserRef
+from pydantic import field_validator
 
 
 class Violation(BaseEntity):
@@ -20,9 +19,9 @@ class Violation(BaseEntity):
     user_id: int = 0
 
     # Embedded Value Objects — who is involved
-    owner: UserRef | None = None       # user who was violated
-    creator: UserRef | None = None     # who created this violation
-    updater: UserRef | None = None     # who last updated this
+    owner: UserRef | None = None  # user who was violated
+    creator: UserRef | None = None  # who created this violation
+    updater: UserRef | None = None  # who last updated this
 
     @field_validator("reason")
     @classmethod

@@ -1,11 +1,11 @@
 from typing import List, Optional
-from pydantic import BaseModel
 
+from app.meeting.schemas import MeetingResponse
 from app.schemas.activity import BonusPointResponse, ViolationResponse
 from app.schemas.homework import HomeworkResponse
-from app.schemas.meeting import MeetingResponse
 from app.schemas.permission_request import PermissionRequestResponse
 from app.schemas.user import UserResponse
+from pydantic import BaseModel
 
 
 class DashboardOverviewResponse(BaseModel):

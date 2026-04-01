@@ -1,12 +1,12 @@
-from sqlmodel import Session, select
 from app.core.database import engine
+from app.core.permissions import *
+from app.models.account import Account
 from app.models.permission import Permission
 from app.models.role import Role, RoleType
 from app.models.user import User, UserStatus
-from app.models.account import Account
-from app.core.permissions import *
 from app.utils.password import hash_password
 from loguru import logger
+from sqlmodel import Session, select
 
 
 def seed_roles():

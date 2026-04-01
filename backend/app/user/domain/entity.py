@@ -4,9 +4,9 @@ User Domain Entity — pure Pydantic, NO ORM dependency.
 
 from enum import Enum
 from typing import Optional
-from pydantic import Field
 
 from app.shared.domain.base_entity import BaseEntity
+from pydantic import Field
 
 
 class UserStatus(str, Enum):
@@ -14,7 +14,7 @@ class UserStatus(str, Enum):
     INACTIVE = "inactive"
 
 
-class User(BaseEntity):
+class UserEntity(BaseEntity):
     """Domain entity representing a user."""
 
     name: str
@@ -22,9 +22,10 @@ class User(BaseEntity):
     phone_number: Optional[str] = None
     status: UserStatus = UserStatus.ACTIVE
     avatar_url: Optional[str] = None
-    
+
     # IDs for external services
     discord_id: Optional[str] = None
+    check_in_card_code: Optional[str] = None
     zalo_id: Optional[str] = None
     zalo_bot_id: Optional[str] = None
     zalo_bind_code: Optional[str] = None
@@ -38,6 +39,10 @@ class User(BaseEntity):
     permissions: set[str] = Field(default_factory=set)
 
     def has_permission(self, permission_name: str) -> bool:
-        if self.role_name == "admin":
+        role = getattr(self, "_jwt_role", None) or self.role_name
+        if role == "admin":
             return True
+        jwt_perms = getattr(self, "_jwt_permissions", None)
+        if jwt_perms is not None:
+            return permission_name in jwt_perms
         return permission_name in self.permissions
