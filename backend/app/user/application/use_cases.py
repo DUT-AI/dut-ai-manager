@@ -5,16 +5,18 @@ User Application Use Cases — business logic layer.
 from datetime import datetime
 from typing import List
 
-from app.api.v1.services.email_service import EmailService
+from app.shared.application.query_support_utils import build_query_support
+from app.shared.domain.query_support import FilterCriterion, FilterOperator
+
 # External imports for complex use cases
-from app.auth.application.use_cases import CreateAccountUseCase
-from app.shared.domain.event_bus import EventBus
 from app.shared.infrastructure.minio_service import MinioService
 from app.user.application.dtos import UserCreate, UserImportResult
 from app.user.domain.entity import UserEntity, UserStatus
 from app.user.infrastructure.repository import UserRepository
 from fastapi import BackgroundTasks, HTTPException, UploadFile
 from loguru import logger
+from app.shared.domain.event_bus import EventBus
+from app.user.domain.events import UserCreated
 
 
 class GetUserUseCase:
@@ -24,13 +26,32 @@ class GetUserUseCase:
         self.repo = repo
 
     def execute(self, user_id: int) -> UserEntity:
-        user = self.repo.get_by_id(user_id)
+        # Load đầy đủ role/permissions
+        qs = build_query_support(
+            filters=[
+                FilterCriterion(field="id", operator=FilterOperator.EQ, value=user_id)
+            ],
+            include=[
+                "role",
+                "role.role_permissions",
+                "role.role_permissions.permission",
+            ],
+        )
+        user = self.repo.get_one(qs)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         return user
 
     def get_all(self) -> List[UserEntity]:
-        return self.repo.get_all()
+        # Mặc định load đầy đủ role/permissions để to_entity chính xác
+        qs = build_query_support(
+            include=[
+                "role",
+                "role.role_permissions",
+                "role.role_permissions.permission",
+            ]
+        )
+        return self.repo.get_all(qs)
 
     def search(self, keyword: str) -> List[UserEntity]:
         return self.repo.search_user(keyword)
@@ -43,7 +64,17 @@ class UpdateUserUseCase:
         self.repo = repo
 
     def execute(self, user_id: int, **update_data) -> UserEntity:
-        user = self.repo.get_by_id(user_id)
+        qs = build_query_support(
+            filters=[
+                FilterCriterion(field="id", operator=FilterOperator.EQ, value=user_id)
+            ],
+            include=[
+                "role",
+                "role.role_permissions",
+                "role.role_permissions.permission",
+            ],
+        )
+        user = self.repo.get_one(qs)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -54,7 +85,16 @@ class UpdateUserUseCase:
             else:
                 code = raw.strip()
                 update_data["check_in_card_code"] = code
-                other = self.repo.get_by_check_in_card_code(code)
+                qs_check = build_query_support(
+                    filters=[
+                        FilterCriterion(
+                            field="check_in_card_code",
+                            operator=FilterOperator.EQ,
+                            value=code,
+                        )
+                    ]
+                )
+                other = self.repo.get_one(qs_check)
                 if other and other.id != user_id:
                     raise HTTPException(
                         status_code=400,
@@ -80,11 +120,17 @@ class DeleteUserUseCase:
         self.repo = repo
 
     def execute(self, user_id: int) -> bool:
-        user = self.repo.get_by_id(user_id)
+        qs = build_query_support(
+            filters=[
+                FilterCriterion(field="id", operator=FilterOperator.EQ, value=user_id)
+            ]
+        )
+        user = self.repo.get_one(qs)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        return self.repo.delete_by_id(user_id)
+        self.repo.soft_delete(user)
+        return True
 
 
 class CreateUserUseCase:
@@ -93,24 +139,24 @@ class CreateUserUseCase:
     def __init__(
         self,
         repo: UserRepository,
-        create_account_uc: CreateAccountUseCase,
-        email_service: EmailService,
     ):
         self.repo = repo
-        self.create_account_uc = create_account_uc
-        self.email_service = email_service
 
     async def execute(
         self, user_data: UserCreate, background_tasks: BackgroundTasks
     ) -> UserEntity:
         # Check email exists
-        if self.repo.get_by_email(user_data.email):
+        qs_email = build_query_support(
+            filters=[
+                FilterCriterion(
+                    field="email", operator=FilterOperator.EQ, value=user_data.email
+                )
+            ]
+        )
+        if self.repo.get_one(qs_email):
             raise HTTPException(status_code=400, detail="Email already exists")
 
-        # Create auth account
-        account, password = self.create_account_uc.execute()
-
-        # Build Domain Entity
+        # 1. Build & Save User Domain Entity
         new_user = UserEntity(
             name=user_data.name,
             email=user_data.email,
@@ -119,18 +165,21 @@ class CreateUserUseCase:
                 UserStatus(user_data.status) if user_data.status else UserStatus.ACTIVE
             ),
             role_id=user_data.role_id,
-            account_id=account.id,
         )
+        saved_user = self.repo.add(new_user)
+        self.repo.flush()
+        if not saved_user or saved_user.id is None:
+            raise Exception("Failed to create user")
 
-        # Save
-        saved_user = self.repo.save(new_user)
+        # 2. Publish Domain Event
 
-        # Send welcome email
-        background_tasks.add_task(
-            self.email_service.send_new_account_email,
-            to_email=saved_user.email,
-            name=saved_user.name,
-            password=password,
+        await EventBus.publish(
+            UserCreated(
+                user_id=saved_user.id,
+                name=saved_user.name,
+                email=saved_user.email,
+                role_id=saved_user.role_id,
+            )
         )
 
         return saved_user
@@ -152,7 +201,8 @@ class ImportUsersUseCase:
 
         content = await file.read()
         try:
-            if file.filename.endswith(".csv"):
+            is_csv = file.filename and file.filename.endswith(".csv")
+            if is_csv:
                 df = pd.read_csv(BytesIO(content))
             else:
                 df = pd.read_excel(BytesIO(content))
@@ -167,7 +217,7 @@ class ImportUsersUseCase:
         )
 
         for index, row in df.iterrows():
-            row_num = index + 2
+            row_num = int(index) + 2
             try:
                 email = str(row.get("email", "")).strip()
                 name = str(row.get("name", "")).strip()
@@ -177,7 +227,14 @@ class ImportUsersUseCase:
                     summary.errors.append(f"Row {row_num}: Invalid email")
                     continue
 
-                if self.repo.get_by_email(email):
+                qs_email = build_query_support(
+                    filters=[
+                        FilterCriterion(
+                            field="email", operator=FilterOperator.EQ, value=email
+                        )
+                    ]
+                )
+                if self.repo.get_one(qs_email):
                     summary.error_count += 1
                     summary.errors.append(f"Row {row_num}: Email exists ({email})")
                     continue
@@ -191,7 +248,8 @@ class ImportUsersUseCase:
                 summary.success_count += 1
             except Exception as e:
                 summary.error_count += 1
-                summary.errors.append(f"Row {row_num}: {str(e)}")
+                error_msg = f"Row {row_num}: {str(e)}"
+                summary.errors.append(error_msg)
 
         return summary
 
@@ -204,7 +262,17 @@ class UpdateAvatarUseCase:
         self.minio = minio
 
     async def execute(self, user_id: int, file: UploadFile) -> UserEntity:
-        user = self.repo.get_by_id(user_id)
+        qs = build_query_support(
+            filters=[
+                FilterCriterion(field="id", operator=FilterOperator.EQ, value=user_id)
+            ],
+            include=[
+                "role",
+                "role.role_permissions",
+                "role.role_permissions.permission",
+            ],
+        )
+        user = self.repo.get_one(qs)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 

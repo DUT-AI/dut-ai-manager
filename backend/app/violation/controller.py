@@ -9,19 +9,23 @@ from typing import Annotated
 
 from app.core.deps import hasPermission
 from app.core.permissions import ViolationPermission
-from app.schemas.response import ApiResponse
+from app.shared.application.response import ApiResponse
 from app.user.domain.entity import UserEntity
-from app.violation.application.use_cases import (CreateViolationUseCase,
-                                                 DeleteViolationUseCase,
-                                                 GetViolationsUseCase,
-                                                 RestoreViolationUseCase,
-                                                 UpdateViolationUseCase)
-from app.violation.deps import (get_create_violation_uc,
-                                get_delete_violation_uc,
-                                get_restore_violation_uc,
-                                get_update_violation_uc, get_violations_uc)
-from app.violation.schemas import (ViolationCreate, ViolationResponse,
-                                   ViolationUpdate)
+from app.violation.application.use_cases import (
+    CreateViolationUseCase,
+    DeleteViolationUseCase,
+    GetViolationsUseCase,
+    RestoreViolationUseCase,
+    UpdateViolationUseCase,
+)
+from app.violation.deps import (
+    get_create_violation_uc,
+    get_delete_violation_uc,
+    get_restore_violation_uc,
+    get_update_violation_uc,
+    get_violations_uc,
+)
+from app.violation.schemas import ViolationCreate, ViolationResponse, ViolationUpdate
 from fastapi import APIRouter, Depends, HTTPException
 
 router = APIRouter(prefix="/violations", tags=["violations"])

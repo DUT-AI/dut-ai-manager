@@ -32,17 +32,16 @@ class UserEntity(BaseEntity):
 
     # Relationship IDs
     role_id: Optional[int] = None
-    account_id: Optional[int] = None
 
     # Denormalized / Virtual fields (populated by repository)
     role_name: Optional[str] = None
     permissions: set[str] = Field(default_factory=set)
 
+    # Denormalized / Virtual fields (populated by repository or JWT)
+    role_name: Optional[str] = None
+    permissions: set[str] = Field(default_factory=set)
+
     def has_permission(self, permission_name: str) -> bool:
-        role = getattr(self, "_jwt_role", None) or self.role_name
-        if role == "admin":
+        if self.role_name == "admin":
             return True
-        jwt_perms = getattr(self, "_jwt_permissions", None)
-        if jwt_perms is not None:
-            return permission_name in jwt_perms
         return permission_name in self.permissions

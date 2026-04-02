@@ -60,6 +60,8 @@ class ApiResponse(BaseModel, Generic[T]):
 
 
 class BadRequestException(Exception):
+    """Custom exception for bad requests"""
+
     def __init__(self, message: str, data: Any | None = None, status_code: int = 400):
         self.message = message
         self.data = data

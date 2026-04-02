@@ -1,14 +1,7 @@
-"""
-RBAC Database Infrastructure Models.
-
-Maps to the SQL database using SQLModel and SQLAlchemy.
-Implements the Data Mapper pattern to generate Domain Entities.
-"""
-
-from typing import TYPE_CHECKING, List, Optional
-
+from typing import Any, TYPE_CHECKING, List, Optional
 from app.rbac.domain.entity import Permission, Role, RoleApiKey, RolePermission
 from app.shared.infrastructure.base_model import TimestampMixin
+from app.utils.datetime import get_current_utc7_time
 from sqlmodel import Field, Relationship
 
 if TYPE_CHECKING:
@@ -43,16 +36,16 @@ class PermissionModel(TimestampMixin, table=True):
         )
 
     @classmethod
-    def from_entity(cls, entity: Permission) -> "PermissionModel":
+    def from_entity(cls, entity: Any) -> "PermissionModel":
         return cls(
             id=entity.id,
             name=entity.name,
             description=entity.description,
             resource=entity.resource,
             action=entity.action,
-            created_at=entity.created_at,
-            updated_at=entity.updated_at,
-            is_deleted=entity.is_deleted,
+            created_at=entity.created_at or get_current_utc7_time(),
+            updated_at=entity.updated_at or get_current_utc7_time(),
+            is_deleted=entity.is_deleted or False,
         )
 
 
@@ -71,6 +64,12 @@ class RoleApiKeyModel(TimestampMixin, table=True):
     role: "RoleModel" = Relationship(back_populates="api_keys")
 
     def to_entity(self) -> RoleApiKey:
+        # Only include role if it's already loaded to avoid N+1
+        role_entity = None
+        if "role" in self.__dict__:
+             if self.role:
+                 role_entity = self.role.to_entity()
+
         return RoleApiKey(
             id=self.id,  # type: ignore
             name=self.name,
@@ -78,13 +77,14 @@ class RoleApiKeyModel(TimestampMixin, table=True):
             prefix=self.prefix,
             is_active=self.is_active,
             role_id=self.role_id,
+            role=role_entity,
             created_at=self.created_at,
             updated_at=self.updated_at,
             is_deleted=self.is_deleted,
         )
 
     @classmethod
-    def from_entity(cls, entity: RoleApiKey) -> "RoleApiKeyModel":
+    def from_entity(cls, entity: Any) -> "RoleApiKeyModel":
         return cls(
             id=entity.id,
             name=entity.name,
@@ -92,9 +92,9 @@ class RoleApiKeyModel(TimestampMixin, table=True):
             prefix=entity.prefix,
             is_active=entity.is_active,
             role_id=entity.role_id,
-            created_at=entity.created_at,
-            updated_at=entity.updated_at,
-            is_deleted=entity.is_deleted,
+            created_at=entity.created_at or get_current_utc7_time(),
+            updated_at=entity.updated_at or get_current_utc7_time(),
+            is_deleted=entity.is_deleted or False,
         )
 
 
@@ -113,25 +113,31 @@ class RolePermissionModel(TimestampMixin, table=True):
     )
 
     def to_entity(self) -> RolePermission:
+        # Only include permission if it's already loaded to avoid N+1
+        perm_entity = None
+        if "permission" in self.__dict__:
+             if self.permission:
+                 perm_entity = self.permission.to_entity()
+
         return RolePermission(
             id=self.id,  # type: ignore
             role_id=self.role_id,
             permission_id=self.permission_id,
-            permission=self.permission.to_entity() if self.permission else None,
+            permission=perm_entity,
             created_at=self.created_at,
             updated_at=self.updated_at,
             is_deleted=self.is_deleted,
         )
 
     @classmethod
-    def from_entity(cls, entity: RolePermission) -> "RolePermissionModel":
+    def from_entity(cls, entity: Any) -> "RolePermissionModel":
         return cls(
             id=entity.id,
             role_id=entity.role_id,
             permission_id=entity.permission_id,
-            created_at=entity.created_at,
-            updated_at=entity.updated_at,
-            is_deleted=entity.is_deleted,
+            created_at=entity.created_at or get_current_utc7_time(),
+            updated_at=entity.updated_at or get_current_utc7_time(),
+            is_deleted=entity.is_deleted or False,
         )
 
 
@@ -152,24 +158,32 @@ class RoleModel(TimestampMixin, table=True):
     api_keys: List["RoleApiKeyModel"] = Relationship(back_populates="role")
 
     def to_entity(self) -> Role:
+        role_permissions = []
+        if "role_permissions" in self.__dict__:
+            role_permissions = [rp.to_entity() for rp in self.role_permissions]
+
+        api_keys = []
+        if "api_keys" in self.__dict__:
+            api_keys = [k.to_entity() for k in self.api_keys]
+
         return Role(
-            id=self.id,  # type: ignore
+            id=self.id,
             name=self.name,
             description=self.description,
-            role_permissions=[rp.to_entity() for rp in self.role_permissions],
-            api_keys=[k.to_entity() for k in self.api_keys],
+            role_permissions=role_permissions,
+            api_keys=api_keys,
             created_at=self.created_at,
             updated_at=self.updated_at,
             is_deleted=self.is_deleted,
         )
 
     @classmethod
-    def from_entity(cls, entity: Role) -> "RoleModel":
+    def from_entity(cls, entity: Any) -> "RoleModel":
         return cls(
             id=entity.id,
             name=entity.name,
             description=entity.description,
-            created_at=entity.created_at,
-            updated_at=entity.updated_at,
-            is_deleted=entity.is_deleted,
+            created_at=entity.created_at or get_current_utc7_time(),
+            updated_at=entity.updated_at or get_current_utc7_time(),
+            is_deleted=entity.is_deleted or False,
         )

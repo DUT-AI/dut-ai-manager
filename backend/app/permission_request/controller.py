@@ -3,19 +3,26 @@ from typing import Annotated, List, Optional
 from app.core.deps import CurrentUser, hasPermission
 from app.core.permissions import PermissionRequestPermission
 from app.permission_request.application.use_cases import (
-  CreatePermissionRequestUseCase, DeletePermissionRequestUseCase,
-  GetPermissionRequestsUseCase, RestorePermissionRequestUseCase,
-  UpdatePermissionRequestUseCase)
-from app.permission_request.deps import (get_create_request_uc,
-                                         get_delete_request_uc,
-                                         get_requests_uc,
-                                         get_restore_request_uc,
-                                         get_update_request_uc)
-from app.permission_request.schemas import (PermissionRequestCreate,
-                                            PermissionRequestResponse,
-                                            PermissionRequestUpdate)
-from app.schemas.response import ApiResponse
-from fastapi import APIRouter, Depends, status
+    CreatePermissionRequestUseCase,
+    DeletePermissionRequestUseCase,
+    GetPermissionRequestsUseCase,
+    RestorePermissionRequestUseCase,
+    UpdatePermissionRequestUseCase,
+)
+from app.permission_request.deps import (
+    get_create_request_uc,
+    get_delete_request_uc,
+    get_requests_uc,
+    get_restore_request_uc,
+    get_update_request_uc,
+)
+from app.permission_request.schemas import (
+    PermissionRequestCreate,
+    PermissionRequestResponse,
+    PermissionRequestUpdate,
+)
+from app.shared.application.response import ApiResponse
+from fastapi import APIRouter, Depends
 
 router = APIRouter(prefix="/permissions", tags=["Permissions"])
 
@@ -35,7 +42,12 @@ async def get_permission_requests(
 ):
     """Lấy danh sách các yêu cầu xin phép"""
     results = uc.execute(
-        user_id=user_id, month=month, year=year, skip=skip, limit=limit, deleted=deleted
+        user_id=user_id,
+        month=month,
+        year=year,
+        skip=skip,
+        limit=limit,
+        deleted=deleted
     )
     return ApiResponse.success(data=results)
 

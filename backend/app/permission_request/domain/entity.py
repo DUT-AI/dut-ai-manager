@@ -1,15 +1,14 @@
-from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Optional
 
 from app.permission_request.domain.value_objects import RequestCategory
+from app.shared.domain.base_entity import BaseEntity
 
 
-@dataclass
-class PermissionRequest:
+class PermissionRequest(BaseEntity):
     """Yêu cầu xin phép (Domain Entity)"""
 
-    user_id: int
+    user_id: Optional[int]
     category: RequestCategory
     date: date
     reason: str

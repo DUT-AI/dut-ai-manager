@@ -1,5 +1,7 @@
 from datetime import date
-from typing import List, Optional
+from typing import Any, List, Optional, cast
+from app.shared.domain.query_support import (FilterCriterion, FilterOperator)
+from app.shared.application.query_support_utils import build_query_support
 
 from app.core.context import get_current_user_id
 from app.permission_request.domain.entity import PermissionRequest
@@ -8,8 +10,9 @@ from app.permission_request.domain.events import (PermissionRequestCreated,
 from app.permission_request.domain.repository import \
   PermissionRequestRepository
 from app.permission_request.domain.value_objects import RequestCategory
-from app.shared.domain.event_bus import EventBus
-from fastapi import HTTPException, status
+from app.permission_request.schemas import PermissionRequestUpdate
+from app.shared.domain.event_bus import EventBus, DomainEvent
+from fastapi import HTTPException
 
 
 class GetPermissionRequestsUseCase:
@@ -27,9 +30,16 @@ class GetPermissionRequestsUseCase:
         limit: int = 100,
         deleted: bool = False,
     ) -> List[PermissionRequest]:
+        filters = []
         if user_id:
-            return self.repo.get_by_user(user_id, month, year, deleted)
-        return self.repo.get_all(skip, limit, deleted)
+            filters.append(FilterCriterion(field="created_by", operator=FilterOperator.EQ, value=user_id))
+        if month:
+            filters.append(FilterCriterion(field="date", operator=FilterOperator.MONTH_EQ, value=month))
+        if year:
+            filters.append(FilterCriterion(field="date", operator=FilterOperator.YEAR_EQ, value=year))
+
+        qs = build_query_support(skip=skip, limit=limit, filters=filters)
+        return self.repo.get_all(query_support=qs, deleted=deleted)
 
 
 class CreatePermissionRequestUseCase:
@@ -58,13 +68,13 @@ class CreatePermissionRequestUseCase:
 
         # Publish event for (1) Notification and (2) Violation checking
         await self.event_bus.publish(
-            PermissionRequestCreated(
-                request_id=saved.id,
-                user_id=saved.user_id,
+            cast(DomainEvent, PermissionRequestCreated(
+                request_id=cast(int, saved.id),
+                user_id=cast(int, saved.user_id),
                 category=saved.category,
-                date=saved.date,
+                date=cast(Any, saved.date),
                 reason=saved.reason,
-            )
+            ))
         )
 
         return saved
@@ -96,7 +106,7 @@ class UpdatePermissionRequestUseCase:
 
         saved = self.repo.save(request)
 
-        await self.event_bus.publish(PermissionRequestUpdated(request_id=saved.id))
+        await self.event_bus.publish(cast(DomainEvent, PermissionRequestUpdated(request_id=cast(int, saved.id))))
         return saved
 
 
@@ -117,7 +127,11 @@ class RestorePermissionRequestUseCase:
         self.repo = repo
 
     def execute(self, request_id: int) -> bool:
-        return self.repo.restore(request_id)
+        request = self.repo.get_by_id(request_id)
+        if request:
+            self.repo.restore(request)
+            return True
+        return False
 
 
 class PermissionRequestUseCases:

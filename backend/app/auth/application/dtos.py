@@ -1,3 +1,4 @@
+from typing import Literal
 from pydantic import BaseModel, EmailStr
 
 
@@ -28,3 +29,26 @@ class ChangePasswordRequest(BaseModel):
     old_password: str
     new_password: str
     confirm_password: str
+
+
+class TokenPayloadResponse(BaseModel):
+    """Token payload response schema"""
+
+    sub: int
+    name: str
+    role: str = ""
+    avatar: str = ""
+    permissions: list[str] = []
+    type: Literal["access", "refresh"] = "access"
+    exp: int
+
+
+class UserReponseMe(BaseModel):
+    id: int
+    is_deleted: bool
+    name: str
+    email: str
+    status: str
+    avatar_url: str
+    role_name: str
+    permissions: list[str]

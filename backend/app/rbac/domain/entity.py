@@ -43,6 +43,7 @@ class RoleApiKey(BaseEntity):
     prefix: str
     is_active: bool = True
     role_id: int
+    role: Optional["Role"] = None
 
 
 class Role(BaseEntity):

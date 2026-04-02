@@ -5,15 +5,16 @@ User Module Dependencies — DI for Use Cases and Repositories.
 from typing import Annotated
 
 from app.api.v1.services.email_service import EmailService
-from app.auth.application.use_cases import CreateAccountUseCase
-from app.auth.deps import create_account_uc as get_create_account_uc
 from app.core.database import get_session
 from app.shared.infrastructure.minio_service import MinioService
-from app.user.application.use_cases import (CreateUserUseCase,
-                                            DeleteUserUseCase, GetUserUseCase,
-                                            ImportUsersUseCase,
-                                            UpdateAvatarUseCase,
-                                            UpdateUserUseCase)
+from app.user.application.use_cases import (
+    CreateUserUseCase,
+    DeleteUserUseCase,
+    GetUserUseCase,
+    ImportUsersUseCase,
+    UpdateAvatarUseCase,
+    UpdateUserUseCase,
+)
 from app.user.infrastructure.repository import UserRepository
 from fastapi import Depends
 from sqlmodel import Session
@@ -48,10 +49,8 @@ def delete_user_uc(repo: UserRepository = Depends(get_user_repo)) -> DeleteUserU
 
 def create_user_uc(
     repo: UserRepository = Depends(get_user_repo),
-    create_account: CreateAccountUseCase = Depends(get_create_account_uc),
-    email_service: EmailService = Depends(get_email_service),
 ) -> CreateUserUseCase:
-    return CreateUserUseCase(repo, create_account, email_service)
+    return CreateUserUseCase(repo)
 
 
 def import_users_uc(

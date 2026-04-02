@@ -6,13 +6,17 @@ from app.homework.application.dtos import HomeworkResponse
 from app.homework.infrastructure.repository import HomeworkRepository
 from app.meeting.infrastructure.repository import MeetingRepository
 from app.meeting.schemas import MeetingResponse
-from app.permission_request.infrastructure.repository import \
-  PermissionRequestRepository
+from app.permission_request.infrastructure.repository import PermissionRequestRepository
 from app.permission_request.schemas import PermissionRequestResponse
 from app.rbac.infrastructure.repository import PermissionRepository
-from app.report.schemas import (BonusPointResponse, DailySummaryResponse,
-                                DashboardOverviewResponse, ReportItem,
-                                ReportResponse, ViolationResponse)
+from app.report.schemas import (
+    BonusPointResponse,
+    DailySummaryResponse,
+    DashboardOverviewResponse,
+    ReportItem,
+    ReportResponse,
+    ViolationResponse,
+)
 from app.user.application.dtos import UserResponse
 from app.user.infrastructure.repository import UserRepository
 from app.violation.infrastructure.repository import ViolationRepository
@@ -43,7 +47,7 @@ class GetDailySummaryUseCase:
 
         return DailySummaryResponse(
             date=target_date,
-            meetings=[MeetingResponse.model_validate(m) for m in meetings],
+            meetings=[MeetingResponse.from_domain(m) for m in meetings],
             permission_requests=[
                 PermissionRequestResponse.model_validate(p) for p in permissions
             ],
@@ -153,7 +157,7 @@ class GetDashboardOverviewUseCase:
             unsubmitted_homeworks=[
                 HomeworkResponse.model_validate(h) for h in unsubmitted_homeworks
             ],
-            meetings=[MeetingResponse.model_validate(m) for m in user_meetings],
+            meetings=[MeetingResponse.from_domain(m) for m in user_meetings],
         )
 
 

@@ -3,15 +3,18 @@ from typing import List, Optional, Set
 from app.core.context import get_current_user_id
 from app.homework.application.dtos import HomeworkCreate, HomeworkUpdate
 from app.homework.domain.entity import Homework as HomeworkEntity
-from app.homework.domain.entity import \
-  HomeworkSubmission as HomeworkSubmissionEntity
-from app.homework.domain.value_objects import (HomeworkAssigned,
-                                               HomeworkStatus,
-                                               HomeworkSubmitted)
+from app.homework.domain.entity import HomeworkSubmission as HomeworkSubmissionEntity
+from app.homework.domain.value_objects import (
+    HomeworkAssigned,
+    HomeworkStatus,
+    HomeworkSubmitted,
+)
 from app.homework.infrastructure.repository import (
-  HomeworkRepository, HomeworkSubmissionRepository)
+    HomeworkRepository,
+    HomeworkSubmissionRepository,
+)
 from app.rbac.domain.entity import RoleType
-from app.schemas.response import BadRequestException
+from app.shared.application.response import BadRequestException
 from app.shared.domain.event_bus import EventBus
 from app.shared.infrastructure.minio_service import MinioService
 from app.team.infrastructure.repository import TeamRepository

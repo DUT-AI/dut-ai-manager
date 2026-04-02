@@ -2,10 +2,10 @@ from dataclasses import dataclass
 from datetime import date
 
 from app.permission_request.domain.value_objects import RequestCategory
+from app.shared.domain.event_bus import DomainEvent
 
 
-@dataclass
-class PermissionRequestCreated:
+class PermissionRequestCreated(DomainEvent):
     """Sự kiện yêu cầu mới được tạo"""
 
     request_id: int
@@ -15,8 +15,7 @@ class PermissionRequestCreated:
     reason: str
 
 
-@dataclass
-class PermissionRequestUpdated:
+class PermissionRequestUpdated(DomainEvent):
     """Sự kiện yêu cầu được cập nhật"""
 
     request_id: int

@@ -9,6 +9,7 @@ from app.shared.infrastructure.base_model import TimestampMixin
 
 if TYPE_CHECKING:
     from app.user.infrastructure.model import UserModel
+
 from sqlmodel import Field, Relationship
 
 
@@ -19,11 +20,14 @@ class AccountModel(TimestampMixin, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
     hash_password: str = Field(max_length=255)
+    user_id: Optional[int] = Field(
+        default=None, foreign_key="users.id", unique=True, index=True
+    )
 
     # Relationships
     user: Optional["UserModel"] = Relationship(
         back_populates="account",
-        sa_relationship_kwargs={"foreign_keys": "[UserModel.account_id]"},
+        sa_relationship_kwargs={"foreign_keys": "[AccountModel.user_id]"},
     )
 
     def to_entity(self) -> AccountEntity:
@@ -31,11 +35,12 @@ class AccountModel(TimestampMixin, table=True):
         return AccountEntity(
             id=self.id,
             hash_password=self.hash_password,
-            created_at=self.created_at,  # type: ignore
-            updated_at=self.updated_at,  # type: ignore
+            user_id=self.user_id,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
             created_by=self.created_by,
-            updated_by=self.updated_by,  # type: ignore
-            is_deleted=self.is_deleted,  # type: ignore
+            updated_by=self.updated_by,
+            is_deleted=self.is_deleted,
         )
 
     @classmethod
@@ -44,4 +49,5 @@ class AccountModel(TimestampMixin, table=True):
         return cls(
             id=entity.id,
             hash_password=entity.hash_password,
+            user_id=entity.user_id,
         )

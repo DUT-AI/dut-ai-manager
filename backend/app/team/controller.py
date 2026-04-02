@@ -2,8 +2,12 @@ from typing import List
 
 from app.core.deps import hasPermission
 from app.core.permissions import TeamPermission
-from app.schemas.response import ApiResponse
-from app.team.application.dtos import TeamCreate, TeamResponse, TeamUpdate
+from app.shared.application.response import ApiResponse
+from app.team.application.dtos import (
+    TeamCreate,
+    TeamResponse,
+    TeamUpdate,
+)
 from app.team.application.use_cases import TeamUseCases
 from app.team.deps import get_team_usecases
 from fastapi import APIRouter, Depends, HTTPException

@@ -2,48 +2,25 @@
 Account Repository — infrastructure layer.
 """
 
-from typing import Optional
+from typing import Optional, cast, Any
 
 from app.auth.domain.entity import Account as AccountEntity
 from app.auth.infrastructure.model import AccountModel
+from app.user.infrastructure.model import UserModel
+from app.shared.infrastructure.base_repository import BaseRepository
 from sqlmodel import Session, select
 
 
-class AccountRepository:
+class AccountRepository(BaseRepository[AccountModel, AccountEntity]):
     def __init__(self, session: Session):
-        self.session = session
+        super().__init__(session, AccountModel)
 
-    def get_by_id(self, account_id: int) -> Optional[AccountEntity]:
-        model = self.session.get(AccountModel, account_id)
-        return model.to_entity() if model else None
-
-    def save(self, entity: AccountEntity) -> AccountEntity:
-        model = AccountModel.from_entity(entity)
-        self.session.add(model)
-        self.session.flush()
-        self.session.refresh(model)
-        return model.to_entity()
-
-    def update(self, entity: AccountEntity) -> Optional[AccountEntity]:
-        model = self.session.get(AccountModel, entity.id)
-        if not model:
-            return None
-
-        update_data = entity.model_dump(
-            exclude={"id", "created_at", "updated_at"}, exclude_unset=True
+    def get_by_email(self, email: str) -> Optional[AccountEntity]:
+        stmt = (
+            select(AccountModel)
+            .join(UserModel, cast(Any, AccountModel.user_id == UserModel.id))
+            .where(cast(Any, UserModel.email == email))
         )
-        for key, value in update_data.items():
-            if hasattr(model, key):
-                setattr(model, key, value)
-
-        self.session.add(model)
-        self.session.flush()
-        return model.to_entity()
-
-    def delete_by_id(self, account_id: int) -> bool:
-        model = self.session.get(AccountModel, account_id)
-        if not model:
-            return False
-        self.session.delete(model)
-        self.session.flush()
-        return True
+        model = self.session.exec(stmt)
+        res = model.first()
+        return res.to_entity() if res else None

@@ -2,13 +2,19 @@ import secrets
 from typing import List, Optional, Tuple
 
 from app.rbac.domain.entity import Permission, Role, RoleApiKey, RolePermission
-from app.rbac.infrastructure.repository import (PermissionRepository,
-                                                RoleApiKeyRepository,
-                                                RolePermissionRepository,
-                                                RoleRepository)
-from app.schemas.role_api_key import RoleApiKeyCreate, RoleApiKeySecret
-from app.schemas.role_permission import (PermissionCreate, PermissionUpdate,
-                                         RoleCreate, RoleUpdate)
+from app.rbac.infrastructure.repository import (
+    PermissionRepository,
+    RoleApiKeyRepository,
+    RolePermissionRepository,
+    RoleRepository,
+)
+from app.rbac.application.dtos import RoleApiKeyCreate, RoleApiKeySecret
+from app.rbac.application.dtos import (
+    PermissionCreate,
+    PermissionUpdate,
+    RoleCreate,
+    RoleUpdate,
+)
 from app.utils.password import get_password_hash, verify_password
 
 

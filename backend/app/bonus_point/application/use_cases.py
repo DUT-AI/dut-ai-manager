@@ -3,6 +3,8 @@ from typing import List, Optional
 from app.bonus_point.application.dtos import BonusPointCreate, BonusPointUpdate
 from app.bonus_point.domain.entity import BonusPoint
 from app.bonus_point.infrastructure.repository import BonusPointRepository
+from app.shared.domain.query_support import FilterCriterion, FilterOperator
+from app.shared.application.query_support_utils import build_query_support
 from app.shared.domain.event_bus import EventBus
 
 
@@ -19,9 +21,16 @@ class GetBonusPointsUseCase:
         limit: int = 100,
         deleted: bool = False,
     ) -> List[BonusPoint]:
-        if user_id is not None or month is not None or year is not None:
-            return self.repository.get_by_month(month=month, year=year, user_id=user_id)
-        return self.repository.get_all(skip=skip, limit=limit, deleted=deleted)
+        filters = []
+        if user_id:
+            filters.append(FilterCriterion(field="user_id", operator=FilterOperator.EQ, value=user_id))
+        if month:
+            filters.append(FilterCriterion(field="date", operator=FilterOperator.MONTH_EQ, value=month))
+        if year:
+            filters.append(FilterCriterion(field="date", operator=FilterOperator.YEAR_EQ, value=year))
+            
+        qs = build_query_support(skip=skip, limit=limit, filters=filters)
+        return self.repository.get_all(query_support=qs, deleted=deleted)
 
 
 class CreateBonusPointsUseCase:
@@ -37,12 +46,14 @@ class CreateBonusPointsUseCase:
         created_items = []
 
         # We bypass model_dump validation temporarily or dump base properties
-        base_data = data.model_dump(exclude={"user_ids"})
-
         for user_id in data.user_ids:
-            item_data = {**base_data, "user_id": user_id}
-            entity = BonusPoint(**item_data)
-            created = self.repository.create(entity)
+            entity = BonusPoint(
+                points=data.points,
+                reason=data.reason,
+                date=data.date,
+                user_id=user_id,
+            )
+            created = self.repository.add(entity)
             created_items.append(created)
 
         # Emit events after successful transaction commit
@@ -65,7 +76,7 @@ class UpdateBonusPointUseCase:
         entity_id: int,
         data: BonusPointUpdate,
     ) -> Optional[BonusPoint]:
-        entity = self.repository.get_by_entity_id(entity_id)
+        entity = self.repository.get_by_id(entity_id)
         if not entity:
             return None
 

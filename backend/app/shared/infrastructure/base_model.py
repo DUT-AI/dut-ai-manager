@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import Optional
 
 from app.core.context import get_current_user_id
+from app.shared.domain.base_entity import BaseEntity
 from app.utils.datetime import get_current_utc7_time
 from sqlmodel import Field, SQLModel
 
@@ -33,3 +34,10 @@ class TimestampMixin(SQLModel):
         foreign_key="users.id",
         sa_column_kwargs={"onupdate": get_current_user_id},
     )
+
+    @classmethod
+    def from_entity(cls, entity: BaseEntity) -> "TimestampMixin":
+        raise NotImplementedError("Subclasses must implement from_entity")
+
+    def to_entity(self) -> BaseEntity:
+        raise NotImplementedError("Subclasses must implement to_entity")

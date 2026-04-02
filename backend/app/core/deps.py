@@ -4,15 +4,14 @@ from typing import Annotated
 from app.core.context import set_current_user_id
 from app.core.database import get_session
 from app.rbac.domain.entity import RoleType
-from app.rbac.infrastructure.repository import (RoleApiKeyRepository,
-                                                RoleRepository)
-from app.schemas.response import BadRequestException
+from app.rbac.infrastructure.repository import RoleApiKeyRepository, RoleRepository
+from app.shared.application.response import BadRequestException
 from app.user.domain.entity import UserEntity
-from app.user.infrastructure.repository import UserRepository
 from app.utils.password import decode_access_token, verify_password
 from fastapi import Depends, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlmodel import Session
+from typing import cast
 
 security = HTTPBearer(auto_error=False)
 
@@ -64,6 +63,8 @@ def get_current_user(
             raise BadRequestException("Invalid API Key", status.HTTP_401_UNAUTHORIZED)
 
         role = matched_key.role
+        if not role:
+            raise BadRequestException("Role not found", status.HTTP_401_UNAUTHORIZED)
 
         system_user = UserEntity(
             id=0,
@@ -72,17 +73,14 @@ def get_current_user(
             role_id=role.id,
         )
 
-        full_role = RoleRepository(session).get_role_with_permissions(role.id)
-        if full_role:
-            system_user.role = full_role  # Replace with fully loaded role
-
-        perms = set()
-        if system_user.role.role_permissions:
-            for rp in system_user.role.role_permissions:
+        full_role = RoleRepository(session).get_role_with_permissions(cast(int, role.id))
+        if full_role and full_role.role_permissions:
+            perms = set()
+            for rp in full_role.role_permissions:
                 if rp.permission:
                     perms.add(rp.permission.name)
-
-        system_user.permissions = perms
+            system_user.permissions = perms
+            system_user.role_name = full_role.name
 
         set_current_user_id(0)
 
@@ -96,24 +94,19 @@ def get_current_user(
             "Invalid or expired token", status.HTTP_401_UNAUTHORIZED
         )
 
-    # Get basic user info from DB (minimal query)
-    user = UserRepository(session).get_by_id(payload.sub)
-
-    if not user:
-        raise BadRequestException("User not found", status.HTTP_401_UNAUTHORIZED)
-
-    # Claims lúc đăng nhập — dùng cho quyền và các dep đọc _jwt_*
-    user.role_name = payload.role or user.role_name
-    user.permissions = set(payload.permissions)
-    user._jwt_role = user.role_name
-    user._jwt_permissions = user.permissions
-    if payload.name:
-        user._jwt_name = payload.name
-    if payload.avatar:
-        user._jwt_avatar = payload.avatar
+    # Stateless User object from JWT payload
+    user = UserEntity(
+        id=payload.sub,
+        name=payload.name,
+        email=payload.email or "",
+        avatar_url=payload.avatar,
+        role_name=payload.role,
+        permissions=set(payload.permissions),
+    )
 
     # Set current user ID in context for audit fields
-    set_current_user_id(user.id)
+    if user.id is not None:
+        set_current_user_id(user.id)
 
     return user
 
@@ -146,8 +139,7 @@ def hasPermission(permission: str):
 
 def hasTeamLeaderAccess(target_user_id_param: str = "user_id"):
     async def dependency(request: Request, current_user: CurrentUser):
-        jwt_role = getattr(current_user, "_jwt_role", None)
-        if jwt_role != RoleType.LEADER.value:
+        if current_user.role_name != RoleType.LEADER.value:
             return  # Admin/other roles bypass
 
         # Try to get from query params first, then from body
@@ -169,8 +161,7 @@ def hasTeamLeaderAccess(target_user_id_param: str = "user_id"):
 
 def onlyEditOrDeleteYourself(target_user_id_param: str = "user_id"):
     async def dependency(request: Request, current_user: CurrentUser):
-        jwt_role = getattr(current_user, "_jwt_role", None)
-        if jwt_role != RoleType.LEADER.value:
+        if current_user.role_name != RoleType.LEADER.value:
             return  # Admin/other roles bypass
 
         # Try to get from query params first, then from body

@@ -12,3 +12,4 @@ class Account(BaseEntity):
     """Domain entity representing a user's authentication account."""
 
     hash_password: str
+    user_id: Optional[int] = None

@@ -1,53 +1,51 @@
-from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional
 
 from app.meeting.domain.value_objects import ParticipantStatus
+from app.shared.domain.base_entity import BaseEntity
+from pydantic import BaseModel, ConfigDict, Field
 
 
-@dataclass
-class UserRef:
-    """Tham chiếu đến User trong Domain (Value Object)"""
+class UserRef(BaseModel):
+    """Tham chiếu đến User trong Domain (Value Object) — Pydantic để nhúng trong BaseEntity."""
+
+    model_config = ConfigDict(from_attributes=True)
 
     id: int
     name: str = ""
     avatar_url: Optional[str] = None
 
 
-@dataclass
-class MeetingParticipant:
+class MeetingParticipant(BaseEntity):
     """Thành viên tham gia buổi họp (Domain Entity)"""
 
     user_id: int
     meeting_id: Optional[int] = None
-    id: Optional[int] = None
     check_in_at: Optional[datetime] = None
     status: ParticipantStatus = ParticipantStatus.NOT_JOINED
     link_image: Optional[str] = None
     user: Optional[UserRef] = None
 
-    def check_in(self, check_in_time: datetime, image_url: str):
-        """Thực hiện check-in cho thành viên"""
+    def check_in(self, check_in_time: datetime, image_url: str | None = None):
+        """Thực hiện check-in cho thành viên (image_url tùy chọn, ví dụ quẹt thẻ)."""
         if self.status == ParticipantStatus.JOINED:
-            return False, "Người dùng đã checkin rồi"
+            return True, "Checkin thanh cong"
 
         self.check_in_at = check_in_time
         self.status = ParticipantStatus.JOINED
         self.link_image = image_url
-        return True, "Checkin thành công"
+        return True, "Checkin thanh cong"
 
 
-@dataclass
-class Meeting:
+class Meeting(BaseEntity):
     """Buổi họp (Domain Entity)"""
 
     title: str
     start_time: datetime
     end_time: datetime
-    id: Optional[int] = None
     content: Optional[str] = None
     require_check_in: bool = True
-    participants: List[MeetingParticipant] = field(default_factory=list)
+    participants: List[MeetingParticipant] = Field(default_factory=list)
 
     def is_ongoing(self, current_time: datetime) -> bool:
         """Kiểm tra xem buổi họp có đang diễn ra hay không"""

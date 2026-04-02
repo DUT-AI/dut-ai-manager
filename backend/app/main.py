@@ -1,13 +1,21 @@
 from contextlib import asynccontextmanager
 
+from dishka import make_async_container
+from dishka.integrations.fastapi import setup_dishka
 from app.api.v1.router import api_v1_router
+from app.auth.providers import AuthModuleProvider
+from app.user.providers import UserModuleProvider
+from app.violation.providers import ViolationModuleProvider
+from app.permission_request.providers import PermissionRequestModuleProvider
 from app.core.config import settings
-from app.core.container import AppContainer
+from app.core.events import bootstrap_events
 from app.core.logging_config import setup_logging
 from app.core.scheduler import shutdown_scheduler, start_scheduler
 from app.middleware.auth import set_user_context
+from app.shared.infrastructure.request_context import set_request_container
 from app.middleware.logging import logging_middleware
-from app.schemas.response import BadRequestException
+from app.shared.application.response import BadRequestException
+from app.shared.providers import InfrastructureProvider
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,12 +30,14 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("🚀 Starting application services...")
 
-    app.state.container = AppContainer()
+    # Event registration using Dishka
+    await bootstrap_events(app.state.dishka_container)
 
     start_scheduler()
     logger.info("🚀 Application started")
     yield
     # Shutdown
+    await app.state.dishka_container.close()
     shutdown_scheduler()
     logger.info("👋 Application shutdown")
 
@@ -45,12 +55,38 @@ def create_app():
     # Register middlewares
     # Note: Middlewares are executed in reverse order of registration for @app.middleware
     # or last-added-runs-first for add_middleware.
+    # Note: Middlewares are executed in reverse order of registration for @app.middleware
+    # or last-added-runs-first for add_middleware.
     # To have set_user_context run before logging_middleware:
 
     if settings.ENVIRONMENT != "local":
         _app.middleware("http")(logging_middleware)  # Inner
 
     _app.middleware("http")(set_user_context)  # Outer: sets user context for inner
+
+    @_app.middleware("http")
+    async def request_container_middleware(request, call_next):
+        """Set the request-scoped dishka container in the context var."""
+        token = None
+        if hasattr(request.state, "dishka_container"):
+            token = set_request_container(request.state.dishka_container)
+        
+        try:
+            return await call_next(request)
+        finally:
+            if token:
+                from app.shared.infrastructure.request_context import _request_container_context
+                _request_container_context.reset(token)
+
+    # Dishka Setup (Should be called AFTER middlewares to be the OUTERMOST)
+    container = make_async_container(
+        InfrastructureProvider(), 
+        AuthModuleProvider(),
+        UserModuleProvider(),
+        ViolationModuleProvider(),
+        PermissionRequestModuleProvider(),
+    )
+    setup_dishka(container, _app)
 
     # CORS middleware
     _app.add_middleware(

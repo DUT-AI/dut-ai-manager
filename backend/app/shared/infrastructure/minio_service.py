@@ -5,7 +5,7 @@ from io import BytesIO
 from typing import Optional
 
 from app.core.config import settings
-from app.schemas.response import BadRequestException
+from app.shared.application.response import BadRequestException
 from loguru import logger
 from minio import Minio
 from minio.error import S3Error

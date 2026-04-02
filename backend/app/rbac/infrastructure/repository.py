@@ -1,212 +1,169 @@
 from typing import List, Optional
 
 from app.rbac.domain.entity import Permission, Role, RoleApiKey, RolePermission
-from app.rbac.infrastructure.model import (PermissionModel, RoleApiKeyModel,
-                                           RoleModel, RolePermissionModel)
+from app.rbac.infrastructure.model import (
+    PermissionModel,
+    RoleApiKeyModel,
+    RoleModel,
+    RolePermissionModel,
+)
 from app.shared.infrastructure.base_repository import BaseRepository
-from sqlalchemy.orm import selectinload
-from sqlmodel import Session, select
+from app.shared.application.query_support_utils import build_query_support
+from app.shared.domain.query_support import FilterCriterion, FilterOperator
+from sqlmodel import Session
 
 
-class RoleRepository(BaseRepository[RoleModel]):
+class RoleRepository(BaseRepository[RoleModel, Role]):
     """Clean Architecture Repository for Role operations."""
 
     def __init__(self, session: Session):
         super().__init__(session, RoleModel)
 
-    def to_entity(self, model: Optional[RoleModel]) -> Optional[Role]:
-        if model is None:
-            return None
-        return model.to_entity()
-
-    def from_entity(self, entity: Role) -> RoleModel:
-        return RoleModel.from_entity(entity)
-
     def get_all_roles(self, skip: int = 0, limit: int = 100) -> List[Role]:
-        """Get all roles with permissions."""
-        statement = (
-            select(RoleModel)
-            .where(RoleModel.is_deleted == False)
-            .offset(skip)
-            .limit(limit)
-            .options(
-                selectinload(RoleModel.role_permissions).selectinload(
-                    RolePermissionModel.permission
-                )
-            )
+        """Get all roles with permissions using QuerySupport."""
+        qs = build_query_support(
+            skip=skip,
+            limit=limit,
+            include=["role_permissions", "role_permissions.permission"],
         )
-        models = list(self.session.exec(statement).all())
-        return [self.to_entity(m) for m in models]  # type: ignore
+        return self.get_all(qs)
 
     def get_role_with_permissions(self, role_id: int) -> Optional[Role]:
-        """Get role with its permissions."""
-        statement = (
-            select(RoleModel)
-            .where(
-                RoleModel.is_deleted == False,
-                RoleModel.id == role_id,
-            )
-            .options(
-                selectinload(RoleModel.role_permissions).selectinload(
-                    RolePermissionModel.permission
-                )
-            )
+        """Get role with its permissions using get_one."""
+        qs = build_query_support(
+            filters=[
+                FilterCriterion(field="id", operator=FilterOperator.EQ, value=role_id)
+            ],
+            include=["role_permissions", "role_permissions.permission"],
         )
-        model = self.session.exec(statement).first()
-        return self.to_entity(model)
+        return self.get_one(qs)
 
     def get_by_name(self, name: str) -> Optional[Role]:
         """Get role by name."""
-        statement = select(RoleModel).where(
-            RoleModel.is_deleted == False, RoleModel.name == name
+        qs = build_query_support(
+            filters=[
+                FilterCriterion(field="name", operator=FilterOperator.EQ, value=name)
+            ]
         )
-        model = self.session.exec(statement).first()
-        return self.to_entity(model)
+        return self.get_one(qs)
 
     def save(self, entity: Role) -> Role:
-        model = self.from_entity(entity)
-        if model.id:
-            updated_model = self.update(model)
-            return self.to_entity(updated_model)  # type: ignore
+        """Save role (add or update) using BaseRepository."""
+        if entity.id:
+            return self.update(entity)
         else:
-            created_model = self.add(model)
-            self.session.flush()
-            return self.to_entity(created_model)  # type: ignore
+            return self.add(entity)
 
 
-class PermissionRepository(BaseRepository[PermissionModel]):
+class PermissionRepository(BaseRepository[PermissionModel, Permission]):
     """Clean Architecture Repository for Permission operations."""
 
     def __init__(self, session: Session):
         super().__init__(session, PermissionModel)
 
-    def to_entity(self, model: Optional[PermissionModel]) -> Optional[Permission]:
-        if model is None:
-            return None
-        return model.to_entity()
-
-    def from_entity(self, entity: Permission) -> PermissionModel:
-        return PermissionModel.from_entity(entity)
-
     def get_all_permissions(self, skip: int = 0, limit: int = 100) -> List[Permission]:
-        models = self.get_all(skip=skip, limit=limit)
-        return [self.to_entity(m) for m in models]  # type: ignore
+        """Get all permissions using QuerySupport."""
+        qs = build_query_support(skip=skip, limit=limit)
+        return self.get_all(qs)
 
     def save(self, entity: Permission) -> Permission:
-        model = self.from_entity(entity)
-        if model.id:
-            updated_model = self.update(model)
-            return self.to_entity(updated_model)  # type: ignore
+        """Save permission (add or update) using BaseRepository."""
+        if entity.id:
+            return self.update(entity)
         else:
-            created_model = self.add(model)
-            self.session.flush()
-            return self.to_entity(created_model)  # type: ignore
+            return self.add(entity)
 
     def get_by_id_entity(self, id: int) -> Optional[Permission]:
-        model = self.get_by_id(id)
-        return self.to_entity(model)
+        return self.get_by_id(id)
 
 
-class RolePermissionRepository(BaseRepository[RolePermissionModel]):
+class RolePermissionRepository(BaseRepository[RolePermissionModel, RolePermission]):
     """Clean Architecture Repository for RolePermission link operations."""
 
     def __init__(self, session: Session):
         super().__init__(session, RolePermissionModel)
 
-    def to_entity(
-        self, model: Optional[RolePermissionModel]
-    ) -> Optional[RolePermission]:
-        if model is None:
-            return None
-        return model.to_entity()
-
-    def from_entity(self, entity: RolePermission) -> RolePermissionModel:
-        return RolePermissionModel.from_entity(entity)
-
     def get_by_role_and_permission(
         self, role_id: int, permission_id: int
     ) -> Optional[RolePermission]:
         """Get link by role and permission IDs."""
-        statement = select(RolePermissionModel).where(
-            RolePermissionModel.is_deleted == False,
-            RolePermissionModel.role_id == role_id,
-            RolePermissionModel.permission_id == permission_id,
+        qs = build_query_support(
+            filters=[
+                FilterCriterion(
+                    field="role_id", operator=FilterOperator.EQ, value=role_id
+                ),
+                FilterCriterion(
+                    field="permission_id",
+                    operator=FilterOperator.EQ,
+                    value=permission_id,
+                ),
+            ]
         )
-        model = self.session.exec(statement).first()
-        return self.to_entity(model)
+        return self.get_one(qs)
 
     def save(self, entity: RolePermission) -> RolePermission:
-        model = self.from_entity(entity)
-        if model.id:
-            updated_model = self.update(model)
-            return self.to_entity(updated_model)  # type: ignore
+        """Save role-permission link using BaseRepository."""
+        if entity.id:
+            return self.update(entity)
         else:
-            created_model = self.add(model)
-            self.session.flush()
-            return self.to_entity(created_model)  # type: ignore
+            return self.add(entity)
 
     def get_by_id_entity(self, id: int) -> Optional[RolePermission]:
-        model = self.get_by_id(id)
-        return self.to_entity(model)
+        return self.get_by_id(id)
 
 
-class RoleApiKeyRepository(BaseRepository[RoleApiKeyModel]):
+class RoleApiKeyRepository(BaseRepository[RoleApiKeyModel, RoleApiKey]):
     """Clean Architecture Repository for RoleApiKey operations."""
 
     def __init__(self, session: Session):
         super().__init__(session, RoleApiKeyModel)
 
-    def to_entity(self, model: Optional[RoleApiKeyModel]) -> Optional[RoleApiKey]:
-        if model is None:
-            return None
-        return model.to_entity()
-
-    def from_entity(self, entity: RoleApiKey) -> RoleApiKeyModel:
-        return RoleApiKeyModel.from_entity(entity)
-
     def get_by_key_hash(self, key_hash: str) -> Optional[RoleApiKey]:
         """Get API key by hash."""
-        statement = select(RoleApiKeyModel).where(
-            RoleApiKeyModel.is_deleted == False,
-            RoleApiKeyModel.key_hash == key_hash,
-            RoleApiKeyModel.is_active == True,
+        qs = build_query_support(
+            filters=[
+                FilterCriterion(
+                    field="key_hash", operator=FilterOperator.EQ, value=key_hash
+                ),
+                FilterCriterion(
+                    field="is_active", operator=FilterOperator.EQ, value=True
+                ),
+            ]
         )
-        model = self.session.exec(statement).first()
-        return self.to_entity(model)
+        return self.get_one(qs)
 
     def get_by_role_id(self, role_id: int) -> list[RoleApiKey]:
         """Get all API keys for a role."""
-        statement = select(RoleApiKeyModel).where(
-            RoleApiKeyModel.is_deleted == False,
-            RoleApiKeyModel.role_id == role_id,
+        qs = build_query_support(
+            filters=[
+                FilterCriterion(
+                    field="role_id", operator=FilterOperator.EQ, value=role_id
+                )
+            ]
         )
-        models = list(self.session.exec(statement).all())
-        return [self.to_entity(m) for m in models]  # type: ignore
+        return self.get_all(qs)
 
     def get_candidates_by_prefix(self, prefix: str) -> list[RoleApiKey]:
         """Get all active API keys with matching prefix."""
-        statement = (
-            select(RoleApiKeyModel)
-            .where(
-                RoleApiKeyModel.is_deleted == False,
-                RoleApiKeyModel.prefix == prefix,
-                RoleApiKeyModel.is_active == True,
-            )
-            .options(selectinload(RoleApiKeyModel.role))
+        qs = build_query_support(
+            filters=[
+                FilterCriterion(
+                    field="prefix", operator=FilterOperator.EQ, value=prefix
+                ),
+                FilterCriterion(
+                    field="is_active", operator=FilterOperator.EQ, value=True
+                ),
+            ],
+            include=["role"],
         )
-        models = list(self.session.exec(statement).all())
-        return [self.to_entity(m) for m in models]  # type: ignore
+        return self.get_all(qs)
 
     def save(self, entity: RoleApiKey) -> RoleApiKey:
-        model = self.from_entity(entity)
-        if model.id:
-            updated_model = self.update(model)
-            return self.to_entity(updated_model)  # type: ignore
+        """Save API key using BaseRepository."""
+        if entity.id:
+            return self.update(entity)
         else:
-            created_model = self.add(model)
-            self.session.flush()
-            return self.to_entity(created_model)  # type: ignore
+            return self.add(entity)
 
     def get_by_id_entity(self, id: int) -> Optional[RoleApiKey]:
-        model = self.get_by_id(id)
-        return self.to_entity(model)
+        return self.get_by_id(id)

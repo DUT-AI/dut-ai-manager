@@ -2,18 +2,26 @@ from datetime import date
 from typing import Annotated, List
 
 from app.core.deps import CurrentUser
-from app.report.application.use_cases import (GetBonusPointReportUseCase,
-                                              GetDailySummaryUseCase,
-                                              GetDashboardOverviewUseCase,
-                                              GetMonthlyActivityDatesUseCase,
-                                              GetViolationReportUseCase)
-from app.report.deps import (get_bonus_point_report_uc, get_daily_summary_uc,
-                             get_dashboard_overview_uc,
-                             get_monthly_activity_dates_uc,
-                             get_violation_report_uc)
-from app.report.schemas import (DailySummaryResponse,
-                                DashboardOverviewResponse, ReportResponse)
-from app.schemas.response import ApiResponse
+from app.report.application.use_cases import (
+    GetBonusPointReportUseCase,
+    GetDailySummaryUseCase,
+    GetDashboardOverviewUseCase,
+    GetMonthlyActivityDatesUseCase,
+    GetViolationReportUseCase,
+)
+from app.report.deps import (
+    get_bonus_point_report_uc,
+    get_daily_summary_uc,
+    get_dashboard_overview_uc,
+    get_monthly_activity_dates_uc,
+    get_violation_report_uc,
+)
+from app.report.schemas import (
+    DailySummaryResponse,
+    DashboardOverviewResponse,
+    ReportResponse,
+)
+from app.shared.application.response import ApiResponse
 from fastapi import APIRouter, Depends, Query
 
 router = APIRouter(prefix="/reports", tags=["Reports"])

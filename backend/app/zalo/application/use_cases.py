@@ -7,7 +7,7 @@ import urllib.parse
 from typing import Any, Dict, Optional
 
 from app.core.config import settings
-from app.schemas.response import BadRequestException
+from app.shared.application.response import BadRequestException
 from app.shared.domain.event_bus import EventBus
 from app.zalo.domain.entity import ZaloOAuthState, ZaloProfile
 from app.zalo.domain.events import ZaloAccountBound, ZaloBotLinked

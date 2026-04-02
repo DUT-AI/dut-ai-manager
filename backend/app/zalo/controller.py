@@ -1,16 +1,21 @@
 from typing import Annotated, Any, Dict
 
 from app.core.deps import CurrentUser
-from app.schemas.response import ApiResponse
-from app.zalo.application.use_cases import (BindZaloAccountUseCase,
-                                            GenerateBotBindCodeUseCase,
-                                            GetZaloLoginUrlUseCase,
-                                            HandleBotWebhookUseCase)
-from app.zalo.deps import (get_bind_account_uc, get_generate_bot_code_uc,
-                           get_handle_bot_webhook_uc, get_login_url_uc)
-from app.zalo.schemas import (ZaloBindCodeResponse, ZaloBindRequest,
-                              ZaloLoginUrlResponse)
-from fastapi import APIRouter, Depends, Request, status
+from app.shared.application.response import ApiResponse
+from app.zalo.application.use_cases import (
+    BindZaloAccountUseCase,
+    GenerateBotBindCodeUseCase,
+    GetZaloLoginUrlUseCase,
+    HandleBotWebhookUseCase,
+)
+from app.zalo.deps import (
+    get_bind_account_uc,
+    get_generate_bot_code_uc,
+    get_handle_bot_webhook_uc,
+    get_login_url_uc,
+)
+from app.zalo.schemas import ZaloBindCodeResponse, ZaloBindRequest, ZaloLoginUrlResponse
+from fastapi import APIRouter, Depends, Request
 
 router = APIRouter(prefix="/zalo", tags=["Zalo"])
 

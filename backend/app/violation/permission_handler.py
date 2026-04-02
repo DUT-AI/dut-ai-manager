@@ -1,6 +1,5 @@
 from app.permission_request.domain.events import PermissionRequestCreated
 from app.permission_request.domain.value_objects import RequestCategory
-from app.shared.domain.event_bus import EventBus
 from app.utils.datetime import get_current_utc7_time
 from app.violation.application.use_cases import CreateViolationUseCase
 from loguru import logger
@@ -13,7 +12,7 @@ class PermissionViolationHandler:
         self.create_violation_uc = create_violation_uc
         self.permission_repo = permission_repo
 
-    async def handle_created(self, event: PermissionRequestCreated):
+    async def handle(self, event: PermissionRequestCreated):
         """Xử lý khi có yêu cầu xin phép mới được tạo"""
         if event.category not in [RequestCategory.ABSENCE, RequestCategory.POSTPONE]:
             return
@@ -50,8 +49,3 @@ class PermissionViolationHandler:
             )
 
 
-def register_permission_handlers(
-    event_bus: type[EventBus], handler: PermissionViolationHandler
-):
-    """Đăng ký các hàm xử lý sự kiện với EventBus"""
-    event_bus.subscribe(PermissionRequestCreated, handler.handle_created)

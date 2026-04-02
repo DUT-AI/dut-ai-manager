@@ -3,16 +3,23 @@ from typing import Annotated, List
 from app.core.deps import CurrentUser, hasPermission
 from app.core.permissions import RolePermission as CoreRolePermission
 from app.rbac.deps import RoleApiKeyUseCasesDI, RoleUseCasesDI
-from app.schemas.response import ApiResponse
-from app.schemas.role_api_key import (RoleApiKeyCreate, RoleApiKeyResponse,
-                                      RoleApiKeySecret)
-from app.schemas.role_permission import (PermissionCreate, PermissionResponse,
-                                         PermissionUpdate, RoleCreate,
-                                         RoleResponse, RoleUpdate)
+from app.shared.application.response import ApiResponse
+from app.rbac.application.dtos import (
+    RoleApiKeyCreate,
+    RoleApiKeyResponse,
+    RoleApiKeySecret,
+    PermissionCreate,
+    PermissionResponse,
+    PermissionUpdate,
+    RoleCreate,
+    RoleResponse,
+    RoleUpdate,
+)
+
 from fastapi import APIRouter, status
 
-# Combined router for all RBAC related endpoints
-router = APIRouter(tags=["rbac"])
+# Combined router — prefix khớp frontend: /api/v1/rbac/...
+router = APIRouter(prefix="/rbac", tags=["rbac"])
 
 
 # --- Role Endpoints ---

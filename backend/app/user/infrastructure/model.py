@@ -2,10 +2,10 @@
 User ORM Model — SQLModel, infrastructure layer.
 """
 
-from typing import TYPE_CHECKING, Optional
-
+from typing import Any, TYPE_CHECKING, Optional
 from app.shared.infrastructure.base_model import TimestampMixin
 from app.user.domain.entity import UserEntity, UserStatus
+from app.utils.datetime import get_current_utc7_time
 from sqlmodel import Field, Relationship
 
 if TYPE_CHECKING:
@@ -38,9 +38,6 @@ class UserModel(TimestampMixin, table=True):
 
     # Foreign keys
     role_id: Optional[int] = Field(default=None, foreign_key="roles.id", index=True)
-    account_id: Optional[int] = Field(
-        default=None, foreign_key="accounts.id", unique=True
-    )
 
     # Relationships
     role: Optional["RoleModel"] = Relationship(
@@ -49,7 +46,7 @@ class UserModel(TimestampMixin, table=True):
     )
     account: Optional["AccountModel"] = Relationship(
         back_populates="user",
-        sa_relationship_kwargs={"foreign_keys": "[UserModel.account_id]"},
+        sa_relationship_kwargs={"foreign_keys": "[AccountModel.user_id]"},
     )
     violations: list["ViolationModel"] = Relationship(
         back_populates="user",
@@ -70,12 +67,19 @@ class UserModel(TimestampMixin, table=True):
 
     def to_entity(self) -> UserEntity:
         """ORM Model → Domain Entity."""
-        # Calculate permissions if role is loaded
+        # Calculate permissions only if relations are loaded to avoid N+1
         permissions = set()
-        if self.role and hasattr(self.role, "role_permissions"):
-            permissions = {
-                rp.permission.name for rp in self.role.role_permissions if rp.permission
-            }
+        role_name = None
+        
+        if "role" in self.__dict__ and self.role:
+            role_name = self.role.name
+            
+            # Check if nested role_permissions is also loaded
+            if "role_permissions" in self.role.__dict__:
+                permissions = {
+                    rp.permission.name for rp in self.role.role_permissions 
+                    if "permission" in rp.__dict__ and rp.permission
+                }
 
         return UserEntity(
             id=self.id,
@@ -90,18 +94,17 @@ class UserModel(TimestampMixin, table=True):
             zalo_bot_id=self.zalo_bot_id,
             zalo_bind_code=self.zalo_bind_code,
             role_id=self.role_id,
-            account_id=self.account_id,
-            role_name=self.role.name if self.role else None,
+            role_name=role_name,
             permissions=permissions,
-            created_at=self.created_at,  # type: ignore
-            updated_at=self.updated_at,  # type: ignore
+            created_at=self.created_at,
+            updated_at=self.updated_at,
             created_by=self.created_by,
-            updated_by=self.updated_by,  # type: ignore
-            is_deleted=self.is_deleted,  # type: ignore
+            updated_by=self.updated_by,
+            is_deleted=self.is_deleted,
         )
 
     @classmethod
-    def from_entity(cls, entity: UserEntity) -> "UserModel":
+    def from_entity(cls, entity: Any) -> "UserModel":
         """Domain Entity → ORM Model."""
         return cls(
             id=entity.id,
@@ -116,5 +119,7 @@ class UserModel(TimestampMixin, table=True):
             zalo_bot_id=entity.zalo_bot_id,
             zalo_bind_code=entity.zalo_bind_code,
             role_id=entity.role_id,
-            account_id=entity.account_id,
+            created_at=entity.created_at or get_current_utc7_time(),
+            updated_at=entity.updated_at or get_current_utc7_time(),
+            is_deleted=entity.is_deleted or False,
         )

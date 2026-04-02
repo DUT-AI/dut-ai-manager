@@ -1,14 +1,23 @@
-from datetime import date, datetime
-from typing import List, Optional, Tuple
+from datetime import date, datetime, timedelta
+from typing import List, Optional, Tuple, cast
+from app.shared.domain.query_support import (FilterCriterion, FilterOperator)
+from app.shared.application.query_support_utils import build_query_support
 
 from app.core.config import settings
 from app.meeting.domain.entity import Meeting, MeetingParticipant
-from app.meeting.domain.events import (MeetingCreated, MeetingUpdated,
-                                       ParticipantCheckedIn)
-from app.meeting.infrastructure.repository import (MeetingRepository,
-                                                   ParticipantRepository)
-from app.schemas.response import BadRequestException
-from app.shared.domain.event_bus import EventBus
+from app.meeting.domain.events import (
+    MeetingCreated,
+    MeetingUpdated,
+    ParticipantCheckedIn,
+)
+from app.meeting.infrastructure.repository import (
+    MeetingRepository,
+    ParticipantRepository,
+)
+from app.user.infrastructure.repository import UserRepository
+from app.shared.application.response import BadRequestException
+from app.shared.domain.event_bus import EventBus, DomainEvent
+from app.meeting.schemas import MeetingUpdate
 from app.shared.infrastructure.minio_service import MinioService
 from app.utils.datetime import get_current_utc7_time
 from fastapi import UploadFile, status
@@ -24,13 +33,19 @@ class GetMeetingsUseCase:
         self,
         skip: int = 0,
         limit: int = 100,
-        month: Optional[int] = None,
-        year: Optional[int] = None,
         start_date: Optional[date] = None,
         end_date: Optional[date] = None,
+        deleted: bool = False,
     ) -> List[Meeting]:
+        filters = []
+        if start_date:
+            filters.append(FilterCriterion(field="start_time", operator=FilterOperator.GTE, value=start_date))
+        if end_date:
+            filters.append(FilterCriterion(field="end_time", operator=FilterOperator.LTE, value=end_date))
+
+        qs = build_query_support(skip=skip, limit=limit, filters=filters, sort_by="start_time", descending=True)
         return self.repo.get_all_with_participants(
-            skip, limit, month, year, start_date, end_date
+            query_support=qs, deleted=deleted
         )
 
     def get_by_id(self, meeting_id: int) -> Meeting:
@@ -56,7 +71,7 @@ class CreateMeetingUseCase:
         end_time: datetime,
         content: Optional[str] = None,
         require_check_in: bool = True,
-        user_ids: List[int] = None,
+        user_ids: Optional[List[int]] = None,
     ) -> Meeting:
         # Check overlapped meetings & seats (Business Rule)
         concurrent_participants = self.repo.get_concurrent_participants_count(
@@ -87,13 +102,13 @@ class CreateMeetingUseCase:
 
         # Publish event for notifications
         await self.event_bus.publish(
-            MeetingCreated(
-                meeting_id=saved_meeting.id,
+            cast(DomainEvent, MeetingCreated(
+                meeting_id=cast(int, saved_meeting.id),
                 title=saved_meeting.title,
                 user_ids=user_ids or [],
                 start_time=start_time.isoformat(),
                 end_time=end_time.isoformat(),
-            )
+            ))
         )
 
         return saved_meeting
@@ -164,16 +179,75 @@ class CheckInUseCase:
 
             # Publish event (Violation Handler should handle lateness logic and permission requests)
             await self.event_bus.publish(
-                ParticipantCheckedIn(
+                cast(DomainEvent, ParticipantCheckedIn(
                     meeting_id=meeting_id,
                     user_id=user_id,
                     check_in_at=now,
                     is_late=is_late,
                     meeting_title=meeting.title,
-                )
+                ))
             )
 
         return updated_participants, ". ".join(messages)
+
+
+class CheckInWithCardUseCase:
+    """Check-in bằng mã thẻ: tìm user → meeting trong cửa sổ ±30 phút quanh hiện tại."""
+
+    def __init__(
+        self,
+        user_repo: UserRepository,
+        participant_repo: ParticipantRepository,
+        meeting_repo: MeetingRepository,
+        event_bus: type[EventBus] = EventBus,
+    ):
+        self.user_repo = user_repo
+        self.participant_repo = participant_repo
+        self.meeting_repo = meeting_repo
+        self.event_bus = event_bus
+
+    async def execute(self, card_code: str) -> str:
+        code = (card_code or "").strip()
+        if not code:
+            raise BadRequestException("Ma the khong hop le")
+
+        user = self.user_repo.get_by_check_in_card_code(code)
+        if not user:
+            raise BadRequestException(f"Dang ky {code} tren web")
+
+        uid = user.id
+
+        now = get_current_utc7_time()
+        half_hour = timedelta(minutes=30)
+        window_start = now - half_hour
+        window_end = now + half_hour
+
+        participant = self.participant_repo.find_participation_in_time_window(
+            uid, window_start, window_end, now
+        )
+        if not participant or participant.meeting_id is None:
+            raise BadRequestException("Khong ton tai meeting trong vong 30p")
+
+        meeting = self.meeting_repo.get_domain_for_check_in(participant.meeting_id)
+        if not meeting:
+            raise BadRequestException("Khong ton tai meeting trong vong 30p")
+
+        success, msg = participant.check_in(now, None)
+        if not success:
+            raise BadRequestException(msg)
+
+        self.participant_repo.save(participant)
+        is_late = meeting.is_late(now)
+        await self.event_bus.publish(
+            cast(DomainEvent, ParticipantCheckedIn(
+                meeting_id=cast(int, participant.meeting_id),
+                user_id=uid,
+                check_in_at=now,
+                is_late=is_late,
+                meeting_title=meeting.title,
+            ))
+        )
+        return f"{user.name} checkin thành công"
 
 
 class UpdateMeetingUseCase:
@@ -183,9 +257,7 @@ class UpdateMeetingUseCase:
         self.repo = repo
         self.event_bus = event_bus
 
-    async def execute(self, meeting_id: int, data: "MeetingUpdate") -> Meeting:
-        from app.meeting.schemas import MeetingUpdate
-
+    async def execute(self, meeting_id: int, data: MeetingUpdate) -> Meeting:
         meeting = self.repo.get_by_id(meeting_id)
         if not meeting:
             raise BadRequestException("Không tìm thấy buổi họp")
@@ -209,13 +281,13 @@ class UpdateMeetingUseCase:
 
         # Publish event
         await self.event_bus.publish(
-            MeetingUpdated(
-                meeting_id=saved.id,
+            cast(DomainEvent, MeetingUpdated(
+                meeting_id=cast(int, saved.id),
                 title=saved.title,
                 user_ids=[p.user_id for p in saved.participants],
                 start_time=saved.start_time.isoformat(),
                 end_time=saved.end_time.isoformat(),
-            )
+            ))
         )
         return saved
 
@@ -262,7 +334,9 @@ class MeetingUseCases:
         self, user_id: int, month: int, year: int
     ) -> List[Meeting]:
         """Tương đương với logic cũ trong MeetingService"""
-        all_meetings = self.get_all(limit=1000, month=month, year=year)
+        # For legacy compatibility, we could still use QuerySupport here if needed,
+        # but for now we just filter the results of get_all_with_participants
+        all_meetings = self.repo.get_all_with_participants(deleted=False)
         return [
             m for m in all_meetings if any(p.user_id == user_id for p in m.participants)
         ]
