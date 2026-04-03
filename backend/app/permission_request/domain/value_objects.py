@@ -6,4 +6,5 @@ class RequestCategory(str, Enum):
 
     ABSENCE = "ABSENCE"  # Xin vắng sinh hoạt
     POSTPONE = "POSTPONE"  # Xin hoãn bài tập
+    LATE = "LATE"  # Xin đi trễ
     OTHER = "OTHER"  # Khác

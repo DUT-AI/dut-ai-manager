@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, time
 from typing import Any, List, Optional, cast
 from app.shared.domain.query_support import (FilterCriterion, FilterOperator)
 from app.shared.application.query_support_utils import build_query_support
@@ -55,13 +55,27 @@ class CreatePermissionRequestUseCase:
         self,
         category: RequestCategory,
         date: date,
-        reason: str,
+        note: str,
+        homework_id: Optional[int] = None,
+        meeting_id: Optional[int] = None,
+        start_time: Optional[time] = None,
         user_id: Optional[int] = None,
     ) -> PermissionRequest:
         current_user_id = user_id or get_current_user_id()
 
+        # Combine date and time to create a datetime for the Domain Entity
+        full_datetime: Optional[datetime] = None
+        if start_time:
+            full_datetime = datetime.combine(date, start_time)
+
         request = PermissionRequest(
-            user_id=current_user_id, category=category, date=date, reason=reason
+            user_id=current_user_id,
+            category=category,
+            date=date,
+            note=note,
+            homework_id=homework_id,
+            meeting_id=meeting_id,
+            start_time=full_datetime
         )
 
         saved = self.repo.save(request)
@@ -72,8 +86,8 @@ class CreatePermissionRequestUseCase:
                 request_id=cast(int, saved.id),
                 user_id=cast(int, saved.user_id),
                 category=saved.category,
-                date=cast(Any, saved.date),
-                reason=saved.reason,
+                date=saved.date,
+                note=saved.note,
             ))
         )
 
@@ -101,8 +115,15 @@ class UpdatePermissionRequestUseCase:
             request.category = data.category
         if data.date:
             request.date = data.date
-        if data.reason:
-            request.reason = data.reason
+        if data.note:
+            request.note = data.note
+        if data.homework_id:
+            request.homework_id = data.homework_id
+        if data.meeting_id:
+            request.meeting_id = data.meeting_id
+        if data.start_time:
+            # combine updated time with current request date
+            request.start_time = datetime.combine(request.date, data.start_time)
 
         saved = self.repo.save(request)
 

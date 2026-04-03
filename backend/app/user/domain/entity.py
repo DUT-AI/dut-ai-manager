@@ -37,10 +37,6 @@ class UserEntity(BaseEntity):
     role_name: Optional[str] = None
     permissions: set[str] = Field(default_factory=set)
 
-    # Denormalized / Virtual fields (populated by repository or JWT)
-    role_name: Optional[str] = None
-    permissions: set[str] = Field(default_factory=set)
-
     def has_permission(self, permission_name: str) -> bool:
         if self.role_name == "admin":
             return True

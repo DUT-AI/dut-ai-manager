@@ -60,3 +60,7 @@ class Meeting(BaseEntity):
         if not self.require_check_in:
             return False
         return check_in_time > self.start_time
+
+
+MeetingParticipant.model_rebuild()
+Meeting.model_rebuild()

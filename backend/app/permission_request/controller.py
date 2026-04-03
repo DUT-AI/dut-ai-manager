@@ -62,7 +62,12 @@ async def create_permission_request(
 ):
     """Tạo yêu cầu xin phép mới"""
     result = await uc.execute(
-        category=data.category, date=data.date, reason=data.reason
+        category=data.category,
+        date=data.date,
+        note=data.note,
+        homework_id=data.homework_id,
+        meeting_id=data.meeting_id,
+        start_time=data.start_time
     )
     return ApiResponse.success(data=result)
 

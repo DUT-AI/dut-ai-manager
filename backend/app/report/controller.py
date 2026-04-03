@@ -9,27 +9,22 @@ from app.report.application.use_cases import (
     GetMonthlyActivityDatesUseCase,
     GetViolationReportUseCase,
 )
-from app.report.deps import (
-    get_bonus_point_report_uc,
-    get_daily_summary_uc,
-    get_dashboard_overview_uc,
-    get_monthly_activity_dates_uc,
-    get_violation_report_uc,
-)
 from app.report.schemas import (
     DailySummaryResponse,
     DashboardOverviewResponse,
     ReportResponse,
 )
 from app.shared.application.response import ApiResponse
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Query
+from dishka.integrations.fastapi import FromDishka, inject
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
 
 
 @router.get("/daily-summary", response_model=ApiResponse[DailySummaryResponse])
+@inject
 async def get_daily_summary(
-    uc: Annotated[GetDailySummaryUseCase, Depends(get_daily_summary_uc)],
+    uc: FromDishka[GetDailySummaryUseCase],
     _current_user: CurrentUser,
     target_date: date = Query(alias="date"),
 ):
@@ -39,10 +34,9 @@ async def get_daily_summary(
 
 
 @router.get("/monthly-stats", response_model=ApiResponse[List[date]])
+@inject
 async def get_monthly_activity_dates(
-    uc: Annotated[
-        GetMonthlyActivityDatesUseCase, Depends(get_monthly_activity_dates_uc)
-    ],
+    uc: FromDishka[GetMonthlyActivityDatesUseCase],
     _current_user: CurrentUser,
     month: int,
     year: int,
@@ -55,8 +49,9 @@ async def get_monthly_activity_dates(
 @router.get(
     "/dashboard-overview", response_model=ApiResponse[DashboardOverviewResponse]
 )
+@inject
 async def get_dashboard_overview(
-    uc: Annotated[GetDashboardOverviewUseCase, Depends(get_dashboard_overview_uc)],
+    uc: FromDishka[GetDashboardOverviewUseCase],
     current_user: CurrentUser,
     month: int = Query(..., description="Month (1-12)"),
     year: int = Query(..., description="Year"),
@@ -70,8 +65,9 @@ async def get_dashboard_overview(
 
 
 @router.get("/bonus-points", response_model=ApiResponse[ReportResponse])
+@inject
 async def get_bonus_point_report(
-    uc: Annotated[GetBonusPointReportUseCase, Depends(get_bonus_point_report_uc)],
+    uc: FromDishka[GetBonusPointReportUseCase],
     _current_user: CurrentUser,
     month: int = Query(None, description="Month"),
     year: int = Query(None, description="Year"),
@@ -83,8 +79,9 @@ async def get_bonus_point_report(
 
 
 @router.get("/violations", response_model=ApiResponse[ReportResponse])
+@inject
 async def get_violation_report(
-    uc: Annotated[GetViolationReportUseCase, Depends(get_violation_report_uc)],
+    uc: FromDishka[GetViolationReportUseCase],
     _current_user: CurrentUser,
     month: int = Query(None, description="Month"),
     year: int = Query(None, description="Year"),

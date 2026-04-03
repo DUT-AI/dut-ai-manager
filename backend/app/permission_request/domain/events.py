@@ -12,7 +12,7 @@ class PermissionRequestCreated(DomainEvent):
     user_id: int
     category: RequestCategory
     date: date
-    reason: str
+    note: str
 
 
 class PermissionRequestUpdated(DomainEvent):

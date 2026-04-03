@@ -7,6 +7,11 @@ from app.auth.providers import AuthModuleProvider
 from app.user.providers import UserModuleProvider
 from app.violation.providers import ViolationModuleProvider
 from app.permission_request.providers import PermissionRequestModuleProvider
+from app.report.providers import ReportModuleProvider
+from app.meeting.providers import MeetingModuleProvider
+from app.bonus_point.providers import BonusPointModuleProvider
+from app.homework.providers import HomeworkModuleProvider
+from app.team.providers import TeamModuleProvider
 from app.core.config import settings
 from app.core.events import bootstrap_events
 from app.core.logging_config import setup_logging
@@ -85,6 +90,11 @@ def create_app():
         UserModuleProvider(),
         ViolationModuleProvider(),
         PermissionRequestModuleProvider(),
+        ReportModuleProvider(),
+        MeetingModuleProvider(),
+        BonusPointModuleProvider(),
+        HomeworkModuleProvider(),
+        TeamModuleProvider(),
     )
     setup_dishka(container, _app)
 

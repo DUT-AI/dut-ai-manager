@@ -3,12 +3,11 @@ from typing import List, Optional
 
 from app.bonus_point.infrastructure.repository import BonusPointRepository
 from app.homework.application.dtos import HomeworkResponse
-from app.homework.infrastructure.repository import HomeworkRepository
+from app.homework.infrastructure.repository import HomeworkSubmissionRepository
 from app.meeting.infrastructure.repository import MeetingRepository
 from app.meeting.schemas import MeetingResponse
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
 from app.permission_request.schemas import PermissionRequestResponse
-from app.rbac.infrastructure.repository import PermissionRepository
 from app.report.schemas import (
     BonusPointResponse,
     DailySummaryResponse,
@@ -20,7 +19,6 @@ from app.report.schemas import (
 from app.user.application.dtos import UserResponse
 from app.user.infrastructure.repository import UserRepository
 from app.violation.infrastructure.repository import ViolationRepository
-from loguru import logger
 
 
 class GetDailySummaryUseCase:
@@ -29,7 +27,7 @@ class GetDailySummaryUseCase:
     def __init__(
         self,
         meeting_repo: MeetingRepository,
-        permission_repo: PermissionRepository,
+        permission_repo: PermissionRequestRepository,
         violation_repo: ViolationRepository,
         bonus_point_repo: BonusPointRepository,
     ):
@@ -111,37 +109,38 @@ class GetDashboardOverviewUseCase:
         self,
         user_repo: UserRepository,
         meeting_repo: MeetingRepository,
-        permission_repo: PermissionRepository,
+        permission_repo: PermissionRequestRepository,
         violation_repo: ViolationRepository,
         bonus_point_repo: BonusPointRepository,
-        homework_repo: HomeworkRepository,
+        submission_repo: HomeworkSubmissionRepository,
     ):
         self.user_repo = user_repo
         self.meeting_repo = meeting_repo
         self.permission_repo = permission_repo
         self.violation_repo = violation_repo
         self.bonus_point_repo = bonus_point_repo
-        self.homework_repo = homework_repo
+        self.submission_repo = submission_repo
 
     def execute(self, user_id: int, month: int, year: int) -> DashboardOverviewResponse:
         # 1. Permission Requests
-        permissions = self.permission_repo.get_all(
+        permissions = self.permission_repo.get_by_user(
             user_id=user_id, month=month, year=year
         )
 
         # 2. Bonus Points
-        bonus_points = self.bonus_point_repo.get_all(
+        bonus_points = self.bonus_point_repo.get_by_user_id(
             user_id=user_id, month=month, year=year
         )
 
         # 3. Violations
-        violations = self.violation_repo.get_all(
+        violations = self.violation_repo.get_by_month(
             user_id=user_id, month=month, year=year
         )
 
-        # 4. Unsubmitted Homework (Lấy tất cả bài tập chưa nộp của user này)
-        # Lưu ý: homework_repo cần phương thức get_unsubmitted_by_user
-        unsubmitted_homeworks = self.homework_repo.get_unsubmitted_by_user(user_id)
+        # 4. Unsubmitted Homework (Lấy thực thể bài tập chưa nộp)
+        unsubmitted_homeworks = self.submission_repo.get_all_by_user(user_id)
+        # Lấy list HomeworkEntities từ submissions (giả sử submission entity có field homework)
+        homework_entities = [s.homework for s in unsubmitted_homeworks if hasattr(s, "homework") and s.homework]
 
         # 5. Meetings (Lấy các buổi sinh hoạt mà user tham gia trong tháng)
         user_meetings = self.meeting_repo.get_participating_meetings(
@@ -155,7 +154,7 @@ class GetDashboardOverviewUseCase:
             bonus_points=[BonusPointResponse.model_validate(b) for b in bonus_points],
             violations=[ViolationResponse.model_validate(v) for v in violations],
             unsubmitted_homeworks=[
-                HomeworkResponse.model_validate(h) for h in unsubmitted_homeworks
+                HomeworkResponse.model_validate(h) for h in homework_entities
             ],
             meetings=[MeetingResponse.from_domain(m) for m in user_meetings],
         )

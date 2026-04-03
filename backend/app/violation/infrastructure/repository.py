@@ -5,172 +5,96 @@ Uses flush() instead of commit(). Session commits at middleware level.
 Mapping delegated to ViolationModel.to_entity() / .from_entity().
 """
 
-from datetime import datetime
-from typing import Optional
-
 from app.violation.domain.entity import Violation
 from app.violation.infrastructure.model import ViolationModel
-from loguru import logger
+from app.shared.infrastructure.base_repository import BaseRepository
 from sqlalchemy import desc, extract
 from sqlalchemy.orm import joinedload
 from sqlmodel import Session, select
+from datetime import datetime, date, time
+from typing import List, Optional, Any, cast
 
 
-class ViolationRepository:
-    """Concrete repository — no interface needed."""
+class ViolationRepository(BaseRepository[ViolationModel, Violation]):
+    """Concrete repository using BaseRepository logic."""
 
     def __init__(self, session: Session):
-        self.session = session
-
-    def save(self, entity: Violation) -> Violation:
-        """Create a new violation and return fully loaded entity."""
-        model = ViolationModel.from_entity(entity)
-        self.session.add(model)
-        self.session.flush()
-
-        # Refresh to get ID and also load relationships for the entity
-        statement = (
-            select(ViolationModel)
-            .where(ViolationModel.id == model.id)
-            .options(
-                joinedload(ViolationModel.user),
-                joinedload(ViolationModel.creator_rel),
-                joinedload(ViolationModel.updater_rel),
-            )
-        )
-        model = self.session.exec(statement).first()
-
-        logger.debug(f"Saved violation: id={model.id}")
-        return model.to_entity()
-
-    def get_by_id(self, item_id: int) -> Optional[Violation]:
-        """Get violation by ID with user details."""
-        statement = (
-            select(ViolationModel)
-            .where(ViolationModel.id == item_id, ViolationModel.is_deleted == False)
-            .options(
-                joinedload(ViolationModel.user),
-                joinedload(ViolationModel.creator_rel),
-                joinedload(ViolationModel.updater_rel),
-            )
-        )
-        model = self.session.exec(statement).first()
-        if not model:
-            return None
-        return model.to_entity()
+        super().__init__(session, ViolationModel)
 
     def get_all(
-        self, skip: int = 0, limit: int = 100, deleted: bool = False
-    ) -> list[Violation]:
-        """Get all violations with user details."""
-        statement = (
-            select(ViolationModel)
-            .where(ViolationModel.is_deleted == deleted)
-            .options(
-                joinedload(ViolationModel.user),
-                joinedload(ViolationModel.creator_rel),
-                joinedload(ViolationModel.updater_rel),
-            )
-            .order_by(desc(ViolationModel.created_at))
-            .offset(skip)
-            .limit(limit)
+        self,
+        query_support: Optional[Any] = None,
+        deleted: bool = False,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> List[Violation]:
+        """Override get_all to include default relations and support skip/limit if no query_support."""
+        statement = select(ViolationModel).where(ViolationModel.is_deleted == deleted)
+
+        # Default includes
+        statement = statement.options(
+            joinedload(cast(Any, ViolationModel.user)),
+            joinedload(cast(Any, ViolationModel.creator_rel)),
+            joinedload(cast(Any, ViolationModel.updater_rel)),
         )
-        return [m.to_entity() for m in self.session.exec(statement).all()]
+
+        if query_support:
+            from app.shared.domain.query_support import apply_query_support
+            statement = apply_query_support(statement, ViolationModel, query_support)
+        else:
+            statement = statement.order_by(desc(cast(Any, ViolationModel.created_at)))
+            statement = statement.offset(skip).limit(limit)
+
+        return [m.to_entity() for m in self.session.exec(statement).unique().all()]
 
     def get_by_month(
         self,
         month: Optional[int] = None,
         year: Optional[int] = None,
         user_id: Optional[int] = None,
-    ) -> list[Violation]:
-        """Get violations filtered by month/year (bỏ qua filter nếu month/year là None)."""
-        statement = select(ViolationModel).where(ViolationModel.is_deleted == False)
+    ) -> List[Violation]:
+        """Get violations filtered by month/year/user."""
+        statement = select(ViolationModel).where(ViolationModel.is_deleted == False)  # noqa: E712
+        
         if user_id:
             statement = statement.where(ViolationModel.user_id == user_id)
         if month is not None:
-            statement = statement.where(extract("month", ViolationModel.date) == month)
+            statement = statement.where(extract("month", cast(Any, ViolationModel.date)) == month)
         if year is not None:
-            statement = statement.where(extract("year", ViolationModel.date) == year)
+            statement = statement.where(extract("year", cast(Any, ViolationModel.date)) == year)
+            
         statement = statement.options(
-            joinedload(ViolationModel.user),
-            joinedload(ViolationModel.creator_rel),
-            joinedload(ViolationModel.updater_rel),
-        )
-        return [m.to_entity() for m in self.session.exec(statement).all()]
+            joinedload(cast(Any, ViolationModel.user)),
+            joinedload(cast(Any, ViolationModel.creator_rel)),
+            joinedload(cast(Any, ViolationModel.updater_rel)),
+        ).order_by(desc(cast(Any, ViolationModel.date)))
+        
+        return [m.to_entity() for m in self.session.exec(statement).unique().all()]
 
-    def get_by_user_and_date(
-        self, user_id: int, target_date: datetime
-    ) -> list[Violation]:
-        """Get violations for a user on a specific date."""
-        start = datetime.combine(target_date, datetime.min.time())
-        end = datetime.combine(target_date, datetime.max.time())
+    def get_by_date(self, target_date: date) -> List[Violation]:
+        """Get all violations on a specific date (accepts date or datetime)."""
+        # Tránh lỗi type hint nếu target_date là datetime
+        d = target_date.date() if isinstance(target_date, datetime) else target_date
+        start = datetime.combine(d, time.min)
+        end = datetime.combine(d, time.max)
+        
         statement = (
             select(ViolationModel)
             .where(
-                ViolationModel.is_deleted == False,
-                ViolationModel.user_id == user_id,
+                ViolationModel.is_deleted == False,  # noqa: E712
                 ViolationModel.date >= start,
                 ViolationModel.date <= end,
             )
             .options(
-                joinedload(ViolationModel.user),
-                joinedload(ViolationModel.creator_rel),
-                joinedload(ViolationModel.updater_rel),
+                joinedload(cast(Any, ViolationModel.user)),
+                joinedload(cast(Any, ViolationModel.creator_rel)),
+                joinedload(cast(Any, ViolationModel.updater_rel)),
             )
         )
-        return [m.to_entity() for m in self.session.exec(statement).all()]
+        return [m.to_entity() for m in self.session.exec(statement).unique().all()]
 
-    def get_by_date(self, target_date: datetime) -> list[Violation]:
-        """Get all violations on a specific date."""
-        start = datetime.combine(target_date, datetime.min.time())
-        end = datetime.combine(target_date, datetime.max.time())
-        statement = (
-            select(ViolationModel)
-            .where(
-                ViolationModel.is_deleted == False,
-                ViolationModel.date >= start,
-                ViolationModel.date <= end,
-            )
-            .options(
-                joinedload(ViolationModel.user),
-                joinedload(ViolationModel.creator_rel),
-                joinedload(ViolationModel.updater_rel),
-            )
-        )
-        return [m.to_entity() for m in self.session.exec(statement).all()]
-
-    def update(self, entity: Violation) -> Optional[Violation]:
-        """Update an existing violation."""
-        model = self.session.get(ViolationModel, entity.id)
-        if not model:
-            return None
-        model.reason = entity.reason
-        model.date = entity.date
-        self.session.add(model)
-        self.session.flush()
-        self.session.refresh(model)
-        return model.to_entity()
-
-    def soft_delete(self, item_id: int) -> bool:
-        """Soft delete a violation."""
-        model = self.session.get(ViolationModel, item_id)
-        if not model:
-            return False
-        model.is_deleted = True
-        self.session.add(model)
-        self.session.flush()
-        return True
-
-    def restore(self, item_id: int) -> Optional[Violation]:
-        """Restore a soft-deleted violation."""
-        statement = select(ViolationModel).where(
-            ViolationModel.id == item_id, ViolationModel.is_deleted == True
-        )
-        model = self.session.exec(statement).first()
-        if not model:
-            return None
-        model.is_deleted = False
-        self.session.add(model)
-        self.session.flush()
-        self.session.refresh(model)
-        return model.to_entity()
+    def save(self, entity: Violation) -> Violation:
+        """Compatibility save method."""
+        if entity.id:
+            return self.update(entity)
+        return self.add(entity)

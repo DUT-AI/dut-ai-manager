@@ -17,6 +17,7 @@ class HomeworkSubmission(BaseEntity):
     # Read-only attributes mapped from user relation
     user_name: Optional[str] = None
     user_avatar: Optional[str] = None
+    homework: Optional["Homework"] = None
 
 
 class Homework(BaseEntity):
@@ -31,3 +32,7 @@ class Homework(BaseEntity):
     @property
     def submission_count(self) -> int:
         return len(self.submissions)
+
+
+HomeworkSubmission.model_rebuild()
+Homework.model_rebuild()

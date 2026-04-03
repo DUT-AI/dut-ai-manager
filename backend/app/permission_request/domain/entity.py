@@ -1,8 +1,12 @@
 from datetime import date, datetime
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from app.permission_request.domain.value_objects import RequestCategory
 from app.shared.domain.base_entity import BaseEntity
+
+from app.user.domain.entity import UserEntity
+from app.homework.domain.entity import Homework
+from app.meeting.domain.entity import Meeting
 
 
 class PermissionRequest(BaseEntity):
@@ -11,13 +15,26 @@ class PermissionRequest(BaseEntity):
     user_id: Optional[int]
     category: RequestCategory
     date: date
-    reason: str
-    id: Optional[int] = None
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
+    note: str
+    
+    # Specific metadata based on category
+    homework_id: Optional[int] = None
+    meeting_id: Optional[int] = None
+    
+    # Target time (arrival time or deadline time)
+    start_time: Optional[datetime] = None
+
+    # Related entities (Optional)
+    user: Optional[UserEntity] = None
+    homework: Optional[Homework] = None
+    meeting: Optional[Meeting] = None
 
     def is_absence(self) -> bool:
         return self.category == RequestCategory.ABSENCE
 
     def is_postpone(self) -> bool:
         return self.category == RequestCategory.POSTPONE
+
+
+# Rebuild model for Pydantic to resolve type hints
+PermissionRequest.model_rebuild()

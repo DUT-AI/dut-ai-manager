@@ -1,12 +1,19 @@
 from datetime import date as dt_date
+from datetime import datetime
 from datetime import time as dt_time
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
-from app.permission_request.domain.entity import \
-  PermissionRequest as PermissionRequestEntity
+from app.permission_request.domain.entity import (
+    PermissionRequest as PermissionRequestEntity,
+)
 from app.permission_request.domain.value_objects import RequestCategory
 from app.shared.infrastructure.base_model import TimestampMixin
-from sqlmodel import Field, Index, SQLModel
+from sqlmodel import Field, Index, Relationship
+
+if TYPE_CHECKING:
+    from app.user.infrastructure.model import UserModel
+    from app.homework.infrastructure.model import HomeworkModel
+    from app.meeting.infrastructure.model import Meeting
 
 
 class PermissionRequest(TimestampMixin, table=True):
@@ -19,20 +26,46 @@ class PermissionRequest(TimestampMixin, table=True):
     category: RequestCategory = Field(index=True)
     note: str = Field(max_length=500)
     date: dt_date = Field(index=True)
-    start_time: dt_time = Field()
-    end_time: dt_time = Field()
+    start_time: Optional[dt_time] = Field(default=None)
+
+    # Specific metadata fields
+    homework_id: Optional[int] = Field(
+        default=None, foreign_key="homeworks.id", index=True
+    )
+    meeting_id: Optional[int] = Field(
+        default=None, foreign_key="meetings.id", index=True
+    )
+
+    # Relationships
+    user: "UserModel" = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "[PermissionRequest.created_by]"}
+    )
+    homework: Optional["HomeworkModel"] = Relationship()
+    meeting: Optional["Meeting"] = Relationship()
 
     def to_entity(self) -> PermissionRequestEntity:
         if self.created_by is None:
             raise ValueError("permission request missing created_by")
+
         return PermissionRequestEntity(
             id=self.id,
             user_id=self.created_by,
             category=self.category,
             date=self.date,
-            reason=self.note,
+            note=self.note,
+            homework_id=self.homework_id,
+            meeting_id=self.meeting_id,
+            start_time=(
+                datetime.combine(self.date, self.start_time)
+                if self.start_time
+                else None
+            ),
             created_at=self.created_at,
             updated_at=self.updated_at,
+            # Map related entities
+            user=self.user.to_entity() if self.user else None,
+            homework=self.homework.to_entity() if self.homework else None,
+            meeting=self.meeting.to_entity() if self.meeting else None,
         )
 
     @classmethod
@@ -40,9 +73,10 @@ class PermissionRequest(TimestampMixin, table=True):
         return cls(
             id=entity.id,
             category=entity.category,
-            note=entity.reason,
+            note=entity.note,
             date=entity.date,
-            start_time=dt_time(0, 0, 0),
-            end_time=dt_time(23, 59, 59),
+            start_time=entity.start_time.time() if entity.start_time else None,
+            homework_id=entity.homework_id,
+            meeting_id=entity.meeting_id,
             created_by=entity.user_id,
         )

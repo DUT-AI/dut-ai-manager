@@ -70,14 +70,14 @@ const MobileListView = ({ violations, isLoading, canUpdate, canDelete, onViewDet
 
                         <div className="flex items-center gap-3 mb-4">
                             <Avatar
-                                src={record.user_avatar}
+                                src={record.owner?.avatar || record.user_avatar}
                                 icon={<UserOutlined />}
                                 className="bg-linear-to-br from-red-500 to-orange-500 shadow-sm shrink-0"
                                 size="large"
                             />
                             <div className="flex flex-col min-w-0 flex-1">
                                 <Text strong className="truncate text-base">
-                                    {record.user_name || 'Unknown'}
+                                    {record.owner?.name || record.user_name || 'Unknown'}
                                 </Text>
                                 <Text type="danger" className="text-xs italic truncate">
                                     {record.reason}
@@ -183,13 +183,13 @@ const ViolationManagementPage = () => {
             render: (_: any, record: ViolationResponse) => (
                 <Space>
                     <Avatar
-                        src={record.user_avatar}
+                        src={record.owner?.avatar || record.user_avatar}
                         icon={<UserOutlined />}
                         className="bg-linear-to-br from-red-500 to-orange-500 shadow-sm"
                         size="small"
                     />
                     <div>
-                        <Text strong className="block">{record.user_name || 'Unknown'}</Text>
+                        <Title level={5} className="!mb-0 text-sm">{record.owner?.name || record.user_name || 'Unknown'}</Title>
                     </div>
                 </Space>
             ),
@@ -226,7 +226,7 @@ const ViolationManagementPage = () => {
                             setEditingItem(record);
                             form.setFieldsValue({
                                 ...record,
-                                user_name: record.user_name || 'Unknown', // Set for display
+                                user_name: record.owner?.name || record.user_name || 'Unknown', // Set for display
                                 date: dayjs(record.date)
                             });
                             setIsModalOpen(true);
@@ -288,7 +288,7 @@ const ViolationManagementPage = () => {
                             setEditingItem(item);
                             form.setFieldsValue({
                                 ...item,
-                                user_name: item.user_name || 'Unknown',
+                                user_name: item.owner?.name || item.user_name || 'Unknown',
                                 date: dayjs(item.date)
                             });
                             setIsModalOpen(true);
@@ -379,8 +379,12 @@ const ViolationManagementPage = () => {
                             <Descriptions column={1} bordered size="small" className="mb-6">
                                 <Descriptions.Item label="Thành viên">
                                     <Space>
-                                        <UserOutlined />
-                                        <Text strong>{detailItem.user_name || 'Unknown'}</Text>
+                                        <Avatar
+                                            src={detailItem.owner?.avatar || detailItem.user_avatar}
+                                            icon={<UserOutlined />}
+                                            size="small"
+                                        />
+                                        <Text strong>{detailItem.owner?.name || detailItem.user_name || 'Unknown'}</Text>
                                     </Space>
                                 </Descriptions.Item>
                                 <Descriptions.Item label="Thời gian">
@@ -403,14 +407,20 @@ const ViolationManagementPage = () => {
                                         {dayjs(detailItem.updated_at).format('DD/MM/YYYY HH:mm:ss')}
                                     </Descriptions.Item>
                                 )}
-                                {detailItem.creator_name && (
+                                {detailItem.creator && (
                                     <Descriptions.Item label="Created by">
-                                        {detailItem.creator_name}
+                                        <Space>
+                                            <Avatar src={detailItem.creator.avatar} size="small" />
+                                            <Text>{detailItem.creator.name}</Text>
+                                        </Space>
                                     </Descriptions.Item>
                                 )}
-                                {detailItem.updater_name && (
+                                {detailItem.updater && (
                                     <Descriptions.Item label="Updated by">
-                                        {detailItem.updater_name}
+                                        <Space>
+                                            <Avatar src={detailItem.updater.avatar} size="small" />
+                                            <Text>{detailItem.updater.name}</Text>
+                                        </Space>
                                     </Descriptions.Item>
                                 )}
                             </Descriptions>

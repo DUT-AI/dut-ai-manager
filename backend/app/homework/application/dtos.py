@@ -8,7 +8,6 @@ from pydantic import BaseModel, HttpUrl
 class HomeworkBase(BaseModel):
     title: str
     description: str
-    description: str
     deadline: datetime
     file_url: Optional[str] = None
 

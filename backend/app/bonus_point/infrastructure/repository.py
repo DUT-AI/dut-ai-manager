@@ -1,7 +1,4 @@
-"""
-Bonus Point Repository Interface and SQLite Implementation.
-"""
-
+from datetime import date
 from typing import Any, List, Optional, cast
 from app.bonus_point.domain.entity import BonusPoint
 from app.bonus_point.infrastructure.model import BonusPointModel
@@ -22,10 +19,10 @@ class BonusPointRepository(BaseRepository[BonusPointModel, BonusPoint]):
     ) -> List[BonusPoint]:
         return self.get_all(query_support=query_support, deleted=deleted)
 
-    def update(self, entity: BonusPoint) -> Optional[BonusPoint]:
+    def update(self, entity: BonusPoint) -> BonusPoint:
         return super().update(entity)
 
-    def update_entity(self, entity: BonusPoint) -> Optional[BonusPoint]:
+    def update_entity(self, entity: BonusPoint) -> BonusPoint:
         return self.update(entity)
 
     def delete_entity(self, id: int) -> bool:
@@ -35,11 +32,11 @@ class BonusPointRepository(BaseRepository[BonusPointModel, BonusPoint]):
             return True
         return False
 
-    def restore_entity(self, id: int) -> Optional[BonusPoint]:
+    def restore_entity(self, id: int) -> BonusPoint:
         entity = self.get_by_id(id)
         if entity:
             return self.restore(entity)
-        return None
+        raise ValueError(f"Bonus point with id {id} not found")
 
     def to_entity(self, model: BonusPointModel) -> BonusPoint:
         """Convert ORM model to Domain Entity."""
@@ -54,7 +51,7 @@ class BonusPointRepository(BaseRepository[BonusPointModel, BonusPoint]):
     ) -> List[BonusPoint]:
         """Override get_all to include necessary relations."""
         statement = select(BonusPointModel)
-        statement = statement.where(cast(Any, BonusPointModel.is_deleted) == deleted)
+        statement = statement.where(cast(Any, BonusPointModel.is_deleted).is_(deleted))
 
         # Always include these relations for bonus points
         statement = statement.options(
@@ -72,13 +69,37 @@ class BonusPointRepository(BaseRepository[BonusPointModel, BonusPoint]):
         models = self.session.exec(statement).all()
         return [self.to_entity(m) for m in models]
 
+    def get_by_date(self, target_date: date) -> List[BonusPoint]:
+        """Get bonus points for a specific date."""
+        from app.shared.application.query_support_utils import build_query_support
+        from app.shared.domain.query_support import FilterCriterion, FilterOperator
+        
+        qs = build_query_support(
+            filters=[FilterCriterion(field="date", operator=FilterOperator.EQ, value=target_date)]
+        )
+        return self.get_all(query_support=qs)
+
+    def get_by_month(self, month: Optional[int] = None, year: Optional[int] = None) -> List[BonusPoint]:
+        """Get bonus points for a specific month/year."""
+        from app.shared.application.query_support_utils import build_query_support
+        from app.shared.domain.query_support import FilterCriterion, FilterOperator
+        
+        filters = []
+        if month:
+            filters.append(FilterCriterion(field="date", operator=FilterOperator.MONTH_EQ, value=month))
+        if year:
+            filters.append(FilterCriterion(field="date", operator=FilterOperator.YEAR_EQ, value=year))
+            
+        qs = build_query_support(filters=filters, limit=2000)
+        return self.get_all(query_support=qs)
+
     def get_by_user_id(
         self, user_id: int, month: Optional[int] = None, year: Optional[int] = None
     ) -> List[BonusPoint]:
-        """Legacy compatibility wrapper."""
-        from app.shared.domain.query_support import FilterCriterion, FilterOperator
+        """Get bonus points for a specific user, optionally filtered by month/year."""
         from app.shared.application.query_support_utils import build_query_support
-
+        from app.shared.domain.query_support import FilterCriterion, FilterOperator
+        
         filters = [FilterCriterion(field="user_id", operator=FilterOperator.EQ, value=user_id)]
         if month:
             filters.append(FilterCriterion(field="date", operator=FilterOperator.MONTH_EQ, value=month))

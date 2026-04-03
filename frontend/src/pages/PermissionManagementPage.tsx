@@ -35,11 +35,13 @@ import {
     usePermissionRequests,
     useCreatePermissionRequest,
     useUpdatePermissionRequest,
-    useDeletePermissionRequest
+    useDeletePermissionRequest,
+    useHomeworks,
+    useMeetings
 } from '@/hooks';
 import { useAuth } from '@/context/AuthContext';
 import { PermissionRequestPermission } from '@/types/rbac.types';
-import type { PermissionRequestResponse, PermissionCreate } from '@/types/activity.types';
+import type { PermissionRequestResponse } from '@/types/activity.types';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -57,10 +59,17 @@ interface MobileListViewProps {
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
-    'vắng sinh hoạt': 'volcano',
-    'đi trễ sinh hoạt': 'gold',
-    'tạm hoãn bài tập': 'geekblue',
-    'khác': 'default',
+    'absence': 'volcano',
+    'late': 'gold',
+    'postpone': 'geekblue',
+    'other': 'default',
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+    'absence': 'Vắng sinh hoạt',
+    'late': 'Đi trễ sinh hoạt',
+    'postpone': 'Tạm hoãn bài tập',
+    'other': 'Khác',
 };
 
 const MobileListView = ({ permissions, isLoading, canUpdate, canDelete, onViewDetail, onEdit, onDelete }: MobileListViewProps) => (
@@ -70,7 +79,7 @@ const MobileListView = ({ permissions, isLoading, canUpdate, canDelete, onViewDe
             loading={isLoading}
             split={false}
             renderItem={(record) => (
-                <List.Item className="px-2 !mb-4 !border-0">
+                <List.Item className="px-2 mb-4! border-0!">
                     <Card
                         className="w-full shadow-sm border-gray-100 overflow-hidden"
                         styles={{ body: { padding: '16px' } }}
@@ -78,7 +87,7 @@ const MobileListView = ({ permissions, isLoading, canUpdate, canDelete, onViewDe
                     >
                         <div className="flex items-center justify-between mb-4">
                             <Tag color={CATEGORY_COLORS[record.category.toLowerCase()] || 'default'} className="m-0 font-medium px-3 rounded-full">
-                                {record.category.toUpperCase()}
+                                {CATEGORY_LABELS[record.category.toLowerCase()] || record.category}
                             </Tag>
                             <Space className="text-gray-400 text-xs">
                                 <CalendarOutlined />
@@ -88,18 +97,18 @@ const MobileListView = ({ permissions, isLoading, canUpdate, canDelete, onViewDe
 
                         <div className="flex items-center gap-3 mb-4">
                             <Avatar
-                                src={record.user_avatar}
+                                src={record.user?.avatar_url || record.user_avatar}
                                 icon={<UserOutlined />}
                                 className="bg-linear-to-br from-indigo-500 to-purple-500 shadow-sm shrink-0"
                                 size="large"
                             />
                             <div className="flex flex-col min-w-0 flex-1">
                                 <Text strong className="truncate text-base">
-                                    {record.user_name || (record.created_by ? `#${record.created_by}` : 'N/A')}
+                                    {record.user?.name || record.user_name || (record.created_by ? `#${record.created_by}` : 'N/A')}
                                 </Text>
                                 <Text type="secondary" className="text-xs flex items-center gap-1">
                                     <ClockCircleOutlined />
-                                    {record.start_time.substring(0, 5)} - {record.end_time.substring(0, 5)}
+                                    {record.start_time ? record.start_time.substring(0, 5) : '--:--'}
                                 </Text>
                             </div>
                         </div>
@@ -136,6 +145,8 @@ const PermissionManagementPage = () => {
 
     // TanStack Query hooks
     const { data: permissions = [], isLoading } = usePermissionRequests();
+    const { data: homeworks = [] } = useHomeworks();
+    const { data: meetings = [] } = useMeetings();
     const createPermission = useCreatePermissionRequest();
     const updatePermission = useUpdatePermissionRequest();
     const deletePermission = useDeletePermissionRequest();
@@ -154,11 +165,10 @@ const PermissionManagementPage = () => {
     const canDelete = hasPermission(PermissionRequestPermission.DELETE);
 
     const handleCreateOrUpdate = async (values: any) => {
-        const formattedValues: PermissionCreate = {
+        const formattedValues: any = {
             ...values,
             date: values.date.format('YYYY-MM-DD'),
-            start_time: values.start_time.format('HH:mm:ss'),
-            end_time: values.end_time.format('HH:mm:ss'),
+            start_time: values.start_time?.format('HH:mm:ss'),
         };
 
         try {
@@ -193,14 +203,14 @@ const PermissionManagementPage = () => {
             render: (_: any, record: PermissionRequestResponse) => (
                 <Space>
                     <Avatar
-                        src={record.user_avatar}
+                        src={record.user?.avatar_url || record.user_avatar}
                         icon={<UserOutlined />}
                         className="bg-linear-to-br from-indigo-500 to-purple-500 shadow-sm"
                         size="small"
                     />
                     <div>
                         <Text strong className="block">
-                            {record.user_name || (record.created_by ? `#${record.created_by}` : 'N/A')}
+                            {record.user?.name || record.user_name || (record.created_by ? `#${record.created_by}` : 'N/A')}
                         </Text>
                     </div>
                 </Space>
@@ -212,7 +222,7 @@ const PermissionManagementPage = () => {
             key: 'category',
             render: (category: string) => (
                 <Tag color={CATEGORY_COLORS[category.toLowerCase()] || 'default'} className="font-medium px-3 rounded-full">
-                    {category.toUpperCase()}
+                    {CATEGORY_LABELS[category.toLowerCase()] || category}
                 </Tag>
             ),
         },
@@ -233,7 +243,7 @@ const PermissionManagementPage = () => {
             render: (_: any, record: PermissionRequestResponse) => (
                 <Space>
                     <ClockCircleOutlined className="text-gray-400" />
-                    <Text>{record.start_time.substring(0, 5)} - {record.end_time.substring(0, 5)}</Text>
+                    <Text>{record.start_time?.substring(0, 5) || '--:--'}</Text>
                 </Space>
             ),
         },
@@ -251,8 +261,7 @@ const PermissionManagementPage = () => {
                             form.setFieldsValue({
                                 ...record,
                                 date: dayjs(record.date),
-                                start_time: dayjs(record.start_time, 'HH:mm:ss'),
-                                end_time: dayjs(record.end_time, 'HH:mm:ss'),
+                                start_time: record.start_time ? dayjs(record.start_time, 'HH:mm:ss') : null,
                             });
                             setIsModalOpen(true);
                         }}
@@ -294,7 +303,7 @@ const PermissionManagementPage = () => {
                                 form.resetFields();
                                 form.setFieldsValue({
                                     date: dayjs(),
-                                    category: 'vắng sinh hoạt'
+                                    category: 'ABSENCE'
                                 });
                                 setIsModalOpen(true);
                             }}
@@ -317,8 +326,7 @@ const PermissionManagementPage = () => {
                             form.setFieldsValue({
                                 ...item,
                                 date: dayjs(item.date),
-                                start_time: dayjs(item.start_time, 'HH:mm:ss'),
-                                end_time: dayjs(item.end_time, 'HH:mm:ss'),
+                                start_time: item.start_time ? dayjs(item.start_time, 'HH:mm:ss') : null,
                             });
                             setIsModalOpen(true);
                         }}
@@ -358,26 +366,82 @@ const PermissionManagementPage = () => {
             >
                 <Form form={form} layout="vertical" onFinish={handleCreateOrUpdate} className="mt-6">
                     <Form.Item name="category" label="Loại đơn" rules={[{ required: true }]}>
-                        <Select>
-                            <Option value="vắng sinh hoạt">Vắng sinh hoạt</Option>
-                            <Option value="đi trễ sinh hoạt">Đi trễ sinh hoạt</Option>
-                            <Option value="tạm hoãn bài tập">Tạm hoãn bài tập</Option>
-                            <Option value="khác">Khác</Option>
+                        <Select onChange={() => form.setFieldsValue({ homework_id: undefined, meeting_id: undefined })}>
+                            <Option value="ABSENCE">Vắng sinh hoạt</Option>
+                            <Option value="LATE">Đi trễ sinh hoạt</Option>
+                            <Option value="POSTPONE">Tạm hoãn bài tập</Option>
+                            <Option value="OTHER">Khác</Option>
                         </Select>
                     </Form.Item>
 
-                    <Form.Item name="date" label="Ngày xin phép" rules={[{ required: true, message: 'Vui lòng chọn ngày!' }]}>
-                        <DatePicker format="DD/MM/YYYY" className="w-full" />
+                    <Form.Item
+                        noStyle
+                        shouldUpdate={(prevValues, currentValues) => prevValues.category !== currentValues.category}
+                    >
+                        {({ getFieldValue }) => {
+                            const category = getFieldValue('category');
+                            if (category === 'POSTPONE') {
+                                return (
+                                    <Form.Item name="homework_id" label="Bài tập" rules={[{ required: true, message: 'Vui lòng chọn bài tập!' }]}>
+                                        <Select placeholder="Chọn bài tập">
+                                            {(homeworks || []).map((hw: any) => (
+                                                <Option key={hw.id} value={hw.id}>{hw.title}</Option>
+                                            ))}
+                                        </Select>
+                                    </Form.Item>
+                                );
+                            }
+                            if (category === 'ABSENCE' || category === 'LATE') {
+                                return (
+                                    <Form.Item name="meeting_id" label="Buổi sinh hoạt" rules={[{ required: true, message: 'Vui lòng chọn buổi sinh hoạt!' }]}>
+                                        <Select placeholder="Chọn buổi sinh hoạt">
+                                            {(meetings || []).map((m: any) => (
+                                                <Option key={m.id} value={m.id}>{m.title} ({dayjs(m.date).format('DD/MM/YYYY')})</Option>
+                                            ))}
+                                        </Select>
+                                    </Form.Item>
+                                );
+                            }
+                            return null;
+                        }}
                     </Form.Item>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <Form.Item name="start_time" label="Giờ bắt đầu" rules={[{ required: true }]}>
-                            <TimePicker format="HH:mm" className="w-full" />
-                        </Form.Item>
-                        <Form.Item name="end_time" label="Giờ kết thúc" rules={[{ required: true }]}>
-                            <TimePicker format="HH:mm" className="w-full" />
-                        </Form.Item>
-                    </div>
+                    <Form.Item
+                        noStyle
+                        shouldUpdate={(prevValues, currentValues) => prevValues.category !== currentValues.category}
+                    >
+                        {({ getFieldValue }) => {
+                            const category = getFieldValue('category');
+                            let dateLabel = "Ngày xin phép";
+                            if (category === 'POSTPONE') dateLabel = "Ngày deadline mới";
+
+                            return (
+                                <Form.Item name="date" label={dateLabel} rules={[{ required: true, message: 'Vui lòng chọn ngày!' }]}>
+                                    <DatePicker format="DD/MM/YYYY" className="w-full" />
+                                </Form.Item>
+                            );
+                        }}
+                    </Form.Item>
+
+                    <Form.Item
+                        noStyle
+                        shouldUpdate={(prevValues, currentValues) => prevValues.category !== currentValues.category}
+                    >
+                        {({ getFieldValue }) => {
+                            const category = getFieldValue('category');
+                            if (category === 'ABSENCE' || category === 'OTHER') return null;
+
+                            let timeLabel = "Giờ bắt đầu";
+                            if (category === 'POSTPONE') timeLabel = "Giờ deadline mới";
+                            if (category === 'LATE') timeLabel = "Giờ có mặt trễ nhất";
+
+                            return (
+                                <Form.Item name="start_time" label={timeLabel} rules={[{ required: true }]}>
+                                    <TimePicker format="HH:mm" className="w-full" />
+                                </Form.Item>
+                            );
+                        }}
+                    </Form.Item>
 
                     <Form.Item name="note" label="Lý do/Ghi chú" rules={[{ required: true, message: 'Vui lòng nhập lý do!' }]}>
                         <TextArea rows={4} placeholder="Mô tả chi tiết lý do..." />
@@ -400,24 +464,54 @@ const PermissionManagementPage = () => {
             >
                 {detailItem && (
                     <div className="flex flex-col h-full">
-                        <div className="flex-1">
-                            <Descriptions column={1} bordered size="small" className="mb-6">
+                        <div className="flex-1 overflow-y-auto px-1">
+                            <Descriptions column={1} bordered size="small" className="mb-6 bg-white rounded-lg shadow-xs overflow-hidden">
                                 <Descriptions.Item label="Người tạo">
                                     <Space>
-                                        <UserOutlined />
-                                        <Text strong>{detailItem.user_name || `#${detailItem.created_by}`}</Text>
+                                        <Avatar size="small" src={detailItem.user?.avatar_url || detailItem.user_avatar} icon={<UserOutlined />} />
+                                        <Text strong>{detailItem.user?.name || detailItem.user_name || `#${detailItem.created_by}`}</Text>
                                     </Space>
                                 </Descriptions.Item>
                                 <Descriptions.Item label="Loại phép">
-                                    <Tag color={CATEGORY_COLORS[detailItem.category.toLowerCase()] || 'default'}>{detailItem.category.toUpperCase()}</Tag>
+                                    <Tag color={CATEGORY_COLORS[detailItem.category.toLowerCase()] || 'default'} className="rounded-full px-3">
+                                        {CATEGORY_LABELS[detailItem.category.toLowerCase()] || detailItem.category}
+                                    </Tag>
                                 </Descriptions.Item>
-                                <Descriptions.Item label="Thời gian">
-                                    {dayjs(detailItem.date).format('DD/MM/YYYY')} <br />
-                                    {detailItem.start_time.substring(0, 5)} - {detailItem.end_time.substring(0, 5)}
+                                <Descriptions.Item label="Ngày">
+                                    {dayjs(detailItem.date).format('DD/MM/YYYY')}
                                 </Descriptions.Item>
+                                {detailItem.start_time && (
+                                    <Descriptions.Item label="Thời gian">
+                                        {detailItem.start_time.substring(0, 5)}
+                                    </Descriptions.Item>
+                                )}
                             </Descriptions>
 
-                            <Divider style={{ textAlign: 'left' }} className="!mb-4">Nội dung / Lý do</Divider>
+                            {(detailItem.homework || detailItem.meeting) && (
+                                <>
+                                    <Divider style={{ textAlign: 'left' }} className="mb-4!">Liên quan</Divider>
+                                    <div className="mb-6">
+                                        {detailItem.homework && (
+                                            <Card size="small" className="bg-indigo-50/30 border-indigo-100 rounded-lg">
+                                                <Title level={5} className="mb-1! text-indigo-700">
+                                                    <Space><FileTextOutlined /> {detailItem.homework.title}</Space>
+                                                </Title>
+                                                <Text type="secondary" className="text-xs">Deadline: {dayjs(detailItem.homework.deadline).format('DD/MM/YYYY HH:mm')}</Text>
+                                            </Card>
+                                        )}
+                                        {detailItem.meeting && (
+                                            <Card size="small" className="bg-purple-50/30 border-purple-100 rounded-lg">
+                                                <Title level={5} className="mb-1! text-purple-700">
+                                                    <Space><ClockCircleOutlined /> {detailItem.meeting.title}</Space>
+                                                </Title>
+                                                <Text type="secondary" className="text-xs">Ngày: {dayjs(detailItem.meeting.start_time).format('DD/MM/YYYY')}</Text>
+                                            </Card>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+
+                            <Divider style={{ textAlign: 'left' }} className="mb-4!">Nội dung / Lý do</Divider>
                             <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 text-gray-700 whitespace-pre-wrap">
                                 {detailItem.note}
                             </div>
@@ -454,8 +548,7 @@ const PermissionManagementPage = () => {
                                         form.setFieldsValue({
                                             ...detailItem,
                                             date: dayjs(detailItem.date),
-                                            start_time: dayjs(detailItem.start_time, 'HH:mm:ss'),
-                                            end_time: dayjs(detailItem.end_time, 'HH:mm:ss'),
+                                            start_time: detailItem.start_time ? dayjs(detailItem.start_time, 'HH:mm:ss') : null,
                                         });
                                         setIsModalOpen(true);
                                         setIsDetailOpen(false);

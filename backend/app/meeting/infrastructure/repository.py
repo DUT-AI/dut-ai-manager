@@ -76,7 +76,22 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         self,
         query_support: Optional[QuerySupport] = None,
         deleted: bool = False,
+        skip: int = 0,
+        limit: int = 100,
+        month: Optional[int] = None,
+        year: Optional[int] = None,
     ) -> List[DomainMeeting]:
+        from app.shared.application.query_support_utils import build_query_support
+        from app.shared.domain.query_support import FilterCriterion, FilterOperator
+
+        if not query_support:
+            filters = []
+            if month:
+                filters.append(FilterCriterion(field="start_time", operator=FilterOperator.MONTH_EQ, value=month))
+            if year:
+                filters.append(FilterCriterion(field="start_time", operator=FilterOperator.YEAR_EQ, value=year))
+            query_support = build_query_support(filters=filters, skip=skip, limit=limit)
+
         stmt = (
             select(ORMMeeting)
             .where(cast(Any, getattr(ORMMeeting, "is_deleted") == deleted))  # noqa: E712
@@ -85,16 +100,43 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
                 cast(Any, getattr(ORMParticipant, "is_deleted")).is_(False),
             )
             .options(
-                contains_eager(cast(Any, ORMMeeting.participants)),
-                joinedload(cast(Any, ORMParticipant.user)),
+                contains_eager(cast(Any, ORMMeeting.participants)).joinedload(
+                    cast(Any, ORMParticipant.user)
+                ),
             )
         )
         
-        if query_support:
-            stmt = apply_query_support(stmt, ORMMeeting, query_support)
-        else:
-            stmt = stmt.order_by(desc(cast(Any, ORMMeeting.start_time)))
+        stmt = apply_query_support(stmt, ORMMeeting, query_support)
             
+        orms = self.session.exec(stmt).unique().all()
+        return [self._to_domain(orm) for orm in orms]
+
+    def get_participating_meetings(
+        self, user_id: int, month: Optional[int] = None, year: Optional[int] = None
+    ) -> List[DomainMeeting]:
+        """Get meetings where user is a participant, filtered by month/year."""
+        from app.shared.application.query_support_utils import build_query_support
+        from app.shared.domain.query_support import FilterCriterion, FilterOperator
+        
+        filters = []
+        if month:
+            filters.append(FilterCriterion(field="start_time", operator=FilterOperator.MONTH_EQ, value=month))
+        if year:
+            filters.append(FilterCriterion(field="start_time", operator=FilterOperator.YEAR_EQ, value=year))
+            
+        qs = build_query_support(filters=filters, limit=1000)
+        
+        stmt = (
+            select(ORMMeeting)
+            .join(ORMParticipant, cast(Any, ORMMeeting.id == ORMParticipant.meeting_id))
+            .where(
+                cast(Any, ORMMeeting.is_deleted == False),  # noqa: E712
+                cast(Any, ORMParticipant.user_id == user_id),
+                cast(Any, ORMParticipant.is_deleted == False),  # noqa: E712
+            )
+        )
+        
+        stmt = apply_query_support(stmt, ORMMeeting, qs)
         orms = self.session.exec(stmt).unique().all()
         return [self._to_domain(orm) for orm in orms]
 

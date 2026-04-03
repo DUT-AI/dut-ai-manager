@@ -17,7 +17,9 @@ from app.rbac.domain.entity import RoleType
 from app.shared.application.response import BadRequestException
 from app.shared.domain.event_bus import EventBus
 from app.shared.infrastructure.minio_service import MinioService
+from app.team.domain.entity import Team
 from app.team.infrastructure.repository import TeamRepository
+from app.user.domain.entity import UserEntity
 from app.user.infrastructure.repository import UserRepository
 from app.utils.datetime import get_current_utc7_time
 from fastapi import UploadFile
@@ -39,16 +41,17 @@ class HomeworkUseCases:
         self.minio_service = minio_service
 
     async def _handle_file(self, file: UploadFile, title: str) -> str:
+        assert file.filename is not None
         content = await file.read()
         error = self.minio_service.validate_file(file.filename, len(content))
         if error:
             raise BadRequestException(error)
 
         now_utc7 = get_current_utc7_time()
-        timestamp = now_utc7.strftime("%Y%m%d_%H%M%S")
-        filename = f"{self.minio_service.HOMEWORK_PREFIX}/{title}/{title}_{timestamp}"
+        timestamp = now_utc7.strftime("%y%m%d_%H%M%S")
+        filename = f"{self.minio_service.HOMEWORK_PREFIX}/{title}/{file.filename.split('.')[0]}_{timestamp}"
 
-        file_url = self.minio_service.upload_file(content, filename, file.content_type)
+        file_url = self.minio_service.upload_file(content, filename, file.content_type or "application/octet-stream")
         return file_url
 
     def get_all(
@@ -94,6 +97,7 @@ class HomeworkUseCases:
 
         homework = HomeworkEntity(**homework_data, file_url=file_url)
         homework = self.homework_repo.create(homework)
+        assert homework.id is not None
 
         for owner_id in all_assignee_ids:
             submission = HomeworkSubmissionEntity(
@@ -171,8 +175,10 @@ class HomeworkUseCases:
         return self.homework_repo.get_by_id(homework_id)
 
     def delete(self, homework_id: int) -> bool:
+        assert homework_id is not None
         submissions = self.submission_repo.get_all_by_homework(homework_id)
         for submission in submissions:
+            assert submission.id is not None
             self.submission_repo.delete(submission.id)
         return self.homework_repo.delete_by_id(homework_id)
 
@@ -182,29 +188,31 @@ class HomeworkUseCases:
         self, homework_id: int
     ) -> Optional[HomeworkSubmissionEntity]:
         user_id = get_current_user_id()
+        assert user_id is not None
         return self.submission_repo.get_by_homework_and_user(homework_id, user_id)
 
     def get_all_submissions_by_homework(
-        self, homework_id: int, current_user: "User"
+        self, homework_id: int, current_user: UserEntity
     ) -> List[HomeworkSubmissionEntity]:
         homework_submissions = self.submission_repo.get_all_by_homework(homework_id)
 
-        role_name = current_user.role.name.lower()
+        role_name = current_user.role_name or ""
+        role_name = role_name.lower()
         match role_name:
             case RoleType.ADMIN.value:
                 return homework_submissions
             case RoleType.LEADER.value:
                 # Need to use team info to filter
                 team_member_ids = set()
-                teams = self.team_repo.get_all_with_members()
+                teams: List[Team] = self.team_repo.get_all_with_members()
                 # find teams that current user belongs to
                 my_teams = [
                     t
                     for t in teams
-                    if any(tm.user_id == current_user.id for tm in t.team_members)
+                    if any(tm.user_id == current_user.id for tm in t.members)
                 ]
                 for tm in my_teams:
-                    for member in tm.team_members:
+                    for member in tm.members:
                         team_member_ids.add(member.user_id)
 
                 filter_submissions = [
@@ -244,6 +252,7 @@ class HomeworkUseCases:
         now_utc7 = get_current_utc7_time()
         is_late = now_utc7 > homework.deadline
         user_id = get_current_user_id()
+        assert user_id is not None
 
         if existing_submission and existing_submission.user_name:
             user_name = existing_submission.user_name.replace(" ", "_")
@@ -288,6 +297,7 @@ class HomeworkUseCases:
             )
             submission = self.submission_repo.create(submission_entity)
 
+        assert submission is not None
         # Publish Event for decoupled violation/notification
         await EventBus.publish(
             HomeworkSubmitted(homework_id=homework_id, user_id=user_id, is_late=is_late)
@@ -299,7 +309,7 @@ class HomeworkUseCases:
         self,
         submission_id: int,
         status: HomeworkStatus,
-        current_user: "User",
+        current_user: UserEntity,
     ) -> Optional[HomeworkSubmissionEntity]:
         submission = self.submission_repo.get_by_id(submission_id)
         if not submission:
@@ -311,7 +321,8 @@ class HomeworkUseCases:
         if submission.status == HomeworkStatus.NOT_SUBMITTED:
             raise BadRequestException("Submission chưa được nộp, không được check")
 
-        match current_user.role.name:
+        assert current_user.role_name is not None
+        match current_user.role_name:
             case RoleType.ADMIN.value:
                 pass
             case RoleType.LEADER.value:
@@ -331,10 +342,10 @@ class HomeworkUseCases:
                 my_teams = [
                     t
                     for t in teams
-                    if any(tm.user_id == current_user.id for tm in t.team_members)
+                    if any(tm.user_id == current_user.id for tm in t.members)
                 ]
                 for tm in my_teams:
-                    for member in tm.team_members:
+                    for member in tm.members:
                         team_member_ids.add(member.user_id)
 
                 if submission.owner_id not in team_member_ids:

@@ -1,7 +1,7 @@
-from datetime import date, datetime
-from typing import TYPE_CHECKING, List, Optional
+from datetime import datetime
+from typing import TYPE_CHECKING, List, Optional, Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 from .domain.value_objects import ParticipantStatus
 
@@ -17,6 +17,8 @@ class CheckInWithCardRequest(BaseModel):
 
 
 class ParticipantResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     user_id: int
     user_name: str
@@ -24,6 +26,35 @@ class ParticipantResponse(BaseModel):
     check_in_at: Optional[datetime] = None
     status: ParticipantStatus
     link_image: Optional[str] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def map_user_info(cls, data: Any) -> Any:
+        """Tự động lấy user_name và user_avatar từ đối tượng user nếu có."""
+        if isinstance(data, dict):
+            user = data.get("user")
+            if user and isinstance(user, dict):
+                if not data.get("user_name"):
+                    data["user_name"] = user.get("name")
+                if not data.get("user_avatar"):
+                    data["user_avatar"] = user.get("avatar_url")
+        else:
+            # Nếu là object (Domain Entity hoặc ORM)
+            user = getattr(data, "user", None)
+            if user:
+                if not getattr(data, "user_name", None):
+                    # Chúng ta trả về dict mới để không mutate object gốc
+                    d = {
+                        "id": getattr(data, "id", None),
+                        "user_id": getattr(data, "user_id", None),
+                        "user_name": getattr(user, "name", ""),
+                        "user_avatar": getattr(user, "avatar_url", None),
+                        "check_in_at": getattr(data, "check_in_at", None),
+                        "status": getattr(data, "status", None),
+                        "link_image": getattr(data, "link_image", None),
+                    }
+                    return d
+        return data
 
     @classmethod
     def from_domain(cls, p: "DomainParticipant") -> "ParticipantResponse":
@@ -61,6 +92,8 @@ class MeetingUpdate(BaseModel):
 
 
 class MeetingResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     title: str
     content: Optional[str]

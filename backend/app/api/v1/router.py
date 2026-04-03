@@ -1,6 +1,7 @@
 from app.auth.controller import router as auth_router
 from app.bonus_point.controller import router as bonus_point_router
-from app.homework.controller import router as homework_router
+from app.homework.controller import router as homework_router, \
+    submission_router as homework_submission_router
 from app.meeting.controller import router as meeting_router
 from app.permission_request.controller import \
   router as permission_request_router
@@ -25,6 +26,7 @@ routers = [
     violation_router,
     team_router,
     homework_router,
+    homework_submission_router,
     meeting_router,
     zalo_router,
 ]

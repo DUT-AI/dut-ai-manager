@@ -10,7 +10,7 @@ import type {
 
 export const homeworkService = {
     baseUrl: 'homeworks',
-    submissionUrl: 'homework-submissions',
+    submissionUrl: 'homework-submission',
 
     // Homeworks
     async getAll(skip = 0, limit = 100, deleted = false) {
@@ -94,9 +94,10 @@ export const homeworkService = {
     // Submissions
     async submit(homeworkId: number, file: File) {
         const formData = new FormData();
+        formData.append('homework_id', homeworkId.toString());
         formData.append('file', file);
         const response = await axiosInstance.post<ApiResponse<HomeworkSubmission>>(
-            `/${this.submissionUrl}/${homeworkId}/submit`,
+            `/${this.submissionUrl}`,
             formData,
             {
                 headers: {
@@ -108,18 +109,22 @@ export const homeworkService = {
     },
 
     async getSubmissions(homeworkId: number) {
-        const response = await axiosInstance.get<ApiResponse<HomeworkSubmission[]>>(`/${this.submissionUrl}/${homeworkId}/submissions`);
+        const response = await axiosInstance.get<ApiResponse<HomeworkSubmission[]>>(`/${this.submissionUrl}`, {
+            params: { homework_id: homeworkId }
+        });
         return response.data.data;
     },
 
     async getMySubmission(homeworkId: number) {
         // Return null data if 404 handled gracefully or rely on try-catch in component
-        const response = await axiosInstance.get<ApiResponse<HomeworkSubmission>>(`/${this.submissionUrl}/${homeworkId}/my-submission`);
+        const response = await axiosInstance.get<ApiResponse<HomeworkSubmission>>(`/${this.submissionUrl}/me`, {
+            params: { homework_id: homeworkId }
+        });
         return response.data.data;
     },
 
     async updateStatus(submissionId: number, status: HomeworkStatus) {
-        const response = await axiosInstance.put<ApiResponse<HomeworkSubmission>>(`/${this.submissionUrl}/submissions/${submissionId}/status`, null, { 
+        const response = await axiosInstance.put<ApiResponse<HomeworkSubmission>>(`/${this.submissionUrl}/${submissionId}/status`, null, { 
             params: { status } 
         });
         return response.data.data;

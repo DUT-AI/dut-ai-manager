@@ -1,13 +1,13 @@
 from typing import List, Optional, Any, cast
 
-from app.permission_request.domain.entity import \
-  PermissionRequest as DomainEntity
+from app.permission_request.domain.entity import PermissionRequest as DomainEntity
 from app.permission_request.domain.value_objects import RequestCategory
-from app.permission_request.infrastructure.model import \
-  PermissionRequest as ORMModel
+from app.permission_request.infrastructure.model import PermissionRequest as ORMModel
 from app.shared.infrastructure.base_repository import BaseRepository
 from sqlalchemy import desc, extract, func
+from sqlalchemy.orm import joinedload
 from sqlmodel import Session, select
+from datetime import date
 from app.shared.domain.query_support import QuerySupport, apply_query_support
 
 
@@ -22,8 +22,12 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         query_support: Optional[QuerySupport] = None,
         deleted: bool = False,
     ) -> List[DomainEntity]:
-        stmt = select(ORMModel)
-        
+        stmt = select(ORMModel).options(
+            joinedload(cast(Any, ORMModel.user)),
+            joinedload(cast(Any, ORMModel.homework)),
+            joinedload(cast(Any, ORMModel.meeting)),
+        )
+
         if hasattr(ORMModel, "is_deleted"):
             stmt = stmt.where(cast(Any, ORMModel.is_deleted) == deleted)
 
@@ -32,7 +36,25 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         else:
             # Default sorting if no query support provided
             stmt = stmt.order_by(desc(cast(Any, ORMModel.created_at)))
-            
+
+        rows = self.session.exec(stmt).unique().all()
+        return [r.to_entity() for r in rows]
+
+    def get_by_date(self, target_date: date) -> List[DomainEntity]:
+        """Lấy tất cả yêu cầu xin phép trong một ngày cụ thể."""
+        stmt = (
+            select(ORMModel)
+            .options(
+                joinedload(cast(Any, ORMModel.user)),
+                joinedload(cast(Any, ORMModel.homework)),
+                joinedload(cast(Any, ORMModel.meeting)),
+            )
+            .where(
+                getattr(ORMModel, "is_deleted") == False,
+                ORMModel.date == target_date,
+            )
+            .order_by(desc(cast(Any, ORMModel.created_at)))
+        )
         rows = self.session.exec(stmt).unique().all()
         return [r.to_entity() for r in rows]
 
@@ -45,6 +67,11 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
     ) -> List[DomainEntity]:
         stmt = (
             select(ORMModel)
+            .options(
+                joinedload(cast(Any, ORMModel.user)),
+                joinedload(cast(Any, ORMModel.homework)),
+                joinedload(cast(Any, ORMModel.meeting)),
+            )
             .where(
                 getattr(ORMModel, "is_deleted") == deleted,
                 extract("month", cast(Any, ORMModel.date)) == month,
@@ -53,7 +80,7 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
             .order_by(desc(cast(Any, ORMModel.date)))
             .limit(limit)
         )
-        rows = self.session.exec(stmt).all()
+        rows = self.session.exec(stmt).unique().all()
         return [r.to_entity() for r in rows]
 
     def get_by_user(
@@ -63,8 +90,17 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         year: Optional[int] = None,
         deleted: bool = False,
     ) -> List[DomainEntity]:
-        stmt = select(ORMModel).where(
-            ORMModel.created_by == user_id, getattr(ORMModel, "is_deleted") == deleted
+        stmt = (
+            select(ORMModel)
+            .options(
+                joinedload(cast(Any, ORMModel.user)),
+                joinedload(cast(Any, ORMModel.homework)),
+                joinedload(cast(Any, ORMModel.meeting)),
+            )
+            .where(
+                ORMModel.created_by == user_id,
+                getattr(ORMModel, "is_deleted") == deleted,
+            )
         )
         if month is not None:
             stmt = stmt.where(extract("month", cast(Any, ORMModel.date)) == month)
@@ -87,10 +123,10 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         )
         return self.session.exec(stmt).one()
 
-    def update(self, entity: DomainEntity) -> Optional[DomainEntity]:
+    def update(self, entity: DomainEntity) -> DomainEntity:
         return super().update(entity)
 
-    def save(self, entity: DomainEntity) -> Optional[DomainEntity]:
+    def save(self, entity: DomainEntity) -> DomainEntity:
         if entity.id:
             return self.update(entity)
         return self.add(entity)
@@ -102,5 +138,5 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
             return True
         return False
 
-    def restore(self, entity: DomainEntity) -> Optional[DomainEntity]:
+    def restore(self, entity: DomainEntity) -> DomainEntity:
         return super().restore(entity)

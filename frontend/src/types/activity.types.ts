@@ -1,12 +1,14 @@
 import type { MeetingResponse } from './meeting.types';
 import type { UserResponse } from './user.types';
+import type { Homework } from './homework.types';
 
 export interface PermissionCreate {
     category: string;
     note: string;
     date: string;       // YYYY-MM-DD
-    start_time: string; // HH:MM:SS
-    end_time: string;   // HH:MM:SS
+    start_time?: string; // HH:MM:SS
+    homework_id?: number;
+    meeting_id?: number;
 }
 
 export interface PermissionUpdate extends Partial<PermissionCreate> {}
@@ -31,10 +33,11 @@ export interface ViolationUpdate extends Partial<ViolationCreate> {}
 export interface PermissionRequestResponse {
     id: number;
     category: string;
-    note: string;  // Not "reason"
+    note: string;
     date: string;
     start_time: string;
-    end_time: string;
+    homework_id?: number;
+    meeting_id?: number;
     created_by?: number;
     updated_by?: number;
     user_name?: string;
@@ -43,6 +46,11 @@ export interface PermissionRequestResponse {
     updater_name?: string;
     created_at: string;
     updated_at: string;
+    
+    // Nested related entities
+    user?: UserResponse;
+    homework?: Homework;
+    meeting?: MeetingResponse;
 }
 
 export interface BonusPointResponse {
@@ -61,6 +69,12 @@ export interface BonusPointResponse {
     updated_at: string;
 }
 
+export interface UserBrief {
+    id: number;
+    name: string;
+    avatar: string;
+}
+
 export interface ViolationResponse {
     id: number;
     reason: string;
@@ -68,6 +82,9 @@ export interface ViolationResponse {
     user_id: number;
     user_name?: string;
     user_avatar?: string;
+    owner?: UserBrief;
+    creator?: UserBrief;
+    updater?: UserBrief;
     created_by?: number;
     updated_by?: number;
     creator_name?: string;

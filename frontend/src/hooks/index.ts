@@ -19,6 +19,9 @@ export * from './useBonusPoints';
 // Permission Requests
 export * from './usePermissionRequests';
 
+// Meetings
+export * from './useMeetings';
+
 // Utils
 export * from './useDebounce';
 

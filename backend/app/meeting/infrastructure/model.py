@@ -8,6 +8,8 @@ from ..domain.value_objects import ParticipantStatus
 
 if TYPE_CHECKING:
     from app.user.infrastructure.model import UserModel
+    from app.meeting.domain.entity import Meeting as MeetingEntity
+    from app.meeting.domain.entity import MeetingParticipant as MeetingParticipantEntity
 
 
 class MeetingParticipant(TimestampMixin, table=True):
@@ -22,12 +24,35 @@ class MeetingParticipant(TimestampMixin, table=True):
     status: ParticipantStatus = Field(default=ParticipantStatus.NOT_JOINED)
     link_image: Optional[str] = Field(default=None, max_length=500)
 
-    # Relationships
     meeting: "Meeting" = Relationship(back_populates="participants")
     user: "UserModel" = Relationship(
         back_populates="meeting_participations",
         sa_relationship_kwargs={"foreign_keys": "[MeetingParticipant.user_id]"},
     )
+
+    def to_entity(self) -> "MeetingParticipantEntity":
+        from app.meeting.domain.entity import MeetingParticipant as MeetingParticipantEntity
+        from app.meeting.domain.entity import UserRef
+        
+        user_ref = None
+        if self.user:
+            user_ref = UserRef(
+                id=self.user.id or 0,
+                name=self.user.name,
+                avatar_url=self.user.avatar_url
+            )
+            
+        return MeetingParticipantEntity(
+            id=self.id,
+            meeting_id=self.meeting_id,
+            user_id=self.user_id,
+            check_in_at=self.check_in_at,
+            status=self.status,
+            link_image=self.link_image,
+            user=user_ref,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
+        )
 
 
 class Meeting(TimestampMixin, table=True):
@@ -42,8 +67,22 @@ class Meeting(TimestampMixin, table=True):
     end_time: datetime = Field(index=True)
     require_check_in: bool = Field(default=True)
 
-    # Relationships
     participants: List[MeetingParticipant] = Relationship(
         back_populates="meeting",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
+
+    def to_entity(self) -> "MeetingEntity":
+        from app.meeting.domain.entity import Meeting as MeetingEntity
+        return MeetingEntity(
+            id=self.id,
+            title=self.title,
+            content=self.content,
+            start_time=self.start_time,
+            end_time=self.end_time,
+            require_check_in=self.require_check_in,
+            participants=[p.to_entity() for p in self.participants] if self.participants else [],
+            created_at=self.created_at,
+            updated_at=self.updated_at,
+            is_deleted=self.is_deleted,
+        )
