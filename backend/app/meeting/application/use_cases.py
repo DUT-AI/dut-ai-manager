@@ -42,7 +42,9 @@ class GetMeetingsUseCase:
         if start_date:
             filters.append(FilterCriterion(field="start_time", operator=FilterOperator.GTE, value=start_date))
         if end_date:
-            filters.append(FilterCriterion(field="end_time", operator=FilterOperator.LTE, value=end_date))
+            # Bao gồm cả ngày kết thúc bằng cách lấy mốc bắt đầu của ngày hôm sau và dùng toán tử LT (<)
+            next_day = end_date + timedelta(days=1)
+            filters.append(FilterCriterion(field="start_time", operator=FilterOperator.LT, value=next_day))
 
         qs = build_query_support(skip=skip, limit=limit, filters=filters, sort_by="start_time", descending=True)
         return self.repo.get_all_with_participants(

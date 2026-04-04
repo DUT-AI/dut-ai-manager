@@ -1,10 +1,9 @@
-from dataclasses import dataclass
 from datetime import datetime
 from typing import List
+from app.shared.domain.event_bus import DomainEvent
 
 
-@dataclass
-class MeetingCreated:
+class MeetingCreated(DomainEvent):
     """Sự kiện buổi họp mới được tạo"""
 
     meeting_id: int
@@ -14,8 +13,7 @@ class MeetingCreated:
     end_time: str
 
 
-@dataclass
-class MeetingUpdated:
+class MeetingUpdated(DomainEvent):
     """Sự kiện buổi họp được cập nhật"""
 
     meeting_id: int
@@ -25,8 +23,7 @@ class MeetingUpdated:
     end_time: str
 
 
-@dataclass
-class ParticipantCheckedIn:
+class ParticipantCheckedIn(DomainEvent):
     """Sự kiện thành viên điểm danh"""
 
     meeting_id: int

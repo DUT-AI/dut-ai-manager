@@ -83,6 +83,7 @@ class MeetingPermission(str, Enum):
     READ = "meeting:read"
     UPDATE = "meeting:update"
     DELETE = "meeting:delete"
+    CHECK_IN = "meeting:check_in"
 
 
 class BillingPermission(str, Enum):

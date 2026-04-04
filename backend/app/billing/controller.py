@@ -43,7 +43,6 @@ async def create_invoice(
         description=data.description,
     )
     return ApiResponse.created(data=InvoiceResponse.from_domain(invoice))
-    return ApiResponse.created(data=InvoiceResponse.from_domain(invoice))
 
 
 @router.post(

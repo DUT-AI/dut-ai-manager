@@ -4,7 +4,8 @@ User Web Controller — provides API routes.
 
 from typing import Annotated, List, Optional
 
-from app.core.deps import CurrentUser
+from app.core.deps import CurrentUser, PermissionChecker
+from app.core.permissions import UserPermission
 from app.shared.application.response import ApiResponse
 from app.user.application.dtos import (
     UserCreate,
@@ -22,7 +23,7 @@ from app.user.application.use_cases import (
     UpdateUserUseCase,
 )
 from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import APIRouter, BackgroundTasks, Query, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, UploadFile
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -30,6 +31,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 @router.get("", response_model=ApiResponse[List[UserResponse]])
 @inject
 async def list_users(
+    _: Annotated[CurrentUser, Depends(PermissionChecker(UserPermission.READ))],
     uc: FromDishka[GetUserUseCase],
     keyword: Optional[str] = Query(None, description="Search by name or email"),
 ):
@@ -48,7 +50,9 @@ async def list_users(
 @router.get("/{user_id}", response_model=ApiResponse[UserResponse])
 @inject
 async def get_user_by_id(
-    user_id: int, uc: FromDishka[GetUserUseCase]
+    user_id: int,
+    uc: FromDishka[GetUserUseCase],
+    _: Annotated[CurrentUser, Depends(PermissionChecker(UserPermission.READ))],
 ):
     """Retrieve a specific user by ID."""
     user = uc.execute(user_id)
@@ -57,12 +61,16 @@ async def get_user_by_id(
     )
 
 
-@router.post("", response_model=ApiResponse[UserResponse])
+@router.post(
+    "",
+    response_model=ApiResponse[UserResponse],
+)
 @inject
 async def create_user(
     user_data: UserCreate,
     background_tasks: BackgroundTasks,
     uc: FromDishka[CreateUserUseCase],
+    _: Annotated[CurrentUser, Depends(PermissionChecker(UserPermission.CREATE))],
 ):
     """Create a new user (and auth account)."""
     user = await uc.execute(user_data, background_tasks)
@@ -77,6 +85,7 @@ async def import_users(
     file: UploadFile,
     background_tasks: BackgroundTasks,
     uc: FromDishka[ImportUsersUseCase],
+    _: Annotated[CurrentUser, Depends(PermissionChecker(UserPermission.CREATE))],
 ):
     """Bulk import users from file."""
     result = await uc.execute(file, background_tasks)
@@ -104,6 +113,7 @@ async def update_user(
     user_id: int,
     user_data: UserUpdate,
     uc: FromDishka[UpdateUserUseCase],
+    _: Annotated[CurrentUser, Depends(PermissionChecker(UserPermission.UPDATE))],
 ):
     """Update user information."""
     updated = uc.execute(user_id, **user_data.model_dump(exclude_unset=True))
@@ -115,7 +125,9 @@ async def update_user(
 @router.delete("/{user_id}", response_model=ApiResponse[bool])
 @inject
 async def delete_user(
-    user_id: int, uc: FromDishka[DeleteUserUseCase]
+    user_id: int,
+    uc: FromDishka[DeleteUserUseCase],
+    _: Annotated[CurrentUser, Depends(PermissionChecker(UserPermission.DELETE))],
 ):
     """Delete a user account."""
     success = uc.execute(user_id)
