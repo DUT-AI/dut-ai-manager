@@ -3,9 +3,12 @@ from sqlmodel import Session
 from app.homework.infrastructure.repository import (HomeworkRepository,
                                                    HomeworkSubmissionRepository)
 from app.homework.application.use_cases import HomeworkUseCases
+from app.homework.application.event_handlers import HomeworkNotificationHandler
 from app.user.infrastructure.repository import UserRepository
 from app.team.infrastructure.repository import TeamRepository
 from app.shared.infrastructure.minio_service import MinioService
+from app.core.discord_service import DiscordService
+from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
 
 class HomeworkModuleProvider(Provider):
     scope = Scope.REQUEST
@@ -33,4 +36,16 @@ class HomeworkModuleProvider(Provider):
             user_repo=user_repo,
             team_repo=team_repo,
             minio_service=minio_service,
+        )
+
+    @provide
+    def get_notification_handler(
+        self,
+        discord_service: DiscordService,
+        homework_repo: HomeworkRepository,
+        user_repo: UserRepository,
+        zalo_bot: ZaloBotClient,
+    ) -> HomeworkNotificationHandler:
+        return HomeworkNotificationHandler(
+            discord_service, homework_repo, user_repo, zalo_bot
         )

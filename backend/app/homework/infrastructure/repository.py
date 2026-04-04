@@ -1,45 +1,55 @@
 from typing import List, Optional, Any, cast
- 
+
 from app.homework.domain.entity import Homework as HomeworkEntity
 from app.homework.domain.entity import HomeworkStatus
-from app.homework.domain.entity import \
-  HomeworkSubmission as HomeworkSubmissionEntity
-from app.homework.infrastructure.model import (HomeworkModel,
-                                               HomeworkSubmissionModel)
+from app.homework.domain.entity import HomeworkSubmission as HomeworkSubmissionEntity
+from app.homework.infrastructure.model import HomeworkModel, HomeworkSubmissionModel
 from sqlalchemy import func
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 from sqlmodel import Session, desc, select
- 
- 
+
+
 class HomeworkRepository:
     def __init__(self, session: Session):
         self.session = session
- 
+
     def get_unsubmitted_by_user(self, user_id: int) -> List[HomeworkEntity]:
         """Lấy danh sách các bài tập mà user CHƯA nộp thành công."""
         # Join Homework with Submissions for this user
         statement = (
             select(HomeworkModel)
+            .options(
+                selectinload(cast(Any, HomeworkModel.submissions)).joinedload(
+                    cast(Any, HomeworkSubmissionModel.owner)
+                )
+            )
             .join(
-                HomeworkSubmissionModel, 
-                cast(Any, HomeworkModel.id == HomeworkSubmissionModel.homework_id)
+                HomeworkSubmissionModel,
+                cast(Any, HomeworkModel.id == HomeworkSubmissionModel.homework_id),
             )
             .where(
                 cast(Any, HomeworkSubmissionModel.owner_id == user_id),
-                cast(Any, HomeworkSubmissionModel.status == HomeworkStatus.NOT_SUBMITTED),
-                cast(Any, HomeworkModel.is_deleted == False)  # noqa: E712
+                cast(
+                    Any, HomeworkSubmissionModel.status == HomeworkStatus.NOT_SUBMITTED
+                ),
+                cast(Any, HomeworkModel.is_deleted == False),  # noqa: E712
             )
             .order_by(desc(cast(Any, HomeworkModel.deadline)))
         )
         models = self.session.exec(statement).all()
         return [m.to_entity() for m in models]
- 
+
     def get_all(
         self, skip: int = 0, limit: int = 100, deleted: bool = False
     ) -> List[HomeworkEntity]:
         """Get all homeworks optionally with pagination."""
         statement = (
             select(HomeworkModel)
+            .options(
+                selectinload(cast(Any, HomeworkModel.submissions)).joinedload(
+                    cast(Any, HomeworkSubmissionModel.owner)
+                )
+            )
             .where(cast(Any, HomeworkModel.is_deleted == deleted))
             .order_by(desc(cast(Any, HomeworkModel.created_at)))
             .offset(skip)
@@ -47,23 +57,33 @@ class HomeworkRepository:
         )
         models = self.session.exec(statement).all()
         return [m.to_entity() for m in models]
- 
+
     def get_by_id(self, homework_id: int) -> Optional[HomeworkEntity]:
-        statement = select(HomeworkModel).where(
-            cast(Any, HomeworkModel.id == homework_id), 
-            cast(Any, HomeworkModel.is_deleted == False)  # noqa: E712
+        statement = (
+            select(HomeworkModel)
+            .options(
+                selectinload(cast(Any, HomeworkModel.submissions)).joinedload(
+                    cast(Any, HomeworkSubmissionModel.owner)
+                )
+            )
+            .where(
+                cast(Any, HomeworkModel.id == homework_id),
+                cast(Any, HomeworkModel.is_deleted == False),  # noqa: E712
+            )
         )
         model = self.session.exec(statement).first()
         return model.to_entity() if model else None
- 
+
     def create(self, homework: HomeworkEntity) -> HomeworkEntity:
         model = HomeworkModel.from_entity(homework)
         self.session.add(model)
         self.session.flush()
         return model.to_entity()
- 
+
     def update(self, homework: HomeworkEntity) -> Optional[HomeworkEntity]:
-        statement = select(HomeworkModel).where(cast(Any, HomeworkModel.id == homework.id))
+        statement = select(HomeworkModel).where(
+            cast(Any, HomeworkModel.id == homework.id)
+        )
         model = self.session.exec(statement).first()
         if model:
             model.title = homework.title
@@ -74,21 +94,28 @@ class HomeworkRepository:
             self.session.flush()
             return model.to_entity()
         return None
- 
+
     def delete_by_id(self, homework_id: int) -> bool:
-        statement = select(HomeworkModel).where(cast(Any, HomeworkModel.id == homework_id))
+        statement = select(HomeworkModel).where(
+            cast(Any, HomeworkModel.id == homework_id)
+        )
         model = self.session.exec(statement).first()
         if model:
             model.is_deleted = True
             self.session.add(model)
             return True
         return False
- 
+
     def get_assigned_to_user(
         self, user_id: int, skip: int = 0, limit: int = 100
     ) -> List[HomeworkEntity]:
         statement = (
             select(HomeworkModel)
+            .options(
+                selectinload(cast(Any, HomeworkModel.submissions)).joinedload(
+                    cast(Any, HomeworkSubmissionModel.owner)
+                )
+            )
             .join(
                 HomeworkSubmissionModel,
                 cast(Any, HomeworkModel.id == HomeworkSubmissionModel.homework_id),
@@ -101,12 +128,12 @@ class HomeworkRepository:
         )
         models = self.session.exec(statement).all()
         return [m.to_entity() for m in models]
- 
- 
+
+
 class HomeworkSubmissionRepository:
     def __init__(self, session: Session):
         self.session = session
- 
+
     def get_by_id(self, submission_id: int) -> Optional[HomeworkSubmissionEntity]:
         statement = (
             select(HomeworkSubmissionModel)
@@ -118,13 +145,19 @@ class HomeworkSubmissionRepository:
         )
         model = self.session.exec(statement).first()
         return model.to_entity() if model else None
- 
+
     def create(self, submission: HomeworkSubmissionEntity) -> HomeworkSubmissionEntity:
         model = HomeworkSubmissionModel.from_entity(submission)
         self.session.add(model)
         self.session.flush()
         return model.to_entity()
- 
+
+    def bulk_create(self, submissions: List[HomeworkSubmissionEntity]) -> None:
+        models = [HomeworkSubmissionModel.from_entity(s) for s in submissions]
+        for model in models:
+            self.session.add(model)
+        self.session.flush()
+
     def update(
         self, submission: HomeworkSubmissionEntity
     ) -> Optional[HomeworkSubmissionEntity]:
@@ -145,7 +178,7 @@ class HomeworkSubmissionRepository:
             ).first()
             return model_eager.to_entity() if model_eager else None
         return None
- 
+
     def delete(self, submission_id: int) -> bool:
         statement = select(HomeworkSubmissionModel).where(
             cast(Any, HomeworkSubmissionModel.id == submission_id)
@@ -156,7 +189,7 @@ class HomeworkSubmissionRepository:
             self.session.add(model)
             return True
         return False
- 
+
     def get_by_homework_and_user(
         self, homework_id: int, user_id: int
     ) -> Optional[HomeworkSubmissionEntity]:
@@ -171,7 +204,7 @@ class HomeworkSubmissionRepository:
         )
         model = self.session.exec(statement).first()
         return model.to_entity() if model else None
- 
+
     def get_all_by_homework(
         self, homework_id: int, skip: int = 0, limit: int = 100
     ) -> List[HomeworkSubmissionEntity]:
@@ -186,14 +219,14 @@ class HomeworkSubmissionRepository:
         )
         models = self.session.exec(statement).all()
         return [m.to_entity() for m in models]
- 
+
     def get_owner_ids_by_homework(self, homework_id: int) -> List[int]:
         statement = select(HomeworkSubmissionModel.owner_id).where(
             cast(Any, HomeworkSubmissionModel.is_deleted == False),  # noqa: E712
             cast(Any, HomeworkSubmissionModel.homework_id == homework_id),
         )
         return list(self.session.exec(statement).all())
- 
+
     def delete_by_homework_and_owner(self, homework_id: int, owner_id: int) -> bool:
         statement = select(HomeworkSubmissionModel).where(
             cast(Any, HomeworkSubmissionModel.is_deleted == False),  # noqa: E712
@@ -206,7 +239,7 @@ class HomeworkSubmissionRepository:
             self.session.add(model)
             return True
         return False
- 
+
     def get_all_by_user(self, user_id: int) -> List[HomeworkSubmissionEntity]:
         statement = (
             select(HomeworkSubmissionModel)
@@ -227,19 +260,21 @@ class HomeworkSubmissionRepository:
                 e.homework = m.homework.to_entity()
             entities.append(e)
         return entities
- 
+
     def get_not_submitted_for_deadline_date(
         self, target_date: Any
     ) -> List[HomeworkSubmissionEntity]:
         statement = (
             select(HomeworkSubmissionModel)
             .join(
-                HomeworkModel, 
-                cast(Any, HomeworkSubmissionModel.homework_id == HomeworkModel.id)
+                HomeworkModel,
+                cast(Any, HomeworkSubmissionModel.homework_id == HomeworkModel.id),
             )
             .where(
                 cast(Any, HomeworkSubmissionModel.is_deleted == False),  # noqa: E712
-                cast(Any, HomeworkSubmissionModel.status == HomeworkStatus.NOT_SUBMITTED),
+                cast(
+                    Any, HomeworkSubmissionModel.status == HomeworkStatus.NOT_SUBMITTED
+                ),
                 cast(Any, func.date(HomeworkModel.deadline) == target_date),
             )
             .options(

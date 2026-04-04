@@ -9,19 +9,13 @@ class ZaloBotClient:
     """Client giao tiếp với Zalo Bot Platform"""
 
     def __init__(self):
-        self.bot_token = settings.ZALO_BOT_TOKEN
-        self.bot = zalo_bot.Bot(token=self.bot_token) if self.bot_token else None
+
+        self.bot = zalo_bot.Bot(token=settings.ZALO_BOT_TOKEN)
 
     async def send_message(self, chat_id: str, text: str) -> Optional[Dict[str, Any]]:
-        """Gửi tin nhắn qua Zalo Bot Platform"""
-        bot = self.bot
-        if not bot:
-            logger.warning("ZALO_BOT_TOKEN chưa được cấu hình")
-            return None
-
         try:
-            async with bot:
-                msg = await bot.send_message(chat_id, text)
+            async with self.bot:
+                msg = await self.bot.send_message(chat_id, text)
                 logger.debug(f"Đã gửi tin nhắn Zalo Bot tới {chat_id}")
                 return msg.to_dict() if hasattr(msg, "to_dict") else {}
         except Exception as e:

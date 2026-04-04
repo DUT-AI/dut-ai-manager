@@ -99,15 +99,18 @@ class HomeworkUseCases:
         homework = self.homework_repo.create(homework)
         assert homework.id is not None
 
-        for owner_id in all_assignee_ids:
-            submission = HomeworkSubmissionEntity(
+        submissions_to_create = [
+            HomeworkSubmissionEntity(
                 homework_id=homework.id,
                 owner_id=owner_id,
                 status=HomeworkStatus.NOT_SUBMITTED,
                 is_late=False,
                 link="",
             )
-            self.submission_repo.create(submission)
+            for owner_id in all_assignee_ids
+        ]
+        if submissions_to_create:
+            self.submission_repo.bulk_create(submissions_to_create)
 
         # Publish Event for decoupled notification
         await EventBus.publish(
@@ -148,15 +151,18 @@ class HomeworkUseCases:
                 )
 
                 to_add = new_assignee_ids - current_ids
-                for owner_id in to_add:
-                    submission = HomeworkSubmissionEntity(
+                to_add_submissions = [
+                    HomeworkSubmissionEntity(
                         homework_id=homework_id,
                         owner_id=owner_id,
                         status=HomeworkStatus.NOT_SUBMITTED,
                         is_late=False,
                         link="",
                     )
-                    self.submission_repo.create(submission)
+                    for owner_id in to_add
+                ]
+                if to_add_submissions:
+                    self.submission_repo.bulk_create(to_add_submissions)
 
                 # Publish Event for new assignees
                 if to_add:

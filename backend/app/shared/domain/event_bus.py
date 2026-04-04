@@ -15,7 +15,7 @@ from app.shared.infrastructure.request_context import get_request_container
 
 class DomainEvent(BaseModel):
     """Base class for all domain events."""
-
+        
     pass
 
 

@@ -57,6 +57,13 @@ class UserRepository(BaseRepository[UserModel, UserEntity]):
         model = self.session.exec(statement).unique().first()
         return model.to_entity() if model else None
 
+    def get_by_ids(self, ids: List[int]) -> List[UserEntity]:
+        if not ids:
+            return []
+        statement = self._get_base_query().where(cast(Any, UserModel.id).in_(ids))
+        models = self.session.exec(statement).unique().all()
+        return [m.to_entity() for m in models]
+
     def search_user(self, keyword: str) -> List[UserEntity]:
         statement = self._get_base_query().where(
             or_(

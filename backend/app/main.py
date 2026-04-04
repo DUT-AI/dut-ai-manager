@@ -13,6 +13,7 @@ from app.bonus_point.providers import BonusPointModuleProvider
 from app.homework.providers import HomeworkModuleProvider
 from app.team.providers import TeamModuleProvider
 from app.billing.providers import BillingModuleProvider
+from app.zalo.providers import ZaloModuleProvider
 from app.core.config import settings
 from app.core.events import bootstrap_events
 from app.core.logging_config import setup_logging
@@ -58,13 +59,6 @@ def create_app():
         lifespan=lifespan,
     )
 
-    # Register middlewares
-    # Note: Middlewares are executed in reverse order of registration for @app.middleware
-    # or last-added-runs-first for add_middleware.
-    # Note: Middlewares are executed in reverse order of registration for @app.middleware
-    # or last-added-runs-first for add_middleware.
-    # To have set_user_context run before logging_middleware:
-
     if settings.ENVIRONMENT != "local":
         _app.middleware("http")(logging_middleware)  # Inner
 
@@ -76,17 +70,20 @@ def create_app():
         token = None
         if hasattr(request.state, "dishka_container"):
             token = set_request_container(request.state.dishka_container)
-        
+
         try:
             return await call_next(request)
         finally:
             if token:
-                from app.shared.infrastructure.request_context import _request_container_context
+                from app.shared.infrastructure.request_context import (
+                    _request_container_context,
+                )
+
                 _request_container_context.reset(token)
 
     # Dishka Setup (Should be called AFTER middlewares to be the OUTERMOST)
     container = make_async_container(
-        InfrastructureProvider(), 
+        InfrastructureProvider(),
         AuthModuleProvider(),
         UserModuleProvider(),
         ViolationModuleProvider(),
@@ -97,6 +94,7 @@ def create_app():
         HomeworkModuleProvider(),
         TeamModuleProvider(),
         BillingModuleProvider(),
+        ZaloModuleProvider(),
     )
     setup_dishka(container, _app)
 
