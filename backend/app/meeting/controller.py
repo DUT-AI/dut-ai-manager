@@ -48,6 +48,7 @@ async def create_meeting(
         end_time=data.end_time,
         require_check_in=data.require_check_in,
         user_ids=data.user_ids,
+        team_ids=data.team_ids,
     )
     return ApiResponse.success(
         data=MeetingResponse.from_domain(meeting),

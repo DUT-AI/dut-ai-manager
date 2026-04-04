@@ -68,6 +68,13 @@ export const HomeworkSubmissionPermission = {
   DELETE: 'homework_submission:delete',
 } as const;
 
+export const BillingPermission = {
+  CREATE: 'billing:create',
+  READ: 'billing:read',
+  MY_INVOICES: 'billing:my_invoices',
+  DELETE: 'billing:delete',
+} as const;
+
 
 export interface PermissionResponse {
   id: number;

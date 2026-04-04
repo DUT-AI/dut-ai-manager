@@ -14,6 +14,7 @@ from app.meeting.infrastructure.repository import (
     MeetingRepository,
     ParticipantRepository,
 )
+from app.team.infrastructure.repository import TeamRepository
 from app.user.infrastructure.repository import UserRepository
 from app.shared.application.response import BadRequestException
 from app.shared.domain.event_bus import EventBus, DomainEvent
@@ -60,8 +61,9 @@ class GetMeetingsUseCase:
 class CreateMeetingUseCase:
     """Tạo mới một buổi họp và mời các thành viên tham gia"""
 
-    def __init__(self, repo: MeetingRepository, event_bus: type[EventBus] = EventBus):
+    def __init__(self, repo: MeetingRepository, team_repo: TeamRepository, event_bus: type[EventBus] = EventBus):
         self.repo = repo
+        self.team_repo = team_repo
         self.event_bus = event_bus
 
     async def execute(
@@ -72,13 +74,22 @@ class CreateMeetingUseCase:
         content: Optional[str] = None,
         require_check_in: bool = True,
         user_ids: Optional[List[int]] = None,
+        team_ids: Optional[List[int]] = None,
     ) -> Meeting:
+        # Resolve team_ids to user_ids
+        all_user_ids = set(user_ids or [])
+        if team_ids:
+            team_user_ids = self.team_repo.get_user_ids_by_teams(team_ids)
+            all_user_ids.update(team_user_ids)
+        
+        user_ids_list = list(all_user_ids)
+
         # Check overlapped meetings & seats (Business Rule)
         concurrent_participants = self.repo.get_concurrent_participants_count(
             start_time, end_time
         )
 
-        needed_seats = len(user_ids) if user_ids else 0
+        needed_seats = len(user_ids_list)
         if concurrent_participants + needed_seats > settings.MAX_SEATS:
             remaining = max(0, settings.MAX_SEATS - concurrent_participants)
             raise BadRequestException(
@@ -86,7 +97,7 @@ class CreateMeetingUseCase:
             )
 
         # Create Domain Entity
-        participants = [MeetingParticipant(user_id=uid) for uid in (user_ids or [])]
+        participants = [MeetingParticipant(user_id=uid) for uid in user_ids_list]
 
         meeting = Meeting(
             title=title,
@@ -105,7 +116,7 @@ class CreateMeetingUseCase:
             cast(DomainEvent, MeetingCreated(
                 meeting_id=cast(int, saved_meeting.id),
                 title=saved_meeting.title,
-                user_ids=user_ids or [],
+                user_ids=user_ids_list,
                 start_time=start_time.isoformat(),
                 end_time=end_time.isoformat(),
             ))
@@ -253,8 +264,9 @@ class CheckInWithCardUseCase:
 class UpdateMeetingUseCase:
     """Cập nhật thông tin buổi họp"""
 
-    def __init__(self, repo: MeetingRepository, event_bus: type[EventBus] = EventBus):
+    def __init__(self, repo: MeetingRepository, team_repo: TeamRepository, event_bus: type[EventBus] = EventBus):
         self.repo = repo
+        self.team_repo = team_repo
         self.event_bus = event_bus
 
     async def execute(self, meeting_id: int, data: MeetingUpdate) -> Meeting:

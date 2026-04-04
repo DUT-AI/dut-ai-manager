@@ -1,9 +1,33 @@
 from app.core.database import engine
-from app.core.permissions import *
-from app.models.account import Account
-from app.models.permission import Permission
-from app.models.role import Role, RoleType
-from app.models.user import User, UserStatus
+from app.core.permissions import (
+    AccountPermission,
+    BillingPermission,
+    BonusPointPermission,
+    HomeworkPermission,
+    HomeworkSubmissionPermission,
+    MeetingPermission,
+    PermissionPermission,
+    PermissionRequestPermission,
+    RolePermission,
+    TeamMemberPermission,
+    TeamPermission,
+    UserPermission,
+    ViolationPermission,
+)
+from app.auth.infrastructure.model import AccountModel
+from app.rbac.infrastructure.model import PermissionModel, RoleModel, RolePermissionModel
+from app.rbac.domain.entity import RoleType
+from app.user.infrastructure.model import UserModel
+from app.user.domain.entity import UserStatus
+
+# Import other models to register them in SQLModel registry for relationships
+from app.violation.infrastructure.model import ViolationModel
+from app.team.infrastructure.model import TeamModel, TeamMemberModel
+from app.meeting.infrastructure.model import Meeting, MeetingParticipant
+from app.bonus_point.infrastructure.model import BonusPointModel
+from app.homework.infrastructure.model import HomeworkModel, HomeworkSubmissionModel
+from app.permission_request.infrastructure.model import PermissionRequest
+
 from app.utils.password import hash_password
 from loguru import logger
 from sqlmodel import Session, select
@@ -22,7 +46,7 @@ def seed_roles():
     with Session(engine) as session:
         for role_data in roles_data:
             # Check if role already exists
-            statement = select(Role).where(Role.name == role_data["name"])
+            statement = select(RoleModel).where(RoleModel.name == role_data["name"])
             existing_role = session.exec(statement).first()
 
             if existing_role:
@@ -32,7 +56,7 @@ def seed_roles():
                 continue
 
             # Create new role
-            new_role = Role(
+            new_role = RoleModel(
                 name=role_data["name"],
                 description=role_data["description"],
             )
@@ -55,7 +79,7 @@ def seed_admin_user():
 
     with Session(engine) as session:
         # Check if admin already exists
-        statement = select(User).where(User.email == admin_data["email"])
+        statement = select(UserModel).where(UserModel.email == admin_data["email"])
         existing_user = session.exec(statement).first()
 
         if existing_user:
@@ -65,28 +89,31 @@ def seed_admin_user():
             return
 
         # Get admin role
-        role_statement = select(Role).where(Role.name == RoleType.ADMIN)
+        role_statement = select(RoleModel).where(RoleModel.name == RoleType.ADMIN)
         admin_role = session.exec(role_statement).first()
 
         if not admin_role:
             logger.error("Admin role not found. Please run seed_roles first.")
             return
 
-        # Create account with phone_number as password
-        account = Account(hash_password=hash_password(admin_data["phone_number"]))
-        session.add(account)
-        session.flush()  # Get the account ID
-
-        # Create user
-        user = User(
+        # Create user first (in new model structure, Account has user_id)
+        user = UserModel(
             name=admin_data["name"],
             email=admin_data["email"],
             phone_number=admin_data["phone_number"],
             status=UserStatus.ACTIVE,
             role_id=admin_role.id,
-            account_id=account.id,
         )
         session.add(user)
+        session.flush() # Get user.id
+
+        # Create account with phone_number as password linked to user
+        account = AccountModel(
+            hash_password=hash_password(admin_data["phone_number"]),
+            user_id=user.id
+        )
+        session.add(account)
+        
         session.commit()
         logger.success(
             f"Added admin user: {admin_data['name']} ({admin_data['email']})"
@@ -109,6 +136,8 @@ def seed_permissions():
         PermissionPermission,
         PermissionRequestPermission,
         MeetingPermission,
+        AccountPermission,
+        BillingPermission,
     ]
 
     with Session(engine) as session:
@@ -124,7 +153,7 @@ def seed_permissions():
                     continue
 
                 # Check if permission already exists
-                statement = select(Permission).where(Permission.name == perm_name)
+                statement = select(PermissionModel).where(PermissionModel.name == perm_name)
                 existing_perm = session.exec(statement).first()
 
                 if existing_perm:
@@ -132,7 +161,7 @@ def seed_permissions():
                     continue
 
                 # Create new permission
-                new_perm = Permission(
+                new_perm = PermissionModel(
                     name=perm_name,
                     resource=resource,
                     action=action,
@@ -145,7 +174,49 @@ def seed_permissions():
         logger.info("Permission seeding completed.")
 
 
+def sync_admin_permissions():
+    """
+    Ensure the Admin role has ALL permissions defined in the database.
+    """
+    with Session(engine) as session:
+        # Get admin role
+        admin_role = session.exec(
+            select(RoleModel).where(RoleModel.name == RoleType.ADMIN)
+        ).first()
+
+        if not admin_role:
+            logger.error("Admin role not found. Please run seed_roles first.")
+            return
+
+        # Get all permissions
+        all_permissions = session.exec(select(PermissionModel)).all()
+        
+        # Get existing role permissions to avoid duplicates
+        existing_perm_ids = session.exec(
+            select(RolePermissionModel.permission_id).where(
+                RolePermissionModel.role_id == admin_role.id
+            )
+        ).all()
+        
+        added_count = 0
+        for perm in all_permissions:
+            if perm.id not in existing_perm_ids:
+                role_perm = RolePermissionModel(
+                    role_id=admin_role.id,
+                    permission_id=perm.id
+                )
+                session.add(role_perm)
+                added_count += 1
+        
+        session.commit()
+        if added_count > 0:
+            logger.success(f"Synced {added_count} new permissions to Admin role.")
+        else:
+            logger.info("Admin role already has all permissions.")
+
+
 if __name__ == "__main__":
     seed_roles()
     seed_permissions()
     seed_admin_user()
+    sync_admin_permissions()

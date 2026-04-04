@@ -20,7 +20,7 @@ from app.permission_request.infrastructure.model import PermissionRequest
 from app.violation.infrastructure.model import ViolationModel
 from app.meeting.infrastructure.model import MeetingParticipant, Meeting
 from app.homework.infrastructure.model import HomeworkSubmissionModel, HomeworkModel
-
+from app.billing.infrastructure.model import InvoiceModel, InvoiceItemModel
 from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
 

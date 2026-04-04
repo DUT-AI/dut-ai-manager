@@ -85,7 +85,7 @@ export const PermissionRequestSection = ({ data, onEdit, onRefresh }: Props) => 
                             </div>
                             <div className="flex items-center text-gray-500 text-xs mb-2">
                                 <ClockCircleOutlined className="mr-1" />
-                                {item.start_time.substring(0, 5)} - {item.end_time.substring(0, 5)}
+                                {item.start_time ? item.start_time.substring(0, 5) : 'N/A'}
                             </div>
                             <Text className="block text-sm text-gray-700 line-clamp-2">{item.note}</Text>
                             <div className="mt-2 pt-2 border-t border-blue-100 flex justify-between items-center text-[10px] text-gray-400">
@@ -119,7 +119,7 @@ export const PermissionRequestSection = ({ data, onEdit, onRefresh }: Props) => 
                                 {dayjs(detailItem.date).format('DD/MM/YYYY')}
                             </Descriptions.Item>
                             <Descriptions.Item label="Thời gian">
-                                {detailItem.start_time.substring(0, 5)} - {detailItem.end_time.substring(0, 5)}
+                                {detailItem.start_time ? detailItem.start_time.substring(0, 5) : 'N/A'}
                             </Descriptions.Item>
                         </Descriptions>
 

@@ -12,6 +12,7 @@ from app.meeting.infrastructure.repository import (
     MeetingRepository,
     ParticipantRepository,
 )
+from app.team.infrastructure.repository import TeamRepository
 from app.shared.infrastructure.database import get_session
 from app.user.infrastructure.repository import UserRepository
 from app.shared.infrastructure.minio_service import MinioService
@@ -38,6 +39,12 @@ def _get_user_repo(
     return UserRepository(session)
 
 
+def _get_team_repo(
+    session: Annotated[Session, Depends(get_session)],
+) -> TeamRepository:
+    return TeamRepository(session)
+
+
 def get_meetings_uc(
     repo: Annotated[MeetingRepository, Depends(_get_meeting_repo)],
 ) -> GetMeetingsUseCase:
@@ -46,14 +53,16 @@ def get_meetings_uc(
 
 def get_create_meeting_uc(
     repo: Annotated[MeetingRepository, Depends(_get_meeting_repo)],
+    team_repo: Annotated[TeamRepository, Depends(_get_team_repo)],
 ) -> CreateMeetingUseCase:
-    return CreateMeetingUseCase(repo)
+    return CreateMeetingUseCase(repo, team_repo)
 
 
 def get_update_meeting_uc(
     repo: Annotated[MeetingRepository, Depends(_get_meeting_repo)],
+    team_repo: Annotated[TeamRepository, Depends(_get_team_repo)],
 ) -> UpdateMeetingUseCase:
-    return UpdateMeetingUseCase(repo)
+    return UpdateMeetingUseCase(repo, team_repo)
 
 
 def get_delete_meeting_uc(

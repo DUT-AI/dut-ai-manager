@@ -24,8 +24,8 @@ dayjs.extend(isoWeek);
 const { Title, Text } = Typography;
 
 // Timeline configuration
-const HOUR_START = 7;
-const HOUR_END = 23;
+const HOUR_START = 0;
+const HOUR_END = 24;
 const HOUR_HEIGHT = 60; // pixels per hour
 const TOTAL_HOURS = HOUR_END - HOUR_START;
 
@@ -258,7 +258,7 @@ const MeetingCalendarPage = () => {
     const isCurrentWeek = currentWeekStart.isSame(dayjs().startOf('isoWeek'), 'day');
 
     return (
-        <div className="h-full flex flex-col bg-white">
+        <div className="min-w-full bg-white" style={{ minWidth: 1460 }}>
             {/* Header */}
             <div className="px-6 py-4 border-b border-gray-100 bg-white sticky top-0 z-20">
                 <div className="flex items-center justify-between flex-wrap gap-3">
@@ -296,7 +296,7 @@ const MeetingCalendarPage = () => {
                     <Spin size="large" />
                 </div>
             ) : (
-                <div className="flex-1 overflow-auto">
+                <div>
                     <div className="flex" style={{ minWidth: 1460 }}>
                         {/* Time gutter */}
                         <div className="w-16 flex-shrink-0 border-r border-gray-100 bg-gray-50/50">

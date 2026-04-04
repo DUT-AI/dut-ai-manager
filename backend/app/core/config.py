@@ -61,6 +61,12 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     EMAILS_FROM_EMAIL: str = ""
     EMAILS_FROM_NAME: str = "DUT AI Manager"
+    
+    # SePay Configuration
+    SEPAY_BANK_CODE: str = "MBBank"
+    SEPAY_ACCOUNT_NO: str = ""
+    SEPAY_ACCOUNT_NAME: str = ""
+    SEPAY_WEBHOOK_SECRET: str = ""
 
     BACKEND_CORS_ORIGINS: Annotated[list[AnyUrl] | str, BeforeValidator(parse_cors)] = (
         []

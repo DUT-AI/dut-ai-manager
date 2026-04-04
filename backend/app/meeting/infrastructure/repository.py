@@ -66,7 +66,9 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
                 ORMMeeting.id == meeting_id,
             )
             .options(
-                contains_eager(cast(Any, ORMMeeting.participants)).joinedload(cast(Any, ORMParticipant.user))
+                contains_eager(cast(Any, ORMMeeting.participants)).joinedload(
+                    cast(Any, ORMParticipant.user)
+                )
             )
         )
         orm = self.session.exec(statement).unique().first()
@@ -87,15 +89,33 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         if not query_support:
             filters = []
             if month:
-                filters.append(FilterCriterion(field="start_time", operator=FilterOperator.MONTH_EQ, value=month))
+                filters.append(
+                    FilterCriterion(
+                        field="start_time",
+                        operator=FilterOperator.MONTH_EQ,
+                        value=month,
+                    )
+                )
             if year:
-                filters.append(FilterCriterion(field="start_time", operator=FilterOperator.YEAR_EQ, value=year))
+                filters.append(
+                    FilterCriterion(
+                        field="start_time", operator=FilterOperator.YEAR_EQ, value=year
+                    )
+                )
             query_support = build_query_support(filters=filters, skip=skip, limit=limit)
 
         stmt = (
             select(ORMMeeting)
-            .where(cast(Any, getattr(ORMMeeting, "is_deleted") == deleted))  # noqa: E712
-            .outerjoin(ORMParticipant, cast(Any, getattr(ORMParticipant, "meeting_id") == getattr(ORMMeeting, "id")))
+            .where(
+                cast(Any, getattr(ORMMeeting, "is_deleted") == deleted)
+            )  # noqa: E712
+            .outerjoin(
+                ORMParticipant,
+                cast(
+                    Any,
+                    getattr(ORMParticipant, "meeting_id") == getattr(ORMMeeting, "id"),
+                ),
+            )
             .where(
                 cast(Any, getattr(ORMParticipant, "is_deleted")).is_(False),
             )
@@ -105,9 +125,9 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
                 ),
             )
         )
-        
+
         stmt = apply_query_support(stmt, ORMMeeting, query_support)
-            
+
         orms = self.session.exec(stmt).unique().all()
         return [self._to_domain(orm) for orm in orms]
 
@@ -117,15 +137,23 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         """Get meetings where user is a participant, filtered by month/year."""
         from app.shared.application.query_support_utils import build_query_support
         from app.shared.domain.query_support import FilterCriterion, FilterOperator
-        
+
         filters = []
         if month:
-            filters.append(FilterCriterion(field="start_time", operator=FilterOperator.MONTH_EQ, value=month))
+            filters.append(
+                FilterCriterion(
+                    field="start_time", operator=FilterOperator.MONTH_EQ, value=month
+                )
+            )
         if year:
-            filters.append(FilterCriterion(field="start_time", operator=FilterOperator.YEAR_EQ, value=year))
-            
+            filters.append(
+                FilterCriterion(
+                    field="start_time", operator=FilterOperator.YEAR_EQ, value=year
+                )
+            )
+
         qs = build_query_support(filters=filters, limit=1000)
-        
+
         stmt = (
             select(ORMMeeting)
             .join(ORMParticipant, cast(Any, ORMMeeting.id == ORMParticipant.meeting_id))
@@ -135,7 +163,7 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
                 cast(Any, ORMParticipant.is_deleted == False),  # noqa: E712
             )
         )
-        
+
         stmt = apply_query_support(stmt, ORMMeeting, qs)
         orms = self.session.exec(stmt).unique().all()
         return [self._to_domain(orm) for orm in orms]
@@ -148,7 +176,9 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
                 func.date(ORMMeeting.start_time) == target_date,
             )
             .options(
-                joinedload(cast(Any, ORMMeeting.participants)).joinedload(cast(Any, ORMParticipant.user))
+                joinedload(cast(Any, ORMMeeting.participants)).joinedload(
+                    cast(Any, ORMParticipant.user)
+                )
             )
         )
         orms = self.session.exec(statement).unique().all()
@@ -204,13 +234,13 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
                     id=domain.id,
                     title=domain.title,
                     start_time=domain.start_time,
-                    end_time=domain.end_time
+                    end_time=domain.end_time,
                 )
         else:
             orm = ORMMeeting(
                 title=domain.title,
                 start_time=domain.start_time,
-                end_time=domain.end_time
+                end_time=domain.end_time,
             )
 
         orm.title = domain.title
@@ -294,7 +324,9 @@ class ParticipantRepository(BaseRepository[ORMParticipant, DomainParticipant]):
                 joinedload(cast(Any, ORMParticipant.user)),
                 joinedload(cast(Any, ORMParticipant.meeting)),
             )
-            .order_by(case({ongoing_expr: 0}, else_=1), desc(cast(Any, ORMMeeting.start_time)))
+            .order_by(
+                case({ongoing_expr: 0}, else_=1), desc(cast(Any, ORMMeeting.start_time))
+            )
             .limit(1)
         )
         orm = self.session.exec(stmt).first()
@@ -318,15 +350,10 @@ class ParticipantRepository(BaseRepository[ORMParticipant, DomainParticipant]):
             orm = self.session.get(ORMParticipant, domain.id)
             if not orm:
                 orm = ORMParticipant(
-                    id=domain.id,
-                    meeting_id=domain.meeting_id,
-                    user_id=domain.user_id
+                    id=domain.id, meeting_id=domain.meeting_id, user_id=domain.user_id
                 )
         else:
-            orm = ORMParticipant(
-                meeting_id=domain.meeting_id,
-                user_id=domain.user_id
-            )
+            orm = ORMParticipant(meeting_id=domain.meeting_id, user_id=domain.user_id)
 
         orm.status = domain.status
         orm.check_in_at = domain.check_in_at

@@ -15,6 +15,8 @@ import { HomeworkPage } from './HomeworkPage';
 import { SettingsPage } from './SettingsPage';
 import { TrashPage } from '@/pages/TrashPage';
 import MeetingCalendarPage from './MeetingCalendarPage';
+import InvoicesPage from './InvoicesPage';
+import AdminBillingPage from './AdminBillingPage';
 import { useState } from 'react';
 
 import {
@@ -30,6 +32,8 @@ import {
     BookOutlined,
     SettingOutlined,
     VideoCameraOutlined,
+    CreditCardOutlined,
+    AuditOutlined,
 } from '@ant-design/icons';
 import HeaderLayout from '@/components/MainLayout/Header';
 const { Content, Sider } = Layout;
@@ -72,7 +76,7 @@ const SidebarContent = ({ activeKey, sideMenuItems }: SidebarContentProps) => (
 );
 
 const DashboardPage = () => {
-    const { loading } = useAuth();
+    const { loading, hasPermission } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const screens = useBreakpoint();
@@ -95,6 +99,8 @@ const DashboardPage = () => {
         if (path.includes('/settings')) return 'settings';
         if (path.includes('/trash')) return 'trash';
         if (path.includes('/reports')) return 'reports';
+        if (path.includes('/admin-billing')) return 'admin_billing';
+        if (path.includes('/invoices')) return 'invoices';
         return 'profile';
     };
 
@@ -169,6 +175,18 @@ const DashboardPage = () => {
             onClick: () => handleMenuClick('/dashboard/homeworks'),
         },
         {
+            key: 'invoices',
+            icon: <CreditCardOutlined />,
+            label: 'Hóa đơn của tôi',
+            onClick: () => handleMenuClick('/dashboard/invoices'),
+        },
+        ...(hasPermission('billing:read') ? [{
+            key: 'admin_billing',
+            icon: <AuditOutlined />,
+            label: 'Quản lý Hóa đơn',
+            onClick: () => handleMenuClick('/dashboard/admin-billing'),
+        }] : []),
+        {
             key: 'settings',
             icon: <SettingOutlined />,
             label: 'Cài đặt',
@@ -219,7 +237,7 @@ const DashboardPage = () => {
                     <SidebarContent activeKey={activeKey} sideMenuItems={sideMenuItems} />
                 </Drawer>
 
-                <Content className="p-0 bg-[#f8fafc] overflow-y-auto custom-scrollbar">
+                <Content className="p-0 bg-[#f8fafc] overflow-auto custom-scrollbar">
                     <div className="min-h-full relative">
                         <Routes>
                             <Route index element={<HomePage />} />
@@ -232,6 +250,8 @@ const DashboardPage = () => {
                             <Route path="teams" element={<TeamManagementPage />} />
                             <Route path="homeworks" element={<HomeworkPage />} />
                             <Route path="meetings" element={<MeetingCalendarPage />} />
+                            <Route path="invoices" element={<InvoicesPage />} />
+                            <Route path="admin-billing" element={<AdminBillingPage />} />
                             <Route path="settings" element={<SettingsPage />} />
                             <Route path="trash" element={<TrashPage />} />
                             <Route path="profile/:userId" element={<ProfilePage />} />
