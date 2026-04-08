@@ -31,3 +31,12 @@ class ParticipantCheckedIn(DomainEvent):
     check_in_at: datetime
     is_late: bool
     meeting_title: str
+
+
+class MeetingAbsenceDetected(DomainEvent):
+    """Sự kiện phát hiện vắng mặt không phép"""
+
+    user_id: int
+    meeting_id: int
+    meeting_title: str
+    meeting_date: str

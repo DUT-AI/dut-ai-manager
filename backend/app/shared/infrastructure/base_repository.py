@@ -83,6 +83,13 @@ class BaseRepository(Generic[TModel, TEntity]):
     def update(self, entity: TEntity) -> TEntity:
         """Update a model (merge into session and flush)."""
         model = self.model.from_entity(entity)
+        
+        # Fix for default_factory overwriting audit fields on new model instance creation
+        if hasattr(entity, "created_at") and entity.created_at:
+            model.created_at = entity.created_at
+        if hasattr(entity, "created_by") and entity.created_by:
+            model.created_by = entity.created_by
+            
         attached_model = self.session.merge(model)
         self.session.flush()
         return cast(TEntity, attached_model.to_entity())

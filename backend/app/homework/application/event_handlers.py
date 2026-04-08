@@ -1,12 +1,13 @@
 import asyncio
 from typing import cast
-from app.core.discord_service import DiscordService
+from app.shared.infrastructure.discord_service import DiscordService
 from app.homework.domain.value_objects import HomeworkAssigned
 from app.homework.infrastructure.repository import HomeworkRepository
 from app.user.infrastructure.repository import UserRepository
 from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
 from loguru import logger
 from app.shared.application.event_handler import EventHandler
+
 
 class HomeworkNotificationHandler(EventHandler):
     """Xử lý gửi thông báo Discord và Zalo khi có bài tập mới."""

@@ -1,6 +1,9 @@
 from dishka import Provider, Scope, provide
 from sqlmodel import Session
-from app.meeting.infrastructure.repository import MeetingRepository, ParticipantRepository
+from app.meeting.infrastructure.repository import (
+    MeetingRepository,
+    ParticipantRepository,
+)
 from app.meeting.application.use_cases import (
     GetMeetingsUseCase,
     CreateMeetingUseCase,
@@ -8,14 +11,17 @@ from app.meeting.application.use_cases import (
     CheckInWithCardUseCase,
     UpdateMeetingUseCase,
     DeleteMeetingUseCase,
-    MeetingUseCases
+    MeetingUseCases,
+    CheckMeetingAttendanceUseCase,
 )
 from app.meeting.application.event_handlers import MeetingNotificationHandler
 from app.user.infrastructure.repository import UserRepository
 from app.team.infrastructure.repository import TeamRepository
 from app.shared.infrastructure.minio_service import MinioService
-from app.core.discord_service import DiscordService
+from app.shared.infrastructure.discord_service import DiscordService
 from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
+from app.permission_request.infrastructure.repository import PermissionRequestRepository
+
 
 class MeetingModuleProvider(Provider):
     scope = Scope.REQUEST
@@ -66,6 +72,14 @@ class MeetingModuleProvider(Provider):
     @provide
     def delete_meeting_uc(self, repo: MeetingRepository) -> DeleteMeetingUseCase:
         return DeleteMeetingUseCase(repo)
+
+    @provide
+    def check_meeting_attendance_uc(
+        self,
+        meeting_repo: MeetingRepository,
+        permission_repo: PermissionRequestRepository,
+    ) -> CheckMeetingAttendanceUseCase:
+        return CheckMeetingAttendanceUseCase(meeting_repo, permission_repo)
 
     @provide
     def meeting_use_cases(

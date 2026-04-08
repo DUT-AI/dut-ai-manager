@@ -5,7 +5,6 @@ import type { Homework } from './homework.types';
 export interface PermissionCreate {
     category: string;
     note: string;
-    date: string;       // YYYY-MM-DD
     start_time?: string; // HH:MM:SS
     homework_id?: number;
     meeting_id?: number;
@@ -34,7 +33,6 @@ export interface PermissionRequestResponse {
     id: number;
     category: string;
     note: string;
-    date: string;
     start_time: string;
     homework_id?: number;
     meeting_id?: number;

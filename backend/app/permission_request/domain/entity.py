@@ -1,5 +1,5 @@
-from datetime import date, datetime
-from typing import Optional, TYPE_CHECKING
+from datetime import datetime
+from typing import Optional
 
 from app.permission_request.domain.value_objects import RequestCategory
 from app.shared.domain.base_entity import BaseEntity
@@ -14,7 +14,6 @@ class PermissionRequest(BaseEntity):
 
     user_id: Optional[int]
     category: RequestCategory
-    date: date
     note: str
     
     # Specific metadata based on category

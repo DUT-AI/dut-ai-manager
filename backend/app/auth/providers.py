@@ -1,7 +1,7 @@
 from dishka import Provider, Scope, provide
 from sqlmodel import Session
 
-from app.api.v1.services.email_service import EmailService
+from app.shared.infrastructure.email_service import EmailService
 from app.auth.account_notification_handler import AccountNotificationHandler
 from app.auth.application.user_event_handler import UserAccountHandler
 from app.auth.application.use_cases import (
@@ -49,7 +49,9 @@ class AuthModuleProvider(Provider):
         return ChangePasswordUseCase(account_repo, user_repo)
 
     @provide
-    def create_account_uc(self, account_repo: AccountRepository) -> CreateAccountUseCase:
+    def create_account_uc(
+        self, account_repo: AccountRepository
+    ) -> CreateAccountUseCase:
         return CreateAccountUseCase(account_repo)
 
     @provide

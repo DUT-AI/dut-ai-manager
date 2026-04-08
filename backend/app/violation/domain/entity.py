@@ -43,7 +43,7 @@ class Violation(BaseEntity):
         user_id: int,
         reason: str,
         date: datetime,
-        system_user_id: int,
+        system_user_id: int | None = None,
     ) -> "Violation":
         """Factory method for system-generated violations."""
         return cls(

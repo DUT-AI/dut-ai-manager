@@ -2,33 +2,37 @@ from contextlib import asynccontextmanager
 
 from dishka import make_async_container
 from dishka.integrations.fastapi import setup_dishka
-from app.api.v1.router import api_v1_router
-from app.auth.providers import AuthModuleProvider
-from app.user.providers import UserModuleProvider
-from app.violation.providers import ViolationModuleProvider
-from app.permission_request.providers import PermissionRequestModuleProvider
-from app.report.providers import ReportModuleProvider
-from app.meeting.providers import MeetingModuleProvider
-from app.bonus_point.providers import BonusPointModuleProvider
-from app.homework.providers import HomeworkModuleProvider
-from app.team.providers import TeamModuleProvider
-from app.billing.providers import BillingModuleProvider
-from app.zalo.providers import ZaloModuleProvider
-from app.core.config import settings
-from app.core.events import bootstrap_events
-from app.core.logging_config import setup_logging
-from app.core.scheduler import shutdown_scheduler, start_scheduler
-from app.middleware.auth import set_user_context
-from app.shared.infrastructure.request_context import set_request_container
-from app.middleware.logging import logging_middleware
-from app.shared.application.response import BadRequestException
-from app.shared.providers import InfrastructureProvider
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from loguru import logger
 from starlette.exceptions import HTTPException as StarletteHTTPException
+
+from app.api.v1.router import api_v1_router
+from app.auth.providers import AuthModuleProvider
+from app.billing.providers import BillingModuleProvider
+from app.bonus_point.providers import BonusPointModuleProvider
+from app.core.config import settings
+from app.core.events import bootstrap_events
+from app.core.logging_config import setup_logging
+from app.core.scheduler import shutdown_scheduler, start_scheduler
+from app.homework.providers import HomeworkModuleProvider
+from app.meeting.providers import MeetingModuleProvider
+from app.middleware.auth import set_user_context
+from app.middleware.logging import logging_middleware
+from app.permission_request.providers import PermissionRequestModuleProvider
+from app.report.providers import ReportModuleProvider
+from app.shared.application.response import BadRequestException
+from app.shared.infrastructure.request_context import (
+    _request_container_context,
+    set_request_container,
+)
+from app.shared.providers import InfrastructureProvider
+from app.team.providers import TeamModuleProvider
+from app.user.providers import UserModuleProvider
+from app.violation.providers import ViolationModuleProvider
+from app.zalo.providers import ZaloModuleProvider
 
 
 @asynccontextmanager
@@ -40,7 +44,7 @@ async def lifespan(app: FastAPI):
     # Event registration using Dishka
     await bootstrap_events(app.state.dishka_container)
 
-    start_scheduler()
+    start_scheduler(app.state.dishka_container)
     logger.info("🚀 Application started")
     yield
     # Shutdown
@@ -75,9 +79,6 @@ def create_app():
             return await call_next(request)
         finally:
             if token:
-                from app.shared.infrastructure.request_context import (
-                    _request_container_context,
-                )
 
                 _request_container_context.reset(token)
 

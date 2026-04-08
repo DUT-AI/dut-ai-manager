@@ -31,10 +31,15 @@ class CreateViolationUseCase:
         is_system: bool = False,
         system_user_id: int | None = None,
     ) -> list[Violation]:
-        created_violations: list[Violation] = []
+        violations_to_create: list[Violation] = []
 
         for user_id in user_ids:
-            if is_system and system_user_id:
+            if is_system:
+                # Check for existing violations to prevent duplicates from recurrent job runs
+                existing = self.repo.get_by_user_and_date(user_id, date)
+                if any(v.reason == reason for v in existing):
+                    continue
+                    
                 violation = Violation.create_system_violation(
                     user_id=user_id,
                     reason=reason,
@@ -42,31 +47,32 @@ class CreateViolationUseCase:
                     system_user_id=system_user_id,
                 )
             else:
-                # Pydantic validates automatically on init
                 violation = Violation(user_id=user_id, reason=reason, date=date)
+            violations_to_create.append(violation)
 
-            saved = self.repo.save(violation)
-            logger.debug(f"Created violation id={saved.id} for user_id={user_id}")
+        if not violations_to_create:
+            return []
 
-            saved = self.repo.save(violation)
-            logger.debug(f"Created violation id={saved.id} for user_id={user_id}")
-
-            # Publish domain event (notification handler will pick it up)
-            # data is now available in the enriched entity returned by repo.save()
+        # Batch save violations
+        saved_violations = self.repo.save_all(violations_to_create)
+        
+        # Publish domain events for all saved violations
+        for saved in saved_violations:
+            logger.debug(f"Created violation id={saved.id} for user_id={saved.user_id}")
             await self.event_bus.publish(
                 ViolationCreated(
-                    violation_id=saved.id,
-                    user_id=user_id,
-                    reason=reason,
-                    date=date.isoformat(),
+                    violation_id=saved.id, # type: ignore
+                    user_id=saved.user_id,
+                    reason=saved.reason,
+                    date=saved.date.isoformat() if saved.date else "",
                     user_discord_id=saved.owner.discord_id if saved.owner else None,
+                    user_zalo_bot_id=saved.owner.zalo_bot_id if saved.owner else None,
                     user_name=saved.owner.name if saved.owner else None,
                     creator_name=saved.creator.name if saved.creator else None,
                 )
             )
-            created_violations.append(saved)
 
-        return created_violations
+        return saved_violations
 
 
 class GetViolationsUseCase:
@@ -132,7 +138,7 @@ class DeleteViolationUseCase:
         existing = self.repo.get_by_id(item_id)
         if not existing:
             raise HTTPException(status_code=404, detail="Violation not found")
-        return self.repo.soft_delete(item_id)
+        return self.repo.delete_by_id(item_id)
 
 
 class RestoreViolationUseCase:
@@ -142,4 +148,5 @@ class RestoreViolationUseCase:
         self.repo = repo
 
     def execute(self, item_id: int) -> Optional[Violation]:
-        return self.repo.restore(item_id)
+        dummy = Violation.model_construct(id=item_id)
+        return self.repo.restore(dummy)

@@ -9,9 +9,9 @@ import type {
 export const permissionService = {
   subPath: 'permissions',
 
-  async getPermissions(userId?: number, month?: number, year?: number, deleted?: boolean) {
+  async getPermissions(userId?: number, month?: number, year?: number, category?: string, deleted?: boolean) {
     const response = await axiosInstance.get<ApiResponse<PermissionRequestResponse[]>>(`/${this.subPath}`, {
-        params: { user_id: userId, month, year, deleted }
+        params: { user_id: userId, month, year, category, deleted }
     });
     return response.data.data;
   },

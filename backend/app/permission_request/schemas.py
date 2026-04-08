@@ -1,8 +1,8 @@
-from datetime import date, datetime, time
-from typing import Optional, TYPE_CHECKING
+from datetime import datetime
+from typing import Optional
 
 from app.permission_request.domain.value_objects import RequestCategory
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict
 
 from app.user.application.dtos import UserResponse
 from app.homework.application.dtos import HomeworkResponse
@@ -11,11 +11,10 @@ from app.meeting.schemas import MeetingResponse
 
 class PermissionRequestBase(BaseModel):
     category: RequestCategory
-    date: date
     note: str
     homework_id: Optional[int] = None
     meeting_id: Optional[int] = None
-    start_time: Optional[time] = None
+    start_time: Optional[datetime] = None
 
 
 class PermissionRequestCreate(PermissionRequestBase):
@@ -24,11 +23,10 @@ class PermissionRequestCreate(PermissionRequestBase):
 
 class PermissionRequestUpdate(BaseModel):
     category: Optional[RequestCategory] = None
-    date: Optional[date] = None
     note: Optional[str] = None
     homework_id: Optional[int] = None
     meeting_id: Optional[int] = None
-    start_time: Optional[time] = None
+    start_time: Optional[datetime] = None
 
 
 class PermissionRequestResponse(PermissionRequestBase):
@@ -43,10 +41,3 @@ class PermissionRequestResponse(PermissionRequestBase):
     meeting: Optional[MeetingResponse] = None
 
     model_config = ConfigDict(from_attributes=True)
-
-    @field_validator("start_time", mode="before")
-    @classmethod
-    def validate_start_time(cls, v):
-        if isinstance(v, datetime):
-            return v.time()
-        return v

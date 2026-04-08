@@ -21,6 +21,7 @@ from app.permission_request.schemas import (
     PermissionRequestResponse,
     PermissionRequestUpdate,
 )
+from app.permission_request.domain.value_objects import RequestCategory
 from app.shared.application.response import ApiResponse
 from fastapi import APIRouter, Depends
 
@@ -36,6 +37,7 @@ async def get_permission_requests(
     user_id: Optional[int] = None,
     month: Optional[int] = None,
     year: Optional[int] = None,
+    category: Optional[RequestCategory] = None,
     skip: int = 0,
     limit: int = 100,
     deleted: bool = False,
@@ -45,6 +47,7 @@ async def get_permission_requests(
         user_id=user_id,
         month=month,
         year=year,
+        category=category,
         skip=skip,
         limit=limit,
         deleted=deleted
@@ -63,7 +66,6 @@ async def create_permission_request(
     """Tạo yêu cầu xin phép mới"""
     result = await uc.execute(
         category=data.category,
-        date=data.date,
         note=data.note,
         homework_id=data.homework_id,
         meeting_id=data.meeting_id,

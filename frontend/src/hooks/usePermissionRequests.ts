@@ -5,7 +5,7 @@ import type { PermissionCreate, PermissionUpdate } from '@/types/activity.types'
 // Query Keys
 const permissionRequestKeys = {
   all: ['permissionRequests'] as const,
-  list: (filters: { userId?: number; month?: number; year?: number }) => 
+  list: (filters: { userId?: number; month?: number; year?: number; category?: string }) => 
     ['permissionRequests', filters] as const,
 };
 
@@ -14,6 +14,7 @@ export const usePermissionRequests = (filters: {
   userId?: number; 
   month?: number; 
   year?: number;
+  category?: string;
   enabled?: boolean;
 } = {}) => {
   const { enabled = true, ...rest } = filters;
@@ -23,7 +24,8 @@ export const usePermissionRequests = (filters: {
       const response = await permissionService.getPermissions(
         rest.userId, 
         rest.month, 
-        rest.year
+        rest.year,
+        rest.category
       );
       return response ?? [];
     },

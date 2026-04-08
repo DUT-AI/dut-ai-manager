@@ -1,4 +1,4 @@
-import { Modal, Form, Select, DatePicker, TimePicker, Input } from 'antd';
+import { Modal, Form, Select, TimePicker, Input } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import type { PermissionRequestResponse } from '@/types/activity.types';
@@ -20,17 +20,21 @@ export const PermissionRequestModal = ({ open, editingItem, initialDate, onSubmi
     const initialValues = editingItem ? {
         category: editingItem.category,
         note: editingItem.note,
-        date: dayjs(editingItem.date),
-        start_time: dayjs(editingItem.start_time, 'HH:mm:ss'),
-        end_time: dayjs(editingItem.end_time, 'HH:mm:ss'),
-    } : { date: initialDate };
+        start_time: editingItem.start_time ? dayjs(editingItem.start_time) : null,
+    } : { start_time: initialDate };
 
     const handleFinish = (values: any) => {
+        let finalStartTime = undefined;
+        if (values.start_time) {
+            // Since this modal creates from a specific date day, we maintain that date part
+            const dateStr = initialDate.format('YYYY-MM-DD');
+            const timeStr = values.start_time.format('HH:mm:ss');
+            finalStartTime = `${dateStr}T${timeStr}`;
+        }
+        
         const formattedValues = {
             ...values,
-            date: values.date.format('YYYY-MM-DD'),
-            start_time: values.start_time.format('HH:mm:ss'),
-            end_time: values.end_time.format('HH:mm:ss'),
+            start_time: finalStartTime,
         };
         onSubmit(formattedValues);
     };
@@ -46,20 +50,14 @@ export const PermissionRequestModal = ({ open, editingItem, initialDate, onSubmi
             <Form form={form} initialValues={initialValues} layout="vertical" onFinish={handleFinish}>
                 <Form.Item name="category" label="Loại" rules={[{ required: true }]}>
                     <Select>
-                        <Option value="vắng sinh hoạt">Vắng sinh hoạt</Option>
-                        <Option value="tạm hoãn bài tập">Tạm hoãn bài tập</Option>
-                        <Option value="đi trễ sinh hoạt">Đi trễ sinh hoạt</Option>
-                        <Option value="khác">Khác</Option>
+                        <Option value="ABSENT">Vắng sinh hoạt</Option>
+                        <Option value="POSTPONE">Tạm hoãn bài tập</Option>
+                        <Option value="LATE">Đi trễ sinh hoạt</Option>
+                        <Option value="OTHER">Khác</Option>
                     </Select>
                 </Form.Item>
-                <Form.Item name="date" label="Ngày xin phép" rules={[{ required: true, message: 'Vui lòng chọn ngày!' }]}>
-                    <DatePicker format="DD/MM/YYYY" className="w-full" />
-                </Form.Item>
-                <div className="grid grid-cols-2 gap-4">
-                    <Form.Item name="start_time" label="Từ giờ" rules={[{ required: true, message: 'Vui lòng chọn giờ bắt đầu!' }]}>
-                        <TimePicker format="HH:mm" className="w-full" />
-                    </Form.Item>
-                    <Form.Item name="end_time" label="Đến giờ" rules={[{ required: true, message: 'Vui lòng chọn giờ kết thúc!' }]}>
+                <div className="grid grid-cols-1 gap-4">
+                    <Form.Item name="start_time" label="Thời gian / Hạn chót" rules={[{ required: true, message: 'Vui lòng chọn thời gian!' }]}>
                         <TimePicker format="HH:mm" className="w-full" />
                     </Form.Item>
                 </div>

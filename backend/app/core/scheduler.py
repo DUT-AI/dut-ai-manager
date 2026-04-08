@@ -11,10 +11,11 @@ the lock will run the scheduler.
 import fcntl
 import os
 
-# from app.jobs.homework_checker_job import check_overdue_homework_submissions
-# from app.jobs.meeting_checker_job import check_meeting_attendance
+from app.jobs.homework_checker_job import check_overdue_homework_submissions
+from app.jobs.meeting_checker_job import check_meeting_attendance
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from dishka import AsyncContainer
 from loguru import logger
 
 # Global scheduler instance
@@ -48,20 +49,13 @@ def _acquire_scheduler_lock() -> bool:
         return False
 
 
-def start_scheduler() -> None:
+def start_scheduler(dishka_container: AsyncContainer) -> None:
     """Start the background scheduler with all registered jobs.
 
     Uses file locking to ensure only ONE worker runs the scheduler,
     even across multiple Gunicorn/Uvicorn workers.
     """
     global scheduler
-
-    # Check if scheduler should be enabled (default: True for backward compatibility)
-    scheduler_enabled = os.getenv("SCHEDULER_ENABLED", "true").lower() == "true"
-
-    if not scheduler_enabled:
-        logger.info("📅 Scheduler disabled for this worker (SCHEDULER_ENABLED=false)")
-        return
 
     # Try to acquire the scheduler lock
     if not _acquire_scheduler_lock():
@@ -74,30 +68,28 @@ def start_scheduler() -> None:
 
     scheduler = AsyncIOScheduler(timezone="Asia/Ho_Chi_Minh")
 
-    # Schedule homework check job at 23:00 (11 PM) every day
-    # scheduler.add_job(
-    #     check_overdue_homework_submissions,
-    #     CronTrigger(hour=23, minute=0, timezone="Asia/Ho_Chi_Minh"),
-    #     id="homework_deadline_check",
-    #     name="Check overdue homework submissions",
-    #     replace_existing=True,
-    # )
+    # Schedule homework check job at 23:59 every day
+    scheduler.add_job(
+        check_overdue_homework_submissions,
+        CronTrigger(hour=23, minute=59, timezone="Asia/Ho_Chi_Minh"),
+        id="homework_deadline_check",
+        name="Check overdue homework submissions",
+        replace_existing=True,
+        kwargs={"container": dishka_container},
+    )
 
-    # # Schedule meeting attendance check every hour from 8:00 to 23:00
-    # scheduler.add_job(
-    #     check_meeting_attendance,
-    #     CronTrigger(hour="8-23", minute=5, timezone="Asia/Ho_Chi_Minh"),
-    #     id="meeting_attendance_check",
-    #     name="Check meeting attendance",
-    #     replace_existing=True,
-    # )
+    # Schedule meeting attendance check at 23:59 every day
+    scheduler.add_job(
+        check_meeting_attendance,
+        CronTrigger(hour=23, minute=59, timezone="Asia/Ho_Chi_Minh"),
+        id="meeting_attendance_check",
+        name="Check meeting attendance",
+        replace_existing=True,
+        kwargs={"container": dishka_container},
+    )
 
     scheduler.start()
-    logger.info(
-        "📅 Scheduler started - "
-        "Homework check at 23:00, "
-        "Meeting attendance check hourly (8:05-23:05)"
-    )
+    logger.info("📅 Scheduler started - Homework & Meeting check at 23:59 daily")
 
 
 def shutdown_scheduler() -> None:

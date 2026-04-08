@@ -21,7 +21,7 @@ const TrashMobileList = ({ dataSource, loading, columns, onRestore }: { dataSour
             split={false}
             locale={{ emptyText: "Thùng rác trống" }}
             renderItem={(record) => (
-                <List.Item className="px-2 !mb-4 !border-0">
+                <List.Item className="px-2 mb-4! border-0!">
                     <Card
                         className="w-full shadow-sm border-gray-100 overflow-hidden"
                         styles={{ body: { padding: '16px' } }}
@@ -96,7 +96,7 @@ export const TrashPage: React.FC = () => {
         refetch: refetchPermissions
     } = useQuery({
         queryKey: ['deletedPermissions'],
-        queryFn: () => permissionService.getPermissions(undefined, undefined, undefined, true),
+        queryFn: () => permissionService.getPermissions(undefined, undefined, undefined, undefined, true),
     });
 
     // Restore Handlers
@@ -188,7 +188,19 @@ export const TrashPage: React.FC = () => {
         { title: 'Người gửi', dataIndex: 'user_name', key: 'user_name' }, // Check if user_name is available in response
         { title: 'Loại', dataIndex: 'category', key: 'category' },
         { title: 'Lý do/Ghi chú', dataIndex: 'note', key: 'note' },
-        { title: 'Ngày', dataIndex: 'date', key: 'date', render: (date) => dayjs(date).format('DD/MM/YYYY') },
+        {
+            title: 'Mục tiêu',
+            key: 'target',
+            render: (_: any, record: any) => {
+                if (record.category === 'POSTPONE' && record.homework) {
+                    return <Text strong className="text-indigo-600">{record.homework.title}</Text>;
+                }
+                if ((record.category === 'ABSENCE' || record.category === 'LATE') && record.meeting) {
+                    return <Text strong className="text-purple-600">{record.meeting.title}</Text>;
+                }
+                return <Text type="secondary">--</Text>;
+            },
+        },
         {
             title: 'Hành động', key: 'action', width: 120,
             render: (_: any, record: any) => (

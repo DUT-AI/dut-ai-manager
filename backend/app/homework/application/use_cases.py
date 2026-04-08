@@ -1,3 +1,4 @@
+from datetime import date
 from typing import List, Optional, Set
 
 from app.core.context import get_current_user_id
@@ -23,6 +24,89 @@ from app.user.domain.entity import UserEntity
 from app.user.infrastructure.repository import UserRepository
 from app.utils.datetime import get_current_utc7_time
 from fastapi import UploadFile
+
+
+from app.permission_request.infrastructure.repository import PermissionRequestRepository
+from app.homework.domain.value_objects import HomeworkOverdueDetected
+
+
+class CheckOverdueHomeworkUseCase:
+    """Kiểm tra bài tập quá hạn và tạo vi phạm tự động"""
+
+    def __init__(
+        self,
+        submission_repo: HomeworkSubmissionRepository,
+        permission_repo: PermissionRequestRepository,
+    ):
+        self.submission_repo = submission_repo
+        self.permission_repo = permission_repo
+
+    async def execute(self, target_date: Optional[date] = None):
+        """
+        Logic:
+        1. Lấy tất cả các bài nộp chưa nộp có deadline là hôm nay.
+        2. Với mỗi bài nộp:
+           - Kiểm tra xem user có đơn xin hoãn (POSTPONE) cho bài tập (homework_id) không.
+           - Nếu có đơn hoãn, kiểm tra xem hiện tại đã quá hạn của đơn chưa (`start_time`). Nếu quá hạn -> vi phạm.
+           - Nếu KHÔNG có đơn hoãn, kiểm tra xem hiện tại đã quá hạn deadline của bài tập chưa -> vi phạm.
+        """
+        now = get_current_utc7_time().replace(tzinfo=None)
+        if target_date is None:
+            target_date = now.date()
+
+        overdue_submissions = self.submission_repo.get_not_submitted_for_deadline_date(
+            target_date
+        )
+
+        if not overdue_submissions:
+            return 0
+
+        # Tối ưu N+1: Lấy toàn bộ đơn xin hoãn theo user_id + homework_id
+        owner_ids = list({sub.owner_id for sub in overdue_submissions})
+        homework_ids = list(
+            {sub.homework_id for sub in overdue_submissions if sub.homework_id}
+        )
+
+        postpone_requests = self.permission_repo.get_postpone_requests_for_homeworks(
+            homework_ids=homework_ids, user_ids=owner_ids
+        )
+        postpone_map = {(r.user_id, r.homework_id): r for r in postpone_requests}
+
+        created_count = 0
+        for sub in overdue_submissions:
+            user_id = sub.owner_id
+            homework = sub.homework
+
+            if not homework:
+                continue
+
+            # Kiểm tra xem hiện tại đã quá deadline gốc chưa
+            if now <= homework.deadline:
+                continue
+
+            req = postpone_map.get((user_id, homework.id))
+
+            if req:
+                if req.start_time and now <= req.start_time:
+                    continue
+
+                reason = "Không nộp bài tập quá thời gian xin hẹn"
+            else:
+                reason = "Không nộp bài tập và không phép"
+
+            # Phát sự kiện phát hiện quá hạn bài tập
+            await EventBus.publish(
+                HomeworkOverdueDetected(
+                    user_id=user_id,
+                    homework_id=homework.id or 0,
+                    homework_title=homework.title,
+                    deadline_date=str(homework.deadline.date()),
+                    reason=reason,
+                )
+            )
+            created_count += 1
+
+        return created_count
 
 
 class HomeworkUseCases:
@@ -51,7 +135,9 @@ class HomeworkUseCases:
         timestamp = now_utc7.strftime("%y%m%d_%H%M%S")
         filename = f"{self.minio_service.HOMEWORK_PREFIX}/{title}/{file.filename.split('.')[0]}_{timestamp}"
 
-        file_url = self.minio_service.upload_file(content, filename, file.content_type or "application/octet-stream")
+        file_url = self.minio_service.upload_file(
+            content, filename, file.content_type or "application/octet-stream"
+        )
         return file_url
 
     def get_all(

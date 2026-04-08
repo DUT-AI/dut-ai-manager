@@ -1,42 +1,66 @@
-"""
-Violation Notification Handler — reacts to ViolationCreated events.
+import asyncio
+from typing import cast
 
-Sends Discord DM to the violated user.
-This replaces the direct NotificationService.send_violation_notification() call.
-"""
-
-from app.core.config import settings
-from app.core.discord_service import DiscordService
-from app.violation.domain.events import ViolationCreated
 from loguru import logger
 
+from app.shared.application.event_handler import EventHandler
+from app.shared.infrastructure.discord_service import DiscordService
+from app.user.infrastructure.repository import UserRepository
+from app.violation.domain.events import ViolationCreated
+from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
 
-def create_violation_notification_handler(discord_service: DiscordService):
-    """Factory: creates handler with injected Discord service."""
 
-    async def handle_violation_created(event: ViolationCreated) -> None:
-        """Send Discord DM when a violation is created."""
+class ViolationNotificationHandler(EventHandler):
+    """Xử lý gửi thông báo Discord và Zalo khi có vi phạm mới."""
+
+    def __init__(
+        self,
+        discord_service: DiscordService,
+        zalo_bot: ZaloBotClient,
+        user_repo: UserRepository,
+    ):
+        self.discord_service = discord_service
+        self.zalo_bot = zalo_bot
+        self.user_repo = user_repo
+
+    async def handle(self, event: ViolationCreated) -> None:
+        """Thông báo cho người dùng trên Discord và Zalo khi có vi phạm mới."""
         try:
-            if not event.user_discord_id:
-                logger.debug(
-                    f"User {event.user_id} has no discord_id, skipping notification"
-                )
-                return
 
+            logger.info(f"Handling ViolationCreated for user {event.user_id}")
+
+            asyncio.create_task(self._send_notifications_task(event))
+
+            logger.info(
+                f"Triggered background job for ViolationNotification: user_id={event.user_id}"
+            )
+        except Exception as e:
+            logger.error(f"Error in ViolationNotificationHandler: {e}")
+
+    async def _send_notifications_task(self, event: ViolationCreated) -> None:
+        """Hàm chạy ngầm để gửi thông báo qua Discord và Zalo."""
+        try:
+            display_date = event.date
+            if event.date:
+                try:
+                    from datetime import datetime
+
+                    dt = datetime.fromisoformat(event.date)
+                    if dt.hour == 0 and dt.minute == 0:
+                        display_date = dt.strftime("%d/%m/%Y")
+                    else:
+                        display_date = dt.strftime("%d/%m/%Y lúc %H:%M")
+                except ValueError:
+                    pass
+
+            # 1. Discord Embed
             embed = {
-                "title": "⚠️ Thông báo vi phạm",
-                "description": (
-                    f"Chào **{event.user_name or 'bạn'}**, "
-                    f"bạn vừa nhận được một thông báo vi phạm mới."
-                ),
+                "title": "⚠️ THÔNG BÁO VI PHẠM",
+                "description": f"Chào **{event.user_name or 'bạn'}**, bạn vừa nhận được một thông báo vi phạm mới.",
                 "color": 0xE74C3C,  # Red
                 "fields": [
                     {"name": "📝 Lý do", "value": event.reason, "inline": False},
-                    {
-                        "name": "📅 Ngày vi phạm",
-                        "value": event.date,
-                        "inline": False,
-                    },
+                    {"name": "📅 Ngày vi phạm", "value": display_date, "inline": False},
                     {
                         "name": "💁‍♂️ Được tạo bởi",
                         "value": event.creator_name or "Hệ thống",
@@ -46,16 +70,47 @@ def create_violation_notification_handler(discord_service: DiscordService):
                 "footer": {"text": "DUT AI Manager • Hệ thống nhắc nhở tự động"},
             }
 
-            await discord_service.send_message_to_user(
-                user_id=event.user_discord_id,
-                content="",
-                embed=embed,
+            # 2. Zalo Text
+            zalo_text = (
+                "⚠️ THÔNG BÁO VI PHẠM\n\n"
+                f"Chào {event.user_name or 'bạn'},\n"
+                f"Lý do: {event.reason}\n"
+                f"Ngày: {display_date}\n"
+                f"Người tạo: {event.creator_name or 'Hệ thống'}\n\n"
+                "Vui lòng kiểm tra lại và rút kinh nghiệm lần sau."
             )
-            logger.info(
-                f"Sent violation notification to user {event.user_name} "
-                f"(Discord: {event.user_discord_id})"
-            )
-        except Exception as e:
-            logger.error(f"Failed to send violation notification: {e}")
 
-    return handle_violation_created
+            # --- Gửi Discord ---
+            if event.user_discord_id:
+                try:
+                    await self.discord_service.send_message_to_user(
+                        user_id=cast(str, event.user_discord_id),
+                        content=f"Chào <@{event.user_discord_id}>! Bạn có thông báo vi phạm mới.",
+                        embed=embed,
+                    )
+                    logger.info(
+                        f"Background: Sent Discord violation notification to {event.user_name}"
+                    )
+                except Exception as e:
+                    logger.error(
+                        f"Background: Failed to send Discord violation notification to {event.user_name}: {e}"
+                    )
+
+            # --- Gửi Zalo ---
+            if event.user_zalo_bot_id:
+                try:
+                    await self.zalo_bot.send_message(
+                        chat_id=event.user_zalo_bot_id, text=zalo_text
+                    )
+                    logger.info(
+                        f"Background: Sent Zalo violation notification to {event.user_name}"
+                    )
+                except Exception as e:
+                    logger.error(
+                        f"Background: Failed to send Zalo violation notification to {event.user_name}: {e}"
+                    )
+
+        except Exception as e:
+            logger.error(
+                f"Unexpected error in background violation notification task: {e}"
+            )

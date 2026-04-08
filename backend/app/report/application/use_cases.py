@@ -87,7 +87,9 @@ class GetMonthlyActivityDatesUseCase:
             month=month, year=year, limit=1000
         )
         for p in permissions:
-            activity_dates.add(p.date)
+            target_time = getattr(p, "start_time", None) or getattr(p, "created_at", None)
+            if target_time:
+                activity_dates.add(target_time.date() if hasattr(target_time, "date") else target_time)
 
         # 3. Violation dates
         violations = self.violation_repo.get_by_month(month=month, year=year)[:1000]

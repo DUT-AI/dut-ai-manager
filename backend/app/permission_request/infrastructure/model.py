@@ -1,13 +1,12 @@
-from datetime import date as dt_date
 from datetime import datetime
-from datetime import time as dt_time
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, cast
 
 from app.permission_request.domain.entity import (
     PermissionRequest as PermissionRequestEntity,
 )
 from app.permission_request.domain.value_objects import RequestCategory
 from app.shared.infrastructure.base_model import TimestampMixin
+from app.shared.domain.base_entity import BaseEntity
 from sqlmodel import Field, Index, Relationship
 
 if TYPE_CHECKING:
@@ -25,8 +24,7 @@ class PermissionRequest(TimestampMixin, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     category: RequestCategory = Field(index=True)
     note: str = Field(max_length=500)
-    date: dt_date = Field(index=True)
-    start_time: Optional[dt_time] = Field(default=None)
+    start_time: Optional[datetime] = Field(default=None)
 
     # Specific metadata fields
     homework_id: Optional[int] = Field(
@@ -50,16 +48,13 @@ class PermissionRequest(TimestampMixin, table=True):
         return PermissionRequestEntity(
             id=self.id,
             user_id=self.created_by,
+            created_by=self.created_by,
+            updated_by=self.updated_by,
             category=self.category,
-            date=self.date,
             note=self.note,
             homework_id=self.homework_id,
             meeting_id=self.meeting_id,
-            start_time=(
-                datetime.combine(self.date, self.start_time)
-                if self.start_time
-                else None
-            ),
+            start_time=self.start_time,
             created_at=self.created_at,
             updated_at=self.updated_at,
             # Map related entities
@@ -69,14 +64,23 @@ class PermissionRequest(TimestampMixin, table=True):
         )
 
     @classmethod
-    def from_entity(cls, entity: PermissionRequestEntity) -> "PermissionRequest":
+    def from_entity(cls, entity: BaseEntity) -> "PermissionRequest":
+        """Convert PermissionRequest domain entity to ORM model"""
+        if not isinstance(entity, PermissionRequestEntity):
+            e = cast(PermissionRequestEntity, entity)
+        else:
+            e = entity
+            
         return cls(
-            id=entity.id,
-            category=entity.category,
-            note=entity.note,
-            date=entity.date,
-            start_time=entity.start_time.time() if entity.start_time else None,
-            homework_id=entity.homework_id,
-            meeting_id=entity.meeting_id,
-            created_by=entity.user_id,
+            id=e.id,
+            category=e.category,
+            note=e.note,
+            start_time=e.start_time if e.start_time else None,
+            homework_id=e.homework_id,
+            meeting_id=e.meeting_id,
+            created_by=e.created_by,
+            updated_by=e.updated_by,
+            created_at=e.created_at,
+            updated_at=e.updated_at,
+            is_deleted=e.is_deleted,
         )

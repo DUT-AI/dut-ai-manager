@@ -1,6 +1,6 @@
 from datetime import date, datetime, timedelta
 from typing import List, Optional, Tuple, cast
-from app.shared.domain.query_support import (FilterCriterion, FilterOperator)
+from app.shared.domain.query_support import FilterCriterion, FilterOperator
 from app.shared.application.query_support_utils import build_query_support
 
 from app.core.config import settings
@@ -10,6 +10,7 @@ from app.meeting.domain.events import (
     MeetingUpdated,
     ParticipantCheckedIn,
 )
+from app.meeting.domain.value_objects import ParticipantStatus
 from app.meeting.infrastructure.repository import (
     MeetingRepository,
     ParticipantRepository,
@@ -22,6 +23,87 @@ from app.meeting.schemas import MeetingUpdate
 from app.shared.infrastructure.minio_service import MinioService
 from app.utils.datetime import get_current_utc7_time
 from fastapi import UploadFile, status
+
+from app.permission_request.domain.value_objects import RequestCategory
+from app.permission_request.infrastructure.repository import PermissionRequestRepository
+from app.meeting.domain.events import MeetingAbsenceDetected
+
+
+class CheckMeetingAttendanceUseCase:
+    """Kiểm tra điểm danh các buổi họp & tạo vi phạm tự động"""
+
+    def __init__(
+        self,
+        meeting_repo: MeetingRepository,
+        permission_repo: PermissionRequestRepository,
+    ):
+        self.meeting_repo = meeting_repo
+        self.permission_repo = permission_repo
+
+    async def execute(self, target_date: Optional[date] = None):
+        """
+        Logic:
+        1. Lấy tất cả các buổi họp diễn ra trong ngày hôm nay.
+        2. Với mỗi buổi họp:
+           - Duyệt qua danh sách người tham gia (participants).
+           - Nếu người tham gia chưa điểm danh (status != ATTENDED):
+             - Kiểm tra xem họ có đơn xin vắng (ABSENCE) cho ngày hôm đó không.
+             - Nếu KHÔNG → tạo Vi phạm.
+        """
+        if target_date is None:
+            now = get_current_utc7_time()
+            target_date = now.date()
+
+        meetings = self.meeting_repo.get_by_date(target_date)
+
+        if not meetings:
+            return 0
+
+        # Tối ưu N+1: Thu thập toàn bộ user_id cần kiểm tra
+        all_participant_user_ids = []
+        for meeting in meetings:
+            if not meeting.require_check_in:
+                continue
+            for participant in meeting.participants:
+                if participant.status != ParticipantStatus.JOINED:
+                    all_participant_user_ids.append(participant.user_id)
+
+        # Lấy một lần duy nhất các user có đơn xin vắng
+        absence_user_ids = self.permission_repo.get_user_ids_with_requests_for_date(
+            user_ids=all_participant_user_ids,
+            target_date=target_date,
+            category=RequestCategory.ABSENCE,
+        )
+
+        created_count = 0
+        for meeting in meetings:
+            if not meeting.require_check_in:
+                continue
+
+            for participant in meeting.participants:
+                # Nếu đã điểm danh xong (JOINED) thì bỏ qua
+                if participant.status == ParticipantStatus.JOINED:
+                    continue
+
+                user_id = participant.user_id
+                meeting_date = meeting.start_time.date()
+
+                # Kiểm tra đơn xin vắng (Thao tác trong bộ nhớ trên tập hợp "set")
+                if user_id in absence_user_ids:
+                    continue
+
+                # Phát sự kiện phát hiện vắng mặt không phép
+                await EventBus.publish(
+                    MeetingAbsenceDetected(
+                        user_id=user_id,
+                        meeting_id=meeting.id if meeting.id else 0,
+                        meeting_title=meeting.title,
+                        meeting_date=str(meeting_date),
+                    )
+                )
+                created_count += 1
+
+        return created_count
 
 
 class GetMeetingsUseCase:
@@ -40,16 +122,28 @@ class GetMeetingsUseCase:
     ) -> List[Meeting]:
         filters = []
         if start_date:
-            filters.append(FilterCriterion(field="start_time", operator=FilterOperator.GTE, value=start_date))
+            filters.append(
+                FilterCriterion(
+                    field="start_time", operator=FilterOperator.GTE, value=start_date
+                )
+            )
         if end_date:
             # Bao gồm cả ngày kết thúc bằng cách lấy mốc bắt đầu của ngày hôm sau và dùng toán tử LT (<)
             next_day = end_date + timedelta(days=1)
-            filters.append(FilterCriterion(field="start_time", operator=FilterOperator.LT, value=next_day))
+            filters.append(
+                FilterCriterion(
+                    field="start_time", operator=FilterOperator.LT, value=next_day
+                )
+            )
 
-        qs = build_query_support(skip=skip, limit=limit, filters=filters, sort_by="start_time", descending=True)
-        return self.repo.get_all_with_participants(
-            query_support=qs, deleted=deleted
+        qs = build_query_support(
+            skip=skip,
+            limit=limit,
+            filters=filters,
+            sort_by="start_time",
+            descending=True,
         )
+        return self.repo.get_all_with_participants(query_support=qs, deleted=deleted)
 
     def get_by_id(self, meeting_id: int) -> Meeting:
         meeting = self.repo.get_with_participants(meeting_id)
@@ -63,7 +157,12 @@ class GetMeetingsUseCase:
 class CreateMeetingUseCase:
     """Tạo mới một buổi họp và mời các thành viên tham gia"""
 
-    def __init__(self, repo: MeetingRepository, team_repo: TeamRepository, event_bus: type[EventBus] = EventBus):
+    def __init__(
+        self,
+        repo: MeetingRepository,
+        team_repo: TeamRepository,
+        event_bus: type[EventBus] = EventBus,
+    ):
         self.repo = repo
         self.team_repo = team_repo
         self.event_bus = event_bus
@@ -83,7 +182,7 @@ class CreateMeetingUseCase:
         if team_ids:
             team_user_ids = self.team_repo.get_user_ids_by_teams(team_ids)
             all_user_ids.update(team_user_ids)
-        
+
         user_ids_list = list(all_user_ids)
 
         # Check overlapped meetings & seats (Business Rule)
@@ -115,13 +214,16 @@ class CreateMeetingUseCase:
 
         # Publish event for notifications
         await self.event_bus.publish(
-            cast(DomainEvent, MeetingCreated(
-                meeting_id=cast(int, saved_meeting.id),
-                title=saved_meeting.title,
-                user_ids=user_ids_list,
-                start_time=start_time.isoformat(),
-                end_time=end_time.isoformat(),
-            ))
+            cast(
+                DomainEvent,
+                MeetingCreated(
+                    meeting_id=cast(int, saved_meeting.id),
+                    title=saved_meeting.title,
+                    user_ids=user_ids_list,
+                    start_time=start_time.isoformat(),
+                    end_time=end_time.isoformat(),
+                ),
+            )
         )
 
         return saved_meeting
@@ -192,13 +294,16 @@ class CheckInUseCase:
 
             # Publish event (Violation Handler should handle lateness logic and permission requests)
             await self.event_bus.publish(
-                cast(DomainEvent, ParticipantCheckedIn(
-                    meeting_id=meeting_id,
-                    user_id=user_id,
-                    check_in_at=now,
-                    is_late=is_late,
-                    meeting_title=meeting.title,
-                ))
+                cast(
+                    DomainEvent,
+                    ParticipantCheckedIn(
+                        meeting_id=meeting_id,
+                        user_id=user_id,
+                        check_in_at=now,
+                        is_late=is_late,
+                        meeting_title=meeting.title,
+                    ),
+                )
             )
 
         return updated_participants, ". ".join(messages)
@@ -252,13 +357,16 @@ class CheckInWithCardUseCase:
         self.participant_repo.save(participant)
         is_late = meeting.is_late(now)
         await self.event_bus.publish(
-            cast(DomainEvent, ParticipantCheckedIn(
-                meeting_id=cast(int, participant.meeting_id),
-                user_id=uid,
-                check_in_at=now,
-                is_late=is_late,
-                meeting_title=meeting.title,
-            ))
+            cast(
+                DomainEvent,
+                ParticipantCheckedIn(
+                    meeting_id=cast(int, participant.meeting_id),
+                    user_id=uid,
+                    check_in_at=now,
+                    is_late=is_late,
+                    meeting_title=meeting.title,
+                ),
+            )
         )
         return f"{user.name} checkin thành công"
 
@@ -266,7 +374,12 @@ class CheckInWithCardUseCase:
 class UpdateMeetingUseCase:
     """Cập nhật thông tin buổi họp"""
 
-    def __init__(self, repo: MeetingRepository, team_repo: TeamRepository, event_bus: type[EventBus] = EventBus):
+    def __init__(
+        self,
+        repo: MeetingRepository,
+        team_repo: TeamRepository,
+        event_bus: type[EventBus] = EventBus,
+    ):
         self.repo = repo
         self.team_repo = team_repo
         self.event_bus = event_bus
@@ -295,13 +408,16 @@ class UpdateMeetingUseCase:
 
         # Publish event
         await self.event_bus.publish(
-            cast(DomainEvent, MeetingUpdated(
-                meeting_id=cast(int, saved.id),
-                title=saved.title,
-                user_ids=[p.user_id for p in saved.participants],
-                start_time=saved.start_time.isoformat(),
-                end_time=saved.end_time.isoformat(),
-            ))
+            cast(
+                DomainEvent,
+                MeetingUpdated(
+                    meeting_id=cast(int, saved.id),
+                    title=saved.title,
+                    user_ids=[p.user_id for p in saved.participants],
+                    start_time=saved.start_time.isoformat(),
+                    end_time=saved.end_time.isoformat(),
+                ),
+            )
         )
         return saved
 

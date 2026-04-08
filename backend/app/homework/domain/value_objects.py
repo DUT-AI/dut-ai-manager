@@ -19,3 +19,11 @@ class HomeworkSubmitted(DomainEvent):
     homework_id: int
     user_id: int
     is_late: bool
+
+
+class HomeworkOverdueDetected(DomainEvent):
+    user_id: int
+    homework_id: int
+    homework_title: str
+    deadline_date: str
+    reason: str = "Không nộp bài tập"

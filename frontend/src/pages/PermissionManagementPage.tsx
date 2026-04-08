@@ -19,14 +19,15 @@ import {
     Divider,
     Avatar,
     Grid,
-    List
+    List,
+    Row,
+    Col
 } from 'antd';
 import {
     PlusOutlined,
     EditOutlined,
     DeleteOutlined,
     FileTextOutlined,
-    CalendarOutlined,
     UserOutlined,
     ClockCircleOutlined,
     InfoCircleOutlined
@@ -37,7 +38,8 @@ import {
     useUpdatePermissionRequest,
     useDeletePermissionRequest,
     useHomeworks,
-    useMeetings
+    useMeetings,
+    useUsers
 } from '@/hooks';
 import { useAuth } from '@/context/AuthContext';
 import { PermissionRequestPermission } from '@/types/rbac.types';
@@ -90,8 +92,10 @@ const MobileListView = ({ permissions, isLoading, canUpdate, canDelete, onViewDe
                                 {CATEGORY_LABELS[record.category.toLowerCase()] || record.category}
                             </Tag>
                             <Space className="text-gray-400 text-xs">
-                                <CalendarOutlined />
-                                <span>{dayjs(record.date).format('DD/MM')}</span>
+                                <InfoCircleOutlined />
+                                <span className="max-w-[120px] truncate">
+                                    {record.category === 'POSTPONE' ? record.homework?.title : record.meeting?.title || '--'}
+                                </span>
                             </Space>
                         </div>
 
@@ -105,10 +109,6 @@ const MobileListView = ({ permissions, isLoading, canUpdate, canDelete, onViewDe
                             <div className="flex flex-col min-w-0 flex-1">
                                 <Text strong className="truncate text-base">
                                     {record.user?.name || record.user_name || (record.created_by ? `#${record.created_by}` : 'N/A')}
-                                </Text>
-                                <Text type="secondary" className="text-xs flex items-center gap-1">
-                                    <ClockCircleOutlined />
-                                    {record.start_time ? record.start_time.substring(0, 5) : '--:--'}
                                 </Text>
                             </div>
                         </div>
@@ -144,9 +144,26 @@ const PermissionManagementPage = () => {
     const screens = Grid.useBreakpoint();
 
     // TanStack Query hooks
-    const { data: permissions = [], isLoading } = usePermissionRequests();
+    // Filter states
+    const [filterDate, setFilterDate] = useState<dayjs.Dayjs | null>(null);
+    const [filterMonth, setFilterMonth] = useState<number | undefined>();
+    const [filterYear, setFilterYear] = useState<number | undefined>();
+    const [filterCategory, setFilterCategory] = useState<string | undefined>();
+    const [filterUserId, setFilterUserId] = useState<number | undefined>();
+
+    // TanStack Query hooks
+    const { data: permissions = [], isLoading } = usePermissionRequests({
+        month: filterMonth,
+        year: filterYear,
+        category: filterCategory,
+        userId: filterUserId
+    });
     const { data: homeworks = [] } = useHomeworks();
     const { data: meetings = [] } = useMeetings();
+    const { data: usersData = [] } = useUsers();
+    // Wrap users data as it might be an object with .data property depending on API
+    const users = Array.isArray(usersData) ? usersData : (usersData as any)?.data || [];
+
     const createPermission = useCreatePermissionRequest();
     const updatePermission = useUpdatePermissionRequest();
     const deletePermission = useDeletePermissionRequest();
@@ -165,10 +182,27 @@ const PermissionManagementPage = () => {
     const canDelete = hasPermission(PermissionRequestPermission.DELETE);
 
     const handleCreateOrUpdate = async (values: any) => {
+        let finalStartTime = undefined;
+        if (values.start_time) {
+            if (values.category === 'POSTPONE') {
+                finalStartTime = values.start_time.format('YYYY-MM-DDTHH:mm:ss');
+            } else if (values.category === 'LATE' && values.meeting_id) {
+                const meeting = meetings.find((m: any) => m.id === values.meeting_id);
+                if (meeting && meeting.start_time) {
+                    const dateStr = dayjs(meeting.start_time).format('YYYY-MM-DD');
+                    const timeStr = values.start_time.format('HH:mm:ss');
+                    finalStartTime = `${dateStr}T${timeStr}`;
+                } else {
+                    finalStartTime = values.start_time.format('YYYY-MM-DDTHH:mm:ss');
+                }
+            } else {
+                finalStartTime = values.start_time.format('YYYY-MM-DDTHH:mm:ss');
+            }
+        }
+
         const formattedValues: any = {
             ...values,
-            date: values.date.format('YYYY-MM-DD'),
-            start_time: values.start_time?.format('HH:mm:ss'),
+            start_time: finalStartTime,
         };
 
         try {
@@ -227,25 +261,27 @@ const PermissionManagementPage = () => {
             ),
         },
         {
-            title: 'Ngày',
-            dataIndex: 'date',
-            key: 'date',
-            render: (date: string) => (
-                <Space>
-                    <CalendarOutlined className="text-gray-400" />
-                    <Text>{dayjs(date).format('DD/MM/YYYY')}</Text>
-                </Space>
-            ),
-        },
-        {
-            title: 'Thời gian',
-            key: 'time',
-            render: (_: any, record: PermissionRequestResponse) => (
-                <Space>
-                    <ClockCircleOutlined className="text-gray-400" />
-                    <Text>{record.start_time?.substring(0, 5) || '--:--'}</Text>
-                </Space>
-            ),
+            title: 'Mục tiêu',
+            key: 'target',
+            render: (_: any, record: PermissionRequestResponse) => {
+                if (record.category === 'POSTPONE' && record.homework) {
+                    return (
+                        <Space>
+                            <FileTextOutlined className="text-indigo-400" />
+                            <Text strong className="text-indigo-600">{record.homework.title}</Text>
+                        </Space>
+                    );
+                }
+                if ((record.category === 'ABSENCE' || record.category === 'LATE') && record.meeting) {
+                    return (
+                        <Space>
+                            <ClockCircleOutlined className="text-purple-400" />
+                            <Text strong className="text-purple-600">{record.meeting.title}</Text>
+                        </Space>
+                    );
+                }
+                return <Text type="secondary">--</Text>;
+            },
         },
         {
             title: 'Thao tác',
@@ -260,8 +296,7 @@ const PermissionManagementPage = () => {
                             setEditingItem(record);
                             form.setFieldsValue({
                                 ...record,
-                                date: dayjs(record.date),
-                                start_time: record.start_time ? dayjs(record.start_time, 'HH:mm:ss') : null,
+                                start_time: record.start_time ? dayjs(record.start_time) : null,
                             });
                             setIsModalOpen(true);
                         }}
@@ -314,6 +349,70 @@ const PermissionManagementPage = () => {
                     )}
                 </div>
 
+                <div className="bg-gray-50/50 p-4 rounded-xl mb-6 border border-gray-100">
+                    <Row gutter={[16, 16]} align="middle">
+                        <Col xs={24} sm={12} md={6}>
+                            <DatePicker
+                                picker="month"
+                                className="w-full h-10 rounded-lg"
+                                placeholder="Lọc theo tháng năm"
+                                format="MM/YYYY"
+                                value={filterDate}
+                                onChange={(date) => {
+                                    setFilterDate(date);
+                                    setFilterMonth(date ? date.month() + 1 : undefined);
+                                    setFilterYear(date ? date.year() : undefined);
+                                }}
+                            />
+                        </Col>
+                        <Col xs={24} sm={12} md={6}>
+                            <Select
+                                className="w-full h-10 rounded-lg custom-select"
+                                placeholder="Loại đơn xin phép"
+                                allowClear
+                                value={filterCategory}
+                                onChange={(val) => setFilterCategory(val)}
+                            >
+                                <Option value="ABSENCE">Vắng sinh hoạt</Option>
+                                <Option value="LATE">Đi trễ sinh hoạt</Option>
+                                <Option value="POSTPONE">Tạm hoãn bài tập</Option>
+                                <Option value="OTHER">Khác</Option>
+                            </Select>
+                        </Col>
+                        <Col xs={24} sm={12} md={6}>
+                            <Select
+                                showSearch
+                                className="w-full h-10 rounded-lg"
+                                placeholder="Lọc theo User"
+                                allowClear
+                                value={filterUserId}
+                                optionFilterProp="label"
+                                onChange={(val) => setFilterUserId(val)}
+                                options={users.map((u: any) => ({
+                                    label: u.name,
+                                    value: u.id
+                                }))}
+                            />
+                        </Col>
+                        <Col xs={24} sm={12} md={6}>
+                            <Button 
+                                className="w-full h-10 rounded-lg" 
+                                ghost
+                                type="primary"
+                                onClick={() => {
+                                    setFilterDate(null);
+                                    setFilterMonth(undefined);
+                                    setFilterYear(undefined);
+                                    setFilterCategory(undefined);
+                                    setFilterUserId(undefined);
+                                }}
+                            >
+                                Đặt lại bộ lọc
+                            </Button>
+                        </Col>
+                    </Row>
+                </div>
+
                 {!screens.md ? (
                     <MobileListView
                         permissions={permissions}
@@ -325,8 +424,7 @@ const PermissionManagementPage = () => {
                             setEditingItem(item);
                             form.setFieldsValue({
                                 ...item,
-                                date: dayjs(item.date),
-                                start_time: item.start_time ? dayjs(item.start_time, 'HH:mm:ss') : null,
+                                start_time: item.start_time ? dayjs(item.start_time) : null,
                             });
                             setIsModalOpen(true);
                         }}
@@ -406,22 +504,6 @@ const PermissionManagementPage = () => {
                         }}
                     </Form.Item>
 
-                    <Form.Item
-                        noStyle
-                        shouldUpdate={(prevValues, currentValues) => prevValues.category !== currentValues.category}
-                    >
-                        {({ getFieldValue }) => {
-                            const category = getFieldValue('category');
-                            let dateLabel = "Ngày xin phép";
-                            if (category === 'POSTPONE') dateLabel = "Ngày deadline mới";
-
-                            return (
-                                <Form.Item name="date" label={dateLabel} rules={[{ required: true, message: 'Vui lòng chọn ngày!' }]}>
-                                    <DatePicker format="DD/MM/YYYY" className="w-full" />
-                                </Form.Item>
-                            );
-                        }}
-                    </Form.Item>
 
                     <Form.Item
                         noStyle
@@ -431,12 +513,23 @@ const PermissionManagementPage = () => {
                             const category = getFieldValue('category');
                             if (category === 'ABSENCE' || category === 'OTHER') return null;
 
-                            let timeLabel = "Giờ bắt đầu";
-                            if (category === 'POSTPONE') timeLabel = "Giờ deadline mới";
-                            if (category === 'LATE') timeLabel = "Giờ có mặt trễ nhất";
+                            if (category === 'POSTPONE') {
+                                return (
+                                    <Form.Item name="start_time" label="Deadline mới (ngày và giờ)" rules={[{ required: true }]}>
+                                        <DatePicker showTime format="DD/MM/YYYY HH:mm" className="w-full" placeholder="Chọn ngày và giờ" />
+                                    </Form.Item>
+                                );
+                            }
+                            if (category === 'LATE') {
+                                return (
+                                    <Form.Item name="start_time" label="Giờ có mặt trễ nhất" rules={[{ required: true }]}>
+                                        <TimePicker format="HH:mm" className="w-full" />
+                                    </Form.Item>
+                                );
+                            }
 
                             return (
-                                <Form.Item name="start_time" label={timeLabel} rules={[{ required: true }]}>
+                                <Form.Item name="start_time" label="Giờ bắt đầu" rules={[{ required: true }]}>
                                     <TimePicker format="HH:mm" className="w-full" />
                                 </Form.Item>
                             );
@@ -477,12 +570,9 @@ const PermissionManagementPage = () => {
                                         {CATEGORY_LABELS[detailItem.category.toLowerCase()] || detailItem.category}
                                     </Tag>
                                 </Descriptions.Item>
-                                <Descriptions.Item label="Ngày">
-                                    {dayjs(detailItem.date).format('DD/MM/YYYY')}
-                                </Descriptions.Item>
                                 {detailItem.start_time && (
                                     <Descriptions.Item label="Thời gian">
-                                        {detailItem.start_time.substring(0, 5)}
+                                        {dayjs(detailItem.start_time).format('DD/MM/YYYY HH:mm')}
                                     </Descriptions.Item>
                                 )}
                             </Descriptions>
@@ -547,8 +637,7 @@ const PermissionManagementPage = () => {
                                         setEditingItem(detailItem);
                                         form.setFieldsValue({
                                             ...detailItem,
-                                            date: dayjs(detailItem.date),
-                                            start_time: detailItem.start_time ? dayjs(detailItem.start_time, 'HH:mm:ss') : null,
+                                            start_time: detailItem.start_time ? dayjs(detailItem.start_time) : null,
                                         });
                                         setIsModalOpen(true);
                                         setIsDetailOpen(false);

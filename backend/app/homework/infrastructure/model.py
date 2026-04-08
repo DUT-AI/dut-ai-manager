@@ -4,8 +4,7 @@ from typing import TYPE_CHECKING, List, Optional
 import sqlmodel
 from app.homework.domain.entity import Homework as HomeworkEntity
 from app.homework.domain.entity import HomeworkStatus
-from app.homework.domain.entity import \
-  HomeworkSubmission as HomeworkSubmissionEntity
+from app.homework.domain.entity import HomeworkSubmission as HomeworkSubmissionEntity
 from app.shared.infrastructure.base_model import TimestampMixin
 from sqlmodel import Field, Relationship
 
@@ -35,6 +34,21 @@ class HomeworkSubmissionModel(TimestampMixin, table=True):
     )
 
     def to_entity(self) -> HomeworkSubmissionEntity:
+        from sqlalchemy import inspect
+
+        ins = inspect(self)
+        unloaded = getattr(ins, "unloaded", set())
+        user_name = None
+        user_avatar = None
+
+        if "owner" not in unloaded and self.owner:
+            user_name = self.owner.name
+            user_avatar = self.owner.avatar_url
+
+        homework_entity = None
+        if "homework" not in unloaded and self.homework:
+            homework_entity = self.homework.to_entity()
+
         return HomeworkSubmissionEntity(
             id=self.id,
             homework_id=self.homework_id,
@@ -42,13 +56,14 @@ class HomeworkSubmissionModel(TimestampMixin, table=True):
             link=self.link,
             status=self.status,
             is_late=self.is_late,
-            user_name=self.owner.name if self.owner else None,
-            user_avatar=self.owner.avatar_url if self.owner else None,
-            created_at=self.created_at,  # type: ignore
-            updated_at=self.updated_at,  # type: ignore
+            user_name=user_name,
+            user_avatar=user_avatar,
+            homework=homework_entity,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
             created_by=self.created_by,
-            updated_by=self.updated_by,  # type: ignore
-            is_deleted=self.is_deleted,  # type: ignore
+            updated_by=self.updated_by,
+            is_deleted=self.is_deleted,
         )
 
     @classmethod
@@ -78,10 +93,15 @@ class HomeworkModel(TimestampMixin, table=True):
     submissions: List[HomeworkSubmissionModel] = Relationship(back_populates="homework")
 
     def to_entity(self) -> HomeworkEntity:
+        from sqlalchemy import inspect
+
+        ins = inspect(self)
+        unloaded = getattr(ins, "unloaded", set())
         submissions_entities = []
-        for s in self.submissions:
-            if not s.is_deleted:
-                submissions_entities.append(s.to_entity())
+        if "submissions" not in unloaded and self.submissions:
+            for s in self.submissions:
+                if not s.is_deleted:
+                    submissions_entities.append(s.to_entity())
 
         return HomeworkEntity(
             id=self.id,
@@ -90,15 +110,15 @@ class HomeworkModel(TimestampMixin, table=True):
             description=self.description,
             file_url=self.file_url,
             submissions=submissions_entities,
-            created_at=self.created_at,  # type: ignore
-            updated_at=self.updated_at,  # type: ignore
+            created_at=self.created_at,
+            updated_at=self.updated_at,
             created_by=self.created_by,
-            updated_by=self.updated_by,  # type: ignore
-            is_deleted=self.is_deleted,  # type: ignore
+            updated_by=self.updated_by,
+            is_deleted=self.is_deleted,
         )
 
     @classmethod
-    def from_entity(cls, entity: HomeworkEntity) -> "HomeworkModel":
+    def from_entity(cls, entity: HomeworkEntity) -> "HomeworkModel":  # type: ignore[override]
         return cls(
             id=entity.id,
             title=entity.title,

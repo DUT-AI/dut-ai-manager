@@ -4,12 +4,15 @@ from app.auth.account_notification_handler import AccountNotificationHandler
 from app.auth.application.user_event_handler import UserAccountHandler
 from app.auth.domain.events import AccountCreated
 from app.homework.application.event_handlers import HomeworkNotificationHandler
-from app.homework.domain.value_objects import HomeworkAssigned
+from app.homework.domain.value_objects import HomeworkAssigned, HomeworkOverdueDetected
 from app.permission_request.domain.events import PermissionRequestCreated
 from app.shared.domain.event_bus import EventBus
 from app.user.domain.events import UserCreated
+from app.violation.application.event_handlers import AutomatedViolationHandler
+from app.violation.notification_handler import ViolationNotificationHandler
+from app.violation.domain.events import ViolationCreated
 from app.violation.permission_handler import PermissionViolationHandler
-from app.meeting.domain.events import ParticipantCheckedIn, MeetingCreated, MeetingUpdated
+from app.meeting.domain.events import ParticipantCheckedIn, MeetingCreated, MeetingUpdated, MeetingAbsenceDetected
 from app.meeting.application.event_handlers import MeetingNotificationHandler
 
 async def bootstrap_events(container: AsyncContainer):
@@ -25,6 +28,9 @@ async def bootstrap_events(container: AsyncContainer):
 
     # Violation Module
     EventBus.subscribe(PermissionRequestCreated, PermissionViolationHandler)
+    EventBus.subscribe(HomeworkOverdueDetected, AutomatedViolationHandler)
+    EventBus.subscribe(MeetingAbsenceDetected, AutomatedViolationHandler)
+    EventBus.subscribe(ViolationCreated, ViolationNotificationHandler)
 
     # Homework Module
 
