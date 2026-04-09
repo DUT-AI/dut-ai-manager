@@ -17,8 +17,9 @@ class PermissionViolationHandler:
         if event.category not in [RequestCategory.ABSENCE, RequestCategory.POSTPONE]:
             return
 
-        month = event.date.month
-        year = event.date.year
+        target_time = event.start_time or get_current_utc7_time()
+        month = target_time.month
+        year = target_time.year
 
         # Đếm số lượng yêu cầu TRƯỚC ĐÓ trong tháng (không tính yêu cầu vừa tạo - id đã có)
         # Tuy nhiên trong logic cũ, nó đếm tất cả bao gồm cả cái vừa tạo.
@@ -45,7 +46,5 @@ class PermissionViolationHandler:
                 reason=reason,
                 date=get_current_utc7_time(),
                 is_system=True,
-                system_user_id=0,  # System ID
+                system_user_id=None,
             )
-
-

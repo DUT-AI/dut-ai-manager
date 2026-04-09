@@ -14,6 +14,7 @@ from app.violation.domain.events import ViolationCreated
 from app.violation.permission_handler import PermissionViolationHandler
 from app.meeting.domain.events import ParticipantCheckedIn, MeetingCreated, MeetingUpdated, MeetingAbsenceDetected
 from app.meeting.application.event_handlers import MeetingNotificationHandler
+from app.permission_request.application.event_handlers import PermissionRequestNotificationHandler
 
 async def bootstrap_events(container: AsyncContainer):
     """
@@ -28,6 +29,7 @@ async def bootstrap_events(container: AsyncContainer):
 
     # Violation Module
     EventBus.subscribe(PermissionRequestCreated, PermissionViolationHandler)
+    EventBus.subscribe(PermissionRequestCreated, PermissionRequestNotificationHandler)
     EventBus.subscribe(HomeworkOverdueDetected, AutomatedViolationHandler)
     EventBus.subscribe(MeetingAbsenceDetected, AutomatedViolationHandler)
     EventBus.subscribe(ViolationCreated, ViolationNotificationHandler)

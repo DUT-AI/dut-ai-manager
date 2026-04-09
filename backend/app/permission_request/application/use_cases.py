@@ -108,6 +108,7 @@ class CreatePermissionRequestUseCase:
                     user_id=cast(int, saved.user_id),
                     category=saved.category,
                     note=saved.note,
+                    start_time=saved.start_time,
                 ),
             )
         )

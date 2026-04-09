@@ -494,7 +494,7 @@ const PermissionManagementPage = () => {
                                     <Form.Item name="meeting_id" label="Buổi sinh hoạt" rules={[{ required: true, message: 'Vui lòng chọn buổi sinh hoạt!' }]}>
                                         <Select placeholder="Chọn buổi sinh hoạt">
                                             {(meetings || []).map((m: any) => (
-                                                <Option key={m.id} value={m.id}>{m.title} ({dayjs(m.date).format('DD/MM/YYYY')})</Option>
+                                                <Option key={m.id} value={m.id}>{m.title} ({dayjs(m.start_time).format('DD/MM/YYYY')})</Option>
                                             ))}
                                         </Select>
                                     </Form.Item>
