@@ -63,3 +63,10 @@ class HomeworkSubmissionResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class HomeworkReportResponse(BaseModel):
+    user_id: int
+    user_name: str
+    user_avatar: Optional[str] = None
+    unsubmitted_count: int

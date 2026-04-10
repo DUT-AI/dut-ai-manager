@@ -18,7 +18,7 @@ import { homeworkService } from '@/services/api/homework.service';
 import type { Homework } from '@/types/homework.types';
 import { HomeworkPermission } from '@/types/rbac.types';
 import type { ColumnsType } from 'antd/es/table';
-import { HomeworkFormModal, SubmitHomeworkModal, SubmissionsDrawer } from '@/components/homework';
+import { HomeworkFormModal, SubmitHomeworkModal, SubmissionsDrawer, HomeworkReportTab } from '@/components/homework';
 
 const { Title, Text } = Typography;
 
@@ -386,7 +386,12 @@ export const HomeworkPage: React.FC = () => {
                                     loading={allLoading}
                                 />
                             )
-                        }] : [])
+                        }] : []),
+                        {
+                            key: '3',
+                            label: 'Báo cáo',
+                            children: <HomeworkReportTab />
+                        }
                     ]}
                 />
 

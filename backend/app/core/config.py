@@ -92,6 +92,9 @@ class Settings(BaseSettings):
     POSTGRES_DEV_DB: str = ""
     POSTGRES_USER_DEV: str = ""
     POSTGRES_PASSWORD_DEV: str = ""
+    
+    # Homework-checker api
+    HOMEWORK_CHECKER_API_URL: str = ""
 
     @computed_field  # type: ignore[prop-decorator]
     @property

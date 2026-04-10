@@ -5,6 +5,7 @@ from app.core.deps import CurrentUser, hasPermission
 from app.core.permissions import HomeworkPermission, HomeworkSubmissionPermission
 from app.homework.application.dtos import (
     HomeworkCreate,
+    HomeworkReportResponse,
     HomeworkResponse,
     HomeworkSubmissionResponse,
     HomeworkUpdate,
@@ -82,6 +83,35 @@ async def create_homework(
     )
 
     result = await use_cases.create(data, file)
+    return ApiResponse.success(data=result)
+
+
+@router.get(
+    "/report/unsubmitted",
+    response_model=ApiResponse[List[HomeworkReportResponse]],
+    dependencies=[hasPermission(HomeworkPermission.READ)],
+)
+@inject
+async def get_unsubmitted_report(
+    use_cases: FromDishka[HomeworkUseCases],
+):
+    """Báo cáo bài tập chưa nộp của tất cả active user"""
+    result = use_cases.get_unsubmitted_report()
+    return ApiResponse.success(data=result)
+
+
+@router.get(
+    "/report/unsubmitted/{user_id}",
+    response_model=ApiResponse[List[HomeworkResponse]],
+    dependencies=[hasPermission(HomeworkPermission.READ)],
+)
+@inject
+async def get_unsubmitted_by_user(
+    user_id: int,
+    use_cases: FromDishka[HomeworkUseCases],
+):
+    """Lấy danh sách bài tập chưa nộp của một user cụ thể"""
+    result = use_cases.get_unsubmitted_by_user(user_id)
     return ApiResponse.success(data=result)
 
 

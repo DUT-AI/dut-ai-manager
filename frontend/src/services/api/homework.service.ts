@@ -5,7 +5,8 @@ import type {
     Homework, 
     HomeworkCreate, 
     HomeworkSubmission, 
-    HomeworkUpdate 
+    HomeworkUpdate,
+    HomeworkReportResponse
 } from '@/types/homework.types';
 
 export const homeworkService = {
@@ -88,6 +89,17 @@ export const homeworkService = {
 
     async restore(id: number) {
         const response = await axiosInstance.put<ApiResponse<Homework>>(`/${this.baseUrl}/${id}/restore`);
+        return response.data.data;
+    },
+
+    // Reports
+    async getUnsubmittedReport() {
+        const response = await axiosInstance.get<ApiResponse<HomeworkReportResponse[]>>(`/${this.baseUrl}/report/unsubmitted`);
+        return response.data.data;
+    },
+
+    async getUnsubmittedByUser(userId: number) {
+        const response = await axiosInstance.get<ApiResponse<Homework[]>>(`/${this.baseUrl}/report/unsubmitted/${userId}`);
         return response.data.data;
     },
 

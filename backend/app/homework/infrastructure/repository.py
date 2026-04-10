@@ -290,3 +290,17 @@ class HomeworkSubmissionRepository:
                 e.homework = m.homework.to_entity()
             entities.append(e)
         return entities
+
+    def get_unsubmitted_counts_per_user(self) -> dict[int, int]:
+        statement = (
+            select(HomeworkSubmissionModel.owner_id, func.count(HomeworkSubmissionModel.id))
+            .join(HomeworkModel, cast(Any, HomeworkSubmissionModel.homework_id == HomeworkModel.id))
+            .where(
+                cast(Any, HomeworkSubmissionModel.is_deleted == False),
+                cast(Any, HomeworkSubmissionModel.status == HomeworkStatus.NOT_SUBMITTED),
+                cast(Any, HomeworkModel.is_deleted == False),
+            )
+            .group_by(HomeworkSubmissionModel.owner_id)
+        )
+        results = self.session.exec(statement).all()
+        return {r[0]: r[1] for r in results}

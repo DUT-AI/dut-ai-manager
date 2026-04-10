@@ -55,6 +55,23 @@ export const useMySubmission = (homeworkId: number) => {
   });
 };
 
+export const useUnsubmittedReport = () => {
+  return useQuery({
+    queryKey: ['homeworks', 'report', 'unsubmitted'],
+    queryFn: () => homeworkService.getUnsubmittedReport(),
+    staleTime: 60 * 1000, // 1 minute
+  });
+};
+
+export const useUnsubmittedByUser = (userId: number | null) => {
+  return useQuery({
+    queryKey: ['homeworks', 'report', 'unsubmitted', userId],
+    queryFn: () => homeworkService.getUnsubmittedByUser(userId!),
+    enabled: !!userId,
+    staleTime: 60 * 1000, // 1 minute
+  });
+};
+
 // Mutations
 export const useCreateHomework = () => {
   const queryClient = useQueryClient();

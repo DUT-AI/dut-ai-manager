@@ -1,6 +1,6 @@
+import asyncio
 from datetime import date
 from typing import List, Optional, Set
-
 from app.core.context import get_current_user_id
 from app.homework.application.dtos import HomeworkCreate, HomeworkUpdate
 from app.homework.domain.entity import Homework as HomeworkEntity
@@ -110,6 +110,8 @@ class CheckOverdueHomeworkUseCase:
 
 
 class HomeworkUseCases:
+    EXTERNAL_HOMEWORK_API_URL = ""
+
     def __init__(
         self,
         homework_repo: HomeworkRepository,
@@ -204,6 +206,9 @@ class HomeworkUseCases:
                 homework_id=homework.id, assignee_ids=list(all_assignee_ids)
             )
         )
+
+        # Fire-and-forget: notify external homework service
+        asyncio.create_task(homework.notify_external_homework_api())
 
         return homework
 
@@ -341,7 +346,7 @@ class HomeworkUseCases:
         if not homework:
             raise BadRequestException("Không tồn tại homework này")
 
-        now_utc7 = get_current_utc7_time()
+        now_utc7 = get_current_utc7_time().replace(tzinfo=None)
         is_late = now_utc7 > homework.deadline
         user_id = get_current_user_id()
         assert user_id is not None
@@ -459,3 +464,23 @@ class HomeworkUseCases:
                 if hw:
                     unsubmitted_homeworks.append(hw)
         return unsubmitted_homeworks
+
+    def get_unsubmitted_report(self) -> List[dict]:
+        counts = self.submission_repo.get_unsubmitted_counts_per_user()
+        # get all active users
+        users = self.user_repo.get_all()
+        report = []
+        for u in users:
+            if not u.is_active:
+                continue
+            report.append(
+                {
+                    "user_id": u.id,
+                    "user_name": u.name,
+                    "user_avatar": u.avatar_url,
+                    "unsubmitted_count": counts.get(u.id, 0),
+                }
+            )
+            
+        report.sort(key=lambda x: x["unsubmitted_count"], reverse=True)    
+        return report

@@ -52,3 +52,10 @@ export interface HomeworkSubmission {
 export interface HomeworkSubmissionCreate {
     link: string;
 }
+
+export interface HomeworkReportResponse {
+    user_id: number;
+    user_name: string;
+    user_avatar?: string;
+    unsubmitted_count: number;
+}

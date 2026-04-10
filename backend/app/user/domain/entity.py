@@ -41,3 +41,7 @@ class UserEntity(BaseEntity):
         if self.role_name == "admin":
             return True
         return permission_name in self.permissions
+
+    @property
+    def is_active(self) -> bool:
+        return self.status == UserStatus.ACTIVE

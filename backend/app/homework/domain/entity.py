@@ -1,8 +1,11 @@
 from datetime import datetime
 from typing import List, Optional
 
+import httpx
+from app.core.config import settings
 from app.homework.domain.value_objects import HomeworkStatus
 from app.shared.domain.base_entity import BaseEntity
+from loguru import logger
 
 
 class HomeworkSubmission(BaseEntity):
@@ -32,6 +35,25 @@ class Homework(BaseEntity):
     @property
     def submission_count(self) -> int:
         return len(self.submissions)
+
+    async def notify_external_homework_api(self) -> None:
+        """Fire-and-forget POST to external homework service."""
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                response = await client.post(
+                    settings.HOMEWORK_CHECKER_API_URL,
+                    json={
+                        "homework_link": self.file_url or "",
+                        "description": self.description,
+                        "homework_id": str(self.id),
+                    },
+                )
+                logger.info(f"External homework API response: status={response.status_code}, body={response.text}")
+
+        except Exception as exc:
+            logger.warning(
+                f"Failed to notify external homework API: {exc}", exc_info=True
+            )
 
 
 HomeworkSubmission.model_rebuild()
