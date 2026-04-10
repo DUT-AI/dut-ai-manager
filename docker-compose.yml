@@ -42,6 +42,8 @@ services:
       - ENVIRONMENT=production
       - POSTGRES_SERVER=postgres
       - POSTGRES_PORT=5432
+      - HOMEWORK_CHECKER_API_URL=http://excercise-checker-backend-1:3636/api/v1/homework
+      - SUBMISSION_CHECKER_API_URL=http://excercise-checker-backend-1:3636/api/v1/submission
     ports:
       - "${BACKEND_PORT}:8000"
     depends_on:
@@ -56,6 +58,7 @@ services:
     networks:
       - dut-ai-network
       - dut-ai-shared
+      - excercise_net
 
   # ================================================
   # Frontend - React + Vite (Nginx)
@@ -88,3 +91,6 @@ networks:
   dut-ai-shared:
     external: true
     name: dut-ai-shared
+  excercise_net:
+    external: true
+    name: excercise-checker_internal
