@@ -61,7 +61,7 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     EMAILS_FROM_EMAIL: str = ""
     EMAILS_FROM_NAME: str = "DUT AI Manager"
-    
+
     # SePay Configuration
     SEPAY_BANK_CODE: str = "MBBank"
     SEPAY_ACCOUNT_NO: str = ""
@@ -92,9 +92,10 @@ class Settings(BaseSettings):
     POSTGRES_DEV_DB: str = ""
     POSTGRES_USER_DEV: str = ""
     POSTGRES_PASSWORD_DEV: str = ""
-    
+
     # Homework-checker api
     HOMEWORK_CHECKER_API_URL: str = ""
+    SUBMISSION_CHECKER_API_URL: str = ""
 
     @computed_field  # type: ignore[prop-decorator]
     @property

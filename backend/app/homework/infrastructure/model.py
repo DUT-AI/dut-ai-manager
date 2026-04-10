@@ -27,6 +27,14 @@ class HomeworkSubmissionModel(TimestampMixin, table=True):
     )
     is_late: bool = Field(default=False)
 
+    is_pass: Optional[bool] = Field(default=None)
+    score: Optional[float] = Field(default=None)
+    feedback: Optional[str] = Field(default=None)
+    score_details: Optional[list] = Field(default=None, sa_column=sqlmodel.Column(sqlmodel.JSON))
+    plagiarism_info: Optional[list] = Field(default=None, sa_column=sqlmodel.Column(sqlmodel.JSON))
+    is_plagiarized: bool = Field(default=False, sa_column_kwargs={"server_default": "false"})
+    plagiarized_from_user_id: Optional[int] = Field(default=None, foreign_key="users.id")
+
     # Relationships
     homework: "HomeworkModel" = Relationship(back_populates="submissions")
     owner: "UserModel" = Relationship(
@@ -56,6 +64,13 @@ class HomeworkSubmissionModel(TimestampMixin, table=True):
             link=self.link,
             status=self.status,
             is_late=self.is_late,
+            is_pass=self.is_pass,
+            score=self.score,
+            feedback=self.feedback,
+            score_details=self.score_details,
+            plagiarism_info=self.plagiarism_info,
+            is_plagiarized=self.is_plagiarized,
+            plagiarized_from_user_id=self.plagiarized_from_user_id,
             user_name=user_name,
             user_avatar=user_avatar,
             homework=homework_entity,
@@ -75,6 +90,13 @@ class HomeworkSubmissionModel(TimestampMixin, table=True):
             link=entity.link,
             status=entity.status,
             is_late=entity.is_late,
+            is_pass=entity.is_pass,
+            score=entity.score,
+            feedback=entity.feedback,
+            score_details=entity.score_details,
+            plagiarism_info=entity.plagiarism_info,
+            is_plagiarized=entity.is_plagiarized,
+            plagiarized_from_user_id=entity.plagiarized_from_user_id,
         )
 
 

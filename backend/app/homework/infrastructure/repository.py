@@ -169,6 +169,15 @@ class HomeworkSubmissionRepository:
             model.link = submission.link
             model.status = submission.status
             model.is_late = submission.is_late
+            # Grading fields
+            model.is_pass = submission.is_pass
+            model.score = submission.score
+            model.feedback = submission.feedback
+            model.score_details = submission.score_details
+            model.plagiarism_info = submission.plagiarism_info
+            model.is_plagiarized = submission.is_plagiarized
+            model.plagiarized_from_user_id = submission.plagiarized_from_user_id
+
             self.session.add(model)
             self.session.flush()
             model_eager = self.session.exec(

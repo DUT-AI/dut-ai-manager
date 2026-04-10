@@ -6,7 +6,10 @@ from app.homework.infrastructure.repository import (
 )
 from app.homework.application.use_cases import (HomeworkUseCases,
                                                    CheckOverdueHomeworkUseCase)
-from app.homework.application.event_handlers import HomeworkNotificationHandler
+from app.homework.application.event_handlers import (
+    HomeworkNotificationHandler,
+    HomeworkGradedNotificationHandler
+)
 from app.user.infrastructure.repository import UserRepository
 from app.team.infrastructure.repository import TeamRepository
 from app.shared.infrastructure.minio_service import MinioService
@@ -65,3 +68,16 @@ class HomeworkModuleProvider(Provider):
         return HomeworkNotificationHandler(
             discord_service, homework_repo, user_repo, zalo_bot
         )
+
+    @provide
+    def get_graded_notification_handler(
+        self,
+        discord_service: DiscordService,
+        homework_repo: HomeworkRepository,
+        user_repo: UserRepository,
+        zalo_bot: ZaloBotClient,
+    ) -> HomeworkGradedNotificationHandler:
+        return HomeworkGradedNotificationHandler(
+            discord_service, homework_repo, user_repo, zalo_bot
+        )
+

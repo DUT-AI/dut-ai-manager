@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Modal, Card, Statistic, Typography, message, Upload } from 'antd';
+import { Modal, Card, Statistic, Typography, message, Upload, Button } from 'antd';
 import { FileZipOutlined, DownloadOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd';
 import dayjs from 'dayjs';
 import type { Homework, HomeworkSubmission } from '@/types/homework.types';
+import { HomeworkStatus } from '@/types/homework.types';
 import { homeworkService } from '@/services/api/homework.service';
+import { FeedbackModal } from './FeedbackModal';
 
 const { Text, Link } = Typography;
 
@@ -23,6 +25,7 @@ export const SubmitHomeworkModal = ({ open, homework, onSuccess, onCancel }: Pro
     const [mySubmission, setMySubmission] = useState<HomeworkSubmission | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [fileList, setFileList] = useState<UploadFile[]>([]);
+    const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
     useEffect(() => {
         if (open && homework) {
@@ -144,6 +147,17 @@ export const SubmitHomeworkModal = ({ open, homework, onSuccess, onCancel }: Pro
                                         </Link>
                                     </div>
                                 )}
+                                {(mySubmission.status === HomeworkStatus.SUBMITTED || mySubmission.status === HomeworkStatus.LeaderChecked || mySubmission.status === HomeworkStatus.FINISHED) && (
+                                    <div className="mt-3">
+                                        <Button
+                                            type="primary"
+                                            size="small"
+                                            onClick={() => setIsFeedbackOpen(true)}
+                                        >
+                                            Xem chi tiết điểm & Đánh giá
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
                         </Card>
                     )}
@@ -168,6 +182,12 @@ export const SubmitHomeworkModal = ({ open, homework, onSuccess, onCancel }: Pro
                     {mySubmission?.link ? 'Upload file mới sẽ thay thế file cũ' : 'Chỉ hỗ trợ file nén (.zip, .rar, .7z, .tar.gz)'}
                 </p>
             </Upload.Dragger>
+
+            <FeedbackModal
+                open={isFeedbackOpen}
+                submission={mySubmission}
+                onClose={() => setIsFeedbackOpen(false)}
+            />
         </Modal>
     );
 };

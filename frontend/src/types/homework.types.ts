@@ -35,6 +35,14 @@ export interface HomeworkUpdate {
     team_ids?: number[];
 }
 
+export interface ScoreDetail {
+    id: number;
+    criterion: string;
+    status: boolean;
+    description: string;
+    weight: number;
+}
+
 export interface HomeworkSubmission {
     id: number;
     homework_id: number;
@@ -45,6 +53,13 @@ export interface HomeworkSubmission {
     link: string;
     status: HomeworkStatus;
     is_late: boolean;
+    is_pass?: boolean | null;
+    score?: number | null;
+    feedback?: string | null;
+    score_details?: ScoreDetail[] | null;
+    plagiarism_info?: any[] | null;
+    is_plagiarized: boolean;
+    plagiarized_from_user_id?: number | null;
     created_at: string;
     updated_at: string;
 }

@@ -1,5 +1,10 @@
 import asyncio
+import httpx
 from datetime import date
+from sqlmodel import Session
+from app.core.database import engine
+from app.core.config import settings
+from loguru import logger
 from typing import List, Optional, Set
 from app.core.context import get_current_user_id
 from app.homework.application.dtos import HomeworkCreate, HomeworkUpdate
@@ -9,6 +14,7 @@ from app.homework.domain.value_objects import (
     HomeworkAssigned,
     HomeworkStatus,
     HomeworkSubmitted,
+    HomeworkGraded,
 )
 from app.homework.infrastructure.repository import (
     HomeworkRepository,
@@ -27,7 +33,11 @@ from fastapi import UploadFile
 
 
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
+from app.homework.infrastructure.model import HomeworkSubmissionModel
 from app.homework.domain.value_objects import HomeworkOverdueDetected
+
+
+from app.homework.infrastructure.external_api import HomeworkGradingService
 
 
 class CheckOverdueHomeworkUseCase:
@@ -110,8 +120,6 @@ class CheckOverdueHomeworkUseCase:
 
 
 class HomeworkUseCases:
-    EXTERNAL_HOMEWORK_API_URL = ""
-
     def __init__(
         self,
         homework_repo: HomeworkRepository,
@@ -400,6 +408,17 @@ class HomeworkUseCases:
             HomeworkSubmitted(homework_id=homework_id, user_id=user_id, is_late=is_late)
         )
 
+        assert submission.id is not None
+        # Push assignment to external API for grading
+        asyncio.create_task(
+            self.create_and_save_submission_feedback(
+                submission_id=submission.id,
+                file_url=file_url,
+                homework_id=homework_id,
+                user_id=user_id,
+            )
+        )
+
         return submission
 
     def update_submission_status(
@@ -455,6 +474,65 @@ class HomeworkUseCases:
         submission.status = status
         return self.submission_repo.update(submission)
 
+    async def create_and_save_submission_feedback(
+        self, submission_id: int, file_url: str, homework_id: int, user_id: int
+    ) -> None:
+        """Gọi API external để chấm bài, và cập nhật lại DB của submission đó khi xong."""
+        try:
+            logger.info(f"Đang gọi API external chấm bài cho code: {submission_id}")
+
+            # 1. Gọi external service (Infrastructure Layer)
+            data = await HomeworkGradingService.fetch_grading(
+                file_url, homework_id, user_id
+            )
+            logger.info(f"Dữ liệu trả về từ API external: {data}")
+
+            is_pass = data.get("is_pass", False)
+            score = data.get("score")
+            feedback = data.get("feedback") or "Không có feedback"
+            score_details = data.get("score_details", []) or []
+            plagiarism_info = data.get("plagiarism", []) or []
+
+            # 2. Xử lý lưu kết quả với Transaction (Application Layer)
+            with Session(engine) as session:
+                repo = HomeworkSubmissionRepository(session)
+                submission_entity = repo.get_by_id(submission_id)
+                if submission_entity:
+                    # 3. Apply Domain Logic (Domain Layer)
+                    submission_entity.update_grading_result(
+                        is_pass=is_pass,
+                        score=score,
+                        feedback=feedback,
+                        score_details=score_details,
+                        plagiarism_info=plagiarism_info,
+                    )
+
+                    # 4. Lưu lại thông qua Repository (Infrastructure / Application)
+                    repo.update(submission_entity)
+                    session.commit()
+                    
+                    is_plagiarized = submission_entity.is_plagiarized
+
+            # 5. Phát sự kiện sau khi đã lưu xong
+            await EventBus.publish(
+                HomeworkGraded(
+                    homework_id=homework_id,
+                    user_id=user_id,
+                    score=score,
+                    is_pass=is_pass,
+                    is_plagiarized=is_plagiarized
+                )
+            )
+
+            logger.info(
+                f"Cập nhật thành công điểm cho bài {submission_id} (Đạo văn: {is_plagiarized})"
+            )
+
+        except Exception as e:
+            logger.exception(
+                f"Lỗi khi đánh giá bài chấm (submission_id={submission_id}): {str(e)}"
+            )
+
     def get_unsubmitted_by_user(self, user_id: int) -> List[HomeworkEntity]:
         submissions = self.submission_repo.get_all_by_user(user_id)
         unsubmitted_homeworks = []
@@ -481,6 +559,6 @@ class HomeworkUseCases:
                     "unsubmitted_count": counts.get(u.id, 0),
                 }
             )
-            
-        report.sort(key=lambda x: x["unsubmitted_count"], reverse=True)    
+
+        report.sort(key=lambda x: x["unsubmitted_count"], reverse=True)
         return report

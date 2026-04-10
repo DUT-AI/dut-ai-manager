@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Drawer, Table, Select, Tag, Space, Typography, message, Avatar } from 'antd';
-import { LinkOutlined, UserOutlined } from '@ant-design/icons';
+import { LinkOutlined, UserOutlined, EyeOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Homework, HomeworkSubmission } from '@/types/homework.types';
 import { HomeworkStatus } from '@/types/homework.types';
 import { homeworkService } from '@/services/api/homework.service';
 import type { ColumnsType } from 'antd/es/table';
+import { FeedbackModal } from './FeedbackModal';
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -19,6 +20,7 @@ interface Props {
 export const SubmissionsDrawer = ({ open, homework, onClose }: Props) => {
     const [submissions, setSubmissions] = useState<HomeworkSubmission[]>([]);
     const [loading, setLoading] = useState(false);
+    const [selectedSubmission, setSelectedSubmission] = useState<HomeworkSubmission | null>(null);
 
     useEffect(() => {
         if (open && homework) {
@@ -106,12 +108,25 @@ export const SubmissionsDrawer = ({ open, homework, onClose }: Props) => {
             render: (_: any, record: HomeworkSubmission) => renderStatusTag(record.status, record.is_late),
         },
         {
+            title: 'Kết quả',
+            key: 'result',
+            render: (_: any, record: HomeworkSubmission) => (
+                <Space direction="vertical" size="small">
+                    {record.score != null ? (
+                        <Text strong type={record.is_pass ? 'success' : 'danger'}>{record.score}/10</Text>
+                    ) : <Text type="secondary">Chưa có điểm</Text>}
+                    {record.is_plagiarized && <Tag bordered={false} color="error">Đạo văn</Tag>}
+                    <a onClick={() => setSelectedSubmission(record)}><EyeOutlined /> Chi tiết</a>
+                </Space>
+            )
+        },
+        {
             title: 'Action',
             key: 'action',
             render: (_: any, record: HomeworkSubmission) => (
                 <Select
                     defaultValue={record.status}
-                    style={{ width: 160 }}
+                    style={{ width: 140 }}
                     onChange={(val) => handleUpdateStatus(record.id, val)}
                     size="small"
                 >
@@ -135,6 +150,11 @@ export const SubmissionsDrawer = ({ open, homework, onClose }: Props) => {
                 columns={columns}
                 rowKey="id"
                 loading={loading}
+            />
+            <FeedbackModal 
+                open={!!selectedSubmission} 
+                submission={selectedSubmission} 
+                onClose={() => setSelectedSubmission(null)} 
             />
         </Drawer>
     );

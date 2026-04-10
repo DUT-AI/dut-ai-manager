@@ -3,8 +3,11 @@ from dishka import AsyncContainer
 from app.auth.account_notification_handler import AccountNotificationHandler
 from app.auth.application.user_event_handler import UserAccountHandler
 from app.auth.domain.events import AccountCreated
-from app.homework.application.event_handlers import HomeworkNotificationHandler
-from app.homework.domain.value_objects import HomeworkAssigned, HomeworkOverdueDetected
+from app.homework.application.event_handlers import (
+    HomeworkNotificationHandler,
+    HomeworkGradedNotificationHandler
+)
+from app.homework.domain.value_objects import HomeworkAssigned, HomeworkOverdueDetected, HomeworkGraded
 from app.permission_request.domain.events import PermissionRequestCreated
 from app.shared.domain.event_bus import EventBus
 from app.user.domain.events import UserCreated
@@ -37,6 +40,7 @@ async def bootstrap_events(container: AsyncContainer):
     # Homework Module
 
     EventBus.subscribe(HomeworkAssigned, HomeworkNotificationHandler)
+    EventBus.subscribe(HomeworkGraded, HomeworkGradedNotificationHandler)
 
     # Meeting Module
     EventBus.subscribe(ParticipantCheckedIn, MeetingNotificationHandler)

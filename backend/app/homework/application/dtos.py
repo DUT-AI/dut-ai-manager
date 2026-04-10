@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from app.homework.domain.entity import HomeworkStatus
+from app.homework.domain.value_objects import ScoreDetail
 from pydantic import BaseModel, HttpUrl
 
 
@@ -58,6 +59,14 @@ class HomeworkSubmissionResponse(BaseModel):
     link: str
     status: HomeworkStatus
     is_late: bool
+    is_pass: Optional[bool] = None
+    score: Optional[float] = None
+    feedback: Optional[str] = None
+    score_details: Optional[List[ScoreDetail]] = None
+    plagiarism_info: Optional[List[dict]] = None
+    is_plagiarized: bool = False
+    plagiarized_from_user_id: Optional[int] = None
+
     created_at: datetime
     updated_at: datetime
 
