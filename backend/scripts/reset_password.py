@@ -1,47 +1,73 @@
 import os
 import sys
+import random
+import string
+from pathlib import Path
 
-# Add the current directory to sys.path so we can import 'app'
-sys.path.append(os.getcwd())
+# Add the 'backend' directory to sys.path so we can import 'app'
+root_dir = Path(__file__).resolve().parent.parent
+if str(root_dir) not in sys.path:
+    sys.path.append(str(root_dir))
 
-from app.core.container import AppContainer
-from app.core.database import engine
-from app.core.repository_factory import RepositoryFactory
-from app.core.service_factory import ServiceFactory
-from app.utils.password import hash_password
+from sqlalchemy import text
 from sqlmodel import Session
+from app.core.database import engine
+from app.utils.password import get_password_hash
+
+
+def generate_strong_password() -> str:
+    """Generate a random strong password specific format: Xyz@123..."""
+    lowercase = string.ascii_lowercase
+    uppercase = string.ascii_uppercase
+    digits = string.digits
+    symbols = "@#$!%*?&"
+
+    password_chars = [
+        random.choice(uppercase),
+        random.choice(lowercase),
+        random.choice(digits),
+        random.choice(symbols),
+    ]
+
+    all_chars = lowercase + uppercase + digits + symbols
+    length = random.randint(10, 12)
+
+    for _ in range(length - 4):
+        password_chars.append(random.choice(all_chars))
+
+    random.shuffle(password_chars)
+    return "".join(password_chars)
 
 
 def reset_password(email: str):
-    container = AppContainer()
     with Session(engine) as session:
-        repo_factory = RepositoryFactory(session)
-        service_factory = ServiceFactory(
-            repo_factory,
-            minio_service=container.minio_service,
-            discord_service=container.discord_service,
-            email_service=container.email_service,
-        )
-
         # 1. Tìm user bằng email
-        user = repo_factory.user.get_by_email(email)
+        user_query = text("SELECT id FROM users WHERE email = :email AND is_deleted = False")
+        user = session.execute(user_query, {"email": email}).first()
+
         if not user:
-            print(f"Lỗi: Không tìm thấy người dùng với email '{email}'.")
+            print(f"Lỗi: Không tìm thấy người dùng (hoặc người dùng đã bị xóa) với email '{email}'.")
             return
 
-        # 2. Lấy tài khoản tương ứng
-        account = repo_factory.account.get_by_id(user.account_id)
+        user_id = user[0]
+
+        # 2. Tìm tài khoản liên kết (AccountModel có user_id)
+        # Kiểm tra xem account có tồn tại không
+        account_check = text("SELECT id FROM accounts WHERE user_id = :user_id AND is_deleted = False")
+        account = session.execute(account_check, {"user_id": user_id}).first()
+        
         if not account:
-            print(f"Lỗi: Không tìm thấy thông tin tài khoản cho người dùng '{email}'.")
+            print(f"Lỗi: Không tìm thấy tài khoản cho người dùng '{email}' (ID: {user_id}).")
             return
 
-        # 3. Tạo mật khẩu mới ngẫu nhiên (sử dụng hàm có sẵn trong AuthService)
-        new_password = service_factory.auth.generate_strong_password()
+        # 3. Tạo mật khẩu mới
+        new_password = generate_strong_password()
+        hashed = get_password_hash(new_password)
 
-        # 4. Hash mật khẩu mới và cập nhật
-        account.hash_password = hash_password(new_password)
-        repo_factory.account.update(account)
-
+        # 4. Hash và cập nhật trong DB
+        update_query = text("UPDATE accounts SET hash_password = :hashed, updated_at = NOW() WHERE user_id = :user_id")
+        session.execute(update_query, {"hashed": hashed, "user_id": user_id})
+        
         # 5. Lưu thay đổi
         session.commit()
 
