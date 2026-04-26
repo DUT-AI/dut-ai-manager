@@ -1,55 +1,39 @@
 import { useState } from 'react';
-import {
-  Table,
-  Card,
-  Button,
-  Typography,
-  Modal,
-  Space,
-  Form,
-  Input,
-  InputNumber,
-  Select,
-  message,
-  Alert,
-  Tag,
-  Divider,
-  Avatar,
-  Grid,
-  Descriptions,
-  Spin
-} from 'antd';
-import {
-  PlusOutlined,
-  DeleteOutlined,
-  UserOutlined,
-  AuditOutlined,
-  InfoCircleOutlined,
-  EyeOutlined,
-  CalendarOutlined
-} from '@ant-design/icons';
-import { useAllInvoices, useCreateInvoice, useInvoiceDetail } from '@/hooks/useBilling';
+import { Card, Button, Typography, Space, Form, message, Grid, Tabs } from 'antd';
+import { PlusOutlined, AuditOutlined, CalendarOutlined, TableOutlined, BarChartOutlined } from '@ant-design/icons';
+import { useAllInvoices, useCreateInvoice, useUpdateInvoice, useInvoiceDetail, useDeleteInvoice } from '@/hooks/useBilling';
 import { useUsers } from '@/hooks';
-import { InvoiceStatus, InvoiceItemType } from '@/types/billing.types';
+import { InvoiceItemType } from '@/types/billing.types';
 import CreateMonthlyInvoiceModal from '@/components/billing/CreateMonthlyInvoiceModal';
-import type { InvoiceStatusType, InvoiceCreate } from '@/types/billing.types';
-import dayjs from 'dayjs';
+import type { InvoiceCreate, Invoice } from '@/types/billing.types';
+
+// Sub-components
+import BillingTable from './billing/components/BillingTable';
+import CreateInvoiceModal from './billing/components/CreateInvoiceModal';
+import UpdateInvoiceModal from './billing/components/UpdateInvoiceModal';
+import InvoiceDetailModal from './billing/components/InvoiceDetailModal';
+import BillingMatrixReport from './billing/components/BillingMatrixReport';
 
 const { Title, Text } = Typography;
-const { Option } = Select;
 const { useBreakpoint } = Grid;
 
 const AdminBillingPage = () => {
   const screens = useBreakpoint();
-  const { data: invoices, isLoading } = useAllInvoices();
+  const { data: invoices = [], isLoading } = useAllInvoices();
   const { data: users = [] } = useUsers();
   const createInvoice = useCreateInvoice();
+  const updateInvoice = useUpdateInvoice();
+  const deleteInvoice = useDeleteInvoice();
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [isMonthlyModalOpen, setIsMonthlyModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  
   const [form] = Form.useForm();
+  const [updateForm] = Form.useForm();
 
   const { data: detail } = useInvoiceDetail(selectedInvoiceId || 0, isDetailModalOpen);
 
@@ -74,66 +58,86 @@ const AdminBillingPage = () => {
     }
   };
 
-  const columns = [
+  const handleUpdate = async (values: any) => {
+    if (!selectedInvoiceId) return;
+    try {
+      const payload = {
+        description: values.description,
+        items: values.items.map((item: any) => ({
+          item_type: item.item_type,
+          amount: item.amount,
+          note: item.note,
+          reference_id: item.reference_id,
+        }))
+      };
+      
+      await updateInvoice.mutateAsync({ id: selectedInvoiceId, data: payload });
+      message.success('Cập nhật hóa đơn thành công');
+      setIsUpdateModalOpen(false);
+      setSelectedInvoiceId(null);
+      setSelectedInvoice(null);
+      updateForm.resetFields();
+    } catch (error: any) {
+      message.error(error?.response?.data?.message || 'Có lỗi xảy ra khi cập nhật hóa đơn');
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    setSelectedInvoiceId(id);
+    try {
+      await deleteInvoice.mutateAsync(id);
+      message.success('Xóa hóa đơn thành công');
+    } catch (error: any) {
+      message.error(error?.response?.data?.message || 'Không thể xóa hóa đơn');
+    } finally {
+      setSelectedInvoiceId(null);
+    }
+  };
+
+  const handleViewDetail = (id: number) => {
+    setSelectedInvoiceId(id);
+    setIsDetailModalOpen(true);
+  };
+
+  const handleEdit = (invoice: Invoice) => {
+    setSelectedInvoiceId(invoice.id);
+    setSelectedInvoice(invoice);
+    setIsUpdateModalOpen(true);
+  };
+
+  const tabItems = [
     {
-      title: 'Mã hóa đơn',
-      dataIndex: 'reference_code',
-      key: 'reference_code',
-      render: (code: string) => <Text strong>{code}</Text>,
+      key: '1',
+      label: (
+        <span className="flex items-center gap-2 px-2">
+          <TableOutlined />
+          Danh sách hóa đơn
+        </span>
+      ),
+      children: (
+        <BillingTable
+          invoices={invoices}
+          isLoading={isLoading}
+          users={users}
+          onViewDetail={handleViewDetail}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          deletingId={deleteInvoice.isPending ? selectedInvoiceId : null}
+        />
+      ),
     },
     {
-      title: 'Thành viên',
-      key: 'user',
-      render: (_: any, record: any) => {
-        const user = users.find(u => u.id === record.user_id);
-        return (
-          <Space>
-            <Avatar src={user?.avatar_url || ''} icon={<UserOutlined />} size="small" />
-            <Text>{user?.name || `User ID: ${record.user_id}`}</Text>
-          </Space>
-        );
-      }
-    },
-    {
-      title: 'Số tiền',
-      dataIndex: 'amount',
-      key: 'amount',
-      render: (amount: number) => <Text strong>{amount.toLocaleString()} VNĐ</Text>,
-    },
-    {
-      title: 'Trạng thái',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status: InvoiceStatusType) => {
-        const colors: Record<string, string> = {
-          [InvoiceStatus.PENDING]: 'orange',
-          [InvoiceStatus.PAID]: 'green',
-          [InvoiceStatus.CANCELLED]: 'red',
-          [InvoiceStatus.EXPIRED]: 'gray',
-        };
-        return <Tag color={colors[status]}>{status}</Tag>;
-      },
-    },
-    {
-      title: 'Ngày tạo',
-      dataIndex: 'created_at',
-      key: 'created_at',
-      render: (date: string) => dayjs(date).format('DD/MM/YYYY'),
-    },
-    {
-      title: 'Thao tác',
-      key: 'action',
-      render: (_: any, record: any) => (
-        <Button 
-          icon={<EyeOutlined />} 
-          size="small"
-          onClick={() => {
-            setSelectedInvoiceId(record.id);
-            setIsDetailModalOpen(true);
-          }}
-        >
-          Chi tiết
-        </Button>
+      key: '2',
+      label: (
+        <span className="flex items-center gap-2 px-2">
+          <BarChartOutlined />
+          Báo cáo tổng hợp
+        </span>
+      ),
+      children: (
+        <div className="p-4 bg-gray-50 border-t border-gray-100">
+          <BillingMatrixReport />
+        </div>
       ),
     },
   ];
@@ -142,23 +146,27 @@ const AdminBillingPage = () => {
     <div className="p-4 md:p-6 bg-[#f8fafc] min-h-full">
       <Card 
         className="shadow-sm border-gray-100 rounded-xl overflow-hidden"
+        styles={{
+          header: { padding: '20px 24px', borderBottom: '1px solid #f1f5f9' },
+          body: { padding: '0' } // Table handles its own padding, Report handles its own
+        }}
         title={
-          <Space>
-            <div className="bg-indigo-50 p-2 rounded-lg text-indigo-600">
+          <Space size={12}>
+            <div className="bg-indigo-50 p-2.5 rounded-xl text-indigo-600 shadow-sm">
               <AuditOutlined className="text-xl" />
             </div>
-            <div>
-              <Title level={4} className="mb-0!">Quản lý Hóa đơn</Title>
-              <Text type="secondary" className="text-xs font-normal">Công cụ dành cho quản trị viên</Text>
+            <div className="flex flex-col">
+              <Title level={4} className="mb-0! leading-tight">Quản lý Hóa đơn</Title>
+              <Text type="secondary" className="text-xs font-medium opacity-70">Công cụ dành cho quản trị viên</Text>
             </div>
           </Space>
         }
         extra={
-          <Space>
+          <Space size={12}>
             <Button 
               icon={<CalendarOutlined />} 
               onClick={() => setIsMonthlyModalOpen(true)}
-              className="h-10 px-6 font-semibold rounded-lg border-indigo-200 text-indigo-600 hover:text-indigo-700 hover:border-indigo-300"
+              className="h-10 px-6 font-semibold rounded-lg border-indigo-200 text-indigo-600 hover:text-indigo-700 hover:border-indigo-300 transition-all"
             >
               Tạo hóa đơn tháng
             </Button>
@@ -166,185 +174,58 @@ const AdminBillingPage = () => {
               type="primary" 
               icon={<PlusOutlined />} 
               onClick={() => setIsCreateModalOpen(true)}
-              className="bg-indigo-600 border-none h-10 px-6 font-semibold rounded-lg"
+              className="bg-indigo-600 border-none h-10 px-6 font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-all"
             >
               Tạo hóa đơn
             </Button>
           </Space>
         }
       >
-        <Table
-          dataSource={invoices}
-          columns={columns}
-          rowKey="id"
-          loading={isLoading}
-          pagination={{ pageSize: 15 }}
-          scroll={{ x: 'max-content' }}
+        <Tabs 
+          items={tabItems} 
+          className="admin-billing-tabs" 
+          tabBarStyle={{ padding: '0 24px', marginBottom: 0, backgroundColor: '#fff' }}
         />
       </Card>
 
-      {/* Create Modal */}
-      <Modal
-        title="Tạo hóa đơn mới"
-        open={isCreateModalOpen}
+      {/* Modals */}
+      <CreateInvoiceModal
+        isOpen={isCreateModalOpen}
         onCancel={() => setIsCreateModalOpen(false)}
-        onOk={() => form.submit()}
-        confirmLoading={createInvoice.isPending}
-        width={700}
-        okText="Tạo hóa đơn"
-        cancelText="Hủy"
-        centered
-        destroyOnClose
-      >
-        <Form 
-          form={form} 
-          layout="vertical" 
-          onFinish={handleCreate}
-          initialValues={{ items: [{ item_type: InvoiceItemType.VIOLATION, amount: 20000 }] }}
-          className="mt-4"
-        >
-          <Form.Item 
-            name="user_id" 
-            label="Chọn thành viên" 
-            rules={[{ required: true, message: 'Vui lòng chọn thành viên' }]}
-          >
-            <Select 
-              showSearch 
-              placeholder="Tìm kiếm theo tên hoặc email"
-              optionFilterProp="children"
-            >
-              {users.map(u => (
-                <Option key={u.id} value={u.id}>{u.name} ({u.email})</Option>
-              ))}
-            </Select>
-          </Form.Item>
+        onFinish={handleCreate}
+        loading={createInvoice.isPending}
+        users={users}
+        form={form}
+      />
 
-          <Form.Item name="description" label="Ghi chú tổng quát">
-            <Input placeholder="Ví dụ: Phí sinh hoạt và vi phạm tháng 3" />
-          </Form.Item>
-
-          <Divider>Danh sách hạng mục</Divider>
-          
-          <Form.List name="items">
-            {(fields, { add, remove }) => (
-              <>
-                {fields.map(({ key, name, ...restField }) => (
-                  <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline" className="bg-gray-50 p-3 rounded-lg border border-dashed border-gray-200">
-                    <Form.Item
-                      {...restField}
-                      name={[name, 'item_type']}
-                      rules={[{ required: true, message: 'Chọn loại' }]}
-                      style={{ width: 130 }}
-                    >
-                      <Select placeholder="Loại">
-                        <Option value={InvoiceItemType.VIOLATION}>Vi phạm</Option>
-                        <Option value={InvoiceItemType.FUND}>Tiền quỹ</Option>
-                        <Option value={InvoiceItemType.DINING}>Ăn uống</Option>
-                        <Option value={InvoiceItemType.OTHER}>Khác</Option>
-                      </Select>
-                    </Form.Item>
-                    
-                    <Form.Item
-                      {...restField}
-                      name={[name, 'note']}
-                      rules={[{ required: true, message: 'Nhập nội dung' }]}
-                    >
-                      <Input placeholder="Nội dung cụ thể (vd: Đi muộn 01/03)" style={{ width: 250 }} />
-                    </Form.Item>
-
-                    <Form.Item
-                      {...restField}
-                      name={[name, 'amount']}
-                      rules={[{ required: true, message: 'Nhập số tiền' }]}
-                    >
-                      <InputNumber 
-                        min={0} 
-                        formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                        parser={value => (value?.replace(/\$\s?|(,*)/g, '') || 0) as any}
-                        placeholder="Số tiền" 
-                        style={{ width: 150 }} 
-                      />
-                    </Form.Item>
-
-                    <Button 
-                      type="text" 
-                      danger 
-                      icon={<DeleteOutlined />} 
-                      onClick={() => remove(name)} 
-                      disabled={fields.length === 1}
-                    />
-                  </Space>
-                ))}
-                <Form.Item>
-                  <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                    Thêm hạng mục
-                  </Button>
-                </Form.Item>
-              </>
-            )}
-          </Form.List>
-        </Form>
-      </Modal>
-
-      {/* Detail Modal */}
-      <Modal
-        title={
-          <Space>
-            <InfoCircleOutlined className="text-indigo-600" />
-            <span>Chi tiết hóa đơn {detail?.reference_code}</span>
-          </Space>
-        }
-        open={isDetailModalOpen}
+      <UpdateInvoiceModal
+        isOpen={isUpdateModalOpen}
         onCancel={() => {
+          setIsUpdateModalOpen(false);
+          setSelectedInvoiceId(null);
+          setSelectedInvoice(null);
+        }}
+        onFinish={handleUpdate}
+        loading={updateInvoice.isPending}
+        invoice={selectedInvoice}
+        form={updateForm}
+      />
+
+      <InvoiceDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={() => {
           setIsDetailModalOpen(false);
           setSelectedInvoiceId(null);
         }}
-        footer={null}
-        width={screens.md ? 600 : '95%'}
-        centered
-      >
-        {detail ? (
-          <div className="py-2">
-            <Descriptions column={2} bordered size="small" className="mb-6">
-              <Descriptions.Item label="Thành viên" span={2}>
-                <Space>
-                  <Avatar src={users.find(u => u.id === detail.user_id)?.avatar_url || ''} size="small" />
-                  <Text strong>{users.find(u => u.id === detail.user_id)?.name}</Text>
-                </Space>
-              </Descriptions.Item>
-              <Descriptions.Item label="Ngày tạo">{dayjs(detail.created_at).format('DD/MM/YYYY HH:mm')}</Descriptions.Item>
-              <Descriptions.Item label="Trạng thái"><Tag color={detail.status === InvoiceStatus.PAID ? 'green' : 'orange'}>{detail.status}</Tag></Descriptions.Item>
-              <Descriptions.Item label="Mã tham chiếu" span={2}><Text strong>{detail.reference_code}</Text></Descriptions.Item>
-              <Descriptions.Item label="Mã giao dịch" span={2}>{detail.transaction_id || 'Chưa có'}</Descriptions.Item>
-              <Descriptions.Item label="Tổng tiền" span={2}><Title level={4} className="mb-0! text-indigo-600">{detail.amount.toLocaleString()} VNĐ</Title></Descriptions.Item>
-            </Descriptions>
+        detail={detail}
+        users={users}
+        isMobile={!screens.md}
+      />
 
-            <Title level={5} className="mb-3">Danh sách hạng mục</Title>
-            <Table
-              dataSource={detail.items}
-              pagination={false}
-              size="small"
-              rowKey="id"
-              columns={[
-                { title: 'Nội dung', dataIndex: 'note', key: 'note' },
-                { title: 'Loại', dataIndex: 'item_type', key: 'item_type' },
-                { title: 'Tiền', dataIndex: 'amount', key: 'amount', render: (a) => a.toLocaleString() },
-              ]}
-              className="border border-gray-100 rounded-lg overflow-hidden"
-            />
-          </div>
-        ) : (
-          <div className="py-12 flex justify-center"><Spin /></div>
-        )}
-      </Modal>
-
-      {/* Monthly Create Modal */}
       <CreateMonthlyInvoiceModal 
         open={isMonthlyModalOpen}
         onCancel={() => setIsMonthlyModalOpen(false)}
-        onSuccess={() => {
-          // Success message handled in modal
-        }}
+        onSuccess={() => {}}
       />
     </div>
   );

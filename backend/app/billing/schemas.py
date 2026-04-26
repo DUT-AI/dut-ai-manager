@@ -29,6 +29,11 @@ class InvoiceCreate(BaseModel):
     description: Optional[str] = None
 
 
+class InvoiceUpdate(BaseModel):
+    items: List[InvoiceItemCreate]
+    description: Optional[str] = None
+
+
 class InvoiceResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

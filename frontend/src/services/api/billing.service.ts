@@ -20,6 +20,13 @@ const billingService = {
     return response.data;
   },
 
+  getMatrixReport: async (params: { start_month: number, start_year: number, end_month: number, end_year: number, user_ids?: number[] }) => {
+    const response = await axiosInstance.get<ApiResponse<Invoice[]>>("/billing/report/matrix", {
+      params
+    });
+    return response.data;
+  },
+
   getInvoiceDetails: async (id: number) => {
     const response = await axiosInstance.get<ApiResponse<Invoice>>(`/billing/${id}`);
     return response.data;
@@ -30,8 +37,18 @@ const billingService = {
     return response.data;
   },
 
+  updateInvoice: async (invoiceId: number, data: Omit<InvoiceCreate, 'user_id'>) => {
+    const response = await axiosInstance.put<ApiResponse<Invoice>>(`/billing/${invoiceId}`, data);
+    return response.data;
+  },
+
   createMonthlyInvoices: async (data: MonthlyInvoiceCreate) => {
     const response = await axiosInstance.post<ApiResponse<MonthlyInvoicePreviewResponse | Invoice[]>>("/billing/monthly", data);
+    return response.data;
+  },
+
+  deleteInvoice: async (id: number) => {
+    const response = await axiosInstance.delete<ApiResponse<boolean>>(`/billing/${id}`);
     return response.data;
   }
 };

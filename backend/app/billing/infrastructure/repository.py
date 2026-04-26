@@ -3,6 +3,7 @@ Billing Repository — data access layer.
 """
 
 from typing import List, Optional, Any, cast
+from datetime import datetime
 
 from app.billing.domain.entity import Invoice
 from app.billing.infrastructure.model import InvoiceModel, InvoiceItemModel
@@ -51,6 +52,26 @@ class InvoiceRepository(BaseRepository[InvoiceModel, Invoice]):
         )
         return [m.to_entity() for m in self.session.exec(statement).unique().all()]
 
+    def get_matrix_report(
+        self,
+        start_date: datetime,
+        end_date: datetime,
+        user_ids: Optional[List[int]] = None
+    ) -> List[Invoice]:
+        """Get invoices for report filtering by date and users."""
+        statement = (
+            select(InvoiceModel)
+            .where(InvoiceModel.is_deleted == False)  # noqa: E712
+            .where(InvoiceModel.created_at >= start_date)
+            .where(InvoiceModel.created_at <= end_date)
+            .options(joinedload(cast(Any, InvoiceModel.items)))
+        )
+        if user_ids:
+            statement = statement.where(InvoiceModel.user_id.in_(user_ids))
+            
+        statement = statement.order_by(InvoiceModel.user_id, InvoiceModel.created_at)
+        return [m.to_entity() for m in self.session.exec(statement).unique().all()]
+
     def save_invoice(self, invoice: Invoice) -> Invoice:
         """
         Save invoice and its items.
@@ -61,12 +82,18 @@ class InvoiceRepository(BaseRepository[InvoiceModel, Invoice]):
             if not db_model:
                 raise ValueError(f"Invoice {invoice.id} not found")
             
-            # Simple fields update
+            # Update fields
             db_model.status = invoice.status
             db_model.transaction_id = invoice.transaction_id
+            db_model.description = invoice.description
+            db_model.amount = invoice.amount
+            
+            # Replace items
+            db_model.items = [InvoiceItemModel.from_entity(item) for item in invoice.items]
             
             self.session.add(db_model)
             self.session.flush()
+            self.session.refresh(db_model)
             return db_model.to_entity()
         else:
             # Create new

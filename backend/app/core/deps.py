@@ -73,7 +73,9 @@ def get_current_user(
             role_id=role.id,
         )
 
-        full_role = RoleRepository(session).get_role_with_permissions(cast(int, role.id))
+        full_role = RoleRepository(session).get_role_with_permissions(
+            cast(int, role.id)
+        )
         if full_role and full_role.role_permissions:
             perms = set()
             for rp in full_role.role_permissions:
@@ -105,8 +107,12 @@ def get_current_user(
     )
 
     # Set current user ID in context for audit fields
-    if user.id is not None:
-        set_current_user_id(user.id)
+    if not user.id:
+        raise BadRequestException(
+            "Invalid or expired token", status.HTTP_401_UNAUTHORIZED
+        )
+
+    set_current_user_id(int(user.id))
 
     return user
 

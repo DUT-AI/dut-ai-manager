@@ -45,6 +45,21 @@ export const useInvoiceDetail = (id: number, enabled = true, refetchInterval?: n
   });
 };
 
+export const useMatrixReport = (
+  params: { start_month: number; start_year: number; end_month: number; end_year: number; user_ids?: number[] },
+  enabled = false
+) => {
+  return useQuery({
+    queryKey: ['billing', 'matrix', params],
+    queryFn: async () => {
+      const response = await billingService.getMatrixReport(params);
+      return response.data ?? [];
+    },
+    enabled,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
 // Mutations
 export const useCreateInvoice = () => {
   const queryClient = useQueryClient();
@@ -57,11 +72,35 @@ export const useCreateInvoice = () => {
   });
 };
 
+export const useUpdateInvoice = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Omit<InvoiceCreate, 'user_id'> }) => 
+      billingService.updateInvoice(id, data),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: billingKeys.all });
+      queryClient.invalidateQueries({ queryKey: billingKeys.detail(id) });
+    },
+  });
+};
+
 export const useCreateMonthlyInvoices = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: (data: MonthlyInvoiceCreate) => billingService.createMonthlyInvoices(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: billingKeys.all });
+    },
+  });
+};
+
+export const useDeleteInvoice = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (id: number) => billingService.deleteInvoice(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: billingKeys.all });
     },

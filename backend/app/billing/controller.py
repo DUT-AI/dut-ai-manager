@@ -2,12 +2,15 @@ from typing import Annotated, List
 
 from app.billing.application.use_cases import (
     CreateInvoiceUseCase,
+    UpdateInvoiceUseCase,
     CreateMonthlyInvoicesUseCase,
+    DeleteInvoiceUseCase,
     GetInvoicesUseCase,
     HandleSePayWebhookUseCase,
 )
 from app.billing.schemas import (
     InvoiceCreate,
+    InvoiceUpdate,
     InvoiceResponse,
     MonthlyInvoiceCreate,
     MonthlyInvoicePreviewResponse,
@@ -43,6 +46,28 @@ async def create_invoice(
         description=data.description,
     )
     return ApiResponse.created(data=InvoiceResponse.from_domain(invoice))
+
+
+@router.put(
+    "/{invoice_id}",
+    response_model=ApiResponse[InvoiceResponse],
+)
+@inject
+async def update_invoice(
+    invoice_id: int,
+    data: InvoiceUpdate,
+    update_uc: FromDishka[UpdateInvoiceUseCase],
+    _: Annotated[CurrentUser, Depends(PermissionChecker(BillingPermission.UPDATE))],
+):
+    """
+    Admin edits an unpaid invoice.
+    """
+    invoice = update_uc.execute(
+        invoice_id=invoice_id,
+        items_data=[item.model_dump() for item in data.items],
+        description=data.description,
+    )
+    return ApiResponse.success(data=InvoiceResponse.from_domain(invoice))
 
 
 @router.post(
@@ -87,11 +112,7 @@ async def get_my_invoices(
     """
     Get invoices for the current logged-in user.
     """
-    if current_user.id is None:
-        raise BadRequestException(
-            "User not found", status_code=status.HTTP_401_UNAUTHORIZED
-        )
-
+    
     invoices = get_uc.get_user_invoices(current_user.id)
     data = [InvoiceResponse.from_domain(inv) for inv in invoices]
     return ApiResponse.success(data=data)
@@ -113,27 +134,46 @@ async def get_all_invoices(
     return ApiResponse.success(data=data)
 
 
+from fastapi import Query
+from datetime import datetime
+
+@router.get("/report/matrix", response_model=ApiResponse[List[InvoiceResponse]])
+@inject
+async def get_matrix_report(
+    get_uc: FromDishka[GetInvoicesUseCase],
+    _: Annotated[CurrentUser, Depends(PermissionChecker(BillingPermission.READ))],
+    start_month: int = Query(...),
+    start_year: int = Query(...),
+    end_month: int = Query(...),
+    end_year: int = Query(...),
+    user_ids: List[int] = Query(default=[]),
+):
+    """
+    Get invoices for the matrix report (Admin only).
+    """
+    invoices = get_uc.get_matrix_report(
+        start_month=start_month,
+        start_year=start_year,
+        end_month=end_month,
+        end_year=end_year,
+        user_ids=user_ids if user_ids else None
+    )
+    
+    data = [InvoiceResponse.from_domain(inv) for inv in invoices]
+    return ApiResponse.success(data=data)
+
+
 @router.get("/{invoice_id}", response_model=ApiResponse[InvoiceResponse])
 @inject
 async def get_invoice_details(
     invoice_id: int,
     get_uc: FromDishka[GetInvoicesUseCase],
-    current_user: CurrentUser,
+    _: Annotated[CurrentUser, Depends(PermissionChecker(BillingPermission.READ))],
 ):
     """
     Get detailed information for a specific invoice.
-    User can only see their own invoices unless they are Admin.
     """
     invoice = get_uc.get_invoice_details(invoice_id)
-    if not invoice:
-        raise BadRequestException(
-            "Invoice not found", status_code=status.HTTP_404_NOT_FOUND
-        )
-
-    if invoice.user_id != current_user.id and current_user.role_name != RoleType.ADMIN:
-        raise BadRequestException(
-            "Permission denied", status_code=status.HTTP_403_FORBIDDEN
-        )
 
     return ApiResponse.success(data=InvoiceResponse.from_domain(invoice))
 
@@ -159,3 +199,18 @@ async def sepay_webhook(
     if success:
         return {"success": True}
     return {"success": False, "message": "Transaction not matched or already processed"}
+
+
+@router.delete("/{invoice_id}", response_model=ApiResponse[bool])
+@inject
+async def delete_invoice(
+    invoice_id: int,
+    delete_uc: FromDishka[DeleteInvoiceUseCase],
+    _: Annotated[CurrentUser, Depends(PermissionChecker(BillingPermission.DELETE))],
+):
+    """
+    Admin deletes an invoice.
+    Only possible if invoice is NOT PAID.
+    """
+    success = delete_uc.execute(invoice_id)
+    return ApiResponse.success(data=success)

@@ -1,6 +1,8 @@
 import random
 import string
+import calendar
 from typing import List, Optional
+from datetime import datetime
 
 from app.billing.domain.entity import (
     Invoice,
@@ -11,7 +13,6 @@ from app.billing.domain.entity import (
 from app.billing.infrastructure.repository import InvoiceRepository
 from app.core.config import settings
 from app.shared.application.response import BadRequestException
-from app.user.domain.entity import UserEntity
 from app.violation.infrastructure.repository import ViolationRepository
 from app.team.infrastructure.repository import TeamRepository
 from fastapi import status
@@ -73,6 +74,57 @@ class CreateInvoiceUseCase:
         chars = string.ascii_uppercase + string.digits
         random_str = "".join(random.choice(chars) for _ in range(length))
         return f"DUT{random_str}"
+
+
+class UpdateInvoiceUseCase:
+    """UseCase to edit an unpaid invoice."""
+
+    def __init__(self, repo: InvoiceRepository):
+        self.repo = repo
+
+    def execute(
+        self, invoice_id: int, items_data: List[dict], description: Optional[str] = None
+    ) -> Invoice:
+        # 1. Get the invoice
+        invoice = self.repo.get_by_id(invoice_id)
+        if not invoice:
+            raise BadRequestException("Hóa đơn không tồn tại", status_code=status.HTTP_404_NOT_FOUND)
+
+        if invoice.status != InvoiceStatus.PENDING:
+            raise BadRequestException("Chỉ có thể sửa hóa đơn chưa thanh toán")
+
+        # 2. Calculate new amount and create items
+        total_amount = 0
+        new_items = []
+
+        for item in items_data:
+            item_type = InvoiceItemType(item["item_type"])
+            amount = item.get("amount", 0)
+
+            if item_type == InvoiceItemType.VIOLATION:
+                amount = 20000
+
+            total_amount += amount
+            new_items.append(
+                InvoiceItem(
+                    item_type=item_type,
+                    reference_id=item.get("reference_id"),
+                    amount=amount,
+                    note=item.get("note", ""),
+                )
+            )
+
+        if total_amount <= 0:
+            raise BadRequestException("Tổng số tiền hóa đơn phải lớn hơn 0")
+
+        # 3. Update fields
+        invoice.amount = total_amount
+        invoice.items = new_items
+        if description is not None:
+            invoice.description = description
+
+        # 4. Save
+        return self.repo.save_invoice(invoice)
 
 
 class HandleSePayWebhookUseCase:
@@ -137,12 +189,33 @@ class GetInvoicesUseCase:
     def get_user_invoices(self, user_id: int) -> List[Invoice]:
         return self.repo.get_by_user_id(user_id)
 
-    def get_invoice_details(self, invoice_id: int) -> Optional[Invoice]:
+    def get_invoice_details(self, invoice_id: int) -> Invoice:
         invoice = self.repo.get_by_id(invoice_id)
+        if not invoice:
+            raise BadRequestException(
+                "Invoice not found", status_code=status.HTTP_404_NOT_FOUND
+            )
         return invoice
 
     def get_all_invoices(self, skip: int = 0, limit: int = 100) -> List[Invoice]:
         return self.repo.get_all_active(skip=skip, limit=limit)
+
+    def get_matrix_report(
+        self,
+        start_month: int,
+        start_year: int,
+        end_month: int,
+        end_year: int,
+        user_ids: Optional[List[int]] = None
+    ) -> List[Invoice]:
+        try:
+            start_date = datetime(year=start_year, month=start_month, day=1)
+            last_day = calendar.monthrange(end_year, end_month)[1]
+            end_date = datetime(year=end_year, month=end_month, day=last_day, hour=23, minute=59, second=59)
+        except ValueError:
+            raise BadRequestException("Invalid date range", status_code=status.HTTP_400_BAD_REQUEST)
+            
+        return self.repo.get_matrix_report(start_date, end_date, user_ids)
 
 
 class QRGenerator:
@@ -166,10 +239,10 @@ class CreateMonthlyInvoicesUseCase:
     """UseCase to create invoices in bulk for a month."""
 
     def __init__(
-        self, 
+        self,
         invoice_repo: InvoiceRepository,
         violation_repo: ViolationRepository,
-        team_repo: TeamRepository
+        team_repo: TeamRepository,
     ):
         self.invoice_repo = invoice_repo
         self.violation_repo = violation_repo
@@ -184,9 +257,9 @@ class CreateMonthlyInvoicesUseCase:
         violation_price: int = 20000,
         fund_amount: int = 50000,
         extra_items: List[dict] = [],
-        execute: bool = False
+        execute: bool = False,
     ) -> dict:
-        target_users = {} # user_id -> user_name
+        target_users = {}  # user_id -> user_name
         for uid in user_ids:
             target_users[uid] = f"User #{uid}"
 
@@ -210,7 +283,7 @@ class CreateMonthlyInvoicesUseCase:
             )
             violation_count = len(violations)
             violation_total = violation_count * violation_price
-            
+
             user_name = uname
 
             total_amount = violation_total + fund_amount
@@ -221,16 +294,18 @@ class CreateMonthlyInvoicesUseCase:
                 continue
 
             description = f"Hóa đơn tháng {month:02d}/{year}"
-            
-            preview_items.append({
-                "user_id": uid,
-                "user_name": user_name,
-                "violation_count": violation_count,
-                "violation_amount": violation_total,
-                "fund_amount": fund_amount,
-                "total_amount": total_amount,
-                "description": description
-            })
+
+            preview_items.append(
+                {
+                    "user_id": uid,
+                    "user_name": user_name,
+                    "violation_count": violation_count,
+                    "violation_amount": violation_total,
+                    "fund_amount": fund_amount,
+                    "total_amount": total_amount,
+                    "description": description,
+                }
+            )
 
             if execute:
                 # Build items
@@ -240,7 +315,7 @@ class CreateMonthlyInvoicesUseCase:
                         InvoiceItem(
                             item_type=InvoiceItemType.VIOLATION,
                             amount=violation_total,
-                            note=f"Vi phạm tháng {month:02d}/{year} ({violation_count} lỗi)"
+                            note=f"Vi phạm tháng {month:02d}/{year} ({violation_count} lỗi)",
                         )
                     )
                 if fund_amount > 0:
@@ -248,7 +323,7 @@ class CreateMonthlyInvoicesUseCase:
                         InvoiceItem(
                             item_type=InvoiceItemType.OTHER,
                             amount=fund_amount,
-                            note=f"Tiền quỹ tháng {month:02d}/{year}"
+                            note=f"Tiền quỹ tháng {month:02d}/{year}",
                         )
                     )
                 for ei in extra_items:
@@ -256,22 +331,22 @@ class CreateMonthlyInvoicesUseCase:
                         InvoiceItem(
                             item_type=InvoiceItemType(ei["item_type"]),
                             amount=ei["amount"],
-                            note=ei.get("note", "")
+                            note=ei.get("note", ""),
                         )
                     )
 
                 # Generate reference
                 ref = self._generate_reference_code()
-                
+
                 invoice = Invoice(
                     user_id=uid,
                     amount=total_amount,
                     status=InvoiceStatus.PENDING,
                     description=description,
                     reference_code=ref,
-                    items=invoice_items
+                    items=invoice_items,
                 )
-                
+
                 saved = self.invoice_repo.save_invoice(invoice)
                 created_invoices.append(saved)
 
@@ -279,11 +354,34 @@ class CreateMonthlyInvoicesUseCase:
             "month": month,
             "year": year,
             "items": preview_items,
-            "invoices": created_invoices if execute else []
+            "invoices": created_invoices if execute else [],
         }
 
     def _generate_reference_code(self, length: int = 6) -> str:
         import random
         import string
+
         chars = string.ascii_uppercase + string.digits
         return f"DUT{ ''.join(random.choice(chars) for _ in range(length)) }"
+
+
+class DeleteInvoiceUseCase:
+    """UseCase for Admin to delete an invoice."""
+
+    def __init__(self, repo: InvoiceRepository):
+        self.repo = repo
+
+    def execute(self, invoice_id: int) -> bool:
+        # 1. Get invoice
+        invoice = self.repo.get_by_id(invoice_id)
+        if not invoice:
+            raise BadRequestException(
+                "Không tìm thấy hóa đơn", status_code=status.HTTP_404_NOT_FOUND
+            )
+
+        # 2. Safety check: Do not allow deleting PAID invoices
+        if invoice.status == InvoiceStatus.PAID:
+            raise BadRequestException("Không thể xóa hóa đơn đã được thanh toán")
+
+        # 3. Delete (soft delete by default in repository)
+        return self.repo.delete_by_id(invoice_id)

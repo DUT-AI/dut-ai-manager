@@ -1,0 +1,82 @@
+import { Modal, Space, Descriptions, Avatar, Typography, Tag, Table, Spin } from 'antd';
+import { InfoCircleOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
+import { InvoiceStatus } from '@/types/billing.types';
+import type { Invoice } from '@/types/billing.types';
+import type { UserResponse } from '@/types/user.types';
+
+const { Title, Text } = Typography;
+
+interface InvoiceDetailModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  detail: Invoice | null | undefined;
+  users: UserResponse[];
+  isMobile?: boolean;
+}
+
+const InvoiceDetailModal = ({
+  isOpen,
+  onClose,
+  detail,
+  users,
+  isMobile
+}: InvoiceDetailModalProps) => {
+  const user = users.find(u => u.id === detail?.user_id);
+
+  return (
+    <Modal
+      title={
+        <Space>
+          <InfoCircleOutlined className="text-indigo-600" />
+          <span>Chi tiết hóa đơn {detail?.reference_code}</span>
+        </Space>
+      }
+      open={isOpen}
+      onCancel={onClose}
+      footer={null}
+      width={isMobile ? '95%' : 600}
+      centered
+    >
+      {detail ? (
+        <div className="py-2">
+          <Descriptions column={2} bordered size="small" className="mb-6">
+            <Descriptions.Item label="Thành viên" span={2}>
+              <Space>
+                <Avatar src={user?.avatar_url || ''} size="small" />
+                <Text strong>{user?.name || `User ID: ${detail.user_id}`}</Text>
+              </Space>
+            </Descriptions.Item>
+            <Descriptions.Item label="Ngày tạo">{dayjs(detail.created_at).format('DD/MM/YYYY HH:mm')}</Descriptions.Item>
+            <Descriptions.Item label="Trạng thái">
+              <Tag color={detail.status === InvoiceStatus.PAID ? 'green' : 'orange'}>{detail.status}</Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="Mã tham chiếu" span={2}><Text strong>{detail.reference_code}</Text></Descriptions.Item>
+            <Descriptions.Item label="Mã giao dịch" span={2}>{detail.transaction_id || 'Chưa có'}</Descriptions.Item>
+            <Descriptions.Item label="Tổng tiền" span={2}>
+              <Title level={4} className="mb-0! text-indigo-600">{detail.amount.toLocaleString()} VNĐ</Title>
+            </Descriptions.Item>
+          </Descriptions>
+
+          <Title level={5} className="mb-3">Danh sách hạng mục</Title>
+          <Table
+            dataSource={detail.items}
+            pagination={false}
+            size="small"
+            rowKey="id"
+            columns={[
+              { title: 'Nội dung', dataIndex: 'note', key: 'note' },
+              { title: 'Loại', dataIndex: 'item_type', key: 'item_type' },
+              { title: 'Tiền', dataIndex: 'amount', key: 'amount', render: (a) => a.toLocaleString() },
+            ]}
+            className="border border-gray-100 rounded-lg overflow-hidden"
+          />
+        </div>
+      ) : (
+        <div className="py-12 flex justify-center"><Spin /></div>
+      )}
+    </Modal>
+  );
+};
+
+export default InvoiceDetailModal;

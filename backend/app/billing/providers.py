@@ -1,6 +1,8 @@
 from app.billing.application.use_cases import (
     CreateInvoiceUseCase,
+    UpdateInvoiceUseCase,
     CreateMonthlyInvoicesUseCase,
+    DeleteInvoiceUseCase,
     GetInvoicesUseCase,
     HandleSePayWebhookUseCase,
 )
@@ -23,6 +25,10 @@ class BillingModuleProvider(Provider):
         return CreateInvoiceUseCase(repo)
 
     @provide
+    def update_invoice_uc(self, repo: InvoiceRepository) -> UpdateInvoiceUseCase:
+        return UpdateInvoiceUseCase(repo)
+
+    @provide
     def get_invoices_uc(self, repo: InvoiceRepository) -> GetInvoicesUseCase:
         return GetInvoicesUseCase(repo)
 
@@ -38,3 +44,7 @@ class BillingModuleProvider(Provider):
         team_repo: TeamRepository
     ) -> CreateMonthlyInvoicesUseCase:
         return CreateMonthlyInvoicesUseCase(repo, violation_repo, team_repo)
+
+    @provide
+    def delete_invoice_uc(self, repo: InvoiceRepository) -> DeleteInvoiceUseCase:
+        return DeleteInvoiceUseCase(repo)
