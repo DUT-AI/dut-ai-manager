@@ -42,7 +42,7 @@ async def get_violations(
     limit: int = 100,
     deleted: bool = False,
 ):
-    if user_id:
+    if user_id or month or year:
         result = uc.get_by_month(user_id=user_id, month=month, year=year)
     else:
         result = uc.get_all(skip=skip, limit=limit, deleted=deleted)

@@ -1,122 +1,35 @@
 import { useState } from 'react';
-import {
-    Table,
-    Button,
-    Card,
-    Space,
-    Modal,
-    Form,
-    Input,
-    message,
-    Popconfirm,
-    Typography,
-    Select,
-    DatePicker,
-    Drawer,
-    Descriptions,
-    Divider,
-    Avatar,
-    Grid,
-    List
-} from 'antd';
-import {
-    PlusOutlined,
-    EditOutlined,
-    DeleteOutlined,
-    WarningOutlined,
-    CalendarOutlined,
-    UserOutlined,
-    InfoCircleOutlined
-} from '@ant-design/icons';
+import { Button, Card, Space, Form, message, Typography, Grid } from 'antd';
+import { PlusOutlined, WarningOutlined } from '@ant-design/icons';
 import { useViolations, useCreateViolation, useUpdateViolation, useDeleteViolation, useUsers } from '@/hooks';
 import { useAuth } from '@/context/AuthContext';
 import { ViolationPermission } from '@/types/rbac.types';
 import type { ViolationResponse, ViolationCreate } from '@/types/activity.types';
 import dayjs from 'dayjs';
 
+// Sub-components
+import ViolationFilter from './violations/components/ViolationFilter';
+import ViolationTable from './violations/components/ViolationTable';
+import ViolationMobileList from './violations/components/ViolationMobileList';
+import ViolationFormModal from './violations/components/ViolationFormModal';
+import ViolationDetailDrawer from './violations/components/ViolationDetailDrawer';
+
 const { Title, Text } = Typography;
-const { Option } = Select;
-const { TextArea } = Input;
-
-interface MobileListViewProps {
-    violations: ViolationResponse[];
-    isLoading: boolean;
-    canUpdate: boolean;
-    canDelete: boolean;
-    onViewDetail: (item: ViolationResponse) => void;
-    onEdit: (item: ViolationResponse) => void;
-    onDelete: (id: number) => void;
-}
-
-const MobileListView = ({ violations, isLoading, canUpdate, canDelete, onViewDetail, onEdit, onDelete }: MobileListViewProps) => (
-    <div className="mt-4 px-3">
-        <List
-            dataSource={violations}
-            loading={isLoading}
-            split={false}
-            renderItem={(record) => (
-                <List.Item className="px-2 !mb-4 !border-0">
-                    <Card
-                        className="w-full shadow-sm border-gray-100 overflow-hidden"
-                        styles={{ body: { padding: '16px' } }}
-                        onClick={() => onViewDetail(record)}
-                    >
-                        <div className="flex items-center justify-between mb-4">
-                            <Space className="text-gray-400 text-xs">
-                                <CalendarOutlined />
-                                <span>{dayjs(record.date).format('DD/MM/YYYY HH:mm')}</span>
-                            </Space>
-                        </div>
-
-                        <div className="flex items-center gap-3 mb-4">
-                            <Avatar
-                                src={record.owner?.avatar || record.user_avatar}
-                                icon={<UserOutlined />}
-                                className="bg-linear-to-br from-red-500 to-orange-500 shadow-sm shrink-0"
-                                size="large"
-                            />
-                            <div className="flex flex-col min-w-0 flex-1">
-                                <Text strong className="truncate text-base">
-                                    {record.owner?.name || record.user_name || 'Unknown'}
-                                </Text>
-                                <Text type="danger" className="text-xs italic truncate">
-                                    {record.reason}
-                                </Text>
-                            </div>
-                        </div>
-
-                        <div role="presentation" className="flex justify-end items-center pt-3 border-t border-gray-50 bg-gray-50 -mx-4 -mb-4 px-4 py-3 gap-2" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
-                            <Button
-                                icon={<EditOutlined />}
-                                size="small"
-                                onClick={() => onEdit(record)}
-                                disabled={!canUpdate}
-                            >
-                                Sửa
-                            </Button>
-                            <Popconfirm
-                                title="Xóa vi phạm này?"
-                                onConfirm={() => onDelete(record.id)}
-                                disabled={!canDelete}
-                                okText="Xóa"
-                                cancelText="Hủy"
-                            >
-                                <Button icon={<DeleteOutlined />} size="small" danger disabled={!canDelete}>Xóa</Button>
-                            </Popconfirm>
-                        </div>
-                    </Card>
-                </List.Item>
-            )}
-        />
-    </div>
-);
 
 const ViolationManagementPage = () => {
     const { hasPermission } = useAuth();
     const screens = Grid.useBreakpoint();
 
+    // Filters
+    const [filterUserId, setFilterUserId] = useState<number | undefined>(undefined);
+    const [filterDate, setFilterDate] = useState<dayjs.Dayjs | null>(null);
+
     // TanStack Query hooks
-    const { data: violations = [], isLoading } = useViolations();
+    const { data: violations = [], isLoading } = useViolations({
+        userId: filterUserId,
+        month: filterDate ? filterDate.month() + 1 : undefined,
+        year: filterDate ? filterDate.year() : undefined,
+    });
     const { data: users = [] } = useUsers();
     const createViolation = useCreateViolation();
     const updateViolation = useUpdateViolation();
@@ -138,118 +51,61 @@ const ViolationManagementPage = () => {
     const handleCreateOrUpdate = async (values: any) => {
         try {
             if (editingItem) {
-                // For edit, we stick to original violation update if backend supports it.
-                // Note: ViolationUpdate schema does NOT have user_id(s). So we can't update users here anyway.
-                // We just send date and reason.
                 const updateData = {
                     reason: values.reason,
                     date: values.date.toISOString(),
                 };
                 await updateViolation.mutateAsync({ id: editingItem.id, data: updateData });
-                message.success('Violation updated successfully');
+                message.success('Cập nhật vi phạm thành công');
             } else {
-                // Create mode uses user_ids
                 const formattedValues: ViolationCreate = {
-                    user_ids: values.user_ids, // Expect array
+                    user_ids: values.user_ids,
                     reason: values.reason,
                     date: values.date.toISOString(),
                 };
                 await createViolation.mutateAsync(formattedValues);
-                message.success('Violation recorded successfully');
+                message.success('Ghi nhận vi phạm thành công');
             }
             setIsModalOpen(false);
             form.resetFields();
         } catch (error: any) {
-            message.error(error?.response?.data?.message || 'Operation failed');
+            message.error(error?.response?.data?.message || 'Thao tác thất bại');
         }
     };
 
     const handleDelete = async (id: number) => {
         try {
             await deleteViolation.mutateAsync(id);
-            message.success('Violation deleted successfully');
+            message.success('Xóa vi phạm thành công');
             setIsDetailOpen(false);
         } catch (error: any) {
-            message.error(error?.response?.data?.message || 'Delete failed');
+            message.error(error?.response?.data?.message || 'Xóa thất bại');
         }
     };
 
+    const handleOpenEdit = (item: ViolationResponse) => {
+        setEditingItem(item);
+        form.setFieldsValue({
+            ...item,
+            user_name: item.owner?.name || item.user_name || 'Unknown',
+            date: dayjs(item.date)
+        });
+        setIsModalOpen(true);
+        setIsDetailOpen(false);
+    };
 
-
-    const columns = [
-        {
-            title: 'Thành viên',
-            key: 'user',
-            render: (_: any, record: ViolationResponse) => (
-                <Space>
-                    <Avatar
-                        src={record.owner?.avatar || record.user_avatar}
-                        icon={<UserOutlined />}
-                        className="bg-linear-to-br from-red-500 to-orange-500 shadow-sm"
-                        size="small"
-                    />
-                    <div>
-                        <Title level={5} className="!mb-0 text-sm">{record.owner?.name || record.user_name || 'Unknown'}</Title>
-                    </div>
-                </Space>
-            ),
-        },
-        {
-            title: 'Lý do vi phạm',
-            dataIndex: 'reason',
-            key: 'reason',
-            render: (reason: string) => (
-                <Text className="max-w-[300px] block truncate" title={reason}>{reason}</Text>
-            ),
-        },
-        {
-            title: 'Thời gian',
-            dataIndex: 'date',
-            key: 'date',
-            render: (date: string) => (
-                <Space>
-                    <CalendarOutlined className="text-gray-400" />
-                    <Text>{dayjs(date).format('DD/MM/YYYY HH:mm')}</Text>
-                </Space>
-            ),
-        },
-        {
-            title: 'Thao tác',
-            key: 'actions',
-            width: 120,
-            render: (_: any, record: ViolationResponse) => (
-                <Space onClick={(e) => e.stopPropagation()}>
-                    <Button
-                        icon={<EditOutlined />}
-                        size="small"
-                        onClick={() => {
-                            setEditingItem(record);
-                            form.setFieldsValue({
-                                ...record,
-                                user_name: record.owner?.name || record.user_name || 'Unknown', // Set for display
-                                date: dayjs(record.date)
-                            });
-                            setIsModalOpen(true);
-                        }}
-                        disabled={!canUpdate}
-                    />
-                    <Popconfirm
-                        title="Xóa vi phạm này?"
-                        onConfirm={() => handleDelete(record.id)}
-                        disabled={!canDelete}
-                        okText="Xóa"
-                        cancelText="Hủy"
-                    >
-                        <Button icon={<DeleteOutlined />} size="small" danger disabled={!canDelete} />
-                    </Popconfirm>
-                </Space>
-            ),
-        },
-    ];
+    const handleOpenDetail = (item: ViolationResponse) => {
+        setDetailItem(item);
+        setIsDetailOpen(true);
+    };
 
     return (
         <div className="p-4 md:p-6">
-            <Card className={!screens.md ? "bg-transparent shadow-none border-none" : "shadow-sm border-gray-100 rounded-xl overflow-hidden"} styles={{ body: { padding: !screens.md ? 0 : undefined } }}>
+            <Card 
+                className={!screens.md ? "bg-transparent shadow-none border-none" : "shadow-sm border-gray-100 rounded-xl overflow-hidden"} 
+                styles={{ body: { padding: !screens.md ? 0 : undefined } }}
+            >
+                {/* Header */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 px-3 md:px-0">
                     <Space size="middle">
                         <div className="hidden md:flex w-12 h-12 rounded-xl bg-red-50 items-center justify-center text-red-500">
@@ -277,186 +133,61 @@ const ViolationManagementPage = () => {
                     )}
                 </div>
 
+                {/* Filter Bar */}
+                <ViolationFilter
+                    filterUserId={filterUserId}
+                    setFilterUserId={setFilterUserId}
+                    filterDate={filterDate}
+                    setFilterDate={setFilterDate}
+                    users={users}
+                />
+
+                {/* Content Area */}
                 {!screens.md ? (
-                    <MobileListView
+                    <ViolationMobileList
                         violations={violations}
                         isLoading={isLoading}
                         canUpdate={canUpdate}
                         canDelete={canDelete}
-                        onViewDetail={(item) => { setDetailItem(item); setIsDetailOpen(true); }}
-                        onEdit={(item) => {
-                            setEditingItem(item);
-                            form.setFieldsValue({
-                                ...item,
-                                user_name: item.owner?.name || item.user_name || 'Unknown',
-                                date: dayjs(item.date)
-                            });
-                            setIsModalOpen(true);
-                        }}
+                        onViewDetail={handleOpenDetail}
+                        onEdit={handleOpenEdit}
                         onDelete={handleDelete}
                     />
                 ) : (
-                    <Table
-                        columns={columns}
-                        dataSource={violations}
-                        rowKey="id"
-                        loading={isLoading}
-                        className="border border-gray-100 rounded-lg custom-table cursor-pointer"
-                        pagination={{ pageSize: 10 }}
-                        onRow={(record) => ({
-                            onClick: () => {
-                                setDetailItem(record);
-                                setIsDetailOpen(true);
-                            },
-                            style: { cursor: 'pointer' }
-                        })}
+                    <ViolationTable
+                        violations={violations}
+                        isLoading={isLoading}
+                        canUpdate={canUpdate}
+                        canDelete={canDelete}
+                        onEdit={handleOpenEdit}
+                        onDelete={handleDelete}
+                        onRowClick={handleOpenDetail}
                     />
                 )}
             </Card>
 
-            {/* Create/Edit Modal */}
-            <Modal
-                title={editingItem ? 'Chỉnh sửa Vi phạm' : 'Ghi nhận Vi phạm mới'}
-                open={isModalOpen}
+            {/* Modals & Drawers */}
+            <ViolationFormModal
+                isOpen={isModalOpen}
                 onCancel={() => setIsModalOpen(false)}
-                onOk={() => form.submit()}
-                centered
-                confirmLoading={createViolation.isPending || updateViolation.isPending}
-                destroyOnHidden
-                okText={editingItem ? 'Lưu thay đổi' : 'Ghi nhận'}
-                cancelText="Hủy"
-                width={screens.md ? 500 : '100%'}
-            >
-                <Form form={form} layout="vertical" onFinish={handleCreateOrUpdate} className="mt-6">
-                    {editingItem ? (
-                        <Form.Item name="user_name" label="Thành viên vi phạm">
-                            <Input disabled />
-                        </Form.Item>
-                    ) : (
-                        <Form.Item name="user_ids" label="Thành viên vi phạm" rules={[{ required: true, message: 'Vui lòng chọn thành viên!' }]}>
-                            <Select
-                                mode="multiple"
-                                showSearch
-                                placeholder="Tìm kiếm thành viên"
-                                optionFilterProp="children"
-                                filterOption={(input, option) =>
-                                    String(option?.children ?? '').toLowerCase().includes(input.toLowerCase())
-                                }
-                            >
-                                {users.map(u => (
-                                    <Option key={u.id} value={u.id}>{u.name} ({u.email})</Option>
-                                ))}
-                            </Select>
-                        </Form.Item>
-                    )}
+                onFinish={handleCreateOrUpdate}
+                editingItem={editingItem}
+                loading={createViolation.isPending || updateViolation.isPending}
+                users={users}
+                form={form}
+                isMobile={!screens.md}
+            />
 
-                    <Form.Item name="date" label="Thời gian vi phạm" rules={[{ required: true, message: 'Vui lòng chọn thời gian!' }]}>
-                        <DatePicker showTime format="DD/MM/YYYY HH:mm" className="w-full" />
-                    </Form.Item>
-
-                    <Form.Item name="reason" label="Lý do vi phạm" rules={[{ required: true, message: 'Vui lòng nhập lý do!' }]}>
-                        <TextArea rows={4} placeholder="Mô tả chi tiết vi phạm..." />
-                    </Form.Item>
-                </Form>
-            </Modal>
-
-            {/* Detail Drawer */}
-            <Drawer
-                title={
-                    <Space>
-                        <InfoCircleOutlined className="text-red-500" />
-                        <span>Chi tiết Vi phạm</span>
-                    </Space>
-                }
-                placement="right"
+            <ViolationDetailDrawer
+                isOpen={isDetailOpen}
                 onClose={() => setIsDetailOpen(false)}
-                open={isDetailOpen}
-                width={screens.md ? 500 : '100%'}
-            >
-                {detailItem && (
-                    <div className="flex flex-col h-full">
-                        <div className="flex-1">
-                            <Descriptions column={1} bordered size="small" className="mb-6">
-                                <Descriptions.Item label="Thành viên">
-                                    <Space>
-                                        <Avatar
-                                            src={detailItem.owner?.avatar || detailItem.user_avatar}
-                                            icon={<UserOutlined />}
-                                            size="small"
-                                        />
-                                        <Text strong>{detailItem.owner?.name || detailItem.user_name || 'Unknown'}</Text>
-                                    </Space>
-                                </Descriptions.Item>
-                                <Descriptions.Item label="Thời gian">
-                                    {dayjs(detailItem.date).format('DD/MM/YYYY HH:mm')}
-                                </Descriptions.Item>
-                            </Descriptions>
-
-                            <Divider style={{ textAlign: 'left' }} className="!mb-4">Lý do / Nội dung</Divider>
-                            <div className="bg-red-50 p-4 rounded-lg border border-red-100 text-gray-700 whitespace-pre-wrap">
-                                {detailItem.reason}
-                            </div>
-
-                            <Divider style={{ textAlign: 'left' }} className="!mb-4">Thông tin hệ thống</Divider>
-                            <Descriptions column={1} size="small" className="text-gray-500">
-                                <Descriptions.Item label="Ngày ghi nhận">
-                                    {dayjs(detailItem.created_at).format('DD/MM/YYYY HH:mm:ss')}
-                                </Descriptions.Item>
-                                {detailItem.updated_at !== detailItem.created_at && (
-                                    <Descriptions.Item label="Cập nhật lần cuối">
-                                        {dayjs(detailItem.updated_at).format('DD/MM/YYYY HH:mm:ss')}
-                                    </Descriptions.Item>
-                                )}
-                                {detailItem.creator && (
-                                    <Descriptions.Item label="Created by">
-                                        <Space>
-                                            <Avatar src={detailItem.creator.avatar} size="small" />
-                                            <Text>{detailItem.creator.name}</Text>
-                                        </Space>
-                                    </Descriptions.Item>
-                                )}
-                                {detailItem.updater && (
-                                    <Descriptions.Item label="Updated by">
-                                        <Space>
-                                            <Avatar src={detailItem.updater.avatar} size="small" />
-                                            <Text>{detailItem.updater.name}</Text>
-                                        </Space>
-                                    </Descriptions.Item>
-                                )}
-                            </Descriptions>
-                        </div>
-
-                        <div className="pt-4 border-t border-gray-100 flex justify-end gap-2">
-                            {canUpdate && (
-                                <Button
-                                    icon={<EditOutlined />}
-                                    onClick={() => {
-                                        setEditingItem(detailItem);
-                                        form.setFieldsValue({
-                                            ...detailItem,
-                                            date: dayjs(detailItem.date)
-                                        });
-                                        setIsModalOpen(true);
-                                        setIsDetailOpen(false);
-                                    }}
-                                >
-                                    Chỉnh sửa
-                                </Button>
-                            )}
-                            {canDelete && (
-                                <Popconfirm
-                                    title="Xóa vi phạm này?"
-                                    onConfirm={() => handleDelete(detailItem.id)}
-                                    okText="Xóa"
-                                    cancelText="Hủy"
-                                >
-                                    <Button danger icon={<DeleteOutlined />}>Xóa</Button>
-                                </Popconfirm>
-                            )}
-                        </div>
-                    </div>
-                )}
-            </Drawer>
+                detailItem={detailItem}
+                canUpdate={canUpdate}
+                canDelete={canDelete}
+                onEdit={handleOpenEdit}
+                onDelete={handleDelete}
+                isMobile={!screens.md}
+            />
         </div>
     );
 };
