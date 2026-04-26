@@ -11,23 +11,70 @@ const axiosInstance = axios.create({
   withCredentials: true,
 });
 
+let isRefreshing = false;
+let failedQueue: any[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 // Response interceptor
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
-      // Clear session information
-      // Session is effectively cleared by the cookie being invalid or expiried
+    const originalRequest = error.config;
 
-      
-      // Only redirect if not already on login page
-      if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
-        message.error('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.');
-        // Use setTimeout to allow the message to be seen briefly/process before redirect
-        // although window.location will reload the page immediately usually.
-        // For a smoother experience in a real app we might use react-router's navigate,
-        // but axiosInstance is outside React context.
-        window.location.href = '/login';
+    // Handle 401 Unauthorized errors
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      // If we're on the login page, just reject the error
+      if (window.location.pathname === '/login' || window.location.pathname === '/') {
+        return Promise.reject(error);
+      }
+
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then(() => {
+            return axiosInstance(originalRequest);
+          })
+          .catch((err) => {
+            return Promise.reject(err);
+          });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        // Attempt to refresh the token
+        const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {}, { withCredentials: true });
+
+        if (response.data.is_success) {
+          processQueue(null);
+          return axiosInstance(originalRequest);
+        }
+      } catch (refreshError: any) {
+        processQueue(refreshError, null);
+        
+        // If refresh fails, the refresh_token is likely expired too
+        if (window.location.pathname !== '/login') {
+          message.error('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.');
+          // Redirect to login
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 3000);
+        }
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
 

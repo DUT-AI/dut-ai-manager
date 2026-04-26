@@ -18,7 +18,7 @@ from app.core.config import settings
 from app.core.deps import CurrentUser
 from app.shared.application.response import ApiResponse
 from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Response, Cookie
 from loguru import logger
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -63,12 +63,22 @@ async def login(
 @router.post("/refresh", response_model=ApiResponse)
 @inject
 async def refresh_token(
-    request: RefreshTokenRequest,
     response: Response,
     uc: FromDishka[RefreshTokenUseCase],
+    request_data: RefreshTokenRequest | None = None,
+    refresh_token_cookie: str | None = Cookie(None, alias="refresh_token"),
 ):
     """Refresh tokens with a valid refresh token."""
-    access_token, new_refresh_token = uc.execute(request.refresh_token)
+    token = None
+    if request_data and request_data.refresh_token:
+        token = request_data.refresh_token
+    else:
+        token = refresh_token_cookie
+
+    if not token:
+        return ApiResponse.error(message="Refresh token is missing")
+
+    access_token, new_refresh_token = uc.execute(token)
 
     # Set cookies
     response.set_cookie(
