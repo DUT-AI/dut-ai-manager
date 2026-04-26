@@ -3,7 +3,6 @@ import { Card, Button, Typography, Space, Form, message, Grid, Tabs } from 'antd
 import { PlusOutlined, AuditOutlined, CalendarOutlined, TableOutlined, BarChartOutlined } from '@ant-design/icons';
 import { useAllInvoices, useCreateInvoice, useUpdateInvoice, useInvoiceDetail, useDeleteInvoice } from '@/hooks/useBilling';
 import { useUsers } from '@/hooks';
-import { InvoiceItemType } from '@/types/billing.types';
 import CreateMonthlyInvoiceModal from '@/components/billing/CreateMonthlyInvoiceModal';
 import type { InvoiceCreate, Invoice } from '@/types/billing.types';
 

@@ -30,11 +30,14 @@ class PermissionViolationHandler:
         )
 
         if count >= 2:
-            category_text = (
-                "xin vắng sinh hoạt"
-                if event.category == RequestCategory.ABSENCE
-                else "xin tạm hoãn bài tập"
-            )
+            match event.category:
+                case RequestCategory.ABSENCE:
+                    category_text = "xin vắng sinh hoạt"
+                case RequestCategory.POSTPONE:
+                    category_text = "xin tạm hoãn bài tập"
+                case _:
+                    category_text = "yêu cầu"
+
             reason = (
                 f"{category_text.capitalize()} lần {count} trong tháng {month}/{year}"
             )
