@@ -109,7 +109,7 @@ const HomePage = () => {
                                 >
                                     <List
                                         dataSource={data?.unsubmitted_homeworks}
-                                        locale={{ emptyText: <Empty description="Không có bài tập nào cần làm" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
+                                        locale={{ emptyText: <Empty description="Không có bài tập nào" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
                                         renderItem={(item) => (
                                             <List.Item>
                                                 <List.Item.Meta
@@ -118,7 +118,17 @@ const HomePage = () => {
                                                     description={
                                                         <div className="flex items-center gap-2 text-xs">
                                                             <span className="text-gray-500">Hạn nộp: {dayjs(item.deadline).format("HH:mm DD/MM/YYYY")}</span>
-                                                            {dayjs().isAfter(dayjs(item.deadline)) && <Tag color="red" className="m-0">Quá hạn</Tag>}
+                                                            {(() => {
+                                                                const status = item.submissions?.[0]?.status;
+                                                                if (!status || status === 'chưa nộp') {
+                                                                    if (dayjs().isAfter(dayjs(item.deadline))) return <Tag color="red" className="m-0 border-0">Quá hạn</Tag>;
+                                                                    return <Tag color="orange" className="m-0 border-0">Chưa nộp</Tag>;
+                                                                }
+                                                                if (status === 'đã nộp') return <Tag color="blue" className="m-0 border-0">Đã nộp</Tag>;
+                                                                if (status === 'leader đã check') return <Tag color="cyan" className="m-0 border-0">Đã kiểm tra</Tag>;
+                                                                if (status === 'finish') return <Tag color="green" className="m-0 border-0">Hoàn thành</Tag>;
+                                                                return <Tag color="default" className="m-0 border-0">{status}</Tag>;
+                                                            })()}
                                                         </div>
                                                     }
                                                 />

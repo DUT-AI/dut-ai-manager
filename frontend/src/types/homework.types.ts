@@ -17,6 +17,7 @@ export interface Homework {
     created_by?: number;
     submission_count?: number;
     file_url?: string;
+    submissions?: HomeworkSubmission[];
 }
 
 export interface HomeworkCreate {

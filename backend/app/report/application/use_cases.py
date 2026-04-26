@@ -3,6 +3,7 @@ from typing import List, Optional
 
 from app.bonus_point.infrastructure.repository import BonusPointRepository
 from app.homework.application.dtos import HomeworkResponse
+from app.homework.domain.entity import HomeworkStatus
 from app.homework.infrastructure.repository import HomeworkSubmissionRepository
 from app.meeting.infrastructure.repository import MeetingRepository
 from app.meeting.schemas import MeetingResponse
@@ -87,9 +88,13 @@ class GetMonthlyActivityDatesUseCase:
             month=month, year=year, limit=1000
         )
         for p in permissions:
-            target_time = getattr(p, "start_time", None) or getattr(p, "created_at", None)
+            target_time = getattr(p, "start_time", None) or getattr(
+                p, "created_at", None
+            )
             if target_time:
-                activity_dates.add(target_time.date() if hasattr(target_time, "date") else target_time)
+                activity_dates.add(
+                    target_time.date() if hasattr(target_time, "date") else target_time
+                )
 
         # 3. Violation dates
         violations = self.violation_repo.get_by_month(month=month, year=year)[:1000]
@@ -139,10 +144,15 @@ class GetDashboardOverviewUseCase:
             user_id=user_id, month=month, year=year
         )
 
-        # 4. Unsubmitted Homework (Lấy thực thể bài tập chưa nộp)
-        unsubmitted_homeworks = self.submission_repo.get_all_by_user(user_id)
-        # Lấy list HomeworkEntities từ submissions (giả sử submission entity có field homework)
-        homework_entities = [s.homework for s in unsubmitted_homeworks if hasattr(s, "homework") and s.homework]
+        # 4. Assigned Homework (Lấy thực thể bài tập)
+        submissions = self.submission_repo.get_all_by_user(user_id)
+        homework_entities = []
+        for s in submissions:
+            if s.status == HomeworkStatus.NOT_SUBMITTED:
+                if hasattr(s, "homework") and s.homework:
+                    hw = s.homework
+                    hw.submissions = [s]
+                    homework_entities.append(hw)
 
         # 5. Meetings (Lấy các buổi sinh hoạt mà user tham gia trong tháng)
         user_meetings = self.meeting_repo.get_participating_meetings(
