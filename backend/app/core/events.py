@@ -35,6 +35,7 @@ async def bootstrap_events(container: AsyncContainer):
     EventBus.subscribe(PermissionRequestCreated, PermissionRequestNotificationHandler)
     EventBus.subscribe(HomeworkOverdueDetected, AutomatedViolationHandler)
     EventBus.subscribe(MeetingAbsenceDetected, AutomatedViolationHandler)
+    EventBus.subscribe(ParticipantCheckedIn, AutomatedViolationHandler)
     EventBus.subscribe(ViolationCreated, ViolationNotificationHandler)
 
     # Homework Module

@@ -1,5 +1,5 @@
 from app.homework.domain.value_objects import HomeworkOverdueDetected
-from app.meeting.domain.events import MeetingAbsenceDetected
+from app.meeting.domain.events import MeetingAbsenceDetected, ParticipantCheckedIn
 from app.violation.application.use_cases import CreateViolationUseCase
 from app.utils.datetime import get_current_utc7_time
 from app.shared.application.event_handler import EventHandler
@@ -17,6 +17,8 @@ class AutomatedViolationHandler(EventHandler):
             await self._handle_homework_overdue(event)
         elif isinstance(event, MeetingAbsenceDetected):
             await self._handle_meeting_absence(event)
+        elif isinstance(event, ParticipantCheckedIn):
+            await self._handle_meeting_late(event)
 
     async def _handle_homework_overdue(self, event: HomeworkOverdueDetected):
         """Tạo vi phạm khi quá hạn bài tập."""
@@ -39,3 +41,15 @@ class AutomatedViolationHandler(EventHandler):
             is_system=True,
             system_user_id=None,
         )
+
+    async def _handle_meeting_late(self, event: ParticipantCheckedIn):
+        """Tạo vi phạm khi đi trễ sinh hoạt."""
+        if event.is_late:
+            now = get_current_utc7_time()
+            await self.create_violation_use_case.execute(
+                user_ids=[event.user_id],
+                reason=f"Đi trễ sinh hoạt: {event.meeting_title}",
+                date=now,
+                is_system=True,
+                system_user_id=None,
+            )

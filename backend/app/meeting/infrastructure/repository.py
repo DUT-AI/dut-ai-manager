@@ -264,6 +264,39 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
                 )
                 self.session.add(po)
             self.session.flush()
+        elif not is_new and hasattr(domain, "participants") and domain.participants is not None:
+            # Sync participants
+            stmt = select(ORMParticipant).where(
+                cast(Any, getattr(ORMParticipant, "meeting_id") == orm.id),
+                cast(Any, getattr(ORMParticipant, "is_deleted")).is_(False)
+            )
+            existing_participants = self.session.exec(stmt).all()
+            
+            existing_user_ids = {p.user_id: p for p in existing_participants}
+            new_user_ids = {p.user_id: p for p in domain.participants}
+            
+            for old_user_id, old_p in existing_user_ids.items():
+                if old_user_id not in new_user_ids:
+                    old_p.is_deleted = True
+                    self.session.add(old_p)
+            
+            for new_user_id, new_p in new_user_ids.items():
+                if new_user_id not in existing_user_ids:
+                    po = ORMParticipant(
+                        meeting_id=orm.id,
+                        user_id=new_user_id,
+                        status=new_p.status,
+                        check_in_at=new_p.check_in_at,
+                        link_image=new_p.link_image,
+                    )
+                    self.session.add(po)
+                else:
+                    existing = existing_user_ids[new_user_id]
+                    existing.status = new_p.status
+                    existing.check_in_at = new_p.check_in_at
+                    existing.link_image = new_p.link_image
+                    self.session.add(existing)
+            self.session.flush()
 
         reloaded = self.get_with_participants(orm.id)
         return reloaded if reloaded is not None else domain

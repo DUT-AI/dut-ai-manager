@@ -1,11 +1,10 @@
 from datetime import date, datetime, timedelta
 from typing import List, Optional, Tuple, cast
-from app.shared.domain.query_support import FilterCriterion, FilterOperator
-from app.shared.application.query_support_utils import build_query_support
 
 from app.core.config import settings
 from app.meeting.domain.entity import Meeting, MeetingParticipant
 from app.meeting.domain.events import (
+    MeetingAbsenceDetected,
     MeetingCreated,
     MeetingUpdated,
     ParticipantCheckedIn,
@@ -15,18 +14,18 @@ from app.meeting.infrastructure.repository import (
     MeetingRepository,
     ParticipantRepository,
 )
-from app.team.infrastructure.repository import TeamRepository
-from app.user.infrastructure.repository import UserRepository
-from app.shared.application.response import BadRequestException
-from app.shared.domain.event_bus import EventBus, DomainEvent
 from app.meeting.schemas import MeetingUpdate
-from app.shared.infrastructure.minio_service import MinioService
-from app.utils.datetime import get_current_utc7_time
-from fastapi import UploadFile, status
-
 from app.permission_request.domain.value_objects import RequestCategory
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
-from app.meeting.domain.events import MeetingAbsenceDetected
+from app.shared.application.query_support_utils import build_query_support
+from app.shared.application.response import BadRequestException
+from app.shared.domain.event_bus import DomainEvent, EventBus
+from app.shared.domain.query_support import FilterCriterion, FilterOperator
+from app.shared.infrastructure.minio_service import MinioService
+from app.team.infrastructure.repository import TeamRepository
+from app.user.infrastructure.repository import UserRepository
+from app.utils.datetime import get_current_utc7_time
+from fastapi import UploadFile, status
 
 
 class CheckMeetingAttendanceUseCase:
@@ -402,7 +401,24 @@ class UpdateMeetingUseCase:
             meeting.require_check_in = data.require_check_in
 
         # Handle participant updates if user_ids or team_ids provided
-        # (Logic này khá phức tạp, tạm thời giữ đơn giản bằng cách update entity)
+        if data.user_ids is not None or data.team_ids is not None:
+            all_user_ids = set(data.user_ids or [])
+            if data.team_ids:
+                team_user_ids = self.team_repo.get_user_ids_by_teams(data.team_ids)
+                all_user_ids.update(team_user_ids)
+
+            user_ids_list = list(all_user_ids)
+
+            existing_participants_map = {p.user_id: p for p in meeting.participants}
+            new_participants = []
+
+            for uid in user_ids_list:
+                if uid in existing_participants_map:
+                    new_participants.append(existing_participants_map[uid])
+                else:
+                    new_participants.append(MeetingParticipant(user_id=uid))
+
+            meeting.participants = new_participants
 
         saved = self.repo.save(meeting)
 
@@ -463,9 +479,7 @@ class MeetingUseCases:
     def get_participating_meetings(
         self, user_id: int, month: int, year: int
     ) -> List[Meeting]:
-        """Tương đương với logic cũ trong MeetingService"""
-        # For legacy compatibility, we could still use QuerySupport here if needed,
-        # but for now we just filter the results of get_all_with_participants
+
         all_meetings = self.repo.get_all_with_participants(deleted=False)
         return [
             m for m in all_meetings if any(p.user_id == user_id for p in m.participants)

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional
 
 from app.meeting.domain.value_objects import ParticipantStatus
@@ -59,7 +59,7 @@ class Meeting(BaseEntity):
         """Kiểm tra xem việc check-in có bị trễ hay không"""
         if not self.require_check_in:
             return False
-        return check_in_time > self.start_time
+        return check_in_time > (self.start_time + timedelta(minutes=5))
 
 
 MeetingParticipant.model_rebuild()
