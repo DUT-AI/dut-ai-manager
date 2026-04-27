@@ -9,13 +9,6 @@ from app.permission_request.application.use_cases import (
     RestorePermissionRequestUseCase,
     UpdatePermissionRequestUseCase,
 )
-from app.permission_request.deps import (
-    get_create_request_uc,
-    get_delete_request_uc,
-    get_requests_uc,
-    get_restore_request_uc,
-    get_update_request_uc,
-)
 from app.permission_request.schemas import (
     PermissionRequestCreate,
     PermissionRequestResponse,
@@ -23,14 +16,16 @@ from app.permission_request.schemas import (
 )
 from app.permission_request.domain.value_objects import RequestCategory
 from app.shared.application.response import ApiResponse
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
+from dishka.integrations.fastapi import FromDishka, inject
 
 router = APIRouter(prefix="/permissions", tags=["Permissions"])
 
 
 @router.get("", response_model=ApiResponse[List[PermissionRequestResponse]])
+@inject
 async def get_permission_requests(
-    uc: Annotated[GetPermissionRequestsUseCase, Depends(get_requests_uc)],
+    uc: FromDishka[GetPermissionRequestsUseCase],
     _current_user: Annotated[
         CurrentUser, hasPermission(PermissionRequestPermission.READ)
     ],
@@ -56,9 +51,10 @@ async def get_permission_requests(
 
 
 @router.post("", response_model=ApiResponse[PermissionRequestResponse])
+@inject
 async def create_permission_request(
     data: PermissionRequestCreate,
-    uc: Annotated[CreatePermissionRequestUseCase, Depends(get_create_request_uc)],
+    uc: FromDishka[CreatePermissionRequestUseCase],
     _current_user: Annotated[
         CurrentUser, hasPermission(PermissionRequestPermission.CREATE)
     ],
@@ -75,10 +71,11 @@ async def create_permission_request(
 
 
 @router.put("/{request_id}", response_model=ApiResponse[PermissionRequestResponse])
+@inject
 async def update_permission_request(
     request_id: int,
     data: PermissionRequestUpdate,
-    uc: Annotated[UpdatePermissionRequestUseCase, Depends(get_update_request_uc)],
+    uc: FromDishka[UpdatePermissionRequestUseCase],
     _current_user: Annotated[
         CurrentUser, hasPermission(PermissionRequestPermission.UPDATE)
     ],
@@ -89,9 +86,10 @@ async def update_permission_request(
 
 
 @router.delete("/{request_id}", response_model=ApiResponse[bool])
+@inject
 async def delete_permission_request(
     request_id: int,
-    uc: Annotated[DeletePermissionRequestUseCase, Depends(get_delete_request_uc)],
+    uc: FromDishka[DeletePermissionRequestUseCase],
     _current_user: Annotated[
         CurrentUser, hasPermission(PermissionRequestPermission.DELETE)
     ],
@@ -101,10 +99,11 @@ async def delete_permission_request(
     return ApiResponse.success(data=result)
 
 
-@router.put("/{request_id}/restore", response_model=ApiResponse[bool])
+@router.put("/{request_id}/restore", response_model=ApiResponse[PermissionRequestResponse])
+@inject
 async def restore_permission_request(
     request_id: int,
-    uc: Annotated[RestorePermissionRequestUseCase, Depends(get_restore_request_uc)],
+    uc: FromDishka[RestorePermissionRequestUseCase],
     _current_user: Annotated[
         CurrentUser, hasPermission(PermissionRequestPermission.DELETE)
     ],

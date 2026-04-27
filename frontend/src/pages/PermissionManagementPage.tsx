@@ -544,7 +544,32 @@ const PermissionManagementPage = () => {
 
                             if (category === 'POSTPONE') {
                                 return (
-                                    <Form.Item name="start_time" label="Deadline mới (ngày và giờ)" rules={[{ required: true }]}>
+                                    <Form.Item
+                                        name="start_time"
+                                        label="Deadline mới (ngày và giờ)"
+                                        rules={[
+                                            { required: true, message: 'Vui lòng chọn deadline mới!' },
+                                            ({ getFieldValue }) => ({
+                                                validator(_, value) {
+                                                    const hwId = getFieldValue('homework_id');
+                                                    if (value && hwId) {
+                                                        const homework = homeworks.find((h: any) => h.id === hwId);
+                                                        if (homework) {
+                                                            const deadline = dayjs(homework.deadline);
+                                                            const diffDays = value.diff(deadline, 'day', true);
+                                                            if (diffDays > 4) {
+                                                                return Promise.reject(new Error('Thời gian hoãn không được quá 4 ngày!'));
+                                                            }
+                                                            if (diffDays < 0) {
+                                                                return Promise.reject(new Error('Hạn mới phải sau deadline gốc!'));
+                                                            }
+                                                        }
+                                                    }
+                                                    return Promise.resolve();
+                                                },
+                                            }),
+                                        ]}
+                                    >
                                         <DatePicker showTime format="DD/MM/YYYY HH:mm" className="w-full" placeholder="Chọn ngày và giờ" />
                                     </Form.Item>
                                 );

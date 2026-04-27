@@ -1,7 +1,7 @@
 import React from 'react';
-import { Table, Button, message, Popconfirm, Typography, Card, Tabs, Grid, List } from 'antd';
+import { Space, Table, Button, message, Popconfirm, Typography, Card, Tabs, Grid, List } from 'antd';
 import type { TabsProps } from 'antd';
-import { UndoOutlined } from '@ant-design/icons';
+import { UndoOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useQuery } from '@tanstack/react-query';
 import { homeworkService } from '@/services/api/homework.service';
@@ -205,7 +205,7 @@ export const TrashPage: React.FC = () => {
     ];
 
     const permissionColumns: ColumnsType<any> = [
-        { title: 'Người gửi', dataIndex: 'user_name', key: 'user_name' }, 
+        { title: 'Người gửi', dataIndex: 'user_name', key: 'user_name' },
         { title: 'Loại', dataIndex: 'category', key: 'category' },
         { title: 'Lý do/Ghi chú', dataIndex: 'note', key: 'note' },
         {
@@ -293,7 +293,7 @@ export const TrashPage: React.FC = () => {
     ];
 
     return (
-        <motion.div 
+        <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"

@@ -9,7 +9,8 @@ import {
     Spin,
     message,
     Button,
-    Modal
+    Modal,
+    Space
 } from 'antd';
 import {
     CalendarOutlined,
@@ -22,7 +23,10 @@ import dayjs from 'dayjs';
 import { permissionService } from '@/services/api/permission.service';
 import { bonusPointService } from '@/services/api/bonus-point.service';
 import { userService } from '@/services/api/user.service';
+import { homeworkService } from '@/services/api/homework.service';
 import type { DailySummaryResponse, PermissionRequestResponse, BonusPointResponse, ViolationResponse } from '@/types/activity.types';
+import type { Homework } from '@/types/homework.types';
+import type { MeetingResponse } from '@/types/meeting.types';
 import type { UserResponse } from '@/types/user.types';
 import { violationService } from '@/services/api/violation.service';
 import { activityService } from '@/services/api/activity.service';
@@ -270,6 +274,8 @@ const ActivityCalendarPage = () => {
     const [loading, setLoading] = useToggle(false);
     const [activeDates, setActiveDates] = useState<string[]>([]);
     const [users, setUsers] = useState<UserResponse[]>([]);
+    const [homeworks, setHomeworks] = useState<Homework[]>([]);
+    const [allMeetings, setAllMeetings] = useState<MeetingResponse[]>([]);
 
     // Modal state via useReducer
     const [modalState, dispatch] = useReducer(activityModalReducer, activityModalInitialState);
@@ -319,6 +325,26 @@ const ActivityCalendarPage = () => {
         }
     };
 
+    const fetchAllHomeworks = async () => {
+        try {
+            const data = await homeworkService.getAll();
+            setHomeworks(data || []);
+        } catch (error) {
+            console.error('Failed to fetch homeworks', error);
+        }
+    };
+
+    const fetchAllMeetings = async () => {
+        try {
+            const res = await meetingService.getAllMeetings();
+            if (res.is_success) {
+                setAllMeetings(res.data || []);
+            }
+        } catch (error) {
+            console.error('Failed to fetch meetings', error);
+        }
+    };
+
     const refreshData = () => {
         fetchDailyDetail(selectedDate);
         fetchMonthlyData(selectedDate);
@@ -327,6 +353,8 @@ const ActivityCalendarPage = () => {
     useEffect(() => {
         fetchMonthlyData(selectedDate);
         fetchAllUsers();
+        fetchAllHomeworks();
+        fetchAllMeetings();
         fetchDailyDetail(selectedDate);
     }, [selectedDate.month(), selectedDate.year()]);
 
@@ -455,7 +483,7 @@ const ActivityCalendarPage = () => {
     const screens = Grid.useBreakpoint();
 
     return (
-        <motion.div 
+        <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"
@@ -594,6 +622,8 @@ const ActivityCalendarPage = () => {
                 open={isPermissionModalOpen}
                 editingItem={editingPermission}
                 initialDate={getInitialDate()}
+                homeworks={homeworks}
+                meetings={allMeetings}
                 onSubmit={handlePermissionSubmit}
                 onCancel={() => dispatch({ type: 'CLOSE_PERMISSION' })}
             />

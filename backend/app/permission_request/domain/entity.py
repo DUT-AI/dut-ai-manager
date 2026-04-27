@@ -34,6 +34,18 @@ class PermissionRequest(BaseEntity):
     def is_postpone(self) -> bool:
         return self.category == RequestCategory.POSTPONE
 
+    def validate_postpone(self, homework: Homework) -> None:
+        """Kiểm tra tính hợp lệ của đơn xin hoãn bài tập (tối đa 4 ngày)."""
+        if self.category != RequestCategory.POSTPONE:
+            return
+
+        if self.start_time:
+            delta = self.start_time - homework.deadline
+            if delta.total_seconds() > 4 * 24 * 3600:
+                raise ValueError("Thời gian xin hoãn không được vượt quá 4 ngày so với deadline gốc")
+            if delta.total_seconds() < 0:
+                raise ValueError("Thời gian gia hạn mới phải sau deadline gốc")
+
 
 # Rebuild model for Pydantic to resolve type hints
 PermissionRequest.model_rebuild()

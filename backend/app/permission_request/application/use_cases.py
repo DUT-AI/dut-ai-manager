@@ -9,7 +9,8 @@ from app.permission_request.domain.events import (
     PermissionRequestCreated,
     PermissionRequestUpdated,
 )
-from app.permission_request.domain.repository import PermissionRequestRepository
+from app.permission_request.infrastructure.repository import PermissionRequestRepository
+from app.homework.infrastructure.repository import HomeworkRepository
 from app.permission_request.domain.value_objects import RequestCategory
 from app.permission_request.schemas import PermissionRequestUpdate
 from app.shared.domain.event_bus import EventBus, DomainEvent
@@ -72,9 +73,13 @@ class CreatePermissionRequestUseCase:
     """Tạo yêu cầu xin phép mới và phát sự kiện"""
 
     def __init__(
-        self, repo: PermissionRequestRepository, event_bus: type[EventBus] = EventBus
+        self,
+        repo: PermissionRequestRepository,
+        homework_repo: HomeworkRepository,
+        event_bus: type[EventBus] = EventBus,
     ):
         self.repo = repo
+        self.homework_repo = homework_repo
         self.event_bus = event_bus
 
     async def execute(
@@ -96,6 +101,17 @@ class CreatePermissionRequestUseCase:
             meeting_id=meeting_id,
             start_time=start_time,
         )
+
+        # Validation for POSTPONE (Homework delay)
+        if category == RequestCategory.POSTPONE:
+            if not homework_id:
+                raise HTTPException(status_code=400, detail="Vui lòng chọn bài tập cần hoãn")
+            
+            homework = self.homework_repo.get_by_id(homework_id)
+            if not homework:
+                raise HTTPException(status_code=404, detail="Không tìm thấy bài tập")
+            request.validate_postpone(homework)
+
 
         saved = self.repo.save(request)
 
@@ -120,9 +136,13 @@ class UpdatePermissionRequestUseCase:
     """Cập nhật nội dung yêu cầu xin phép"""
 
     def __init__(
-        self, repo: PermissionRequestRepository, event_bus: type[EventBus] = EventBus
+        self,
+        repo: PermissionRequestRepository,
+        homework_repo: HomeworkRepository,
+        event_bus: type[EventBus] = EventBus,
     ):
         self.repo = repo
+        self.homework_repo = homework_repo
         self.event_bus = event_bus
 
     async def execute(
@@ -143,6 +163,18 @@ class UpdatePermissionRequestUseCase:
             request.meeting_id = data.meeting_id
         if data.start_time:
             request.start_time = data.start_time
+
+        # Re-validate if POSTPONE
+        if request.category == RequestCategory.POSTPONE:
+            if not request.homework_id:
+                 raise HTTPException(status_code=400, detail="Vui lòng chọn bài tập cần hoãn")
+            
+            homework = self.homework_repo.get_by_id(request.homework_id)
+            if not homework:
+                raise HTTPException(status_code=404, detail="Không tìm thấy bài tập")
+            
+            request.validate_postpone(homework)
+      
 
         saved = self.repo.save(request)
 
