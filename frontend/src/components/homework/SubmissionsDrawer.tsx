@@ -106,6 +106,7 @@ export const SubmissionsDrawer = ({ open, homework, onClose }: Props) => {
             title: 'Trạng thái',
             key: 'status',
             render: (_: any, record: HomeworkSubmission) => renderStatusTag(record.status, record.is_late),
+            sorter: (a, b) => a.status.localeCompare(b.status),
         },
         {
             title: 'Kết quả',
@@ -118,7 +119,8 @@ export const SubmissionsDrawer = ({ open, homework, onClose }: Props) => {
                     {record.is_plagiarized && <Tag bordered={false} color="error">Đạo văn</Tag>}
                     <a onClick={() => setSelectedSubmission(record)}><EyeOutlined /> Chi tiết</a>
                 </Space>
-            )
+            ),
+            sorter: (a, b) => (a.score ?? -1) - (b.score ?? -1),
         },
         {
             title: 'Action',

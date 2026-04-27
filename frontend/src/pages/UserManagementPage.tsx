@@ -561,7 +561,7 @@ const UserManagementPage = () => {
                 open={isImportModalOpen}
                 onCancel={() => dispatch({ type: 'CLOSE_IMPORT_MODAL' })}
             />
-        </div>
+        </motion.div>
     );
 };
 
