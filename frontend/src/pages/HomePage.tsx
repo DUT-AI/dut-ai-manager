@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { reportService } from "../services/api/report.service";
-import { Card, Col, DatePicker, Empty, List, Row, Spin, Tag, Typography } from "antd";
+import { Card, Col, DatePicker, Empty, List, Row, Spin, Tag, Typography, Space } from "antd";
 import dayjs from "dayjs";
 import {
     ClockCircleOutlined,
@@ -11,8 +11,47 @@ import {
     TeamOutlined
 } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
+import { motion, type Variants } from "motion/react";
 
 const { Title, Text } = Typography;
+
+const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1,
+            delayChildren: 0.2
+        }
+    }
+};
+
+const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: {
+            duration: 0.5,
+            ease: "easeOut"
+        }
+    }
+};
+
+const listVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.05
+        }
+    }
+};
+
+const listItemVariants: Variants = {
+    hidden: { opacity: 0, x: -10 },
+    visible: { opacity: 1, x: 0 }
+};
 
 const HomePage = () => {
     const { user } = useAuth();
@@ -51,173 +90,134 @@ const HomePage = () => {
     ];
 
     return (
-        <div className="max-w-7xl mx-auto py-6 px-4 md:px-6 md:py-8">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4">
+        <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="max-w-7xl mx-auto py-6 px-4 md:px-6 md:py-8"
+        >
+            <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4">
                 <div>
                     <Title level={3} className="!mb-1">
                         Xin chào, <span className="text-indigo-600">{user?.name}</span> 👋
                     </Title>
                     <Text type="secondary">Tổng quan hoạt động của bạn trong tháng này</Text>
                 </div>
-                <DatePicker
-                    picker="month"
-                    value={date}
-                    onChange={(val) => val && setDate(val)}
-                    allowClear={false}
-                    className="w-full md:w-40"
-                />
-            </div>
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <DatePicker 
+                        picker="month" 
+                        value={date} 
+                        onChange={(d) => d && setDate(d)}
+                        format="MM/YYYY"
+                        allowClear={false}
+                        className="shadow-sm border-gray-100 rounded-lg h-10 px-4"
+                    />
+                </motion.div>
+            </motion.div>
 
-            {isLoading ? (
-                <div className="flex justify-center py-20">
-                    <Spin size="large" />
-                </div>
-            ) : (
-                <>
-                    {/* Stats Cards */}
-                    <Row gutter={[16, 16]} className="mb-8">
-                        {stats.map((stat) => (
-                            <Col xs={24} sm={12} md={6} key={stat.title}>
-                                <Card variant="borderless" className="shadow-sm hover:shadow-md transition-shadow">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`p-3 rounded-xl ${stat.color}`}>
-                                            {stat.icon}
-                                        </div>
-                                        <div>
-                                            <Text type="secondary" className="block text-xs uppercase font-semibold mb-1">
-                                                {stat.title}
-                                            </Text>
-                                            <span className="text-2xl font-bold block leading-none">
-                                                {stat.value}
-                                            </span>
+            <Row gutter={[20, 20]} className="mb-10">
+                {stats.map((stat, index) => (
+                    <Col xs={24} sm={12} lg={6} key={index}>
+                        <motion.div
+                            variants={itemVariants}
+                            whileHover={{ y: -5, transition: { duration: 0.2 } }}
+                        >
+                            <Card bordered={false} className={`${stat.color} shadow-xs rounded-xl overflow-hidden`}>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <Text type="secondary" className="text-xs uppercase font-bold tracking-wider">{stat.title}</Text>
+                                        <div className="mt-1">
+                                            <Title level={2} className="!m-0 !text-gray-800">{stat.value}</Title>
                                         </div>
                                     </div>
-                                </Card>
-                            </Col>
-                        ))}
-                    </Row>
+                                    <div className="p-3 bg-white/60 rounded-xl shadow-xs">
+                                        {stat.icon}
+                                    </div>
+                                </div>
+                            </Card>
+                        </motion.div>
+                    </Col>
+                ))}
+            </Row>
 
-                    <Row gutter={[24, 24]}>
-                        {/* Left Column */}
-                        <Col xs={24} lg={16}>
-                            <div className="flex flex-col gap-6">
-                                {/* Unsubmitted Homework */}
-                                <Card
-                                    title={<span className="font-bold flex items-center gap-2"><ClockCircleOutlined className="text-orange-500" /> Bài tập cần làm</span>}
-                                    variant="borderless"
-                                    className="shadow-sm"
-                                >
+            <Row gutter={[24, 24]}>
+                <Col xs={24} lg={16}>
+                    <motion.div variants={itemVariants}>
+                        <Card 
+                            title={
+                                <Space>
+                                    <ClockCircleOutlined className="text-indigo-500" />
+                                    <span>Bài tập chưa nộp</span>
+                                </Space>
+                            }
+                            bordered={false} 
+                            className="shadow-sm border-gray-100 rounded-xl overflow-hidden h-full"
+                        >
+                            {isLoading ? (
+                                <div className="py-12 flex justify-center"><Spin /></div>
+                            ) : data?.unsubmitted_homeworks.length === 0 ? (
+                                <Empty description="Chúc mừng! Bạn đã hoàn thành tất cả bài tập." className="py-10" />
+                            ) : (
+                                <motion.div variants={listVariants}>
                                     <List
                                         dataSource={data?.unsubmitted_homeworks}
-                                        locale={{ emptyText: <Empty description="Không có bài tập nào" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
-                                        renderItem={(item) => (
-                                            <List.Item>
-                                                <List.Item.Meta
-                                                    avatar={<div className="bg-orange-50 p-2 rounded-lg text-orange-500 font-bold">{dayjs(item.deadline).format("DD/MM")}</div>}
-                                                    title={item.title}
-                                                    description={
-                                                        <div className="flex items-center gap-2 text-xs">
-                                                            <span className="text-gray-500">Hạn nộp: {dayjs(item.deadline).format("HH:mm DD/MM/YYYY")}</span>
-                                                            {(() => {
-                                                                const status = item.submissions?.[0]?.status;
-                                                                if (!status || status === 'chưa nộp') {
-                                                                    if (dayjs().isAfter(dayjs(item.deadline))) return <Tag color="red" className="m-0 border-0">Quá hạn</Tag>;
-                                                                    return <Tag color="orange" className="m-0 border-0">Chưa nộp</Tag>;
-                                                                }
-                                                                if (status === 'đã nộp') return <Tag color="blue" className="m-0 border-0">Đã nộp</Tag>;
-                                                                if (status === 'leader đã check') return <Tag color="cyan" className="m-0 border-0">Đã kiểm tra</Tag>;
-                                                                if (status === 'finish') return <Tag color="green" className="m-0 border-0">Hoàn thành</Tag>;
-                                                                return <Tag color="default" className="m-0 border-0">{status}</Tag>;
-                                                            })()}
-                                                        </div>
-                                                    }
-                                                />
-                                            </List.Item>
-                                        )}
-                                    />
-                                </Card>
-
-                                {/* Meetings */}
-                                <Card
-                                    title={<span className="font-bold flex items-center gap-2"><TeamOutlined className="text-indigo-500" /> Lịch họp tháng này</span>}
-                                    variant="borderless"
-                                    className="shadow-sm"
-                                >
-                                    <List
-                                        dataSource={data?.meetings}
-                                        locale={{ emptyText: <Empty description="Không có lịch họp nào" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
-                                        renderItem={(item) => (
-                                            <List.Item>
-                                                <List.Item.Meta
-                                                    avatar={<div className="bg-indigo-50 p-2 rounded-lg text-indigo-500 font-bold">{dayjs(item.start_time).format("DD")}</div>}
-                                                    title={item.title}
-                                                    description={`${dayjs(item.start_time).format("HH:mm")} - ${dayjs(item.end_time).format("HH:mm")}`}
-                                                />
-                                            </List.Item>
-                                        )}
-                                    />
-                                </Card>
-                            </div>
-                        </Col>
-
-                        {/* Right Column */}
-                        <Col xs={24} lg={8}>
-                            <div className="flex flex-col gap-6">
-                                {/* Recent Activity / Violations / Bonus */}
-                                <Card
-                                    title={<span className="font-bold flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-red-500"></div> Vi phạm gần đây</span>}
-                                    variant="borderless"
-                                    className="shadow-sm"
-                                    styles={{ body: { padding: '12px 24px' } }}
-                                >
-                                    <List
-                                        dataSource={data?.violations.slice(0, 5)}
-                                        size="small"
-                                        locale={{ emptyText: <Empty description="Chưa có vi phạm nào" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
-                                        renderItem={(item) => (
-                                            <List.Item className="!px-0">
-                                                <div className="w-full">
-                                                    <div className="flex justify-between mb-1">
-                                                        <Text strong className="text-xs">{dayjs(item.date).format("DD/MM/YYYY")}</Text>
-                                                        <Tag color="red" className="mr-0 rounded-full text-[10px] px-2">Vi phạm</Tag>
+                                        renderItem={(hw) => (
+                                            <motion.div variants={listItemVariants}>
+                                                <List.Item className="px-0 py-4 hover:bg-gray-50/50 transition-colors rounded-lg">
+                                                    <div className="w-full flex justify-between items-center px-2">
+                                                        <Space direction="vertical" size={0}>
+                                                            <Text strong className="text-gray-800">{hw.title}</Text>
+                                                            <Text type="secondary" className="text-xs">Hết hạn: {dayjs(hw.deadline).format('DD/MM/YYYY HH:mm')}</Text>
+                                                        </Space>
+                                                        <Tag color="error" className="rounded-full px-3">Chưa nộp</Tag>
                                                     </div>
-                                                    <Text type="secondary" className="text-xs block">{item.reason}</Text>
-                                                </div>
-                                            </List.Item>
+                                                </List.Item>
+                                            </motion.div>
                                         )}
                                     />
-                                </Card>
+                                </motion.div>
+                            )}
+                        </Card>
+                    </motion.div>
+                </Col>
 
-                                <Card
-                                    title={<span className="font-bold flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-yellow-500"></div> Điểm cộng gần đây</span>}
-                                    variant="borderless"
-                                    className="shadow-sm"
-                                    styles={{ body: { padding: '12px 24px' } }}
-                                >
+                <Col xs={24} lg={8}>
+                    <motion.div variants={itemVariants}>
+                        <Card 
+                            title={
+                                <Space>
+                                    <TeamOutlined className="text-indigo-500" />
+                                    <span>Team Members</span>
+                                </Space>
+                            }
+                            bordered={false} 
+                            className="shadow-sm border-gray-100 rounded-xl overflow-hidden h-full"
+                        >
+                            {isLoading ? (
+                                <div className="py-12 flex justify-center"><Spin /></div>
+                            ) : (
+                                <motion.div variants={listVariants}>
                                     <List
-                                        dataSource={data?.bonus_points.slice(0, 5)}
-                                        size="small"
-                                        locale={{ emptyText: <Empty description="Chưa có điểm cộng nào" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
-                                        renderItem={(item) => (
-                                            <List.Item className="!px-0">
-                                                <div className="w-full">
-                                                    <div className="flex justify-between mb-1">
-                                                        <Text strong className="text-xs">{dayjs(item.date).format("DD/MM/YYYY")}</Text>
-                                                        <Tag color="gold" className="mr-0 rounded-full text-[10px] px-2">+{item.points}</Tag>
-                                                    </div>
-                                                    <Text type="secondary" className="text-xs block">{item.reason}</Text>
-                                                </div>
-                                            </List.Item>
+                                        dataSource={data?.recent_users}
+                                        renderItem={(u) => (
+                                            <motion.div variants={listItemVariants}>
+                                                <List.Item className="px-2 py-3">
+                                                    <List.Item.Meta
+                                                        avatar={<div className="w-2 h-2 rounded-full bg-green-400 mt-4" />}
+                                                        title={<Text strong className="text-sm">{u.name}</Text>}
+                                                        description={<Text type="secondary" className="text-[10px] uppercase font-bold">{u.role_name}</Text>}
+                                                    />
+                                                </List.Item>
+                                            </motion.div>
                                         )}
                                     />
-                                </Card>
-                            </div>
-                        </Col>
-                    </Row>
-                </>
-            )
-            }
-        </div >
+                                </motion.div>
+                            )}
+                        </Card>
+                    </motion.div>
+                </Col>
+            </Row>
+        </motion.div>
     );
 };
 

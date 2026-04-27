@@ -6,10 +6,12 @@ import { queryClient } from '@/lib/queryClient';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { ConfigProvider, Spin } from 'antd';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { AnimatePresence } from 'motion/react';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 
 const AppContent = () => {
   const { isAuthenticated, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -20,26 +22,28 @@ const AppContent = () => {
   }
 
   return (
-    <Routes>
-      <Route
-        path="/login"
-        element={
-          isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage onLoginSuccess={() => { }} />
-        }
-      />
-      <Route
-        path="/auth/zalo/callback"
-        element={<ZaloCallback />}
-      />
-      <Route
-        path="/dashboard/*"
-        element={
-          isAuthenticated ? <DashboardPage /> : <Navigate to="/login" replace />
-        }
-      />
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route
+          path="/login"
+          element={
+            isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage onLoginSuccess={() => { }} />
+          }
+        />
+        <Route
+          path="/auth/zalo/callback"
+          element={<ZaloCallback />}
+        />
+        <Route
+          path="/dashboard/*"
+          element={
+            isAuthenticated ? <DashboardPage /> : <Navigate to="/login" replace />
+          }
+        />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </AnimatePresence>
   );
 };
 

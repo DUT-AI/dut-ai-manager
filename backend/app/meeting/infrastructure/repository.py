@@ -265,41 +265,61 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
                 self.session.add(po)
             self.session.flush()
         elif not is_new and hasattr(domain, "participants") and domain.participants is not None:
-            # Sync participants
+            # Sync participants correctly by modifying the relationship list
             stmt = select(ORMParticipant).where(
-                cast(Any, getattr(ORMParticipant, "meeting_id") == orm.id),
-                cast(Any, getattr(ORMParticipant, "is_deleted")).is_(False)
+                ORMParticipant.meeting_id == orm.id,
+                ORMParticipant.is_deleted == False  # noqa: E712
             )
             existing_participants = self.session.exec(stmt).all()
             
             existing_user_ids = {p.user_id: p for p in existing_participants}
             new_user_ids = {p.user_id: p for p in domain.participants}
             
+            # 1. Remove participants not in the new list
             for old_user_id, old_p in existing_user_ids.items():
                 if old_user_id not in new_user_ids:
                     old_p.is_deleted = True
                     self.session.add(old_p)
             
+            # 2. Add or update participants
             for new_user_id, new_p in new_user_ids.items():
                 if new_user_id not in existing_user_ids:
-                    po = ORMParticipant(
-                        meeting_id=orm.id,
-                        user_id=new_user_id,
-                        status=new_p.status,
-                        check_in_at=new_p.check_in_at,
-                        link_image=new_p.link_image,
+                    # Check if there's a soft-deleted record we can reuse
+                    stmt_deleted = select(ORMParticipant).where(
+                        ORMParticipant.meeting_id == orm.id,
+                        ORMParticipant.user_id == new_user_id,
+                        ORMParticipant.is_deleted == True  # noqa: E712
                     )
-                    self.session.add(po)
+                    reusable = self.session.exec(stmt_deleted).first()
+                    
+                    if reusable:
+                        reusable.is_deleted = False
+                        reusable.status = new_p.status
+                        reusable.check_in_at = new_p.check_in_at
+                        reusable.link_image = new_p.link_image
+                        self.session.add(reusable)
+                    else:
+                        po = ORMParticipant(
+                            meeting_id=orm.id,
+                            user_id=new_user_id,
+                            status=new_p.status,
+                            check_in_at=new_p.check_in_at,
+                            link_image=new_p.link_image,
+                        )
+                        self.session.add(po)
                 else:
                     existing = existing_user_ids[new_user_id]
+                    # Update fields if they changed in the domain
                     existing.status = new_p.status
                     existing.check_in_at = new_p.check_in_at
                     existing.link_image = new_p.link_image
                     self.session.add(existing)
+            
             self.session.flush()
 
-        reloaded = self.get_with_participants(orm.id)
-        return reloaded if reloaded is not None else domain
+        # Commit is handled by middleware, but we need to refresh to get updated participants for the return
+        self.session.refresh(orm)
+        return self._to_domain(orm)
 
     def delete(self, meeting_id: int) -> bool:
         orm = self.session.get(ORMMeeting, meeting_id)

@@ -40,8 +40,28 @@ import type { RoleResponse } from '@/types/rbac.types';
 import { useAuth } from '@/context/AuthContext';
 import useToggle from '@/hooks/useToggle';
 import ApiKeyModal from '@/components/Role/ApiKeyModal';
+import { motion, type Variants } from 'motion/react';
 
 const { Title, Text } = Typography;
+
+const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1
+        }
+    }
+};
+
+const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.4, ease: "easeOut" }
+    }
+};
 
 interface MobileListViewProps {
     roles: RoleResponse[];
@@ -323,12 +343,22 @@ const RoleManagementPage = () => {
     const screens = Grid.useBreakpoint();
 
     return (
-        <div className="p-4 md:p-6">
+        <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="p-4 md:p-6"
+        >
             <Card className={!screens.md ? "bg-transparent shadow-none border-none" : "shadow-sm border-gray-100 rounded-xl overflow-hidden"} styles={{ body: { padding: !screens.md ? 0 : undefined } }}>
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 px-3 md:px-0">
-                    <Space>
-                        <SafetyCertificateOutlined className="text-2xl text-[#667eea]" />
-                        <Title level={3} className="mt-4 text-xl md:text-2xl">Role Management</Title>
+                <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 px-3 md:px-0">
+                    <Space size="middle">
+                        <div className="hidden md:flex w-12 h-12 rounded-xl bg-purple-50 items-center justify-center text-purple-600 shadow-sm">
+                            <SafetyCertificateOutlined className="text-2xl" />
+                        </div>
+                        <div>
+                            <Title level={3} className="text-xl md:text-2xl mt-4 text-purple-600">Quản lý Vai trò</Title>
+                            <Text type="secondary" className="text-xs md:text-sm">Phân quyền và quản lý API Keys cho các vai trò</Text>
+                        </div>
                     </Space>
                     {canCreateRole && (
                         <Button
@@ -344,41 +374,45 @@ const RoleManagementPage = () => {
                             New Role
                         </Button>
                     )}
-                </div>
+                </motion.div>
 
                 {!canUpdateRole && (
-                    <div className="mb-4 bg-yellow-50 p-4 rounded-lg border border-yellow-100 mx-3 md:mx-0">
+                    <motion.div variants={itemVariants} className="mb-4 bg-yellow-50 p-4 rounded-lg border border-yellow-100 mx-3 md:mx-0">
                         <Text type="warning" className="flex items-center text-sm">
                             <LockOutlined className="mr-2" />
                             <span>Read-only mode. Contact admin for access.</span>
                         </Text>
-                    </div>
+                    </motion.div>
                 )}
 
                 {!screens.md ? (
-                    <MobileListView
-                        roles={roles}
-                        isLoading={isLoading}
-                        canUpdateRole={canUpdateRole}
-                        canDeleteRole={canDeleteRole}
-                        onOpenPerms={openPermissionModal}
-                        onOpenApiKeys={openApiKeyModal}
-                        onEdit={(role) => {
-                            setEditingRole(role);
-                            form.setFieldsValue(role);
-                            toggleModal(true);
-                        }}
-                        onDelete={handleDelete}
-                    />
+                    <motion.div variants={itemVariants}>
+                        <MobileListView
+                            roles={roles}
+                            isLoading={isLoading}
+                            canUpdateRole={canUpdateRole}
+                            canDeleteRole={canDeleteRole}
+                            onOpenPerms={openPermissionModal}
+                            onOpenApiKeys={openApiKeyModal}
+                            onEdit={(role) => {
+                                setEditingRole(role);
+                                form.setFieldsValue(role);
+                                toggleModal(true);
+                            }}
+                            onDelete={handleDelete}
+                        />
+                    </motion.div>
                 ) : (
-                    <Table
-                        columns={columns}
-                        dataSource={roles}
-                        rowKey="id"
-                        loading={isLoading}
-                        pagination={false}
-                        className="border border-gray-100 rounded-lg"
-                    />
+                    <motion.div variants={itemVariants}>
+                        <Table
+                            columns={columns}
+                            dataSource={roles}
+                            rowKey="id"
+                            loading={isLoading}
+                            pagination={false}
+                            className="border border-gray-100 rounded-lg"
+                        />
+                    </motion.div>
                 )}
             </Card>
 
@@ -460,8 +494,7 @@ const RoleManagementPage = () => {
                 open={isApiKeyModalOpen}
                 onClose={() => toggleApiKeyModal(false)}
             />
-        </div>
+        </motion.div>
     );
 };
-
 export default RoleManagementPage;

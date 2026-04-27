@@ -90,8 +90,8 @@ class UpdateInvoiceUseCase:
         if not invoice:
             raise BadRequestException("Hóa đơn không tồn tại", status_code=status.HTTP_404_NOT_FOUND)
 
-        if invoice.status != InvoiceStatus.PENDING:
-            raise BadRequestException("Chỉ có thể sửa hóa đơn chưa thanh toán")
+        if invoice.status == InvoiceStatus.PAID:
+            raise BadRequestException("Không thể sửa hóa đơn đã thanh toán")
 
         # 2. Calculate new amount and create items
         total_amount = 0

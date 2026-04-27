@@ -10,8 +10,28 @@ import { violationService } from '@/services/api/violation.service';
 import { permissionService } from '@/services/api/permission.service';
 import type { Homework } from '@/types/homework.types';
 import type { ColumnsType } from 'antd/es/table';
+import { motion, type Variants } from 'motion/react';
 
 const { Title, Text } = Typography;
+
+const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1
+        }
+    }
+};
+
+const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.4, ease: "easeOut" }
+    }
+};
 
 const TrashMobileList = ({ dataSource, loading, columns, onRestore }: { dataSource: any[], loading: boolean, columns: string[], onRestore: (id: number) => void }) => (
     <div className="mt-4 px-3">
@@ -185,7 +205,7 @@ export const TrashPage: React.FC = () => {
     ];
 
     const permissionColumns: ColumnsType<any> = [
-        { title: 'Người gửi', dataIndex: 'user_name', key: 'user_name' }, // Check if user_name is available in response
+        { title: 'Người gửi', dataIndex: 'user_name', key: 'user_name' }, 
         { title: 'Loại', dataIndex: 'category', key: 'category' },
         { title: 'Lý do/Ghi chú', dataIndex: 'note', key: 'note' },
         {
@@ -273,31 +293,43 @@ export const TrashPage: React.FC = () => {
     ];
 
     return (
-        <div className="p-4 md:p-6 bg-[#f8fafc] min-h-full">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 px-3 md:px-0">
-                <div>
-                    <Title level={3} className="!m-0 text-xl md:text-2xl text-gray-800 mt-4 leading-relaxed">Thùng rác</Title>
-                    <Text type="secondary" className="text-xs md:text-sm">Quản lý và khôi phục các dữ liệu đã xóa</Text>
-                </div>
-            </div>
+        <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="p-4 md:p-6 bg-[#f8fafc] min-h-full"
+        >
+            <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 px-3 md:px-0">
+                <Space size="middle">
+                    <div className="hidden md:flex w-12 h-12 rounded-xl bg-gray-100 items-center justify-center text-gray-500 shadow-sm">
+                        <DeleteOutlined className="text-2xl" />
+                    </div>
+                    <div>
+                        <Title level={3} className="!m-0 text-xl md:text-2xl text-gray-800 mt-4 leading-relaxed">Thùng rác</Title>
+                        <Text type="secondary" className="text-xs md:text-sm">Quản lý và khôi phục các dữ liệu đã xóa</Text>
+                    </div>
+                </Space>
+            </motion.div>
 
-            <Card className={!screens.md ? "bg-transparent shadow-none border-none p-0" : "shadow-sm border-gray-100 rounded-xl overflow-hidden"} styles={{ body: { padding: !screens.md ? 0 : undefined } }}>
-                <div className="overflow-x-auto no-scrollbar">
-                    <Tabs
-                        defaultActiveKey="homework"
-                        items={items}
-                        className="trash-tabs"
-                        tabBarStyle={{
-                            paddingLeft: !screens.md ? '16px' : '24px',
-                            paddingRight: !screens.md ? '16px' : '24px',
-                            margin: 0,
-                            minWidth: !screens.md ? 'max-content' : '100%',
-                            borderBottom: '1px solid #f0f0f0'
-                        }}
-                    />
-                </div>
-            </Card>
-        </div>
+            <motion.div variants={itemVariants}>
+                <Card className={!screens.md ? "bg-transparent shadow-none border-none p-0" : "shadow-sm border-gray-100 rounded-xl overflow-hidden"} styles={{ body: { padding: !screens.md ? 0 : undefined } }}>
+                    <div className="overflow-x-auto no-scrollbar">
+                        <Tabs
+                            defaultActiveKey="homework"
+                            items={items}
+                            className="trash-tabs"
+                            tabBarStyle={{
+                                paddingLeft: !screens.md ? '16px' : '24px',
+                                paddingRight: !screens.md ? '16px' : '24px',
+                                margin: 0,
+                                minWidth: !screens.md ? 'max-content' : '100%',
+                                borderBottom: '1px solid #f0f0f0'
+                            }}
+                        />
+                    </div>
+                </Card>
+            </motion.div>
+        </motion.div>
     );
 };
-
+export default TrashPage;

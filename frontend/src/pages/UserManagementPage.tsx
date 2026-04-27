@@ -1,4 +1,5 @@
 import { useState, useMemo, useReducer } from 'react';
+import { motion, AnimatePresence, type Variants } from 'motion/react';
 import {
     Table,
     Button,
@@ -47,6 +48,25 @@ import { useNavigate } from 'react-router-dom';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+
+const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1
+        }
+    }
+};
+
+const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.4, ease: "easeOut" }
+    }
+};
 
 interface MobileListViewProps {
     filteredUsers: UserResponse[];
@@ -336,7 +356,7 @@ const UserManagementPage = () => {
     ];
 
     return (
-        <div className="p-4 md:p-6">
+        <motion.div variants={containerVariants} initial="hidden" animate="visible" className="p-4 md:p-6">
             <Card className={!screens.md ? "bg-transparent shadow-none border-none" : "shadow-sm border-gray-100 rounded-xl overflow-hidden"} styles={{ body: { padding: !screens.md ? 0 : undefined } }}>
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 px-3 md:px-0">
                     <Space size="middle">
@@ -374,7 +394,7 @@ const UserManagementPage = () => {
                 </div>
 
                 {/* Search & Filter Bar */}
-                <div className="px-3 md:px-0 mb-4">
+                <motion.div className="px-3 md:px-0 mb-4" variants={itemVariants}>
                     <Row gutter={[12, 12]}>
                         <Col xs={24} md={8}>
                             <Input
@@ -431,40 +451,44 @@ const UserManagementPage = () => {
                             </Col>
                         )}
                     </Row>
-                </div>
+                </motion.div>
 
                 {!canUpdate && (
-                    <div className="mb-4 bg-yellow-50 p-4 rounded-lg border border-yellow-100 flex items-center mx-3 md:mx-0">
+                    <motion.div variants={itemVariants} className="mb-4 bg-yellow-50 p-4 rounded-lg border border-yellow-100 flex items-center mx-3 md:mx-0">
                         <LockOutlined className="text-yellow-600 mr-3 text-lg" />
                         <Text type="warning" className="text-xs md:text-base">
                             Read-only access. Contact admin to modify.
                         </Text>
-                    </div>
+                    </motion.div>
                 )}
 
                 {!screens.md ? (
-                    <MobileListView
-                        filteredUsers={filteredUsers}
-                        isLoading={isLoading}
-                        canUpdate={canUpdate}
-                        canDelete={canDelete}
-                        onNavigate={(id) => navigate(`/dashboard/profile/${id}`)}
-                        onEdit={(user) => {
-                            form.setFieldsValue(user);
-                            dispatch({ type: 'OPEN_USER_MODAL', payload: user });
-                        }}
-                        onDelete={handleDelete}
-                    />
+                    <motion.div variants={itemVariants}>
+                        <MobileListView
+                            filteredUsers={filteredUsers}
+                            isLoading={isLoading}
+                            canUpdate={canUpdate}
+                            canDelete={canDelete}
+                            onNavigate={(id) => navigate(`/dashboard/profile/${id}`)}
+                            onEdit={(user) => {
+                                form.setFieldsValue(user);
+                                dispatch({ type: 'OPEN_USER_MODAL', payload: user });
+                            }}
+                            onDelete={handleDelete}
+                        />
+                    </motion.div>
                 ) : (
-                    <Table
-                        columns={columns}
-                        dataSource={filteredUsers}
-                        rowKey="id"
-                        loading={isLoading}
-                        className="border border-gray-100 rounded-lg custom-table"
-                        pagination={{ pageSize: 10 }}
-                        scroll={{ x: 1000 }}
-                    />
+                    <motion.div variants={itemVariants}>
+                        <Table
+                            columns={columns}
+                            dataSource={filteredUsers}
+                            rowKey="id"
+                            loading={isLoading}
+                            className="border border-gray-100 rounded-lg custom-table"
+                            pagination={{ pageSize: 10 }}
+                            scroll={{ x: 1000 }}
+                        />
+                    </motion.div>
                 )}
             </Card>
 

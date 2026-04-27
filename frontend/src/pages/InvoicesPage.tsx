@@ -25,9 +25,29 @@ import { useMyInvoices, useInvoiceDetail } from '@/hooks/useBilling';
 import { InvoiceStatus } from '@/types/billing.types';
 import type { InvoiceStatusType } from '@/types/billing.types';
 import dayjs from 'dayjs';
+import { motion, type Variants } from 'motion/react';
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
+
+const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1
+        }
+    }
+};
+
+const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.4, ease: "easeOut" }
+    }
+};
 
 const StatusTag = ({ status }: { status: InvoiceStatusType }) => {
   switch (status) {
@@ -114,31 +134,40 @@ const InvoicesPage = () => {
   ];
 
   return (
-    <div className="p-4 md:p-6 bg-[#f8fafc] min-h-full">
-      <Card 
-        className="shadow-sm border-gray-100 rounded-xl overflow-hidden"
-        title={
-          <Space>
-            <div className="bg-blue-50 p-2 rounded-lg text-blue-600">
-              <CreditCardOutlined className="text-xl" />
-            </div>
-            <div>
-              <Title level={4} className="mb-0!">Hóa đơn của tôi</Title>
-              <Text type="secondary" className="text-xs font-normal">Xem lịch sử và thực hiện thanh toán</Text>
-            </div>
-          </Space>
-        }
-      >
-        <Table
-          dataSource={invoices}
-          columns={columns}
-          rowKey="id"
-          loading={isLoading}
-          locale={{ emptyText: <Empty description="Bạn chưa có hóa đơn nào" /> }}
-          pagination={{ pageSize: 10 }}
-          scroll={{ x: 'max-content' }}
-        />
-      </Card>
+    <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="p-4 md:p-6 bg-[#f8fafc] min-h-full"
+    >
+      <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 px-3 md:px-0">
+        <Space size="middle">
+          <div className="hidden md:flex w-12 h-12 rounded-xl bg-blue-50 items-center justify-center text-blue-600 shadow-sm">
+            <CreditCardOutlined className="text-2xl" />
+          </div>
+          <div>
+            <Title level={3} className="text-xl md:text-2xl mt-4 text-blue-600">Hóa đơn của tôi</Title>
+            <Text type="secondary" className="text-xs md:text-sm">Xem lịch sử và thực hiện thanh toán</Text>
+          </div>
+        </Space>
+      </motion.div>
+
+      <motion.div variants={itemVariants}>
+        <Card 
+            className="shadow-sm border-gray-100 rounded-xl overflow-hidden"
+            styles={{ body: { padding: '0' } }}
+        >
+            <Table
+            dataSource={invoices}
+            columns={columns}
+            rowKey="id"
+            loading={isLoading}
+            locale={{ emptyText: <Empty description="Bạn chưa có hóa đơn nào" /> }}
+            pagination={{ pageSize: 10 }}
+            scroll={{ x: 'max-content' }}
+            />
+        </Card>
+      </motion.div>
 
       <Modal
         title={`Chi tiết hóa đơn ${detail?.reference_code || ''}`}
@@ -229,7 +258,7 @@ const InvoicesPage = () => {
           </div>
         )}
       </Modal>
-    </div>
+    </motion.div>
   );
 };
 

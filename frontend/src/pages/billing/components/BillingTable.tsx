@@ -84,7 +84,7 @@ const BillingTable = ({
           >
             Chi tiết
           </Button>
-          {record.status === InvoiceStatus.PENDING && (
+          {record.status !== InvoiceStatus.PAID && (
             <Button 
               icon={<EditOutlined />} 
               size="small"

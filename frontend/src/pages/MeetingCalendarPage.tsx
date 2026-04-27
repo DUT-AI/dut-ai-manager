@@ -18,10 +18,30 @@ import { useMeetingsByWeek, useCreateMeeting, useUpdateMeeting, useDeleteMeeting
 import { MeetingDetailDrawer } from '@/components/meeting/MeetingDetailDrawer';
 import { MeetingModal } from '@/components/meeting/MeetingModal';
 import { useUsers } from '@/hooks/useUsers';
+import { motion, type Variants } from 'motion/react';
 
 dayjs.extend(isoWeek);
 
 const { Title, Text } = Typography;
+
+const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.05
+        }
+    }
+};
+
+const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.3, ease: "easeOut" }
+    }
+};
 
 // Timeline configuration
 const HOUR_START = 0;
@@ -258,9 +278,15 @@ const MeetingCalendarPage = () => {
     const isCurrentWeek = currentWeekStart.isSame(dayjs().startOf('isoWeek'), 'day');
 
     return (
-        <div className="min-w-full bg-white" style={{ minWidth: 1460 }}>
+        <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="min-w-full bg-white" 
+            style={{ minWidth: 1460 }}
+        >
             {/* Header */}
-            <div className="px-6 py-4 border-b border-gray-100 bg-white sticky top-0 z-20">
+            <motion.div variants={itemVariants} className="px-6 py-4 border-b border-gray-100 bg-white sticky top-0 z-20">
                 <div className="flex items-center justify-between flex-wrap gap-3">
                     <div className="flex items-center gap-3">
                         <CalendarOutlined className="text-2xl text-indigo-500" />
@@ -288,15 +314,15 @@ const MeetingCalendarPage = () => {
                         </Button>
                     </div>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Calendar grid */}
             {isLoading ? (
-                <div className="flex-1 flex items-center justify-center">
+                <div className="flex-1 flex items-center justify-center p-20">
                     <Spin size="large" />
                 </div>
             ) : (
-                <div>
+                <motion.div variants={itemVariants}>
                     <div className="flex" style={{ minWidth: 1460 }}>
                         {/* Time gutter */}
                         <div className="w-16 flex-shrink-0 border-r border-gray-100 bg-gray-50/50">
@@ -421,7 +447,9 @@ const MeetingCalendarPage = () => {
                                                     }
                                                     placement="right"
                                                 >
-                                                    <div
+                                                    <motion.div
+                                                        initial={{ scale: 0.95, opacity: 0 }}
+                                                        animate={{ scale: 1, opacity: 1 }}
                                                         role="button"
                                                         tabIndex={0}
                                                         className="absolute rounded-lg cursor-pointer transition-all hover:shadow-md hover:scale-[1.02] overflow-hidden"
@@ -477,7 +505,7 @@ const MeetingCalendarPage = () => {
                                                                 </div>
                                                             )}
                                                         </div>
-                                                    </div>
+                                                    </motion.div>
                                                 </Tooltip>
                                             );
                                         })}
@@ -486,7 +514,7 @@ const MeetingCalendarPage = () => {
                             );
                         })}
                     </div>
-                </div>
+                </motion.div>
             )}
 
             {/* Meeting Detail Drawer */}
@@ -509,7 +537,7 @@ const MeetingCalendarPage = () => {
                 onSubmit={handleSubmit}
                 onCancel={() => dispatch({ type: 'CLOSE_MODAL' })}
             />
-        </div>
+        </motion.div>
     );
 };
 

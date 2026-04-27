@@ -43,8 +43,28 @@ import { meetingService } from '@/services/api/meeting.service';
 import useToggle from '@/hooks/useToggle';
 import { useAuth } from '@/context/AuthContext';
 import { BonusPointPermission, PermissionRequestPermission, ViolationPermission } from '@/types/rbac.types';
+import { motion, type Variants } from 'motion/react';
 
 const { Title, Text } = Typography;
+
+const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1
+        }
+    }
+};
+
+const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.4, ease: "easeOut" }
+    }
+};
 
 interface DailyDetailListProps {
     dailyData: DailySummaryResponse | null;
@@ -435,21 +455,26 @@ const ActivityCalendarPage = () => {
     const screens = Grid.useBreakpoint();
 
     return (
-        <div className="md:p-6 pb-20 md:pb-6 min-h-full">
+        <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="md:p-6 pb-20 md:pb-6 min-h-full"
+        >
             <Card
                 className={`border-none ${screens.md ? 'shadow-md rounded-2xl' : 'shadow-none rounded-none'}`}
                 styles={{ body: { padding: screens.md ? '24px' : '16px' } }}
             >
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-6">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-gradient-to-br from-[#667eea] to-[#764ba2] flex items-center justify-center text-white shadow-lg shrink-0">
-                            <CalendarOutlined className="text-2xl md:text-3xl" />
+                <motion.div variants={itemVariants} className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-6 px-3 md:px-0">
+                    <Space size="middle">
+                        <div className="hidden md:flex w-12 h-12 rounded-xl bg-indigo-50 items-center justify-center text-indigo-600 shadow-sm">
+                            <CalendarOutlined className="text-2xl" />
                         </div>
                         <div>
-                            <Title level={3} className="!m-0 text-xl md:text-2xl !leading-tight">Hoạt Động &amp; Điểm Danh</Title>
+                            <Title level={3} className="text-xl md:text-2xl mt-4 text-indigo-600">Hoạt động & Điểm danh</Title>
                             <Text type="secondary" className="text-xs md:text-sm">Quản lý xin phép, điểm cộng và vi phạm cá nhân</Text>
                         </div>
-                    </div>
+                    </Space>
 
                     <div className="grid grid-cols-2 md:flex md:flex-row gap-2 w-full lg:w-auto">
                         {hasPermission(PermissionRequestPermission.CREATE) && (
@@ -491,9 +516,9 @@ const ActivityCalendarPage = () => {
                             Tạo Meeting
                         </Button>
                     </div>
-                </div>
+                </motion.div>
 
-                <div className={`${screens.md ? 'bg-gray-50/50 p-6 border border-gray-100' : 'bg-transparent p-0 border-none'} rounded-2xl`}>
+                <motion.div variants={itemVariants} className={`${screens.md ? 'bg-gray-50/50 p-6 border border-gray-100' : 'bg-transparent p-0 border-none'} rounded-2xl`}>
                     {!screens.md ? (
                         <GridMonthCalendar
                             selectedDate={selectedDate}
@@ -513,7 +538,7 @@ const ActivityCalendarPage = () => {
                             className="custom-calendar rounded-xl overflow-hidden"
                         />
                     )}
-                </div>
+                </motion.div>
             </Card>
 
             <Drawer
@@ -606,7 +631,7 @@ const ActivityCalendarPage = () => {
                     border-bottom: 1px solid #f1f5f9;
                 }
             `}</style>
-        </div>
+        </motion.div>
     );
 };
 

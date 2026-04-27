@@ -3,7 +3,7 @@ import {
     Table, Button, Tabs, Space, message, Popconfirm, Typography, Tag, Grid, List, Card
 } from 'antd';
 import {
-    PlusOutlined, UploadOutlined, EyeOutlined, EditOutlined, DeleteOutlined
+    PlusOutlined, UploadOutlined, EyeOutlined, EditOutlined, DeleteOutlined, ReadOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useAuth } from '@/context/AuthContext';
@@ -19,8 +19,28 @@ import type { Homework } from '@/types/homework.types';
 import { HomeworkPermission } from '@/types/rbac.types';
 import type { ColumnsType } from 'antd/es/table';
 import { HomeworkFormModal, SubmitHomeworkModal, SubmissionsDrawer, HomeworkReportTab } from '@/components/homework';
+import { motion, type Variants } from 'motion/react';
 
 const { Title, Text } = Typography;
+
+const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1
+        }
+    }
+};
+
+const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.4, ease: "easeOut" }
+    }
+};
 
 const HomeworkMobileList = ({ dataSource, loading, emptyText, activeTab, hasPermission, handleOpenSubmit, handleViewSubmissions, handleOpenEdit, handleDelete }: { dataSource: Homework[], loading: boolean, emptyText?: string, activeTab: string, hasPermission: (permission: HomeworkPermission) => boolean, handleOpenSubmit: (homework: Homework) => void, handleViewSubmissions: (homework: Homework) => void, handleOpenEdit: (homework: Homework) => void, handleDelete: (id: number) => void }) => (
     <div className="mt-4 px-3">
@@ -308,12 +328,22 @@ export const HomeworkPage: React.FC = () => {
     const screens = Grid.useBreakpoint();
 
     return (
-        <div className="p-4 md:p-6 bg-white md:rounded-xl shadow-xs min-h-full">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 px-3 md:px-0">
-                <div>
-                    <Title level={3} className="!m-0 text-xl md:text-2xl text-[#4f46e5] mt-4">Quản lý bài tập</Title>
-                    <Text type="secondary" className="text-xs md:text-sm">Giao và nộp bài tập, theo dõi tiến độ</Text>
-                </div>
+        <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="p-4 md:p-6 bg-white md:rounded-xl shadow-xs min-h-full"
+        >
+            <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 px-3 md:px-0">
+                <Space size="middle">
+                    <div className="hidden md:flex w-12 h-12 rounded-xl bg-indigo-50 items-center justify-center text-indigo-600 shadow-sm">
+                        <ReadOutlined className="text-2xl" />
+                    </div>
+                    <div>
+                        <Title level={3} className="text-xl md:text-2xl mt-4 text-indigo-600">Quản lý bài tập</Title>
+                        <Text type="secondary" className="text-xs md:text-sm">Giao và nộp bài tập, theo dõi tiến độ</Text>
+                    </div>
+                </Space>
                 {hasPermission(HomeworkPermission.CREATE) && (
                     <Button
                         type="primary"
@@ -324,9 +354,9 @@ export const HomeworkPage: React.FC = () => {
                         Tạo bài tập mới
                     </Button>
                 )}
-            </div>
+            </motion.div>
 
-            <div className="overflow-x-auto no-scrollbar">
+            <motion.div variants={itemVariants} className="overflow-x-auto no-scrollbar">
                 <Tabs
                     activeKey={activeTab}
                     onChange={setActiveTab}
@@ -424,8 +454,8 @@ export const HomeworkPage: React.FC = () => {
                     homework={selectedHomework}
                     onClose={() => dispatch({ type: 'CLOSE_SUBMISSIONS' })}
                 />
-            </div>
-        </div>
+            </motion.div>
+        </motion.div>
     );
 };
-
+export default HomeworkPage;

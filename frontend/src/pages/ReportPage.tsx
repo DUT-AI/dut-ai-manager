@@ -9,23 +9,44 @@ import {
     DatePicker,
     Tag,
     Avatar,
-    Grid, // Added Grid
-    List  // Added List
+    Grid,
+    List
 } from 'antd';
 import {
     SearchOutlined,
     TrophyOutlined,
     WarningOutlined,
-    UserOutlined
+    UserOutlined,
+    BarChartOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { reportService } from '@/services/api/report.service';
 import type { ReportItem, ReportResponse } from '@/types/report.types';
 import type { ColumnsType } from 'antd/es/table';
 import { useDebounce } from '@/hooks/useDebounce';
+import { motion, type Variants } from 'motion/react';
 
 const { Title, Text } = Typography;
-const { useBreakpoint } = Grid; // Added useBreakpoint hook
+const { useBreakpoint } = Grid;
+
+const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1
+        }
+    }
+};
+
+const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.4, ease: "easeOut" }
+    }
+};
 
 const RankBadge = ({ rank }: { rank: number }) => {
     if (rank === 1) return <Tag color="gold" className="text-base px-2 py-0.5 m-0">#1 🏆</Tag>;
@@ -134,7 +155,6 @@ const ReportPage = () => {
             key: 'rank',
             width: 80,
             render: (rank: number) => {
-
                 if (rank === 1) return <Tag color="gold" className="text-base px-3 py-1">#1 🏆</Tag>;
                 if (rank === 2) return <Tag color="geekblue" className="text-base px-3 py-1">#2 🥈</Tag>;
                 if (rank === 3) return <Tag color="cyan" className="text-base px-3 py-1">#3 🥉</Tag>;
@@ -181,14 +201,22 @@ const ReportPage = () => {
     const screens = useBreakpoint();
 
     return (
-        <div className="p-4 md:p-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                <div>
-                    <Title level={2} className="!m-0">
-                        Detailed Reports
-                    </Title>
-                    <Text type="secondary">View performance statistics and violations leaderboard</Text>
-                </div>
+        <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="p-4 md:p-6"
+        >
+            <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 px-3 md:px-0">
+                <Space size="middle">
+                    <div className="hidden md:flex w-12 h-12 rounded-xl bg-indigo-50 items-center justify-center text-indigo-600 shadow-sm">
+                        <BarChartOutlined className="text-2xl" />
+                    </div>
+                    <div>
+                        <Title level={3} className="text-xl md:text-2xl mt-4 text-indigo-600">Báo cáo chi tiết</Title>
+                        <Text type="secondary" className="text-xs md:text-sm">Xem thống kê hiệu suất và bảng xếp hạng vi phạm</Text>
+                    </div>
+                </Space>
                 <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                     <DatePicker
                         picker="month"
@@ -207,39 +235,41 @@ const ReportPage = () => {
                         className="w-full sm:w-64"
                     />
                 </div>
-            </div>
+            </motion.div>
 
-            <Card className={!screens.md ? "bg-transparent shadow-none border-none" : "shadow-xs"} styles={{ body: { padding: !screens.md ? 0 : undefined } }}>
-                <Tabs
-                    activeKey={activeTab}
-                    onChange={(key) => setActiveTab(key as any)}
-                    tabBarStyle={{ padding: !screens.md ? '0 12px' : '0 24px', margin: 0 }}
-                    size="large"
-                    items={[
-                        {
-                            key: 'bonus',
-                            label: (
-                                <Space>
-                                    <TrophyOutlined />
-                                    <span>Bonus Points</span>
-                                </Space>
-                            ),
-                            children: screens.md ? <DesktopTableView columns={columns} data={data} loading={loading} /> : <MobileListView data={data} loading={loading} activeTab={activeTab} />
-                        },
-                        {
-                            key: 'violation',
-                            label: (
-                                <Space>
-                                    <WarningOutlined />
-                                    <span>Violations</span>
-                                </Space>
-                            ),
-                            children: screens.md ? <DesktopTableView columns={columns} data={data} loading={loading} /> : <MobileListView data={data} loading={loading} activeTab={activeTab} />
-                        }
-                    ]}
-                />
-            </Card>
-        </div>
+            <motion.div variants={itemVariants}>
+                <Card className={!screens.md ? "bg-transparent shadow-none border-none" : "shadow-xs"} styles={{ body: { padding: !screens.md ? 0 : undefined } }}>
+                    <Tabs
+                        activeKey={activeTab}
+                        onChange={(key) => setActiveTab(key as any)}
+                        tabBarStyle={{ padding: !screens.md ? '0 12px' : '0 24px', margin: 0 }}
+                        size="large"
+                        items={[
+                            {
+                                key: 'bonus',
+                                label: (
+                                    <Space>
+                                        <TrophyOutlined />
+                                        <span>Bonus Points</span>
+                                    </Space>
+                                ),
+                                children: screens.md ? <DesktopTableView columns={columns} data={data} loading={loading} /> : <MobileListView data={data} loading={loading} activeTab={activeTab} />
+                            },
+                            {
+                                key: 'violation',
+                                label: (
+                                    <Space>
+                                        <WarningOutlined />
+                                        <span>Violations</span>
+                                    </Space>
+                                ),
+                                children: screens.md ? <DesktopTableView columns={columns} data={data} loading={loading} /> : <MobileListView data={data} loading={loading} activeTab={activeTab} />
+                            }
+                        ]}
+                    />
+                </Card>
+            </motion.div>
+        </motion.div>
     );
 };
 

@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { ViolationPermission } from '@/types/rbac.types';
 import type { ViolationResponse, ViolationCreate } from '@/types/activity.types';
 import dayjs from 'dayjs';
+import { motion, type Variants } from 'motion/react';
 
 // Sub-components
 import ViolationFilter from './violations/components/ViolationFilter';
@@ -15,6 +16,25 @@ import ViolationFormModal from './violations/components/ViolationFormModal';
 import ViolationDetailDrawer from './violations/components/ViolationDetailDrawer';
 
 const { Title, Text } = Typography;
+
+const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1
+        }
+    }
+};
+
+const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.4, ease: "easeOut" }
+    }
+};
 
 const ViolationManagementPage = () => {
     const { hasPermission } = useAuth();
@@ -100,13 +120,18 @@ const ViolationManagementPage = () => {
     };
 
     return (
-        <div className="p-4 md:p-6">
+        <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="p-4 md:p-6"
+        >
             <Card 
                 className={!screens.md ? "bg-transparent shadow-none border-none" : "shadow-sm border-gray-100 rounded-xl overflow-hidden"} 
                 styles={{ body: { padding: !screens.md ? 0 : undefined } }}
             >
                 {/* Header */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 px-3 md:px-0">
+                <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 px-3 md:px-0">
                     <Space size="middle">
                         <div className="hidden md:flex w-12 h-12 rounded-xl bg-red-50 items-center justify-center text-red-500">
                             <WarningOutlined className="text-2xl" />
@@ -131,38 +156,44 @@ const ViolationManagementPage = () => {
                             Thêm Vi phạm
                         </Button>
                     )}
-                </div>
+                </motion.div>
 
                 {/* Filter Bar */}
-                <ViolationFilter
-                    filterUserId={filterUserId}
-                    setFilterUserId={setFilterUserId}
-                    filterDate={filterDate}
-                    setFilterDate={setFilterDate}
-                    users={users}
-                />
+                <motion.div variants={itemVariants}>
+                    <ViolationFilter
+                        filterUserId={filterUserId}
+                        setFilterUserId={setFilterUserId}
+                        filterDate={filterDate}
+                        setFilterDate={setFilterDate}
+                        users={users}
+                    />
+                </motion.div>
 
                 {/* Content Area */}
                 {!screens.md ? (
-                    <ViolationMobileList
-                        violations={violations}
-                        isLoading={isLoading}
-                        canUpdate={canUpdate}
-                        canDelete={canDelete}
-                        onViewDetail={handleOpenDetail}
-                        onEdit={handleOpenEdit}
-                        onDelete={handleDelete}
-                    />
+                    <motion.div variants={itemVariants}>
+                        <ViolationMobileList
+                            violations={violations}
+                            isLoading={isLoading}
+                            canUpdate={canUpdate}
+                            canDelete={canDelete}
+                            onViewDetail={handleOpenDetail}
+                            onEdit={handleOpenEdit}
+                            onDelete={handleDelete}
+                        />
+                    </motion.div>
                 ) : (
-                    <ViolationTable
-                        violations={violations}
-                        isLoading={isLoading}
-                        canUpdate={canUpdate}
-                        canDelete={canDelete}
-                        onEdit={handleOpenEdit}
-                        onDelete={handleDelete}
-                        onRowClick={handleOpenDetail}
-                    />
+                    <motion.div variants={itemVariants}>
+                        <ViolationTable
+                            violations={violations}
+                            isLoading={isLoading}
+                            canUpdate={canUpdate}
+                            canDelete={canDelete}
+                            onEdit={handleOpenEdit}
+                            onDelete={handleDelete}
+                            onRowClick={handleOpenDetail}
+                        />
+                    </motion.div>
                 )}
             </Card>
 
@@ -188,7 +219,7 @@ const ViolationManagementPage = () => {
                 onDelete={handleDelete}
                 isMobile={!screens.md}
             />
-        </div>
+        </motion.div>
     );
 };
 

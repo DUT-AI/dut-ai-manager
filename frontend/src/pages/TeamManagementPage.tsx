@@ -27,9 +27,29 @@ import { useTeams, useCreateTeam, useUpdateTeam, useDeleteTeam, useUsers } from 
 import { useAuth } from '@/context/AuthContext';
 import type { TeamResponse, TeamCreate } from '@/types/team.types';
 import dayjs from 'dayjs';
+import { motion, type Variants } from 'motion/react';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+
+const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1
+        }
+    }
+};
+
+const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.4, ease: "easeOut" }
+    }
+};
 
 interface MobileListViewProps {
     teams: TeamResponse[];
@@ -103,6 +123,7 @@ const MobileListView = ({ teams, isLoading, onEdit, onDelete }: MobileListViewPr
 
 const TeamManagementPage = () => {
     useAuth();
+    const screens = Grid.useBreakpoint();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<TeamResponse | null>(null);
     const [form] = Form.useForm();
@@ -211,12 +232,15 @@ const TeamManagementPage = () => {
         }
     ];
 
-    const screens = Grid.useBreakpoint();
-
     return (
-        <div className="p-4 md:p-6">
+        <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="p-4 md:p-6"
+        >
             <Card className={!screens.md ? "bg-transparent shadow-none border-none" : "shadow-sm border-gray-100 rounded-xl overflow-hidden"} styles={{ body: { padding: !screens.md ? 0 : undefined } }}>
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 px-3 md:px-0">
+                <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 px-3 md:px-0">
                     <Space size="middle">
                         <div className="hidden md:flex w-12 h-12 rounded-xl bg-indigo-50 items-center justify-center text-indigo-500">
                             <TeamOutlined className="text-2xl" />
@@ -238,30 +262,34 @@ const TeamManagementPage = () => {
                     >
                         Tạo Nhóm mới
                     </Button>
-                </div>
+                </motion.div>
 
                 {!screens.md ? (
-                    <MobileListView
-                        teams={teams}
-                        isLoading={isLoading}
-                        onEdit={(item) => {
-                            setEditingItem(item);
-                            form.setFieldsValue({
-                                team_name: item.team_name,
-                                member_ids: item.members.map(m => m.user_id)
-                            });
-                            setIsModalOpen(true);
-                        }}
-                        onDelete={handleDelete}
-                    />
+                    <motion.div variants={itemVariants}>
+                        <MobileListView
+                            teams={teams}
+                            isLoading={isLoading}
+                            onEdit={(item) => {
+                                setEditingItem(item);
+                                form.setFieldsValue({
+                                    team_name: item.team_name,
+                                    member_ids: item.members.map(m => m.user_id)
+                                });
+                                setIsModalOpen(true);
+                            }}
+                            onDelete={handleDelete}
+                        />
+                    </motion.div>
                 ) : (
-                    <Table
-                        columns={columns}
-                        dataSource={teams}
-                        rowKey="id"
-                        loading={isLoading}
-                        className="custom-table"
-                    />
+                    <motion.div variants={itemVariants}>
+                        <Table
+                            columns={columns}
+                            dataSource={teams}
+                            rowKey="id"
+                            loading={isLoading}
+                            className="custom-table"
+                        />
+                    </motion.div>
                 )}
             </Card>
 
@@ -291,7 +319,7 @@ const TeamManagementPage = () => {
                             mode="multiple"
                             allowClear
                             style={{ width: '100%' }}
-                            placeholder="Chọn thành viên thức"
+                            placeholder="Chọn thành viên"
                             optionFilterProp="children"
                         >
                             {users.map(u => (
@@ -301,7 +329,7 @@ const TeamManagementPage = () => {
                     </Form.Item>
                 </Form>
             </Modal>
-        </div>
+        </motion.div>
     );
 };
 

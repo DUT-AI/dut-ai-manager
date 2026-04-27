@@ -35,8 +35,28 @@ import { zaloService } from '@/services/api/zalo.service';
 
 import type { BonusPointResponse, ViolationResponse, PermissionRequestResponse } from '../types/activity.types';
 import type { ColumnsType } from 'antd/es/table';
+import { motion, type Variants } from 'motion/react';
 
 const { Title, Text } = Typography;
+
+const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1
+        }
+    }
+};
+
+const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.4, ease: "easeOut" }
+    }
+};
 
 interface FilterBarProps {
     selectedDate: Dayjs;
@@ -194,196 +214,205 @@ const ProfilePage = () => {
     }
 
     return (
-        <div className="p-4 md:p-8 max-w-5xl mx-auto">
-            <Button
-                icon={<ArrowLeftOutlined />}
-                onClick={() => navigate(-1)}
-                type="text"
-                className="mb-4 hover:bg-gray-100"
-            >
-                Quay lại
-            </Button>
+        <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="p-4 md:p-8 max-w-5xl mx-auto"
+        >
+            <motion.div variants={itemVariants}>
+                <Button
+                    icon={<ArrowLeftOutlined />}
+                    onClick={() => navigate(-1)}
+                    type="text"
+                    className="mb-4 hover:bg-gray-100"
+                >
+                    Quay lại
+                </Button>
+            </motion.div>
 
-            <Card className="rounded-2xl shadow-sm border-gray-100 overflow-hidden">
-                <div className="bg-linear-to-r from-[#4f46e5] to-[#7c3aed] h-32 -mx-6 -mt-6"></div>
-                <div className="relative px-4">
-                    <div className="absolute -top-12 left-0">
-                        <Avatar
-                            size={100}
-                            src={user.avatar_url}
-                            icon={<UserOutlined />}
-                            className="border-4 border-white bg-gray-100 text-[#4f46e5] shadow-md"
-                        />
-                    </div>
-                    <div className="pt-16 pb-4">
-                        <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
-                            <div>
-                                <Title level={2} className="!m-0">{user.name}</Title>
-                                <Tag color="blue" className="mt-2 uppercase font-bold">{user.role_name}</Tag>
+            <motion.div variants={itemVariants}>
+                <Card className="rounded-2xl shadow-sm border-gray-100 overflow-hidden">
+                    <div className="bg-linear-to-r from-[#4f46e5] to-[#7c3aed] h-32 -mx-6 -mt-6"></div>
+                    <div className="relative px-4">
+                        <div className="absolute -top-12 left-0">
+                            <Avatar
+                                size={100}
+                                src={user.avatar_url}
+                                icon={<UserOutlined />}
+                                className="border-4 border-white bg-gray-100 text-[#4f46e5] shadow-md"
+                            />
+                        </div>
+                        <div className="pt-16 pb-4">
+                            <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
+                                <div>
+                                    <Title level={2} className="!m-0">{user.name}</Title>
+                                    <Tag color="blue" className="mt-2 uppercase font-bold">{user.role_name}</Tag>
+                                </div>
+                                <Tag color={user.status === 'active' ? 'success' : 'error'} className="rounded-full px-4 sm:self-start">
+                                    {user.status.toUpperCase()}
+                                </Tag>
                             </div>
-                            <Tag color={user.status === 'active' ? 'success' : 'error'} className="rounded-full px-4 sm:self-start">
-                                {user.status.toUpperCase()}
-                            </Tag>
                         </div>
                     </div>
-                </div>
 
-                <Tabs
-                    activeKey={activeTab}
-                    onChange={setActiveTab}
-                    className="mt-4"
-                    items={[
-                        {
-                            key: 'info',
-                            label: <span><UserOutlined /> Thông tin chung</span>,
-                            children: (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
-                                    <Space direction="vertical" size="large" className="w-full">
-                                        <div>
-                                            <Text type="secondary" className="text-xs uppercase font-bold tracking-wider block mb-2">Thông tin liên hệ</Text>
-                                            <Space direction="vertical" className="w-full">
-                                                <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-50">
-                                                    <MailOutlined className="text-indigo-500" />
-                                                    <Text className="break-all">{user.email}</Text>
-                                                </div>
-                                                <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-50">
-                                                    <PhoneOutlined className="text-indigo-500" />
-                                                    <Text>{user.phone_number || 'Chưa cập nhật số điện thoại'}</Text>
-                                                </div>
-                                                <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-50">
-                                                    <div className="flex items-center gap-3">
-                                                        <Avatar src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Icon_of_Zalo.svg/120px-Icon_of_Zalo.svg.png" size="small" />
-                                                        <Text>Liên kết Zalo (Qua Ứng dụng)</Text>
+                    <Tabs
+                        activeKey={activeTab}
+                        onChange={setActiveTab}
+                        className="mt-4"
+                        items={[
+                            {
+                                key: 'info',
+                                label: <span><UserOutlined /> Thông tin chung</span>,
+                                children: (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
+                                        <Space direction="vertical" size="large" className="w-full">
+                                            <div>
+                                                <Text type="secondary" className="text-xs uppercase font-bold tracking-wider block mb-2">Thông tin liên hệ</Text>
+                                                <Space direction="vertical" className="w-full">
+                                                    <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-50">
+                                                        <MailOutlined className="text-indigo-500" />
+                                                        <Text className="break-all">{user.email}</Text>
                                                     </div>
-                                                    {user.zalo_id ? (
-                                                        <Tag color="green">Đã liên kết</Tag>
-                                                    ) : (
-                                                        <Button type="primary" size="small" className="bg-[#0068ff]" onClick={handleZaloLogin} loading={loadingZalo}>Liên kết</Button>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-50">
-                                                    <div className="flex items-center gap-3">
-                                                        <Avatar src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Icon_of_Zalo.svg/120px-Icon_of_Zalo.svg.png" size="small" />
-                                                        <Text>Liên kết Zalo (Chatbot <Tag color="green" className="ml-1 border-none shadow-sm rounded-md">Miễn phí</Tag>)</Text>
+                                                    <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-50">
+                                                        <PhoneOutlined className="text-indigo-500" />
+                                                        <Text>{user.phone_number || 'Chưa cập nhật số điện thoại'}</Text>
                                                     </div>
-                                                    {(user as any).zalo_bot_id ? (
-                                                        <Tag color="green">Đã liên kết</Tag>
-                                                    ) : (
-                                                        <Button type="primary" size="small" className="bg-[#0068ff]" onClick={handleGenerateBotCode} loading={loadingBotCode}>Lấy mã</Button>
-                                                    )}
-                                                </div>
-                                            </Space>
-                                        </div>
-                                    </Space>
+                                                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-50">
+                                                        <div className="flex items-center gap-3">
+                                                            <Avatar src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Icon_of_Zalo.svg/120px-Icon_of_Zalo.svg.png" size="small" />
+                                                            <Text>Liên kết Zalo (Qua Ứng dụng)</Text>
+                                                        </div>
+                                                        {user.zalo_id ? (
+                                                            <Tag color="green">Đã liên kết</Tag>
+                                                        ) : (
+                                                            <Button type="primary" size="small" className="bg-[#0068ff]" onClick={handleZaloLogin} loading={loadingZalo}>Liên kết</Button>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-50">
+                                                        <div className="flex items-center gap-3">
+                                                            <Avatar src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Icon_of_Zalo.svg/120px-Icon_of_Zalo.svg.png" size="small" />
+                                                            <Text>Liên kết Zalo (Chatbot <Tag color="green" className="ml-1 border-none shadow-sm rounded-md">Miễn phí</Tag>)</Text>
+                                                        </div>
+                                                        {(user as any).zalo_bot_id ? (
+                                                            <Tag color="green">Đã liên kết</Tag>
+                                                        ) : (
+                                                            <Button type="primary" size="small" className="bg-[#0068ff]" onClick={handleGenerateBotCode} loading={loadingBotCode}>Lấy mã</Button>
+                                                        )}
+                                                    </div>
+                                                </Space>
+                                            </div>
+                                        </Space>
 
-                                    <Space direction="vertical" size="large" className="w-full">
-                                        <div>
-                                            <Text type="secondary" className="text-xs uppercase font-bold tracking-wider block mb-2">Hoạt động hệ thống</Text>
-                                            <Space direction="vertical" className="w-full">
-                                                <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-50">
-                                                    <Space>
-                                                        <CalendarOutlined className="text-indigo-500" />
-                                                        <Text>Lịch hoạt động</Text>
-                                                    </Space>
-                                                    <Button type="link" onClick={() => navigate('/dashboard/activities')}>Xem ngay</Button>
-                                                </div>
-                                                <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-50">
-                                                    <Space>
-                                                        <SafetyCertificateOutlined className="text-indigo-500" />
-                                                        <Text>Vai trò hiện tại</Text>
-                                                    </Space>
-                                                    <Tag color="purple">{user.role_name}</Tag>
-                                                </div>
-                                            </Space>
-                                        </div>
+                                        <Space direction="vertical" size="large" className="w-full">
+                                            <div>
+                                                <Text type="secondary" className="text-xs uppercase font-bold tracking-wider block mb-2">Hoạt động hệ thống</Text>
+                                                <Space direction="vertical" className="w-full">
+                                                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-50">
+                                                        <Space>
+                                                            <CalendarOutlined className="text-indigo-500" />
+                                                            <Text>Lịch hoạt động</Text>
+                                                        </Space>
+                                                        <Button type="link" onClick={() => navigate('/dashboard/activities')}>Xem ngay</Button>
+                                                    </div>
+                                                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-50">
+                                                        <Space>
+                                                            <SafetyCertificateOutlined className="text-indigo-500" />
+                                                            <Text>Vai trò hiện tại</Text>
+                                                        </Space>
+                                                        <Tag color="purple">{user.role_name}</Tag>
+                                                    </div>
+                                                </Space>
+                                            </div>
+                                        </Space>
+                                    </div>
+                                )
+                            },
+                            {
+                                key: 'violations',
+                                label: (
+                                    <Space>
+                                        <WarningOutlined />
+                                        <span>Lỗi vi phạm</span>
+                                        <Badge count={activeTab === 'violations' ? sortedViolations.length : 0} size="small" />
                                     </Space>
-                                </div>
-                            )
-                        },
-                        {
-                            key: 'violations',
-                            label: (
-                                <Space>
-                                    <WarningOutlined />
-                                    <span>Lỗi vi phạm</span>
-                                    <Badge count={activeTab === 'violations' ? sortedViolations.length : 0} size="small" />
-                                </Space>
-                            ),
-                            children: (
-                                <>
-                                    <FilterBar selectedDate={selectedDate} onChange={setSelectedDate} />
-                                    <Table
-                                        dataSource={sortedViolations}
-                                        columns={violationColumns}
-                                        rowKey="id"
-                                        loading={violationsLoading}
-                                        pagination={{ pageSize: 10 }}
-                                        scroll={{ x: 600 }}
-                                        onRow={(record) => ({
-                                            onClick: () => setSelectedViolation(record),
-                                            className: 'cursor-pointer hover:bg-gray-50'
-                                        })}
-                                    />
-                                </>
-                            )
-                        },
-                        {
-                            key: 'bonus',
-                            label: (
-                                <Space>
-                                    <TrophyOutlined />
-                                    <span>Điểm cộng</span>
-                                    <Badge count={activeTab === 'bonus' ? sortedBonusPoints.length : 0} size="small" />
-                                </Space>
-                            ),
-                            children: (
-                                <>
-                                    <FilterBar selectedDate={selectedDate} onChange={setSelectedDate} />
-                                    <Table
-                                        dataSource={sortedBonusPoints}
-                                        columns={bonusColumns}
-                                        rowKey="id"
-                                        loading={bonusLoading}
-                                        pagination={{ pageSize: 10 }}
-                                        scroll={{ x: 600 }}
-                                        onRow={(record) => ({
-                                            onClick: () => setSelectedBonus(record),
-                                            className: 'cursor-pointer hover:bg-gray-50'
-                                        })}
-                                    />
-                                </>
-                            )
-                        },
-                        {
-                            key: 'permissions',
-                            label: (
-                                <Space>
-                                    <FileProtectOutlined />
-                                    <span>Xin phép</span>
-                                    <Badge count={activeTab === 'permissions' ? sortedPermissions.length : 0} size="small" />
-                                </Space>
-                            ),
-                            children: (
-                                <>
-                                    <FilterBar selectedDate={selectedDate} onChange={setSelectedDate} />
-                                    <Table
-                                        dataSource={sortedPermissions}
-                                        columns={permissionColumns}
-                                        rowKey="id"
-                                        loading={permissionsLoading}
-                                        pagination={{ pageSize: 10 }}
-                                        scroll={{ x: 600 }}
-                                        onRow={(record) => ({
-                                            onClick: () => setSelectedPermission(record),
-                                            className: 'cursor-pointer hover:bg-gray-50'
-                                        })}
-                                    />
-                                </>
-                            )
-                        }
-                    ]}
-                />
-            </Card>
+                                ),
+                                children: (
+                                    <>
+                                        <FilterBar selectedDate={selectedDate} onChange={setSelectedDate} />
+                                        <Table
+                                            dataSource={sortedViolations}
+                                            columns={violationColumns}
+                                            rowKey="id"
+                                            loading={violationsLoading}
+                                            pagination={{ pageSize: 10 }}
+                                            scroll={{ x: 600 }}
+                                            onRow={(record) => ({
+                                                onClick: () => setSelectedViolation(record),
+                                                className: 'cursor-pointer hover:bg-gray-50'
+                                            })}
+                                        />
+                                    </>
+                                )
+                            },
+                            {
+                                key: 'bonus',
+                                label: (
+                                    <Space>
+                                        <TrophyOutlined />
+                                        <span>Điểm cộng</span>
+                                        <Badge count={activeTab === 'bonus' ? sortedBonusPoints.length : 0} size="small" />
+                                    </Space>
+                                ),
+                                children: (
+                                    <>
+                                        <FilterBar selectedDate={selectedDate} onChange={setSelectedDate} />
+                                        <Table
+                                            dataSource={sortedBonusPoints}
+                                            columns={bonusColumns}
+                                            rowKey="id"
+                                            loading={bonusLoading}
+                                            pagination={{ pageSize: 10 }}
+                                            scroll={{ x: 600 }}
+                                            onRow={(record) => ({
+                                                onClick: () => setSelectedBonus(record),
+                                                className: 'cursor-pointer hover:bg-gray-50'
+                                            })}
+                                        />
+                                    </>
+                                )
+                            },
+                            {
+                                key: 'permissions',
+                                label: (
+                                    <Space>
+                                        <FileProtectOutlined />
+                                        <span>Xin phép</span>
+                                        <Badge count={activeTab === 'permissions' ? sortedPermissions.length : 0} size="small" />
+                                    </Space>
+                                ),
+                                children: (
+                                    <>
+                                        <FilterBar selectedDate={selectedDate} onChange={setSelectedDate} />
+                                        <Table
+                                            dataSource={sortedPermissions}
+                                            columns={permissionColumns}
+                                            rowKey="id"
+                                            loading={permissionsLoading}
+                                            pagination={{ pageSize: 10 }}
+                                            scroll={{ x: 600 }}
+                                            onRow={(record) => ({
+                                                onClick: () => setSelectedPermission(record),
+                                                className: 'cursor-pointer hover:bg-gray-50'
+                                            })}
+                                        />
+                                    </>
+                                )
+                            }
+                        ]}
+                    />
+                </Card>
+            </motion.div>
 
             {/* Detail Modals */}
             <Modal
@@ -484,8 +513,7 @@ const ProfilePage = () => {
                     </Text>
                 </div>
             </Modal>
-        </div >
+        </motion.div >
     );
 };
-
 export default ProfilePage;

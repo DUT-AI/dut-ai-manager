@@ -45,10 +45,30 @@ import { useAuth } from '@/context/AuthContext';
 import { PermissionRequestPermission } from '@/types/rbac.types';
 import type { PermissionRequestResponse } from '@/types/activity.types';
 import dayjs from 'dayjs';
+import { motion, type Variants } from 'motion/react';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
+
+const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.1
+        }
+    }
+};
+
+const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.4, ease: "easeOut" }
+    }
+};
 
 interface MobileListViewProps {
     permissions: PermissionRequestResponse[];
@@ -317,9 +337,14 @@ const PermissionManagementPage = () => {
     ];
 
     return (
-        <div className="p-4 md:p-6">
+        <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="p-4 md:p-6"
+        >
             <Card className={!screens.md ? "bg-transparent shadow-none border-none" : "shadow-sm border-gray-100 rounded-xl overflow-hidden"} styles={{ body: { padding: !screens.md ? 0 : undefined } }}>
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 px-3 md:px-0">
+                <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 px-3 md:px-0">
                     <Space size="middle">
                         <div className="hidden md:flex w-12 h-12 rounded-xl bg-indigo-50 items-center justify-center text-indigo-500">
                             <FileTextOutlined className="text-2xl" />
@@ -347,9 +372,9 @@ const PermissionManagementPage = () => {
                             Tạo Đơn mới
                         </Button>
                     )}
-                </div>
+                </motion.div>
 
-                <div className="bg-gray-50/50 p-4 rounded-xl mb-6 border border-gray-100">
+                <motion.div variants={itemVariants} className="bg-gray-50/50 p-4 rounded-xl mb-6 border border-gray-100">
                     <Row gutter={[16, 16]} align="middle">
                         <Col xs={24} sm={12} md={6}>
                             <DatePicker
@@ -411,41 +436,45 @@ const PermissionManagementPage = () => {
                             </Button>
                         </Col>
                     </Row>
-                </div>
+                </motion.div>
 
                 {!screens.md ? (
-                    <MobileListView
-                        permissions={permissions}
-                        isLoading={isLoading}
-                        canUpdate={canUpdate}
-                        canDelete={canDelete}
-                        onViewDetail={(item) => { setDetailItem(item); setIsDetailOpen(true); }}
-                        onEdit={(item) => {
-                            setEditingItem(item);
-                            form.setFieldsValue({
-                                ...item,
-                                start_time: item.start_time ? dayjs(item.start_time) : null,
-                            });
-                            setIsModalOpen(true);
-                        }}
-                        onDelete={handleDelete}
-                    />
+                    <motion.div variants={itemVariants}>
+                        <MobileListView
+                            permissions={permissions}
+                            isLoading={isLoading}
+                            canUpdate={canUpdate}
+                            canDelete={canDelete}
+                            onViewDetail={(item) => { setDetailItem(item); setIsDetailOpen(true); }}
+                            onEdit={(item) => {
+                                setEditingItem(item);
+                                form.setFieldsValue({
+                                    ...item,
+                                    start_time: item.start_time ? dayjs(item.start_time) : null,
+                                });
+                                setIsModalOpen(true);
+                            }}
+                            onDelete={handleDelete}
+                        />
+                    </motion.div>
                 ) : (
-                    <Table
-                        columns={columns}
-                        dataSource={permissions}
-                        rowKey="id"
-                        loading={isLoading}
-                        className="border border-gray-100 rounded-lg custom-table cursor-pointer"
-                        pagination={{ pageSize: 10 }}
-                        onRow={(record) => ({
-                            onClick: () => {
-                                setDetailItem(record);
-                                setIsDetailOpen(true);
-                            },
-                            style: { cursor: 'pointer' }
-                        })}
-                    />
+                    <motion.div variants={itemVariants}>
+                        <Table
+                            columns={columns}
+                            dataSource={permissions}
+                            rowKey="id"
+                            loading={isLoading}
+                            className="border border-gray-100 rounded-lg custom-table cursor-pointer"
+                            pagination={{ pageSize: 10 }}
+                            onRow={(record) => ({
+                                onClick: () => {
+                                    setDetailItem(record);
+                                    setIsDetailOpen(true);
+                                },
+                                style: { cursor: 'pointer' }
+                            })}
+                        />
+                    </motion.div>
                 )}
             </Card>
 
@@ -660,7 +689,7 @@ const PermissionManagementPage = () => {
                     </div>
                 )}
             </Drawer>
-        </div>
+        </motion.div>
     );
 };
 
