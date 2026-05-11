@@ -83,3 +83,12 @@ class UserRepository(BaseRepository[UserModel, UserEntity]):
         statement = self._get_base_query().where(UserModel.check_in_card_code == code)
         model = self.session.exec(statement).unique().first()
         return model.to_entity() if model else None
+
+    def get_active_users(self) -> List[UserEntity]:
+        from app.user.domain.entity import UserStatus
+        statement = self._get_base_query().where(
+            cast(Any, UserModel.status) == UserStatus.ACTIVE,
+            cast(Any, UserModel.is_deleted).is_(False),
+        )
+        models = self.session.exec(statement).unique().all()
+        return [m.to_entity() for m in models]

@@ -6,7 +6,12 @@ from app.report.application.use_cases import (
     GetBonusPointReportUseCase,
     GetViolationReportUseCase,
 )
+from app.report.application.title_use_cases import (
+    GetCurrentTitleUseCase,
+    GetMonthlyTitlesReportUseCase,
+)
 from app.meeting.infrastructure.repository import MeetingRepository
+from app.user.infrastructure.monthly_stats_repository import MonthlyUserStatsRepository
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
 from app.violation.infrastructure.repository import ViolationRepository
 from app.bonus_point.infrastructure.repository import BonusPointRepository
@@ -70,3 +75,17 @@ class ReportModuleProvider(Provider):
         self, violation_repo: ViolationRepository, user_repo: UserRepository
     ) -> GetViolationReportUseCase:
         return GetViolationReportUseCase(violation_repo, user_repo)
+
+    @provide
+    def get_current_title_uc(
+        self, stats_repo: MonthlyUserStatsRepository
+    ) -> GetCurrentTitleUseCase:
+        return GetCurrentTitleUseCase(stats_repo)
+
+    @provide
+    def get_monthly_titles_report_uc(
+        self,
+        stats_repo: MonthlyUserStatsRepository,
+        user_repo: UserRepository,
+    ) -> GetMonthlyTitlesReportUseCase:
+        return GetMonthlyTitlesReportUseCase(stats_repo, user_repo)

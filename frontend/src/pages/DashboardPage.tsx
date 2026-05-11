@@ -1,4 +1,6 @@
-import ReportPage from './ReportPage';
+import AcademicReportPage from './AcademicReportPage';
+import ActivityReportPage from './ActivityReportPage';
+import RobotInterfacePage from './RobotInterfacePage';
 import type { MenuProps } from 'antd';
 import { Layout, Menu, Spin, Tag, Typography, Drawer, Grid } from 'antd';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
@@ -98,7 +100,8 @@ const DashboardPage = () => {
         if (path.includes('/profile')) return 'profile_detail';
         if (path.includes('/settings')) return 'settings';
         if (path.includes('/trash')) return 'trash';
-        if (path.includes('/reports')) return 'reports';
+        if (path.includes('/academic-reports')) return 'academic_reports';
+        if (path.includes('/activity-reports')) return 'activity_reports';
         if (path.includes('/admin-billing')) return 'admin_billing';
         if (path.includes('/invoices')) return 'invoices';
         return 'profile';
@@ -121,10 +124,16 @@ const DashboardPage = () => {
             onClick: () => handleMenuClick('/dashboard'),
         },
         {
-            key: 'reports',
+            key: 'academic_reports',
             icon: <TrophyOutlined />,
-            label: 'Báo cáo',
-            onClick: () => handleMenuClick('/dashboard/reports'),
+            label: 'Báo cáo Học tập',
+            onClick: () => handleMenuClick('/dashboard/academic-reports'),
+        },
+        {
+            key: 'activity_reports',
+            icon: <AuditOutlined />,
+            label: 'Báo cáo Hoạt động',
+            onClick: () => handleMenuClick('/dashboard/activity-reports'),
         },
         {
             key: 'rbac',
@@ -200,10 +209,22 @@ const DashboardPage = () => {
         },
     ];
 
+    const isRobotPage = location.pathname.startsWith('/dashboard/robot');
+
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
                 <Spin size="large" />
+            </div>
+        );
+    }
+
+    if (isRobotPage) {
+        return (
+            <div className="h-screen w-screen overflow-hidden">
+                <Routes>
+                    <Route path="robot/*" element={<RobotInterfacePage />} />
+                </Routes>
             </div>
         );
     }
@@ -241,7 +262,9 @@ const DashboardPage = () => {
                     <div className="min-h-full relative">
                         <Routes>
                             <Route index element={<HomePage />} />
-                            <Route path="reports" element={<ReportPage />} />
+                            <Route path="academic-reports" element={<AcademicReportPage />} />
+                            <Route path="activity-reports" element={<ActivityReportPage />} />
+                            <Route path="robot/*" element={<RobotInterfacePage />} />
                             <Route path="rbac" element={<RoleManagementPage />} />
                             <Route path="users" element={<UserManagementPage />} />
                             <Route path="activities" element={<ActivityCalendarPage />} />

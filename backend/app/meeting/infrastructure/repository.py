@@ -2,7 +2,7 @@ from datetime import date, datetime
 from typing import Any, List, Optional, cast
 
 from app.shared.infrastructure.base_repository import BaseRepository
-from sqlalchemy import and_, case, desc, func
+from sqlalchemy import and_, case, desc, func, or_
 from sqlalchemy.orm import contains_eager, joinedload
 from sqlmodel import Session, select
 from app.shared.domain.query_support import QuerySupport, apply_query_support
@@ -10,6 +10,7 @@ from app.shared.domain.query_support import QuerySupport, apply_query_support
 from ..domain.entity import Meeting as DomainMeeting
 from ..domain.entity import MeetingParticipant as DomainParticipant
 from ..domain.entity import UserRef
+from ..domain.value_objects import ParticipantStatus
 from .model import Meeting as ORMMeeting
 from .model import MeetingParticipant as ORMParticipant
 
@@ -34,6 +35,7 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
                     user_id=p.user_id if p.user_id is not None else 0,
                     status=p.status,
                     check_in_at=p.check_in_at,
+                    check_out_at=p.check_out_at,
                     link_image=p.link_image,
                     user=user_ref,
                     created_at=p.created_at,
@@ -329,6 +331,72 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         self.session.add(orm)
         return True
 
+    def get_present_participants_count(self, now: datetime) -> int:
+        """
+        N_current: người đã check-in và chưa check-out (hoặc check-out sau now).
+        """
+        stmt = select(func.count(ORMParticipant.id)).where(
+            cast(Any, ORMParticipant.is_deleted).is_(False),
+            ORMParticipant.check_in_at.is_not(None),
+            or_(
+                ORMParticipant.check_out_at.is_(None),
+                ORMParticipant.check_out_at > now
+            ),
+        )
+        result = self.session.exec(stmt).first()
+        return result or 0
+
+    def get_upcoming_participants_count(
+        self, now: datetime, window_end: datetime
+    ) -> int:
+        """
+        N_incoming: người có meeting bắt đầu trong [now, window_end].
+        Chỉ tính participants chưa check-in.
+        """
+        from sqlalchemy.orm import aliased
+
+        ParticipantAlias = aliased(ORMParticipant)
+
+        stmt = (
+            select(func.count(func.distinct(ParticipantAlias.user_id)))
+            .join(ORMMeeting, ParticipantAlias.meeting_id == ORMMeeting.id)
+            .where(
+                cast(Any, ORMMeeting.is_deleted).is_(False),
+                cast(Any, ParticipantAlias.is_deleted).is_(False),
+                ORMMeeting.start_time >= now,
+                ORMMeeting.start_time <= window_end,
+                ParticipantAlias.check_in_at.is_(None),
+            )
+        )
+        result = self.session.exec(stmt).first()
+        return result or 0
+
+    def get_departing_participants_count(
+        self, now: datetime, window_end: datetime
+    ) -> int:
+        """
+        N_outgoing: người đang có mặt và sẽ check-out trong [now, window_end].
+        Chỉ tính những người đã check-in và chưa check-out, nhưng meeting kết thúc trong window.
+        """
+        from sqlalchemy.orm import aliased
+
+        ParticipantAlias = aliased(ORMParticipant)
+
+        stmt = (
+            select(func.count(func.distinct(ParticipantAlias.user_id)))
+            .join(ORMMeeting, ParticipantAlias.meeting_id == ORMMeeting.id)
+            .where(
+                cast(Any, ORMMeeting.is_deleted).is_(False),
+                cast(Any, ParticipantAlias.is_deleted).is_(False),
+                ParticipantAlias.check_in_at.is_not(None),
+                ParticipantAlias.check_out_at.is_(None),
+                ORMMeeting.end_time > now,
+                ORMMeeting.end_time <= window_end,
+            )
+        )
+        result = self.session.exec(stmt).first()
+        return result or 0
+
 
 class ParticipantRepository(BaseRepository[ORMParticipant, DomainParticipant]):
     def __init__(self, session: Session):
@@ -347,6 +415,7 @@ class ParticipantRepository(BaseRepository[ORMParticipant, DomainParticipant]):
             user_id=orm.user_id,
             status=orm.status,
             check_in_at=orm.check_in_at,
+            check_out_at=orm.check_out_at,
             link_image=orm.link_image,
             user=user_ref,
         )
@@ -410,12 +479,39 @@ class ParticipantRepository(BaseRepository[ORMParticipant, DomainParticipant]):
 
         orm.status = domain.status
         orm.check_in_at = domain.check_in_at
+        orm.check_out_at = domain.check_out_at
         orm.link_image = domain.link_image
 
         self.session.add(orm)
         self.session.flush()
         domain.id = orm.id
         return domain
+
+    def check_out(self, participant_id: int, check_out_time: datetime) -> DomainParticipant:
+        """Cập nhật check-out cho participant."""
+        orm = self.session.get(ORMParticipant, participant_id)
+        if not orm:
+            raise ValueError("Participant not found")
+
+        orm.check_out_at = check_out_time
+        orm.status = ParticipantStatus.COMPLETED
+        self.session.add(orm)
+        self.session.flush()
+        return self._to_domain(orm)
+
+    def get_completed_since(self, since: datetime) -> List[DomainParticipant]:
+        """Lấy participants đã check-out sau thời điểm since."""
+        stmt = (
+            select(ORMParticipant)
+            .where(
+                cast(Any, ORMParticipant.is_deleted).is_(False),
+                ORMParticipant.check_out_at.is_not(None),
+                ORMParticipant.check_out_at >= since,
+            )
+            .options(joinedload(cast(Any, ORMParticipant.user)))
+        )
+        orms = self.session.exec(stmt).all()
+        return [self._to_domain(orm) for orm in orms]
 
     def delete_by_meeting(self, meeting_id: int) -> bool:
         statement = select(ORMParticipant).where(

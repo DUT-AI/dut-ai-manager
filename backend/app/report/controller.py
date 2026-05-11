@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Annotated, List
+from typing import Annotated, List, Optional
 
 from app.core.deps import CurrentUser
 from app.report.application.use_cases import (
@@ -8,6 +8,11 @@ from app.report.application.use_cases import (
     GetDashboardOverviewUseCase,
     GetMonthlyActivityDatesUseCase,
     GetViolationReportUseCase,
+)
+from app.report.application.title_use_cases import (
+    GetCurrentTitleUseCase,
+    GetMonthlyTitlesReportUseCase,
+    TitleReportItem,
 )
 from app.report.schemas import (
     DailySummaryResponse,
@@ -90,3 +95,28 @@ async def get_violation_report(
     """Lấy báo cáo tổng hợp vi phạm (xếp hạng)"""
     report = uc.execute(month=month, year=year, keyword=keyword)
     return ApiResponse.success(data=report)
+
+
+@router.get("/titles", response_model=ApiResponse[List[TitleReportItem]])
+@inject
+async def get_monthly_titles_report(
+    uc: FromDishka[GetMonthlyTitlesReportUseCase],
+    _current_user: CurrentUser,
+    month: int = Query(..., description="Month (1-12)"),
+    year: int = Query(..., description="Year"),
+):
+    """Lấy bảng danh hiệu tháng"""
+    report = uc.execute(month=month, year=year)
+    return ApiResponse.success(data=report)
+
+
+@router.get("/users/{user_id}/current-title", response_model=ApiResponse[Optional[str]])
+@inject
+async def get_user_current_title(
+    user_id: int,
+    uc: FromDishka[GetCurrentTitleUseCase],
+    _current_user: CurrentUser,
+):
+    """Lấy danh hiệu hiện tại của user"""
+    title = uc.execute(user_id=user_id)
+    return ApiResponse.success(data=title)

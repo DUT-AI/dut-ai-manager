@@ -7,6 +7,7 @@ from dishka.integrations.fastapi import FromDishka, inject
 from app.meeting.application.use_cases import (
     CheckInUseCase,
     CheckInWithCardUseCase,
+    CheckOutUseCase,
     CreateMeetingUseCase,
     DeleteMeetingUseCase,
     GetMeetingsUseCase,
@@ -153,4 +154,22 @@ async def check_in(
     return ApiResponse.success(
         data=[ParticipantResponse.from_domain(p) for p in participants],
         message=message,
+    )
+
+
+@router.post("/{meeting_id}/check-out", response_model=ApiResponse[ParticipantResponse])
+@inject
+async def check_out(
+    meeting_id: int,
+    uc: FromDishka[CheckOutUseCase],
+    current_user: Annotated[CurrentUser, hasPermission(MeetingPermission.CHECK_IN)],
+):
+    """Thực hiện check-out khỏi buổi họp"""
+    participant = await uc.execute(
+        meeting_id=meeting_id,
+        user_id=current_user.id,
+    )
+    return ApiResponse.success(
+        data=ParticipantResponse.from_domain(participant),
+        message="Checkout thành công",
     )

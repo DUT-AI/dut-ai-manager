@@ -114,7 +114,7 @@ const DesktopTableView = ({ columns, data, loading }: DesktopTableViewProps) => 
     />
 );
 
-const ReportPage = () => {
+const AcademicReportPage = () => {
     const [activeTab, setActiveTab] = useState<'bonus' | 'violation'>('bonus');
     const [loading, setLoading] = useState(false);
     const [data, setData] = useState<ReportItem[]>([]);
@@ -213,8 +213,8 @@ const ReportPage = () => {
                         <BarChartOutlined className="text-2xl" />
                     </div>
                     <div>
-                        <Title level={3} className="text-xl md:text-2xl mt-4 text-indigo-600">Báo cáo chi tiết</Title>
-                        <Text type="secondary" className="text-xs md:text-sm">Xem thống kê hiệu suất và bảng xếp hạng vi phạm</Text>
+                        <Title level={3} className="text-xl md:text-2xl mt-4 text-indigo-600">Báo cáo Học tập</Title>
+                        <Text type="secondary" className="text-xs md:text-sm">Xem thống kê hiệu suất học tập và bảng xếp hạng</Text>
                     </div>
                 </Space>
                 <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
@@ -273,4 +273,4 @@ const ReportPage = () => {
     );
 };
 
-export default ReportPage;
+export default AcademicReportPage;

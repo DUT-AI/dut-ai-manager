@@ -9,6 +9,7 @@ from app.meeting.application.use_cases import (
     CreateMeetingUseCase,
     CheckInUseCase,
     CheckInWithCardUseCase,
+    CheckOutUseCase,
     UpdateMeetingUseCase,
     DeleteMeetingUseCase,
     MeetingUseCases,
@@ -62,6 +63,14 @@ class MeetingModuleProvider(Provider):
         meeting_repo: MeetingRepository,
     ) -> CheckInWithCardUseCase:
         return CheckInWithCardUseCase(user_repo, participant_repo, meeting_repo)
+
+    @provide
+    def check_out_uc(
+        self,
+        meeting_repo: MeetingRepository,
+        participant_repo: ParticipantRepository,
+    ) -> CheckOutUseCase:
+        return CheckOutUseCase(meeting_repo, participant_repo)
 
     @provide
     def update_meeting_uc(

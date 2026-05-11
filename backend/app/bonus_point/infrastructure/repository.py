@@ -108,3 +108,23 @@ class BonusPointRepository(BaseRepository[BonusPointModel, BonusPoint]):
         
         qs = build_query_support(filters=filters, limit=1000)
         return self.get_all(query_support=qs)
+
+    def get_by_user_and_reason_and_date(
+        self, user_id: int, reason: str, date: date
+    ) -> Optional[BonusPoint]:
+        """Get a single bonus point by user, reason substring, and date."""
+        from sqlalchemy import func
+        from app.shared.application.query_support_utils import build_query_support
+        from app.shared.domain.query_support import FilterCriterion, FilterOperator
+
+        filters = [
+            FilterCriterion(field="user_id", operator=FilterOperator.EQ, value=user_id),
+            FilterCriterion(field="date", operator=FilterOperator.EQ, value=date),
+        ]
+        qs = build_query_support(filters=filters, limit=1)
+        results = self.get_all(query_support=qs)
+
+        for bp in results:
+            if reason in bp.reason:
+                return bp
+        return None

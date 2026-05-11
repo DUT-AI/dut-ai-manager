@@ -23,3 +23,16 @@ export interface ReportResponse {
     month: number | null;
     year: number | null;
 }
+
+export interface TitleReportItem {
+    user: {
+        id: number;
+        name: string;
+        email: string;
+        avatar_url?: string;
+    };
+    title: string | null;
+    total_points: number;
+    violation_count: number;
+    hours: number;
+}

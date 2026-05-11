@@ -1,5 +1,5 @@
 import { Modal, Table, Avatar, Tag, Typography } from 'antd';
-import { UserOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { UserOutlined, CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { MeetingResponse, ParticipantResponse } from '@/types/meeting.types';
 import { ParticipantStatus } from '@/types/meeting.types';
@@ -28,11 +28,19 @@ export const ParticipantListModal = ({ open, meeting, onCancel }: Props) => {
             title: 'Trạng thái',
             dataIndex: 'status',
             key: 'status',
-            render: (status: ParticipantStatus) => (
-                <Tag color={status === ParticipantStatus.JOINED ? 'green' : 'default'} icon={status === ParticipantStatus.JOINED ? <CheckCircleOutlined /> : <CloseCircleOutlined />}>
-                    {status.toUpperCase()}
-                </Tag>
-            )
+            render: (status: ParticipantStatus, record: ParticipantResponse) => {
+                const isLateNotJoined = status === ParticipantStatus.NOT_JOINED && meeting && dayjs().isAfter(dayjs(meeting.start_time).add(5, 'minute'));
+                const isLateJoined = status === ParticipantStatus.JOINED && record.check_in_at && meeting && dayjs(record.check_in_at).isAfter(dayjs(meeting.start_time).add(5, 'minute'));
+                
+                return (
+                    <Tag 
+                        color={status === ParticipantStatus.JOINED ? (isLateJoined ? 'warning' : 'green') : isLateNotJoined ? 'orange' : 'default'} 
+                        icon={status === ParticipantStatus.JOINED ? <CheckCircleOutlined /> : isLateNotJoined ? <ClockCircleOutlined /> : <CloseCircleOutlined />}
+                    >
+                        {status === ParticipantStatus.JOINED ? (isLateJoined ? 'TRỄ (ĐÃ CÓ MẶT)' : 'ĐÃ CHECKIN') : isLateNotJoined ? 'TRỄ (CHƯA CÓ MẶT)' : 'CHƯA THAM GIA'}
+                    </Tag>
+                );
+            }
         },
         {
             title: 'Thời gian check-in',

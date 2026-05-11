@@ -370,6 +370,39 @@ class CheckInWithCardUseCase:
         return f"{user.name} checkin thành công"
 
 
+class CheckOutUseCase:
+    """Check-out khỏi buổi họp"""
+
+    def __init__(
+        self,
+        meeting_repo: MeetingRepository,
+        participant_repo: ParticipantRepository,
+    ):
+        self.meeting_repo = meeting_repo
+        self.participant_repo = participant_repo
+
+    async def execute(self, meeting_id: int, user_id: int) -> MeetingParticipant:
+        meeting = self.meeting_repo.get_by_id(meeting_id)
+        if not meeting:
+            raise BadRequestException("Không tìm thấy buổi họp")
+
+        participant = self.participant_repo.get_by_meeting_and_user(
+            meeting_id, user_id
+        )
+        if not participant:
+            raise BadRequestException("Bạn không có trong danh sách tham gia")
+
+        if not participant.check_in_at:
+            raise BadRequestException("Bạn chưa check-in")
+
+        if participant.check_out_at:
+            raise BadRequestException("Bạn đã check-out rồi")
+
+        now = get_current_utc7_time()
+        updated = self.participant_repo.check_out(participant.id, now)
+        return updated
+
+
 class UpdateMeetingUseCase:
     """Cập nhật thông tin buổi họp"""
 

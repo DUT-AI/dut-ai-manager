@@ -6,3 +6,4 @@ class ParticipantStatus(str, Enum):
 
     NOT_JOINED = "chưa tham gia"
     JOINED = "đã checkin"
+    COMPLETED = "đã checkout"
