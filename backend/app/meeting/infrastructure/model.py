@@ -53,6 +53,7 @@ class MeetingParticipant(TimestampMixin, table=True):
     meeting_id: int = Field(foreign_key="meetings.id", index=True)
     user_id: int = Field(foreign_key="users.id", index=True)
     check_in_at: Optional[datetime] = Field(default=None)
+    check_out_at: Optional[datetime] = Field(default=None)
     status: ParticipantStatus = Field(default=ParticipantStatus.NOT_JOINED)
     link_image: Optional[str] = Field(default=None, max_length=500)
 
@@ -76,6 +77,7 @@ class MeetingParticipant(TimestampMixin, table=True):
             meeting_id=self.meeting_id,
             user_id=self.user_id,
             check_in_at=self.check_in_at,
+            check_out_at=self.check_out_at,
             status=self.status,
             link_image=self.link_image,
             user=user_ref,

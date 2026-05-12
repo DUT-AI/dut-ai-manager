@@ -9,12 +9,15 @@ from app.meeting.application.use_cases import (
     CreateMeetingUseCase,
     CheckInUseCase,
     CheckInWithCardUseCase,
+    CheckOutUseCase,
     UpdateMeetingUseCase,
     DeleteMeetingUseCase,
     MeetingUseCases,
     CheckMeetingAttendanceUseCase,
 )
+from app.meeting.application.capacity_use_cases import CalculateCurrentCapacityUseCase
 from app.meeting.application.event_handlers import MeetingNotificationHandler
+from app.meeting.application.sse_handler import MeetingSseHandler
 from app.user.infrastructure.repository import UserRepository
 from app.team.infrastructure.repository import TeamRepository
 from app.shared.infrastructure.minio_service import MinioService
@@ -64,6 +67,14 @@ class MeetingModuleProvider(Provider):
         return CheckInWithCardUseCase(user_repo, participant_repo, meeting_repo)
 
     @provide
+    def check_out_uc(
+        self,
+        meeting_repo: MeetingRepository,
+        participant_repo: ParticipantRepository,
+    ) -> CheckOutUseCase:
+        return CheckOutUseCase(meeting_repo, participant_repo)
+
+    @provide
     def update_meeting_uc(
         self, repo: MeetingRepository, team_repo: TeamRepository
     ) -> UpdateMeetingUseCase:
@@ -80,6 +91,13 @@ class MeetingModuleProvider(Provider):
         permission_repo: PermissionRequestRepository,
     ) -> CheckMeetingAttendanceUseCase:
         return CheckMeetingAttendanceUseCase(meeting_repo, permission_repo)
+
+    @provide
+    def calculate_current_capacity_uc(
+        self,
+        meeting_repo: MeetingRepository,
+    ) -> CalculateCurrentCapacityUseCase:
+        return CalculateCurrentCapacityUseCase(meeting_repo)
 
     @provide
     def meeting_use_cases(
@@ -103,3 +121,7 @@ class MeetingModuleProvider(Provider):
         zalo_bot: ZaloBotClient,
     ) -> MeetingNotificationHandler:
         return MeetingNotificationHandler(discord_service, user_repo, zalo_bot)
+
+    @provide
+    def get_meeting_sse_handler(self) -> MeetingSseHandler:
+        return MeetingSseHandler()

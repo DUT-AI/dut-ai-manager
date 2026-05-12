@@ -15,9 +15,18 @@ from app.violation.application.event_handlers import AutomatedViolationHandler
 from app.violation.notification_handler import ViolationNotificationHandler
 from app.violation.domain.events import ViolationCreated
 from app.violation.permission_handler import PermissionViolationHandler
-from app.meeting.domain.events import ParticipantCheckedIn, MeetingCreated, MeetingUpdated, MeetingAbsenceDetected
+from app.meeting.domain.events import (
+    ParticipantCheckedIn,
+    ParticipantCheckedOut,
+    MeetingCreated,
+    MeetingUpdated,
+    MeetingAbsenceDetected,
+)
 from app.meeting.application.event_handlers import MeetingNotificationHandler
-from app.permission_request.application.event_handlers import PermissionRequestNotificationHandler
+from app.meeting.application.sse_handler import MeetingSseHandler
+from app.permission_request.application.event_handlers import (
+    PermissionRequestNotificationHandler,
+)
 
 async def bootstrap_events(container: AsyncContainer):
     """
@@ -45,6 +54,8 @@ async def bootstrap_events(container: AsyncContainer):
 
     # Meeting Module
     EventBus.subscribe(ParticipantCheckedIn, MeetingNotificationHandler)
+    EventBus.subscribe(ParticipantCheckedIn, MeetingSseHandler)
+    EventBus.subscribe(ParticipantCheckedOut, MeetingSseHandler)
     EventBus.subscribe(MeetingCreated, MeetingNotificationHandler)
     EventBus.subscribe(MeetingUpdated, MeetingNotificationHandler)
 

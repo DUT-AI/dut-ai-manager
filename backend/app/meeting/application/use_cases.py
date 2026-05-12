@@ -1,3 +1,4 @@
+from loguru import logger
 from datetime import date, datetime, timedelta
 from typing import List, Optional, Tuple, cast
 
@@ -8,6 +9,7 @@ from app.meeting.domain.events import (
     MeetingCreated,
     MeetingUpdated,
     ParticipantCheckedIn,
+    ParticipantCheckedOut,
 )
 from app.meeting.domain.value_objects import ParticipantStatus
 from app.meeting.infrastructure.repository import (
@@ -275,6 +277,17 @@ class CheckInUseCase:
                 messages.append(f"Người dùng {user_id} không có trong danh sách")
                 continue
 
+            logger.debug(f"Participant: {participant}")
+
+            if participant.status == ParticipantStatus.JOINED:
+                logger.debug(
+                    f"Người dùng {participant.user.name if participant.user else user_id} đã điểm danh"
+                )
+                messages.append(
+                    f"Người dùng {participant.user.name if participant.user else user_id} đã điểm danh"
+                )
+                continue
+
             success, msg = participant.check_in(now, image_url)
             if not success:
                 messages.append(msg)
@@ -359,7 +372,7 @@ class CheckInWithCardUseCase:
             cast(
                 DomainEvent,
                 ParticipantCheckedIn(
-                    meeting_id=cast(int, participant.meeting_id),
+                    meeting_id=participant.meeting_id,
                     user_id=uid,
                     check_in_at=now,
                     is_late=is_late,
@@ -368,6 +381,53 @@ class CheckInWithCardUseCase:
             )
         )
         return f"{user.name} checkin thành công"
+
+
+class CheckOutUseCase:
+    """Check-out khỏi buổi họp"""
+
+    def __init__(
+        self,
+        meeting_repo: MeetingRepository,
+        participant_repo: ParticipantRepository,
+        event_bus: type[EventBus] = EventBus,
+    ):
+        self.meeting_repo = meeting_repo
+        self.participant_repo = participant_repo
+        self.event_bus = event_bus
+
+    async def execute(self, meeting_id: int, user_id: int) -> MeetingParticipant:
+        meeting = self.meeting_repo.get_by_id(meeting_id)
+        if not meeting:
+            raise BadRequestException("Không tìm thấy buổi họp")
+
+        participant = self.participant_repo.get_by_meeting_and_user(meeting_id, user_id)
+        if not participant:
+            raise BadRequestException("Bạn không có trong danh sách tham gia")
+
+        if not participant.check_in_at:
+            raise BadRequestException("Bạn chưa check-in")
+
+        if participant.check_out_at:
+            raise BadRequestException("Bạn đã check-out rồi")
+
+        now = get_current_utc7_time()
+        updated = self.participant_repo.check_out(participant.id, now)
+
+        # Publish event
+        await self.event_bus.publish(
+            cast(
+                DomainEvent,
+                ParticipantCheckedOut(
+                    meeting_id=meeting_id,
+                    user_id=user_id,
+                    check_out_at=now,
+                    meeting_title=meeting.title,
+                ),
+            )
+        )
+
+        return updated
 
 
 class UpdateMeetingUseCase:

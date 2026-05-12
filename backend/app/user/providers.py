@@ -10,6 +10,7 @@ from app.user.application.use_cases import (
     UpdateUserUseCase,
 )
 from app.user.infrastructure.repository import UserRepository
+from app.user.infrastructure.monthly_stats_repository import MonthlyUserStatsRepository
 from app.shared.infrastructure.minio_service import MinioService
 
 
@@ -19,6 +20,10 @@ class UserModuleProvider(Provider):
     @provide
     def get_user_repo(self, session: Session) -> UserRepository:
         return UserRepository(session)
+
+    @provide
+    def get_monthly_stats_repo(self, session: Session) -> MonthlyUserStatsRepository:
+        return MonthlyUserStatsRepository(session)
 
     @provide
     def get_user_uc(self, repo: UserRepository) -> GetUserUseCase:

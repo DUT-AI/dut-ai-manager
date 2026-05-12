@@ -1,6 +1,6 @@
 import axiosInstance from "../axiosInstance";
 import type { ApiResponse } from "../../types/api.types";
-import type { DashboardOverviewResponse, ReportResponse } from "../../types/report.types";
+import type { DashboardOverviewResponse, ReportResponse, TitleReportItem } from "../../types/report.types";
 
 export const reportService = {
   getDashboardOverview: async (month: number, year: number): Promise<DashboardOverviewResponse> => {
@@ -36,5 +36,12 @@ export const reportService = {
         params: { month, year, keyword }
     });
     return response.data.data as ReportResponse;
+  },
+
+  getTitlesReport: async (month: number, year: number): Promise<TitleReportItem[]> => {
+    const response = await axiosInstance.get<ApiResponse<TitleReportItem[]>>('/reports/titles', {
+        params: { month, year }
+    });
+    return response.data.data as TitleReportItem[];
   }
 };

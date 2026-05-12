@@ -8,9 +8,11 @@ Uses Dishka for dependency injection and CheckMeetingAttendanceUseCase for busin
 
 from datetime import date
 from typing import Optional
-from app.meeting.application.use_cases import CheckMeetingAttendanceUseCase
+
 from dishka import AsyncContainer
 from loguru import logger
+
+from app.meeting.application.use_cases import CheckMeetingAttendanceUseCase
 from app.shared.infrastructure.request_context import (
     _request_container_context,
     set_request_container,

@@ -22,6 +22,7 @@ class MeetingParticipant(BaseEntity):
     user_id: int
     meeting_id: Optional[int] = None
     check_in_at: Optional[datetime] = None
+    check_out_at: Optional[datetime] = None
     status: ParticipantStatus = ParticipantStatus.NOT_JOINED
     link_image: Optional[str] = None
     user: Optional[UserRef] = None
@@ -35,6 +36,15 @@ class MeetingParticipant(BaseEntity):
         self.status = ParticipantStatus.JOINED
         self.link_image = image_url
         return True, "Checkin thanh cong"
+
+    def check_out(self, check_out_time: datetime):
+        """Thực hiện check-out cho thành viên."""
+        if self.status == ParticipantStatus.COMPLETED:
+            return True, "Da checkout"
+
+        self.check_out_at = check_out_time
+        self.status = ParticipantStatus.COMPLETED
+        return True, "Checkout thanh cong"
 
 
 class Meeting(BaseEntity):

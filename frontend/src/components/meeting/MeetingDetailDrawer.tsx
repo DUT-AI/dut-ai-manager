@@ -1,4 +1,4 @@
-import { Drawer, Table, Avatar, Tag, Typography, Descriptions, Button, Popconfirm } from 'antd';
+import { Drawer, Table, Avatar, Tag, Typography, Descriptions, Button, Popconfirm, Image } from 'antd';
 import {
     UserOutlined,
     CheckCircleOutlined,
@@ -45,14 +45,19 @@ export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }
             title: 'Trạng thái',
             dataIndex: 'status',
             key: 'status',
-            render: (status: ParticipantStatus) => (
-                <Tag
-                    color={status === ParticipantStatus.JOINED ? 'green' : 'default'}
-                    icon={status === ParticipantStatus.JOINED ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
-                >
-                    {status === ParticipantStatus.JOINED ? 'Đã checkin' : 'Chưa tham gia'}
-                </Tag>
-            ),
+            render: (status: ParticipantStatus, record: ParticipantResponse) => {
+                const isLateNotJoined = status === ParticipantStatus.NOT_JOINED && dayjs().isAfter(dayjs(meeting.start_time).add(5, 'minute'));
+                const isLateJoined = status === ParticipantStatus.JOINED && record.check_in_at && dayjs(record.check_in_at).isAfter(dayjs(meeting.start_time).add(5, 'minute'));
+
+                return (
+                    <Tag
+                        color={status === ParticipantStatus.JOINED ? (isLateJoined ? 'warning' : 'green') : isLateNotJoined ? 'orange' : 'default'}
+                        icon={status === ParticipantStatus.JOINED ? <CheckCircleOutlined /> : isLateNotJoined ? <ClockCircleOutlined /> : <CloseCircleOutlined />}
+                    >
+                        {status === ParticipantStatus.JOINED ? (isLateJoined ? 'Trễ (Đã có mặt)' : 'Đã checkin') : isLateNotJoined ? 'Trễ (Chưa có mặt)' : 'Chưa tham gia'}
+                    </Tag>
+                );
+            },
         },
         {
             title: 'Thời gian checkin',
@@ -66,9 +71,15 @@ export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }
             key: 'link_image',
             render: (url: string) =>
                 url ? (
-                    <a href={url} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline text-xs">
-                        Xem ảnh
-                    </a>
+                    <Image
+                        src={url}
+                        alt="Checkin"
+                        width={40}
+                        className="rounded cursor-pointer hover:opacity-80 transition-opacity"
+                        preview={{
+                            mask: <div className="text-[10px]">Xem</div>
+                        }}
+                    />
                 ) : (
                     '—'
                 ),

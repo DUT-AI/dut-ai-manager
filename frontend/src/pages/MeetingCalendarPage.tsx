@@ -116,6 +116,8 @@ const MeetingCalendarPage = () => {
     const [modalState, dispatch] = useReducer(meetingModalReducer, meetingModalInitialState);
     const { selectedMeeting, drawerOpen, modalOpen, editingMeeting } = modalState;
 
+
+
     const weekEnd = currentWeekStart.add(6, 'day');
     const startDateStr = currentWeekStart.format('YYYY-MM-DD');
     const endDateStr = weekEnd.format('YYYY-MM-DD');
@@ -123,6 +125,14 @@ const MeetingCalendarPage = () => {
     const { data: meetings = [], isLoading } = useMeetingsByWeek(startDateStr, endDateStr);
     const { data: usersData } = useUsers();
     const users = useMemo(() => (usersData as any)?.data ?? usersData ?? [], [usersData]);
+
+    // Lấy dữ liệu mới nhất của meeting đang được chọn từ cache của React Query
+    const currentMeeting = useMemo(() => {
+        if (!selectedMeeting) return null;
+        // Tìm trong list meetings vừa được refetch
+        const latest = meetings.find(m => m.id === selectedMeeting.id);
+        return latest || selectedMeeting;
+    }, [meetings, selectedMeeting]);
 
     const createMutation = useCreateMeeting();
     const updateMutation = useUpdateMeeting();
@@ -278,11 +288,11 @@ const MeetingCalendarPage = () => {
     const isCurrentWeek = currentWeekStart.isSame(dayjs().startOf('isoWeek'), 'day');
 
     return (
-        <motion.div 
+        <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"
-            className="min-w-full bg-white" 
+            className="min-w-full bg-white"
             style={{ minWidth: 1460 }}
         >
             {/* Header */}
@@ -519,9 +529,9 @@ const MeetingCalendarPage = () => {
 
             {/* Meeting Detail Drawer */}
             <MeetingDetailDrawer
-                key={selectedMeeting?.id ?? 'drawer'}
+                key={currentMeeting?.id ?? 'drawer'}
                 open={drawerOpen}
-                meeting={selectedMeeting}
+                meeting={currentMeeting}
                 onClose={() => dispatch({ type: 'CLOSE_DRAWER' })}
                 onEdit={handleEdit}
                 onDelete={handleDelete}

@@ -1,13 +1,15 @@
-from typing import Optional, List, Any, cast, Union
+from typing import List, Optional, cast, Union
+
 from app.shared.domain.query_support import (
-    QuerySupport, 
-    OffsetPaginationParams, 
-    SortingParams, 
-    SortingOrder,
-    FilterGroup, 
     FilterCriterion,
-    LogicOperator
+    FilterGroup,
+    LogicOperator,
+    OffsetPaginationParams,
+    QuerySupport,
+    SortingOrder,
+    SortingParams,
 )
+
 
 def build_query_support(
     skip: int = 0,
@@ -16,7 +18,7 @@ def build_query_support(
     descending: bool = True,
     filters: Optional[List[FilterCriterion]] = None,
     filter_group: Optional[FilterGroup] = None,
-    include: Optional[List[str]] = None
+    include: Optional[List[str]] = None,
 ) -> QuerySupport:
     """
     Helper to build QuerySupport from common parameters.
@@ -30,15 +32,17 @@ def build_query_support(
 
     final_filter = filter_group
     if filters and not final_filter:
-        final_filter = FilterGroup(elements=cast(List[Union[FilterCriterion, FilterGroup]], filters), logic=LogicOperator.AND)
+        final_filter = FilterGroup(
+            elements=cast(List[Union[FilterCriterion, FilterGroup]], filters),
+            logic=LogicOperator.AND,
+        )
     elif filters and final_filter:
         # If both are provided, combine them (AND by default)
-        combined_elements = list(final_filter.elements) + cast(List[Union[FilterCriterion, FilterGroup]], list(filters))
+        combined_elements = list(final_filter.elements) + cast(
+            List[Union[FilterCriterion, FilterGroup]], list(filters)
+        )
         final_filter = FilterGroup(elements=combined_elements, logic=LogicOperator.AND)
 
     return QuerySupport(
-        pagination=pagination,
-        sorting=sorting,
-        filters=final_filter,
-        include=include
+        pagination=pagination, sorting=sorting, filters=final_filter, include=include
     )

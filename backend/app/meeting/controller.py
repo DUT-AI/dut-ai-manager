@@ -3,25 +3,31 @@ from typing import Annotated, List, Optional
 
 from app.core.deps import CurrentUser, hasPermission
 from app.core.permissions import MeetingPermission
-from dishka.integrations.fastapi import FromDishka, inject
+from app.meeting.application.capacity_use_cases import CalculateCurrentCapacityUseCase
 from app.meeting.application.use_cases import (
     CheckInUseCase,
     CheckInWithCardUseCase,
+    CheckOutUseCase,
     CreateMeetingUseCase,
     DeleteMeetingUseCase,
     GetMeetingsUseCase,
     UpdateMeetingUseCase,
 )
+from app.meeting.domain.value_objects import CapacityMonitor
 from app.meeting.schemas import (
     CheckInWithCardRequest,
+    CheckOutRequest,
     MeetingCreate,
     MeetingResponse,
     MeetingUpdate,
     ParticipantResponse,
 )
 from app.shared.application.response import ApiResponse
+from app.shared.infrastructure.sse import sse_broadcaster
 from app.utils.text import remove_vietnamese_tones
+from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, File, Form, UploadFile, status
+from fastapi.responses import StreamingResponse
 
 router = APIRouter(prefix="/meetings", tags=["Meetings"])
 
@@ -153,4 +159,65 @@ async def check_in(
     return ApiResponse.success(
         data=[ParticipantResponse.from_domain(p) for p in participants],
         message=message,
+    )
+
+
+@router.post("/{meeting_id}/check-out", response_model=ApiResponse[ParticipantResponse])
+@inject
+async def check_out(
+    meeting_id: int,
+    data: CheckOutRequest,
+    uc: FromDishka[CheckOutUseCase],
+    _: Annotated[CurrentUser, hasPermission(MeetingPermission.CHECK_IN)],
+):
+    """Thực hiện check-out khỏi buổi họp"""
+    participant = await uc.execute(meeting_id=meeting_id, user_id=data.user_id)
+    return ApiResponse.success(
+        data=ParticipantResponse.from_domain(participant),
+        message="Checkout thành công",
+    )
+
+
+@router.get("/events/stream")
+async def stream_meeting_events():
+    """Stream các sự kiện check-in/out theo thời gian thực (SSE)"""
+    return StreamingResponse(
+        sse_broadcaster.subscribe(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Hữu ích cho Nginx
+        },
+    )
+
+
+@router.get("/capacity/status", response_model=ApiResponse[CapacityMonitor])
+@inject
+async def get_capacity_status(
+    use_case: FromDishka[CalculateCurrentCapacityUseCase],
+    _current_user: CurrentUser,
+):
+    """Lấy trạng thái capacity hiện tại"""
+    monitor = use_case.execute()
+    return ApiResponse.success(data=monitor)
+
+
+@router.get("/capacity/forecast")
+@inject
+async def get_capacity_forecast(
+    use_case: FromDishka[CalculateCurrentCapacityUseCase],
+    _current_user: CurrentUser,
+):
+    """Lấy dự báo 30 phút tới"""
+    monitor = use_case.execute()
+    return ApiResponse.success(
+        data={
+            "current": monitor.current_count,
+            "incoming": monitor.incoming_count,
+            "outgoing": monitor.outgoing_count,
+            "future": monitor.future_count,
+            "status": monitor.status.value,
+            "max_capacity": monitor.MAX_CAPACITY,
+        }
     )

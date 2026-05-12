@@ -3,10 +3,11 @@ import { useAuth } from '@/context/AuthContext';
 import {
     LogoutOutlined,
     UserOutlined,
-    MenuOutlined
+    MenuOutlined,
+    RobotOutlined
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
-import { Avatar, Dropdown, Layout, Space, Typography, Button } from 'antd';
+import { Avatar, Dropdown, Layout, Space, Typography, Button, Tooltip } from 'antd';
 import { useNavigate } from 'react-router-dom';
 const { Header } = Layout;
 const { Title, Text } = Typography;
@@ -69,7 +70,17 @@ const HeaderLayout = ({ showMenuButton, onMenuClick }: HeaderLayoutProps) => {
                 </div>
             </div>
 
-            <Dropdown menu={{ items: menuItems }} placement="bottomRight" arrow>
+            <div className="flex items-center gap-4 relative z-10">
+                <Tooltip title="Robot Interface">
+                    <Button
+                        type="text"
+                        icon={<RobotOutlined style={{ color: '#4fdbc8', fontSize: '24px' }} />}
+                        onClick={() => navigate('/dashboard/robot')}
+                        className="hover:bg-white/10 flex items-center justify-center w-10 h-10 rounded-full border border-[#4fdbc8]/30 shadow-[0_0_10px_rgba(79,219,200,0.2)]"
+                    />
+                </Tooltip>
+
+                <Dropdown menu={{ items: menuItems }} placement="bottomRight" arrow>
                 <Space className="cursor-pointer hover:bg-white/5 px-2 py-1 md:px-3 md:py-1.5 rounded-xl transition-all border border-transparent hover:border-white/10 group relative z-10">
                     <Avatar
                         className="bg-linear-to-br from-[#6366f1] to-[#a855f7] text-white shadow-md border-2 border-white/10 group-hover:border-white/30 transition-all font-bold"
@@ -87,6 +98,7 @@ const HeaderLayout = ({ showMenuButton, onMenuClick }: HeaderLayoutProps) => {
                     </div>
                 </Space>
             </Dropdown>
+            </div>
         </Header>)
 }
 

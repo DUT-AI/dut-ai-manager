@@ -30,7 +30,7 @@ routers = [
     homework_submission_router,
     meeting_router,
     zalo_router,
-    billing_router,
+    billing_router
 ]
 
 # Include all routers in a single loop

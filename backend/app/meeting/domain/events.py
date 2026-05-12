@@ -33,6 +33,15 @@ class ParticipantCheckedIn(DomainEvent):
     meeting_title: str
 
 
+class ParticipantCheckedOut(DomainEvent):
+    """Sự kiện thành viên rời đi (checkout)"""
+
+    meeting_id: int
+    user_id: int
+    check_out_at: datetime
+    meeting_title: str
+
+
 class MeetingAbsenceDetected(DomainEvent):
     """Sự kiện phát hiện vắng mặt không phép"""
 
