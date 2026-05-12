@@ -8,6 +8,7 @@ from app.core.config import settings
 # Import all models to register them with SQLModel
 from app.auth.infrastructure.model import AccountModel
 from app.user.infrastructure.model import UserModel
+from app.user.infrastructure.monthly_stats_model import MonthlyUserStatsModel
 from app.rbac.infrastructure.model import (
     PermissionModel,
     RoleApiKeyModel,
