@@ -1,4 +1,4 @@
-import { useState, useEffect, useReducer } from 'react';
+import { useState, useEffect, useReducer, useMemo } from 'react';
 import {
     Calendar,
     Badge,
@@ -30,6 +30,7 @@ import type { MeetingResponse } from '@/types/meeting.types';
 import type { UserResponse } from '@/types/user.types';
 import { violationService } from '@/services/api/violation.service';
 import { activityService } from '@/services/api/activity.service';
+import { useMonthlyActivities, useDailyActivitySummary } from '@/hooks/useActivities';
 import {
     PermissionRequestSection,
     BonusPointSection,
@@ -270,9 +271,11 @@ const ActivityCalendarPage = () => {
     // State
     const [selectedDate, setSelectedDate] = useState<Dayjs>(() => dayjs());
     const [drawerVisible, setDrawerVisible] = useToggle(false);
-    const [dailyData, setDailyData] = useState<DailySummaryResponse | null>(null);
-    const [loading, setLoading] = useToggle(false);
-    const [activeDates, setActiveDates] = useState<string[]>([]);
+
+    // React Query Hooks
+    const { data: activeDates = [] } = useMonthlyActivities(selectedDate.month() + 1, selectedDate.year());
+    const { data: dailyData, isLoading: loading, refetch: refreshData } = useDailyActivitySummary(selectedDate.format('YYYY-MM-DD'));
+
     const [users, setUsers] = useState<UserResponse[]>([]);
     const [homeworks, setHomeworks] = useState<Homework[]>([]);
     const [allMeetings, setAllMeetings] = useState<MeetingResponse[]>([]);
@@ -285,34 +288,12 @@ const ActivityCalendarPage = () => {
         isMeetingModalOpen, isParticipantModalOpen, selectedMeeting, editingMeeting,
     } = modalState;
 
-    // Fetch Data
-    const fetchMonthlyData = async (date: Dayjs) => {
-        try {
-            const res = await activityService.getMonthlyStats(date.month() + 1, date.year());
-            if (res.is_success) {
-                setActiveDates(res.data || []);
-            }
-        } catch (error) {
-            console.error('Failed to fetch monthly stats', error);
-        }
-    };
-
-    const fetchDailyDetail = async (date: Dayjs) => {
-        setLoading(true);
-        try {
-            const dateStr = date.format('YYYY-MM-DD');
-            const res = await activityService.getDailySummary(dateStr);
-            if (res.is_success) {
-                setDailyData(res.data || null);
-            } else {
-                message.error(res.message || 'Failed to fetch details');
-            }
-        } catch (error) {
-            message.error('Connection error');
-        } finally {
-            setLoading(false);
-        }
-    };
+    // Lấy dữ liệu mới nhất của meeting đang được chọn
+    const currentMeeting = useMemo(() => {
+        if (!selectedMeeting) return null;
+        const latest = dailyData?.meetings.find(m => m.id === selectedMeeting.id);
+        return latest || selectedMeeting;
+    }, [dailyData, selectedMeeting]);
 
     const fetchAllUsers = async () => {
         try {
@@ -336,7 +317,7 @@ const ActivityCalendarPage = () => {
 
     const fetchAllMeetings = async () => {
         try {
-            const res = await meetingService.getAllMeetings();
+            const res = await meetingService.getMeetings();
             if (res.is_success) {
                 setAllMeetings(res.data || []);
             }
@@ -345,18 +326,11 @@ const ActivityCalendarPage = () => {
         }
     };
 
-    const refreshData = () => {
-        fetchDailyDetail(selectedDate);
-        fetchMonthlyData(selectedDate);
-    };
-
     useEffect(() => {
-        fetchMonthlyData(selectedDate);
         fetchAllUsers();
         fetchAllHomeworks();
         fetchAllMeetings();
-        fetchDailyDetail(selectedDate);
-    }, [selectedDate.month(), selectedDate.year()]);
+    }, []);
 
     const dateCellRender = (value: Dayjs) => {
         const dateStr = value.format('YYYY-MM-DD');
@@ -373,7 +347,6 @@ const ActivityCalendarPage = () => {
 
     const onSelect = (newValue: Dayjs) => {
         setSelectedDate(newValue);
-        fetchDailyDetail(newValue);
         setDrawerVisible(true);
     };
 
@@ -553,7 +526,6 @@ const ActivityCalendarPage = () => {
                             activeDates={activeDates}
                             onSelectDate={(day) => {
                                 setSelectedDate(day);
-                                fetchDailyDetail(day);
                                 setDrawerVisible(true);
                             }}
                             onNavigateMonth={setSelectedDate}
@@ -612,9 +584,9 @@ const ActivityCalendarPage = () => {
             />
 
             <ParticipantListModal
-                key={selectedMeeting?.id ?? 'participants'}
+                key={currentMeeting?.id ?? 'participants'}
                 open={isParticipantModalOpen}
-                meeting={selectedMeeting}
+                meeting={currentMeeting}
                 onCancel={() => dispatch({ type: 'CLOSE_PARTICIPANTS' })}
             />
             <PermissionRequestModal

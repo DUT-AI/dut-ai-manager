@@ -1,4 +1,4 @@
-import { Modal, Table, Avatar, Tag, Typography } from 'antd';
+import { Modal, Table, Avatar, Tag, Typography, Image } from 'antd';
 import { UserOutlined, CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { MeetingResponse, ParticipantResponse } from '@/types/meeting.types';
@@ -53,7 +53,15 @@ export const ParticipantListModal = ({ open, meeting, onCancel }: Props) => {
             dataIndex: 'link_image',
             key: 'link_image',
             render: (url: string) => url ? (
-                <a href={url} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline text-xs">Xem ảnh</a>
+                <Image
+                    src={url}
+                    alt="Checkin"
+                    width={40}
+                    className="rounded cursor-pointer hover:opacity-80 transition-opacity"
+                    preview={{
+                        mask: <div className="text-[10px]">Xem</div>
+                    }}
+                />
             ) : '-'
         }
     ];

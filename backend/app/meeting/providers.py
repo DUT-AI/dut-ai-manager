@@ -17,6 +17,7 @@ from app.meeting.application.use_cases import (
 )
 from app.meeting.application.capacity_use_cases import CalculateCurrentCapacityUseCase
 from app.meeting.application.event_handlers import MeetingNotificationHandler
+from app.meeting.application.sse_handler import MeetingSseHandler
 from app.user.infrastructure.repository import UserRepository
 from app.team.infrastructure.repository import TeamRepository
 from app.shared.infrastructure.minio_service import MinioService
@@ -120,3 +121,7 @@ class MeetingModuleProvider(Provider):
         zalo_bot: ZaloBotClient,
     ) -> MeetingNotificationHandler:
         return MeetingNotificationHandler(discord_service, user_repo, zalo_bot)
+
+    @provide
+    def get_meeting_sse_handler(self) -> MeetingSseHandler:
+        return MeetingSseHandler()

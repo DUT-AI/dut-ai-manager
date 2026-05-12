@@ -1,8 +1,10 @@
+from loguru import logger
+
 from app.homework.domain.value_objects import HomeworkOverdueDetected
 from app.meeting.domain.events import MeetingAbsenceDetected, ParticipantCheckedIn
-from app.violation.application.use_cases import CreateViolationUseCase
-from app.utils.datetime import get_current_utc7_time
 from app.shared.application.event_handler import EventHandler
+from app.utils.datetime import get_current_utc7_time
+from app.violation.application.use_cases import CreateViolationUseCase
 
 
 class AutomatedViolationHandler(EventHandler):
@@ -44,6 +46,7 @@ class AutomatedViolationHandler(EventHandler):
 
     async def _handle_meeting_late(self, event: ParticipantCheckedIn):
         """Tạo vi phạm khi đi trễ sinh hoạt."""
+        logger.debug(f"Handling ParticipantCheckedIn: {event}")
         if event.is_late:
             now = get_current_utc7_time()
             await self.create_violation_use_case.execute(

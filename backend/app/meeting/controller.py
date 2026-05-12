@@ -23,9 +23,11 @@ from app.meeting.schemas import (
     ParticipantResponse,
 )
 from app.shared.application.response import ApiResponse
+from app.shared.infrastructure.sse import sse_broadcaster
 from app.utils.text import remove_vietnamese_tones
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, File, Form, UploadFile, status
+from fastapi.responses import StreamingResponse
 
 router = APIRouter(prefix="/meetings", tags=["Meetings"])
 
@@ -173,6 +175,20 @@ async def check_out(
     return ApiResponse.success(
         data=ParticipantResponse.from_domain(participant),
         message="Checkout thành công",
+    )
+
+
+@router.get("/events/stream")
+async def stream_meeting_events():
+    """Stream các sự kiện check-in/out theo thời gian thực (SSE)"""
+    return StreamingResponse(
+        sse_broadcaster.subscribe(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Hữu ích cho Nginx
+        },
     )
 
 

@@ -1,4 +1,4 @@
-import { Drawer, Table, Avatar, Tag, Typography, Descriptions, Button, Popconfirm } from 'antd';
+import { Drawer, Table, Avatar, Tag, Typography, Descriptions, Button, Popconfirm, Image } from 'antd';
 import {
     UserOutlined,
     CheckCircleOutlined,
@@ -71,9 +71,15 @@ export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }
             key: 'link_image',
             render: (url: string) =>
                 url ? (
-                    <a href={url} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline text-xs">
-                        Xem ảnh
-                    </a>
+                    <Image
+                        src={url}
+                        alt="Checkin"
+                        width={40}
+                        className="rounded cursor-pointer hover:opacity-80 transition-opacity"
+                        preview={{
+                            mask: <div className="text-[10px]">Xem</div>
+                        }}
+                    />
                 ) : (
                     '—'
                 ),
