@@ -61,6 +61,8 @@ def create_app():
         description="API for DUT AI Manager",
         version="1.0.0",
         lifespan=lifespan,
+        docs_url="/api/v1/docs",
+        redoc_url="/api/v1/redoc",
     )
 
     if settings.ENVIRONMENT != "local":
