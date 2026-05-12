@@ -63,6 +63,7 @@ def create_app():
         lifespan=lifespan,
         docs_url="/api/v1/docs",
         redoc_url="/api/v1/redoc",
+        openapi_url="/api/v1/openapi.json",
     )
 
     if settings.ENVIRONMENT != "local":
