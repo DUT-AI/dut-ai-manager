@@ -60,7 +60,7 @@ async def update_role(
     """Update a role (Admin only)"""
     role = use_cases.update_role(role_id, role_data)
     if not role:
-        return ApiResponse.not_found(message="Role not found")
+        return ApiResponse.error(message="Role not found")
     return ApiResponse.success(data=role, message="Role updated successfully")
 
 
@@ -76,7 +76,7 @@ async def delete_role(
     """Delete a role (Admin only)"""
     success = use_cases.delete_role(role_id)
     if not success:
-        return ApiResponse.not_found(message="Role not found")
+        return ApiResponse.error(message="Role not found")
     return ApiResponse.success(message="Role deleted successfully")
 
 
@@ -118,7 +118,7 @@ async def update_permission(
     """Update a permission (Admin only)"""
     perm = use_cases.update_permission(perm_id, perm_data)
     if not perm:
-        return ApiResponse.not_found(message="Permission not found")
+        return ApiResponse.error(message="Permission not found")
     return ApiResponse.success(data=perm, message="Permission updated successfully")
 
 
@@ -136,7 +136,7 @@ async def delete_permission(
     """Delete a permission (Admin only)"""
     success = use_cases.delete_permission(perm_id)
     if not success:
-        return ApiResponse.not_found(message="Permission not found")
+        return ApiResponse.error(message="Permission not found")
     return ApiResponse.success(message="Permission deleted successfully")
 
 
@@ -225,5 +225,5 @@ async def revoke_api_key(
     """Revoke (delete) an API Key"""
     success, message = use_cases.revoke_api_key(key_id)
     if not success:
-        return ApiResponse.not_found(message=message)
+        return ApiResponse.error(message=message)
     return ApiResponse.success(message=message)

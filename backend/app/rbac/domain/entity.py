@@ -56,5 +56,9 @@ class Role(BaseEntity):
 
     @property
     def permissions(self) -> List[Permission]:
-        """Flatten related permissions for ease of access."""
-        return [rp.permission for rp in self.role_permissions if rp.permission]
+        """Flatten related permissions for ease of access, excluding deleted ones."""
+        return [
+            rp.permission
+            for rp in self.role_permissions
+            if rp.permission and not rp.is_deleted
+        ]
