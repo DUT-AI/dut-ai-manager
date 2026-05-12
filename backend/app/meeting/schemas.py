@@ -15,6 +15,9 @@ class CheckInWithCardRequest(BaseModel):
 
     card_code: str = Field(..., min_length=1, description="Mã thẻ check-in")
 
+class CheckOutRequest(BaseModel):
+    user_id: int = Field(..., description="ID của user cần check-out")
+
 
 class ParticipantResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)

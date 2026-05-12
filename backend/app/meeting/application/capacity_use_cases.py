@@ -1,33 +1,28 @@
 """
-Capacity Monitor Service
+Capacity Use Cases
 
-Service tính toán và lưu trạng thái cảnh báo quá tải.
+Chứa logic nghiệp vụ liên quan đến việc tính toán sức chứa của phòng lab.
 """
 
-from datetime import datetime, timedelta
-from typing import Optional
-import json
-from app.capacity.domain.entity import CapacityMonitor, CapacityStatus
+from datetime import timedelta
+
+from app.meeting.domain.value_objects import CapacityMonitor
 from app.meeting.infrastructure.repository import MeetingRepository
 from app.utils.datetime import get_current_utc7_time
 
 
-class CapacityService:
-    """Service quản lý capacity"""
+class CalculateCurrentCapacityUseCase:
+    """Tính toán capacity hiện tại"""
 
     FORECAST_WINDOW_MINUTES = 30
-    CACHE_KEY = "capacity:status"
-    CACHE_TTL = 300  # 5 phút
 
     def __init__(
         self,
         meeting_repo: MeetingRepository,
-        redis_client=None,
     ):
         self.meeting_repo = meeting_repo
-        self.redis = redis_client
 
-    def calculate_current(self) -> CapacityMonitor:
+    def execute(self) -> CapacityMonitor:
         """Tính toán capacity hiện tại (sync version)"""
         now = get_current_utc7_time()
         window_end = now + timedelta(minutes=self.FORECAST_WINDOW_MINUTES)
@@ -44,7 +39,3 @@ class CapacityService:
         )
 
         return monitor
-
-    def get_current_status(self) -> CapacityMonitor:
-        """Lấy trạng thái hiện tại"""
-        return self.calculate_current()

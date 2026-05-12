@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Annotated, List, Optional
+from typing import List, Optional
 
 from app.core.deps import CurrentUser
 from app.report.application.use_cases import (

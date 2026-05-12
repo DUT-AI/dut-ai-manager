@@ -12,7 +12,6 @@ from app.user.controller import router as user_router
 from app.violation.controller import router as violation_router
 from app.zalo.controller import router as zalo_router
 from app.billing.controller import router as billing_router
-from app.capacity.controller import router as capacity_router
 from fastapi import APIRouter
 
 api_v1_router = APIRouter(prefix="/api/v1")
@@ -31,8 +30,7 @@ routers = [
     homework_submission_router,
     meeting_router,
     zalo_router,
-    billing_router,
-    capacity_router
+    billing_router
 ]
 
 # Include all routers in a single loop

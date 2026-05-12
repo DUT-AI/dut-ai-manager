@@ -66,3 +66,14 @@ class BadRequestException(Exception):
         self.message = message
         self.data = data
         self.status_code = status_code
+
+
+class UserInfoResponse(BaseModel):
+    """Response model for user information"""
+
+    id: int
+    name: str
+    avatar_url: str | None = None
+
+    class Config:
+        from_attributes = True

@@ -9,6 +9,7 @@ from app.report.application.use_cases import (
 from app.report.application.title_use_cases import (
     GetCurrentTitleUseCase,
     GetMonthlyTitlesReportUseCase,
+    AssignMonthlyTitlesUseCase,
 )
 from app.meeting.infrastructure.repository import MeetingRepository
 from app.user.infrastructure.monthly_stats_repository import MonthlyUserStatsRepository
@@ -89,3 +90,15 @@ class ReportModuleProvider(Provider):
         user_repo: UserRepository,
     ) -> GetMonthlyTitlesReportUseCase:
         return GetMonthlyTitlesReportUseCase(stats_repo, user_repo)
+
+    @provide
+    def get_assign_monthly_titles_uc(
+        self,
+        stats_repo: MonthlyUserStatsRepository,
+        bonus_repo: BonusPointRepository,
+        violation_repo: ViolationRepository,
+        user_repo: UserRepository,
+    ) -> AssignMonthlyTitlesUseCase:
+        return AssignMonthlyTitlesUseCase(
+            stats_repo, bonus_repo, violation_repo, user_repo
+        )

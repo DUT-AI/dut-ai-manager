@@ -13,6 +13,8 @@ import os
 
 from app.jobs.homework_checker_job import check_overdue_homework_submissions
 from app.jobs.meeting_checker_job import check_meeting_attendance
+from app.jobs.activity_scoring_job import calculate_activity_points
+from app.jobs.monthly_title_job import assign_monthly_titles
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from dishka import AsyncContainer
@@ -84,6 +86,26 @@ def start_scheduler(dishka_container: AsyncContainer) -> None:
         CronTrigger(hour=23, minute=59, timezone="Asia/Ho_Chi_Minh"),
         id="meeting_attendance_check",
         name="Check meeting attendance",
+        replace_existing=True,
+        kwargs={"container": dishka_container},
+    )
+
+    # Schedule activity scoring check every 30 minutes
+    scheduler.add_job(
+        calculate_activity_points,
+        CronTrigger(minute="0,30", timezone="Asia/Ho_Chi_Minh"),
+        id="activity_scoring_job",
+        name="Calculate activity points",
+        replace_existing=True,
+        kwargs={"container": dishka_container},
+    )
+
+    # Schedule monthly title assignment at 00:01 on the first day of the month
+    scheduler.add_job(
+        assign_monthly_titles,
+        CronTrigger(day=1, hour=0, minute=1, timezone="Asia/Ho_Chi_Minh"),
+        id="monthly_title_job",
+        name="Assign monthly titles",
         replace_existing=True,
         kwargs={"container": dishka_container},
     )

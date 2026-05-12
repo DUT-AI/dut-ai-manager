@@ -3,7 +3,7 @@ from typing import Annotated, List, Optional
 
 from app.core.deps import CurrentUser, hasPermission
 from app.core.permissions import MeetingPermission
-from dishka.integrations.fastapi import FromDishka, inject
+from app.meeting.application.capacity_use_cases import CalculateCurrentCapacityUseCase
 from app.meeting.application.use_cases import (
     CheckInUseCase,
     CheckInWithCardUseCase,
@@ -13,8 +13,10 @@ from app.meeting.application.use_cases import (
     GetMeetingsUseCase,
     UpdateMeetingUseCase,
 )
+from app.meeting.domain.value_objects import CapacityMonitor
 from app.meeting.schemas import (
     CheckInWithCardRequest,
+    CheckOutRequest,
     MeetingCreate,
     MeetingResponse,
     MeetingUpdate,
@@ -22,6 +24,7 @@ from app.meeting.schemas import (
 )
 from app.shared.application.response import ApiResponse
 from app.utils.text import remove_vietnamese_tones
+from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, File, Form, UploadFile, status
 
 router = APIRouter(prefix="/meetings", tags=["Meetings"])
@@ -161,15 +164,44 @@ async def check_in(
 @inject
 async def check_out(
     meeting_id: int,
+    data: CheckOutRequest,
     uc: FromDishka[CheckOutUseCase],
-    current_user: Annotated[CurrentUser, hasPermission(MeetingPermission.CHECK_IN)],
+    _: Annotated[CurrentUser, hasPermission(MeetingPermission.CHECK_IN)],
 ):
     """Thực hiện check-out khỏi buổi họp"""
-    participant = await uc.execute(
-        meeting_id=meeting_id,
-        user_id=current_user.id,
-    )
+    participant = await uc.execute(meeting_id=meeting_id, user_id=data.user_id)
     return ApiResponse.success(
         data=ParticipantResponse.from_domain(participant),
         message="Checkout thành công",
+    )
+
+
+@router.get("/capacity/status", response_model=ApiResponse[CapacityMonitor])
+@inject
+async def get_capacity_status(
+    use_case: FromDishka[CalculateCurrentCapacityUseCase],
+    _current_user: CurrentUser,
+):
+    """Lấy trạng thái capacity hiện tại"""
+    monitor = use_case.execute()
+    return ApiResponse.success(data=monitor)
+
+
+@router.get("/capacity/forecast")
+@inject
+async def get_capacity_forecast(
+    use_case: FromDishka[CalculateCurrentCapacityUseCase],
+    _current_user: CurrentUser,
+):
+    """Lấy dự báo 30 phút tới"""
+    monitor = use_case.execute()
+    return ApiResponse.success(
+        data={
+            "current": monitor.current_count,
+            "incoming": monitor.incoming_count,
+            "outgoing": monitor.outgoing_count,
+            "future": monitor.future_count,
+            "status": monitor.status.value,
+            "max_capacity": monitor.MAX_CAPACITY,
+        }
     )

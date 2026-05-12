@@ -15,6 +15,7 @@ from app.meeting.application.use_cases import (
     MeetingUseCases,
     CheckMeetingAttendanceUseCase,
 )
+from app.meeting.application.capacity_use_cases import CalculateCurrentCapacityUseCase
 from app.meeting.application.event_handlers import MeetingNotificationHandler
 from app.user.infrastructure.repository import UserRepository
 from app.team.infrastructure.repository import TeamRepository
@@ -89,6 +90,13 @@ class MeetingModuleProvider(Provider):
         permission_repo: PermissionRequestRepository,
     ) -> CheckMeetingAttendanceUseCase:
         return CheckMeetingAttendanceUseCase(meeting_repo, permission_repo)
+
+    @provide
+    def calculate_current_capacity_uc(
+        self,
+        meeting_repo: MeetingRepository,
+    ) -> CalculateCurrentCapacityUseCase:
+        return CalculateCurrentCapacityUseCase(meeting_repo)
 
     @provide
     def meeting_use_cases(
