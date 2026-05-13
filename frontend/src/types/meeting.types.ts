@@ -23,6 +23,7 @@ export interface ParticipantResponse {
     user_name?: string;
     user_avatar?: string;
     check_in_at?: string;
+    check_out_at?: string;
     status: ParticipantStatus;
     link_image?: string;
     created_at: string;

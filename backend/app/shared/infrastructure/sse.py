@@ -18,13 +18,19 @@ class SseBroadcaster:
         self.subscribers.append(queue)
         try:
             while True:
-                # Chờ đợi message từ queue
-                message = await queue.get()
-                # Format dữ liệu theo chuẩn SSE: "data: <json>\n\n"
-                yield f"data: {json.dumps(message, ensure_ascii=False)}\n\n"
+                try:
+                    # Chờ đợi message từ queue với timeout để gửi heartbeat
+                    # 30 giây là khoảng thời gian an toàn cho Cloudflare (thường ngắt ở 100s)
+                    message = await asyncio.wait_for(queue.get(), timeout=30.0)
+                    # Format dữ liệu theo chuẩn SSE: "data: <json>\n\n"
+                    yield f"data: {json.dumps(message, ensure_ascii=False)}\n\n"
+                except asyncio.TimeoutError:
+                    # Gửi heartbeat (comment trong SSE bắt đầu bằng dấu :) để giữ kết nối
+                    yield ": keep-alive\n\n"
         finally:
             # Cleanup: Xóa queue khi client ngắt kết nối
-            self.subscribers.remove(queue)
+            if queue in self.subscribers:
+                self.subscribers.remove(queue)
 
     async def broadcast(self, message: Dict[str, Any]):
         """Gửi tin nhắn tới tất cả subscribers"""

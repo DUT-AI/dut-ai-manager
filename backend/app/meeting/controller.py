@@ -185,9 +185,10 @@ async def stream_meeting_events():
         sse_broadcaster.subscribe(),
         media_type="text/event-stream",
         headers={
-            "Cache-Control": "no-cache",
+            "Cache-Control": "no-cache, no-transform",
             "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",  # Hữu ích cho Nginx
+            "X-Accel-Buffering": "no",  # Disable buffering on Nginx
+            "X-Content-Type-Options": "nosniff", # Prevent MIME sniffing
         },
     )
 

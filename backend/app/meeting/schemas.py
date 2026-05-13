@@ -27,6 +27,7 @@ class ParticipantResponse(BaseModel):
     user_name: str
     user_avatar: Optional[str] = None
     check_in_at: Optional[datetime] = None
+    check_out_at: Optional[datetime] = None
     status: ParticipantStatus
     link_image: Optional[str] = None
 
@@ -53,6 +54,7 @@ class ParticipantResponse(BaseModel):
                         "user_name": getattr(user, "name", ""),
                         "user_avatar": getattr(user, "avatar_url", None),
                         "check_in_at": getattr(data, "check_in_at", None),
+                        "check_out_at": getattr(data, "check_out_at", None),
                         "status": getattr(data, "status", None),
                         "link_image": getattr(data, "link_image", None),
                     }
@@ -69,6 +71,7 @@ class ParticipantResponse(BaseModel):
             user_name=p.user.name if p.user else "",
             user_avatar=p.user.avatar_url if p.user else None,
             check_in_at=p.check_in_at,
+            check_out_at=p.check_out_at,
             status=p.status,
             link_image=p.link_image,
         )

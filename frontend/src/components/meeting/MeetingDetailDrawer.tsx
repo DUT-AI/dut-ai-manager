@@ -40,6 +40,7 @@ export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }
                     <Text>{record.user_name || `User #${record.user_id}`}</Text>
                 </div>
             ),
+            sorter: (a: ParticipantResponse, b: ParticipantResponse) => (a.user_name || '').localeCompare(b.user_name || ''),
         },
         {
             title: 'Trạng thái',
@@ -58,12 +59,29 @@ export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }
                     </Tag>
                 );
             },
+            sorter: (a: ParticipantResponse, b: ParticipantResponse) => a.status.localeCompare(b.status),
         },
         {
-            title: 'Thời gian checkin',
+            title: 'Checkin',
             dataIndex: 'check_in_at',
             key: 'check_in_at',
             render: (text: string) => text ? dayjs(text).format('HH:mm:ss') : '—',
+            sorter: (a: ParticipantResponse, b: ParticipantResponse) => {
+                if (!a.check_in_at) return 1;
+                if (!b.check_in_at) return -1;
+                return dayjs(a.check_in_at).unix() - dayjs(b.check_in_at).unix();
+            },
+        },
+        {
+            title: 'Checkout',
+            dataIndex: 'check_out_at',
+            key: 'check_out_at',
+            render: (text: string) => text ? dayjs(text).format('HH:mm:ss') : '—',
+            sorter: (a: ParticipantResponse, b: ParticipantResponse) => {
+                if (!a.check_out_at) return 1;
+                if (!b.check_out_at) return -1;
+                return dayjs(a.check_out_at).unix() - dayjs(b.check_out_at).unix();
+            },
         },
         {
             title: 'Ảnh',

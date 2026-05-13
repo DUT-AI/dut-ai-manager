@@ -22,7 +22,8 @@ export const ParticipantListModal = ({ open, meeting, onCancel }: Props) => {
                     <Avatar src={record.user_avatar} icon={<UserOutlined />} size="small" />
                     <Text>{record.user_name || `User ID: ${record.user_id}`}</Text>
                 </div>
-            )
+            ),
+            sorter: (a: ParticipantResponse, b: ParticipantResponse) => (a.user_name || '').localeCompare(b.user_name || ''),
         },
         {
             title: 'Trạng thái',
@@ -40,13 +41,30 @@ export const ParticipantListModal = ({ open, meeting, onCancel }: Props) => {
                         {status === ParticipantStatus.JOINED ? (isLateJoined ? 'TRỄ (ĐÃ CÓ MẶT)' : 'ĐÃ CHECKIN') : isLateNotJoined ? 'TRỄ (CHƯA CÓ MẶT)' : 'CHƯA THAM GIA'}
                     </Tag>
                 );
-            }
+            },
+            sorter: (a: ParticipantResponse, b: ParticipantResponse) => a.status.localeCompare(b.status),
         },
         {
             title: 'Thời gian check-in',
             dataIndex: 'check_in_at',
             key: 'check_in_at',
-            render: (text: string) => text ? dayjs(text).format('HH:mm:ss DD/MM/YYYY') : '-'
+            render: (text: string) => text ? dayjs(text).format('HH:mm:ss DD/MM/YYYY') : '-',
+            sorter: (a: ParticipantResponse, b: ParticipantResponse) => {
+                if (!a.check_in_at) return 1;
+                if (!b.check_in_at) return -1;
+                return dayjs(a.check_in_at).unix() - dayjs(b.check_in_at).unix();
+            },
+        },
+        {
+            title: 'Thời gian check-out',
+            dataIndex: 'check_out_at',
+            key: 'check_out_at',
+            render: (text: string) => text ? dayjs(text).format('HH:mm:ss DD/MM/YYYY') : '-',
+            sorter: (a: ParticipantResponse, b: ParticipantResponse) => {
+                if (!a.check_out_at) return 1;
+                if (!b.check_out_at) return -1;
+                return dayjs(a.check_out_at).unix() - dayjs(b.check_out_at).unix();
+            },
         },
         {
             title: 'Ảnh check-in',
