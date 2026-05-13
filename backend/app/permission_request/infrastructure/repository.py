@@ -192,6 +192,3 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
             self.soft_delete(entity)
             return True
         return False
-
-    def restore(self, entity: DomainEntity) -> DomainEntity:
-        return super().restore(entity)

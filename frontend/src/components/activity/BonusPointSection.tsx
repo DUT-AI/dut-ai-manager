@@ -85,10 +85,10 @@ export const BonusPointSection = ({ data, onEdit, onRefresh }: Props) => {
                                     </Popconfirm>
                                 </div>
                             </div>
-                            <Text className="block text-sm text-gray-600 mb-1">{item.user_name || 'Unknown'}</Text>
+                            <Text className="block text-sm text-gray-600 mb-1">{item.owner?.name || 'Unknown'}</Text>
                             <Text className="block text-sm text-gray-700 line-clamp-2">{item.reason}</Text>
                             <div className="mt-2 pt-2 border-t border-green-100 flex justify-between items-center text-[10px] text-gray-400">
-                                <span>Tạo bởi: {item.creator_name || 'System'}</span>
+                                <span>Tạo bởi: {item.owner?.name || 'System'}</span>
                                 <span>{dayjs(item.created_at).format('DD/MM HH:mm')}</span>
                             </div>
                         </Card>
@@ -112,7 +112,7 @@ export const BonusPointSection = ({ data, onEdit, onRefresh }: Props) => {
                     <div className="flex flex-col gap-4">
                         <Descriptions column={1} size="small" bordered>
                             <Descriptions.Item label="Thành viên">
-                                <Text strong>{detailItem.user_name || 'Unknown'}</Text>
+                                <Text strong>{detailItem.owner?.name || 'Unknown'}</Text>
                             </Descriptions.Item>
                             <Descriptions.Item label="Điểm số">
                                 <Text strong className="text-green-600">+{detailItem.points}</Text>
@@ -129,11 +129,11 @@ export const BonusPointSection = ({ data, onEdit, onRefresh }: Props) => {
 
                         <Divider style={{ textAlign: 'left' }} className="!mb-2">Thông tin hệ thống</Divider>
                         <Descriptions column={1} size="small" className="text-gray-500">
-                            <Descriptions.Item label="Tạo bởi">{detailItem.creator_name || 'N/A'}</Descriptions.Item>
+                            <Descriptions.Item label="Tạo bởi">{detailItem.owner?.name || 'N/A'}</Descriptions.Item>
                             <Descriptions.Item label="Ngày tạo">{dayjs(detailItem.created_at).format('DD/MM/YYYY HH:mm:ss')}</Descriptions.Item>
                             {detailItem.updated_at !== detailItem.created_at && (
                                 <>
-                                    <Descriptions.Item label="Sửa bởi">{detailItem.updater_name || 'N/A'}</Descriptions.Item>
+                                    <Descriptions.Item label="Sửa bởi">{detailItem.updater?.name || 'N/A'}</Descriptions.Item>
                                     <Descriptions.Item label="Ngày sửa">{dayjs(detailItem.updated_at).format('DD/MM/YYYY HH:mm:ss')}</Descriptions.Item>
                                 </>
                             )}

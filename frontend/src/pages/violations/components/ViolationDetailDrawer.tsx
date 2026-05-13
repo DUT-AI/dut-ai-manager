@@ -46,11 +46,11 @@ const ViolationDetailDrawer = ({
                             <Descriptions.Item label="Thành viên">
                                 <Space>
                                     <Avatar
-                                        src={detailItem.owner?.avatar || detailItem.user_avatar}
+                                        src={detailItem.owner?.avatar_url}
                                         icon={<UserOutlined />}
                                         size="small"
                                     />
-                                    <Text strong>{detailItem.owner?.name || detailItem.user_name || 'Unknown'}</Text>
+                                    <Text strong>{detailItem.owner?.name || 'Unknown'}</Text>
                                 </Space>
                             </Descriptions.Item>
                             <Descriptions.Item label="Thời gian">
@@ -76,16 +76,16 @@ const ViolationDetailDrawer = ({
                             {detailItem.creator && (
                                 <Descriptions.Item label="Created by">
                                     <Space>
-                                        <Avatar src={detailItem.creator.avatar} size="small" />
-                                        <Text>{detailItem.creator.name}</Text>
+                                        <Avatar src={detailItem.creator?.avatar_url} size="small" />
+                                        <Text>{detailItem.creator?.name}</Text>
                                     </Space>
                                 </Descriptions.Item>
                             )}
                             {detailItem.updater && (
                                 <Descriptions.Item label="Updated by">
                                     <Space>
-                                        <Avatar src={detailItem.updater.avatar} size="small" />
-                                        <Text>{detailItem.updater.name}</Text>
+                                        <Avatar src={detailItem.updater?.avatar_url} size="small" />
+                                        <Text>{detailItem.updater?.name}</Text>
                                     </Space>
                                 </Descriptions.Item>
                             )}

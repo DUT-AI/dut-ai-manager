@@ -1,5 +1,4 @@
 import type { MeetingResponse } from './meeting.types';
-import type { UserResponse } from './user.types';
 import type { Homework } from './homework.types';
 
 export interface PermissionCreate {
@@ -38,17 +37,22 @@ export interface PermissionRequestResponse {
     meeting_id?: number;
     created_by?: number;
     updated_by?: number;
-    user_name?: string;
-    user_avatar?: string;
-    creator_name?: string;
-    updater_name?: string;
+    owner?: UserRef;
     created_at: string;
     updated_at: string;
+
+    creator?: UserRef;
+    updater?: UserRef;
     
     // Nested related entities
-    user?: UserResponse;
     homework?: Homework;
     meeting?: MeetingResponse;
+}
+
+export interface UserRef {
+    id: number;
+    name: string;
+    avatar_url: string | null;
 }
 
 export interface BonusPointResponse {
@@ -57,36 +61,27 @@ export interface BonusPointResponse {
     reason: string;
     date: string;
     user_id: number;
-    user_name?: string;
-    user_avatar?: string;
+    owner?: UserRef;
     created_by?: number;
     updated_by?: number;
-    creator_name?: string;
-    updater_name?: string;
     created_at: string;
     updated_at: string;
+
+    creator?: UserRef;
+    updater?: UserRef;
 }
 
-export interface UserBrief {
-    id: number;
-    name: string;
-    avatar: string;
-}
 
 export interface ViolationResponse {
     id: number;
     reason: string;
     date: string;
     user_id: number;
-    user_name?: string;
-    user_avatar?: string;
-    owner?: UserBrief;
-    creator?: UserBrief;
-    updater?: UserBrief;
+    owner?: UserRef;
+    creator?: UserRef;
+    updater?: UserRef;
     created_by?: number;
     updated_by?: number;
-    creator_name?: string;
-    updater_name?: string;
     created_at: string;
     updated_at: string;
 }

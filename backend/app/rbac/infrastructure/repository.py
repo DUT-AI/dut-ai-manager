@@ -73,9 +73,6 @@ class PermissionRepository(BaseRepository[PermissionModel, Permission]):
         else:
             return self.add(entity)
 
-    def get_by_id_entity(self, id: int) -> Optional[Permission]:
-        return self.get_by_id(id)
-
 
 class RolePermissionRepository(BaseRepository[RolePermissionModel, RolePermission]):
     """Clean Architecture Repository for RolePermission link operations."""
@@ -107,9 +104,6 @@ class RolePermissionRepository(BaseRepository[RolePermissionModel, RolePermissio
             return self.update(entity)
         else:
             return self.add(entity)
-
-    def get_by_id_entity(self, id: int) -> Optional[RolePermission]:
-        return self.get_by_id(id)
 
 
 class RoleApiKeyRepository(BaseRepository[RoleApiKeyModel, RoleApiKey]):
@@ -164,6 +158,3 @@ class RoleApiKeyRepository(BaseRepository[RoleApiKeyModel, RoleApiKey]):
             return self.update(entity)
         else:
             return self.add(entity)
-
-    def get_by_id_entity(self, id: int) -> Optional[RoleApiKey]:
-        return self.get_by_id(id)

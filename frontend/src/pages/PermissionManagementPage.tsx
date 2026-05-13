@@ -121,14 +121,14 @@ const MobileListView = ({ permissions, isLoading, canUpdate, canDelete, onViewDe
 
                         <div className="flex items-center gap-3 mb-4">
                             <Avatar
-                                src={record.user?.avatar_url || record.user_avatar}
+                                src={record.owner?.avatar_url}
                                 icon={<UserOutlined />}
                                 className="bg-linear-to-br from-indigo-500 to-purple-500 shadow-sm shrink-0"
                                 size="large"
                             />
                             <div className="flex flex-col min-w-0 flex-1">
                                 <Text strong className="truncate text-base">
-                                    {record.user?.name || record.user_name || (record.created_by ? `#${record.created_by}` : 'N/A')}
+                                    {record.owner?.name || (record.created_by ? `#${record.created_by}` : 'N/A')}
                                 </Text>
                             </div>
                         </div>
@@ -257,14 +257,14 @@ const PermissionManagementPage = () => {
             render: (_: any, record: PermissionRequestResponse) => (
                 <Space>
                     <Avatar
-                        src={record.user?.avatar_url || record.user_avatar}
+                        src={record.owner?.avatar_url}
                         icon={<UserOutlined />}
                         className="bg-linear-to-br from-indigo-500 to-purple-500 shadow-sm"
                         size="small"
                     />
                     <div>
                         <Text strong className="block">
-                            {record.user?.name || record.user_name || (record.created_by ? `#${record.created_by}` : 'N/A')}
+                            {record.owner?.name || (record.created_by ? `#${record.created_by}` : 'N/A')}
                         </Text>
                     </div>
                 </Space>
@@ -615,8 +615,8 @@ const PermissionManagementPage = () => {
                             <Descriptions column={1} bordered size="small" className="mb-6 bg-white rounded-lg shadow-xs overflow-hidden">
                                 <Descriptions.Item label="Người tạo">
                                     <Space>
-                                        <Avatar size="small" src={detailItem.user?.avatar_url || detailItem.user_avatar} icon={<UserOutlined />} />
-                                        <Text strong>{detailItem.user?.name || detailItem.user_name || `#${detailItem.created_by}`}</Text>
+                                        <Avatar size="small" src={detailItem.owner?.avatar_url} icon={<UserOutlined />} />
+                                        <Text strong>{detailItem.owner?.name || `#${detailItem.created_by}`}</Text>
                                     </Space>
                                 </Descriptions.Item>
                                 <Descriptions.Item label="Loại phép">

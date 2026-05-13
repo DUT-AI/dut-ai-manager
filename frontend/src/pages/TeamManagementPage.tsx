@@ -105,7 +105,7 @@ const MobileListView = ({ teams, isLoading, onEdit, onDelete }: MobileListViewPr
                             <Avatar.Group max={{ count: 6, style: { color: '#f56a00', backgroundColor: '#fde3cf' } }}>
                                 {record.members.map(m => (
                                     <Tooltip title={m.user_name} key={m.user_id}>
-                                        <Avatar src={m.user_avatar} icon={<UserOutlined />} />
+                                        <Avatar src={m.user_avatar_url} icon={<UserOutlined />} />
                                     </Tooltip>
                                 ))}
                             </Avatar.Group>
@@ -188,7 +188,7 @@ const TeamManagementPage = () => {
                     <Avatar.Group max={{ count: 5, style: { color: '#f56a00', backgroundColor: '#fde3cf' } }} size="small">
                         {record.members.map(m => (
                             <Tooltip title={m.user_name} key={m.user_id}>
-                                <Avatar src={m.user_avatar} icon={<UserOutlined />} />
+                                <Avatar src={m.user_avatar_url} icon={<UserOutlined />} />
                             </Tooltip>
                         ))}
                     </Avatar.Group>

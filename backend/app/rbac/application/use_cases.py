@@ -43,7 +43,7 @@ class RoleUseCases:
         return self.role_repo.save(role)
 
     def update_role(self, role_id: int, role_data: RoleUpdate) -> Optional[Role]:
-        role = self.role_repo.get_by_id_entity(role_id)
+        role = self.role_repo.get_by_id(role_id)
         if not role:
             return None
         if role_data.name is not None:
@@ -71,7 +71,7 @@ class RoleUseCases:
     def update_permission(
         self, perm_id: int, perm_data: PermissionUpdate
     ) -> Optional[Permission]:
-        perm = self.permission_repo.get_by_id_entity(perm_id)
+        perm = self.permission_repo.get_by_id(perm_id)
         if not perm:
             return None
         if perm_data.name is not None:
@@ -89,8 +89,8 @@ class RoleUseCases:
 
     # --- Role-Permission Linking ---
     def add_permission_to_role(self, role_id: int, perm_id: int) -> Tuple[bool, str]:
-        role = self.role_repo.get_by_id_entity(role_id)
-        perm = self.permission_repo.get_by_id_entity(perm_id)
+        role = self.role_repo.get_by_id(role_id)
+        perm = self.permission_repo.get_by_id(perm_id)
         if not role or not perm:
             return False, "Role or Permission not found"
 
@@ -132,7 +132,7 @@ class RoleApiKeyUseCases:
         """
         Create a new API key for a role.
         """
-        role = self.role_repo.get_by_id_entity(data.role_id)
+        role = self.role_repo.get_by_id(data.role_id)
         if not role:
             return None, "Role not found"
 
@@ -166,11 +166,11 @@ class RoleApiKeyUseCases:
 
     def revoke_api_key(self, key_id: int) -> Tuple[bool, str]:
         """Revoke (delete) an API key"""
-        key = self.api_key_repo.get_by_id_entity(key_id)
+        key = self.api_key_repo.get_by_id(key_id)
         if not key:
             return False, "API Key not found"
 
-        self.api_key_repo.delete_by_id(key.id)  # type: ignore
+        self.api_key_repo.delete_by_id(key.id) 
         return True, "API Key revoked successfully"
 
     def verify_api_key(

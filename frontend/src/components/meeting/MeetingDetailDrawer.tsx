@@ -36,7 +36,7 @@ export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }
             key: 'user',
             render: (_: unknown, record: ParticipantResponse) => (
                 <div className="flex items-center gap-2">
-                    <Avatar src={record.user_avatar} icon={<UserOutlined />} size="small" />
+                    <Avatar src={record.user_avatar_url} icon={<UserOutlined />} size="small" />
                     <Text>{record.user_name || `User #${record.user_id}`}</Text>
                 </div>
             ),

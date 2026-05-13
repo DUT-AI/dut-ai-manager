@@ -33,10 +33,8 @@ class BonusPointRepository(BaseRepository[BonusPointModel, BonusPoint]):
         return False
 
     def restore_entity(self, id: int) -> BonusPoint:
-        entity = self.get_by_id(id)
-        if entity:
-            return self.restore(entity)
-        raise ValueError(f"Bonus point with id {id} not found")
+        dummy = BonusPoint.model_construct(id=id)
+        return self.restore(dummy)
 
     def to_entity(self, model: BonusPointModel) -> BonusPoint:
         """Convert ORM model to Domain Entity."""

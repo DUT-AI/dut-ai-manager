@@ -22,8 +22,8 @@ export const HomeworkReportTab: React.FC = () => {
             key: 'user',
             render: (_: any, record: HomeworkReportResponse) => (
                 <Space>
-                    <Avatar src={record.user_avatar} icon={<UserOutlined />} />
-                    <Text strong>{record.user_name}</Text>
+                    <Avatar src={record.owner?.avatar_url} icon={<UserOutlined />} />
+                    <Text strong>{record.owner?.name || 'Unknown'}</Text>
                 </Space>
             )
         },
@@ -55,8 +55,8 @@ export const HomeworkReportTab: React.FC = () => {
             <Card className="w-full shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex justify-between items-center">
                     <Space>
-                        <Avatar src={item.user_avatar} icon={<UserOutlined />} />
-                        <Text strong>{item.user_name}</Text>
+                        <Avatar src={item.owner?.avatar_url} icon={<UserOutlined />} />
+                        <Text strong>{item.owner?.name || 'Unknown'}</Text>
                     </Space>
                     <Tag color={item.unsubmitted_count > 0 ? 'red' : 'green'}>{item.unsubmitted_count} chưa nộp</Tag>
                 </div>
@@ -84,7 +84,7 @@ export const HomeworkReportTab: React.FC = () => {
             )}
 
             <Drawer
-                title={`Chi tiết bài chưa nộp: ${selectedUser?.user_name || ''}`}
+                title={`Chi tiết bài chưa nộp: ${selectedUser?.owner?.name || ''}`}
                 placement="right"
                 width={screens.md ? 500 : '100%'}
                 onClose={() => setSelectedUser(null)}

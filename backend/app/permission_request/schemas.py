@@ -31,7 +31,6 @@ class PermissionRequestUpdate(BaseModel):
 
 class PermissionRequestResponse(PermissionRequestBase):
     id: int
-    user_id: int
     created_at: datetime
     updated_at: datetime
 

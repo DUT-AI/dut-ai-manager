@@ -1,3 +1,5 @@
+import type { UserRef } from './activity.types';
+
 export const HomeworkStatus = {
     NOT_SUBMITTED: "chưa nộp",
     SUBMITTED: "đã nộp",
@@ -48,8 +50,7 @@ export interface HomeworkSubmission {
     id: number;
     homework_id: number;
     owner_id: number;
-    user_name?: string;
-    user_avatar?: string;
+    owner?: UserRef;
     created_by?: number;
     link: string;
     status: HomeworkStatus;
@@ -71,7 +72,6 @@ export interface HomeworkSubmissionCreate {
 
 export interface HomeworkReportResponse {
     user_id: number;
-    user_name: string;
-    user_avatar?: string;
+    owner?: UserRef;
     unsubmitted_count: number;
 }

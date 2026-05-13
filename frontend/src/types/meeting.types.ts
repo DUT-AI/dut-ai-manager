@@ -21,7 +21,7 @@ export interface ParticipantResponse {
     meeting_id: number;
     user_id: number;
     user_name?: string;
-    user_avatar?: string;
+    user_avatar_url?: string;
     check_in_at?: string;
     check_out_at?: string;
     status: ParticipantStatus;

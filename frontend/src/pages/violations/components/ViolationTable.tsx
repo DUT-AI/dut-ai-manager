@@ -31,13 +31,13 @@ const ViolationTable = ({
             render: (_: any, record: ViolationResponse) => (
                 <Space>
                     <Avatar
-                        src={record.owner?.avatar || record.user_avatar}
+                        src={record.owner?.avatar_url}
                         icon={<UserOutlined />}
                         className="bg-linear-to-br from-red-500 to-orange-500 shadow-sm"
                         size="small"
                     />
                     <div>
-                        <Title level={5} className="!mb-0 text-sm">{record.owner?.name || record.user_name || 'Unknown'}</Title>
+                        <Title level={5} className="!mb-0 text-sm">{record.owner?.name || 'Unknown'}</Title>
                     </div>
                 </Space>
             ),

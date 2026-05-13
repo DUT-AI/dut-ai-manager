@@ -16,7 +16,7 @@ from app.permission_request.schemas import (
 )
 from app.permission_request.domain.value_objects import RequestCategory
 from app.shared.application.response import ApiResponse
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from dishka.integrations.fastapi import FromDishka, inject
 
 router = APIRouter(prefix="/permissions", tags=["Permissions"])
@@ -110,4 +110,6 @@ async def restore_permission_request(
 ):
     """Khôi phục yêu cầu đã xóa"""
     result = uc.execute(request_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Yêu cầu không tìm thấy hoặc chưa được xóa")
     return ApiResponse.success(data=result)

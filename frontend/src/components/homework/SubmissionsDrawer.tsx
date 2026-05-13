@@ -72,8 +72,8 @@ export const SubmissionsDrawer = ({ open, homework, onClose }: Props) => {
             key: 'user',
             render: (record: HomeworkSubmission) => (
                 <Space>
-                    <Avatar src={record.user_avatar} icon={<UserOutlined />} size="small" />
-                    <Text strong>{record.user_name || 'Unknown'}</Text>
+                    <Avatar src={record.owner?.avatar_url} icon={<UserOutlined />} size="small" />
+                    <Text strong>{record.owner?.name || 'Unknown'}</Text>
                 </Space>
             )
         },

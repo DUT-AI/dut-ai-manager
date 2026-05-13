@@ -107,7 +107,7 @@ const ViolationManagementPage = () => {
         setEditingItem(item);
         form.setFieldsValue({
             ...item,
-            user_name: item.owner?.name || item.user_name || 'Unknown',
+            user_name: item.owner?.name || 'Unknown',
             date: dayjs(item.date)
         });
         setIsModalOpen(true);

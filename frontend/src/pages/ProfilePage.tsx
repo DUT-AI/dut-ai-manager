@@ -428,7 +428,7 @@ const ProfilePage = () => {
                             {dayjs(selectedViolation.date).format('DD/MM/YYYY')}
                         </Descriptions.Item>
                         <Descriptions.Item label="Người tạo">
-                            {selectedViolation.creator_name || 'N/A'}
+                            {selectedViolation.creator?.name || 'N/A'}
                         </Descriptions.Item>
                         <Descriptions.Item label="Ngày tạo">
                             {dayjs(selectedViolation.created_at).format('DD/MM/YYYY HH:mm')}
@@ -476,7 +476,7 @@ const ProfilePage = () => {
                             {dayjs(selectedPermission.date).format('DD/MM/YYYY')}
                         </Descriptions.Item>
                         <Descriptions.Item label="Người tạo">
-                            {selectedPermission.creator_name || selectedPermission.user_name || 'N/A'}
+                            {selectedPermission.creator?.name || selectedPermission.owner?.name || 'N/A'}
                         </Descriptions.Item>
                         <Descriptions.Item label="Ngày tạo">
                             {dayjs(selectedPermission.created_at).format('DD/MM/YYYY HH:mm')}

@@ -42,21 +42,13 @@ class BaseRepository(Generic[TModel, TEntity]):
             return None
         return cast(TEntity, model.to_entity()) if model else None
 
-    def get_by_id_entity(self, id: int) -> Optional[TEntity]:
-        """Alias for get_by_id for backward compatibility."""
-        return self.get_by_id(id)
-
     def get_one(
         self,
         query_support: QuerySupport,
         deleted: bool = False,
     ) -> Optional[TEntity]:
         """Get a single model using query support (filtering, relations)."""
-        query = select(self.model)
-
-        if hasattr(self.model, "is_deleted"):
-            query = query.where(getattr(self.model, "is_deleted") == deleted)
-
+        query = select(self.model).where(self.model.is_deleted == deleted)
         query = apply_query_support(query, self.model, query_support)
 
         # Get first result
@@ -69,10 +61,7 @@ class BaseRepository(Generic[TModel, TEntity]):
         deleted: bool = False,
     ) -> List[TEntity]:
         """Get all models with optional query support (filtering, sorting, pagination)."""
-        query = select(self.model)
-
-        if hasattr(self.model, "is_deleted"):
-            query = query.where(getattr(self.model, "is_deleted") == deleted)
+        query = select(self.model).where(self.model.is_deleted == deleted)
 
         if query_support:
             query = apply_query_support(query, self.model, query_support)
@@ -83,13 +72,13 @@ class BaseRepository(Generic[TModel, TEntity]):
     def update(self, entity: TEntity) -> TEntity:
         """Update a model (merge into session and flush)."""
         model = self.model.from_entity(entity)
-        
+
         # Fix for default_factory overwriting audit fields on new model instance creation
-        if hasattr(entity, "created_at") and entity.created_at:
+        if entity.created_at:
             model.created_at = entity.created_at
-        if hasattr(entity, "created_by") and entity.created_by:
+        if entity.created_by:
             model.created_by = entity.created_by
-            
+
         attached_model = self.session.merge(model)
         self.session.flush()
         return cast(TEntity, attached_model.to_entity())
@@ -98,11 +87,8 @@ class BaseRepository(Generic[TModel, TEntity]):
         """Soft delete a model."""
         model = self.session.get(self.model, entity.id)
         if model:
-            if hasattr(model, "is_deleted"):
-                model.is_deleted = True
-                self.session.add(model)
-            else:
-                self.session.delete(model)
+            model.is_deleted = True
+            self.session.add(model)
             self.session.flush()
 
     def delete_by_id(self, id: int) -> bool:
@@ -110,13 +96,10 @@ class BaseRepository(Generic[TModel, TEntity]):
         model = self.session.get(self.model, id)
         if not model:
             return False
-        
-        if hasattr(model, "is_deleted"):
-            setattr(model, "is_deleted", True)
-            self.session.add(model)
-        else:
-            self.session.delete(model)
-        
+
+        model.is_deleted = True
+        self.session.add(model)
+
         self.session.flush()
         return True
 
@@ -136,14 +119,15 @@ class BaseRepository(Generic[TModel, TEntity]):
 
         model_id = entity.id
         statement = select(self.model).where(
-            getattr(self.model, "id") == model_id, getattr(self.model, "is_deleted")
+            getattr(self.model, "id") == model_id,
+            self.model.is_deleted == True,
         )
         model = self.session.exec(statement).first()
 
         if not model:
             raise Exception(f"Failed to find soft-deleted model with id {model_id}")
 
-        setattr(model, "is_deleted", False)
+        model.is_deleted = False
         self.session.add(model)
         self.session.flush()
         return cast(TEntity, model.to_entity())

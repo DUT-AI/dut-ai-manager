@@ -45,14 +45,14 @@ const ViolationMobileList = ({
 
                         <div className="flex items-center gap-3 mb-4">
                             <Avatar
-                                src={record.owner?.avatar || record.user_avatar}
+                                src={record.owner?.avatar_url}
                                 icon={<UserOutlined />}
                                 className="bg-linear-to-br from-red-500 to-orange-500 shadow-sm shrink-0"
                                 size="large"
                             />
                             <div className="flex flex-col min-w-0 flex-1">
                                 <Text strong className="truncate text-base">
-                                    {record.owner?.name || record.user_name || 'Unknown'}
+                                    {record.owner?.name || 'Unknown'}
                                 </Text>
                                 <Text type="danger" className="text-xs italic truncate">
                                     {record.reason}

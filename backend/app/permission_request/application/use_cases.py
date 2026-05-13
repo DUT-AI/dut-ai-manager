@@ -1,20 +1,22 @@
 from datetime import datetime
 from typing import List, Optional, cast
-from app.shared.domain.query_support import FilterCriterion, FilterOperator
-from app.shared.application.query_support_utils import build_query_support
+
+from fastapi import HTTPException
+from loguru import logger
 
 from app.core.context import get_current_user_id
+from app.homework.infrastructure.repository import HomeworkRepository
 from app.permission_request.domain.entity import PermissionRequest
 from app.permission_request.domain.events import (
     PermissionRequestCreated,
     PermissionRequestUpdated,
 )
-from app.permission_request.infrastructure.repository import PermissionRequestRepository
-from app.homework.infrastructure.repository import HomeworkRepository
 from app.permission_request.domain.value_objects import RequestCategory
+from app.permission_request.infrastructure.repository import PermissionRequestRepository
 from app.permission_request.schemas import PermissionRequestUpdate
-from app.shared.domain.event_bus import EventBus, DomainEvent
-from fastapi import HTTPException
+from app.shared.application.query_support_utils import build_query_support
+from app.shared.domain.event_bus import DomainEvent, EventBus
+from app.shared.domain.query_support import FilterCriterion, FilterOperator
 
 
 class GetPermissionRequestsUseCase:
@@ -105,13 +107,14 @@ class CreatePermissionRequestUseCase:
         # Validation for POSTPONE (Homework delay)
         if category == RequestCategory.POSTPONE:
             if not homework_id:
-                raise HTTPException(status_code=400, detail="Vui lòng chọn bài tập cần hoãn")
-            
+                raise HTTPException(
+                    status_code=400, detail="Vui lòng chọn bài tập cần hoãn"
+                )
+
             homework = self.homework_repo.get_by_id(homework_id)
             if not homework:
                 raise HTTPException(status_code=404, detail="Không tìm thấy bài tập")
             request.validate_postpone(homework)
-
 
         saved = self.repo.save(request)
 
@@ -167,14 +170,15 @@ class UpdatePermissionRequestUseCase:
         # Re-validate if POSTPONE
         if request.category == RequestCategory.POSTPONE:
             if not request.homework_id:
-                raise HTTPException(status_code=400, detail="Vui lòng chọn bài tập cần hoãn")
-            
+                raise HTTPException(
+                    status_code=400, detail="Vui lòng chọn bài tập cần hoãn"
+                )
+
             homework = self.homework_repo.get_by_id(request.homework_id)
             if not homework:
                 raise HTTPException(status_code=404, detail="Không tìm thấy bài tập")
-            
+
             request.validate_postpone(homework)
-      
 
         saved = self.repo.save(request)
 
@@ -200,9 +204,6 @@ class RestorePermissionRequestUseCase:
     def __init__(self, repo: PermissionRequestRepository):
         self.repo = repo
 
-    def execute(self, request_id: int) -> bool:
-        request = self.repo.get_by_id(request_id)
-        if request:
-            self.repo.restore(request)
-            return True
-        return False
+    def execute(self, request_id: int) -> Optional[PermissionRequest]:
+        dummy = PermissionRequest.model_construct(id=request_id)
+        return self.repo.restore(dummy)
