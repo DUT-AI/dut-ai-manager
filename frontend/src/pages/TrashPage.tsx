@@ -37,7 +37,6 @@ const UserDisplay = ({ record, label }: { record: any, label?: string }) => {
     if (!record) return null;
     const name = record.user_name || record.user?.name || record.owner?.name || record.creator?.name || '--';
     const avatar = record.user_avatar || record.user?.avatar_url || record.owner?.avatar_url || record.owner?.avatar || record.creator?.avatar_url;
-    console.log(record);
     return (
         <Space>
             {avatar ? (
@@ -79,7 +78,6 @@ const TrashMobileList = ({ dataSource, loading, columns, onRestore }: { dataSour
                             {columns.includes('title') && <Text strong className="text-base">{record.title}</Text>}
                             {columns.includes('user_name') && (
                                 <div className="mb-2">
-                                    {console.log('Mobile UserDisplay for:', record)}
                                     <UserDisplay record={record} />
                                 </div>
                             )}
@@ -250,11 +248,10 @@ export const TrashPage: React.FC = () => {
     ];
 
     const violationColumns: ColumnsType<any> = [
-        { 
-            title: 'Người vi phạm (Debug)', 
-            key: 'user_name', 
+        {
+            title: 'Người vi phạm',
+            key: 'user_name',
             render: (_, record) => {
-                console.log('Rendering violation row:', record);
                 return <UserDisplay record={record} />;
             }
         },
