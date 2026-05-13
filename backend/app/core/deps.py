@@ -1,5 +1,9 @@
 from enum import Enum
-from typing import Annotated
+from typing import Annotated, cast
+
+from fastapi import Depends, Request, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlmodel import Session
 
 from app.core.context import set_current_user_id
 from app.core.database import get_session
@@ -7,11 +11,8 @@ from app.rbac.domain.entity import RoleType
 from app.rbac.infrastructure.repository import RoleApiKeyRepository, RoleRepository
 from app.shared.application.response import BadRequestException
 from app.user.domain.entity import UserEntity
+from app.user.infrastructure.repository import UserRepository
 from app.utils.password import decode_access_token, verify_password
-from fastapi import Depends, Request, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlmodel import Session
-from typing import cast
 
 security = HTTPBearer(auto_error=False)
 
@@ -96,23 +97,18 @@ def get_current_user(
             "Invalid or expired token", status.HTTP_401_UNAUTHORIZED
         )
 
-    # Stateless User object from JWT payload
-    user = UserEntity(
-        id=payload.sub,
-        name=payload.name,
-        email=payload.email or "",
-        avatar_url=payload.avatar,
-        role_name=payload.role,
-        permissions=set(payload.permissions),
-    )
+    # Fetch fresh user data from database to ensure permissions are up to date
 
-    # Set current user ID in context for audit fields
-    if not user.id:
+    user_repo = UserRepository(session)
+    user = user_repo.get_by_id(payload.sub)
+
+    if not user:
         raise BadRequestException(
-            "Invalid or expired token", status.HTTP_401_UNAUTHORIZED
+            "User not found or inactive", status.HTTP_401_UNAUTHORIZED
         )
 
-    set_current_user_id(int(user.id))
+    # Set current user ID in context for audit fields
+    set_current_user_id(user.id or 0)
 
     return user
 
