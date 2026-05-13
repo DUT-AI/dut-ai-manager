@@ -111,7 +111,7 @@ class RoleUseCases:
         if not link:
             return False, "Permission not assigned to this role"
 
-        self.role_permission_repo.delete_by_id(link.id)  # type: ignore
+        self.role_permission_repo.hard_delete(link)
         return True, "Permission removed successfully"
 
 

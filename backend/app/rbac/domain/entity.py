@@ -60,5 +60,5 @@ class Role(BaseEntity):
         return [
             rp.permission
             for rp in self.role_permissions
-            if rp.permission and not rp.is_deleted
+            if rp.permission and not rp.is_deleted and not rp.permission.is_deleted
         ]
