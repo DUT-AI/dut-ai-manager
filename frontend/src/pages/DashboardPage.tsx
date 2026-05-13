@@ -20,7 +20,6 @@ import MeetingCalendarPage from './MeetingCalendarPage';
 import InvoicesPage from './InvoicesPage';
 import AdminBillingPage from './AdminBillingPage';
 import { useState } from 'react';
-import { useMeetingEvents } from '@/hooks/useMeetingEvents';
 
 import {
     WarningOutlined,
@@ -80,7 +79,6 @@ const SidebarContent = ({ activeKey, sideMenuItems }: SidebarContentProps) => (
 
 const DashboardPage = () => {
     const { loading, hasPermission } = useAuth();
-    useMeetingEvents(); // Lắng nghe sự kiện check-in/out toàn cục
     const navigate = useNavigate();
     const location = useLocation();
     const screens = useBreakpoint();

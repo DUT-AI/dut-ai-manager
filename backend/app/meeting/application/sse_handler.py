@@ -26,5 +26,6 @@ class MeetingSseHandler:
             ),
         }
 
+        logger.info(f"📣 Broadcasting SSE event: {event_type} for user {event.user_id}")
         # Phát tin qua SSE
         await sse_broadcaster.broadcast(message)

@@ -11,6 +11,7 @@ import {
 import dayjs from 'dayjs';
 import type { MeetingResponse, ParticipantResponse } from '@/types/meeting.types';
 import { ParticipantStatus } from '@/types/meeting.types';
+import { useMeetingEvents } from '@/hooks/useMeetingEvents';
 
 const { Text, Title } = Typography;
 
@@ -23,6 +24,9 @@ interface Props {
 }
 
 export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }: Props) => {
+    // Lắng nghe sự kiện SSE cho buổi họp này chỉ khi drawer đang mở
+    useMeetingEvents(meeting?.id, open);
+
     if (!meeting) return null;
 
     const checkedIn = meeting.participants.filter(p => p.status === ParticipantStatus.JOINED).length;

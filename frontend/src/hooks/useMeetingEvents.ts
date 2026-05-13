@@ -2,10 +2,12 @@ import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { message } from 'antd';
 
-export const useMeetingEvents = (meetingId?: number) => {
+export const useMeetingEvents = (meetingId?: number, enabled: boolean = true) => {
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    if (!enabled) return;
+
     // URL của endpoint SSE
     const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
     const sseUrl = `${baseUrl}/meetings/events/stream`;
@@ -42,9 +44,9 @@ export const useMeetingEvents = (meetingId?: number) => {
       // Trình duyệt sẽ tự động thử kết nối lại sau vài giây
     };
 
-    // Cleanup khi component unmount
+    // Cleanup khi component unmount hoặc khi bị disabled
     return () => {
       eventSource.close();
     };
-  }, [queryClient, meetingId]);
+  }, [queryClient, meetingId, enabled]);
 };
