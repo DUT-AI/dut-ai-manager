@@ -22,7 +22,7 @@ class UserModel(TimestampMixin, table=True):
 
     __tablename__ = "users"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int = Field(primary_key=True, sa_column_kwargs={"autoincrement": True})
     name: str = Field(max_length=255)
     phone_number: Optional[str] = Field(default=None, max_length=20)
     email: str = Field(max_length=255, unique=True, index=True)

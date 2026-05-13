@@ -15,24 +15,20 @@ class PermissionRequest(BaseEntity):
     user_id: Optional[int]
     category: RequestCategory
     note: str
-    
+
     # Specific metadata based on category
     homework_id: Optional[int] = None
     meeting_id: Optional[int] = None
-    
+
     # Target time (arrival time or deadline time)
     start_time: Optional[datetime] = None
 
     # Related entities (Optional)
     owner: Optional[UserRef] = None
+    creator: Optional[UserRef] = None
+    updater: Optional[UserRef] = None
     homework: Optional[Homework] = None
     meeting: Optional[Meeting] = None
-
-    def is_absence(self) -> bool:
-        return self.category == RequestCategory.ABSENCE
-
-    def is_postpone(self) -> bool:
-        return self.category == RequestCategory.POSTPONE
 
     def validate_postpone(self, homework: Homework) -> None:
         """Kiểm tra tính hợp lệ của đơn xin hoãn bài tập (tối đa 4 ngày)."""
@@ -42,7 +38,9 @@ class PermissionRequest(BaseEntity):
         if self.start_time:
             delta = self.start_time - homework.deadline
             if delta.total_seconds() > 4 * 24 * 3600:
-                raise ValueError("Thời gian xin hoãn không được vượt quá 4 ngày so với deadline gốc")
+                raise ValueError(
+                    "Thời gian xin hoãn không được vượt quá 4 ngày so với deadline gốc"
+                )
             if delta.total_seconds() < 0:
                 raise ValueError("Thời gian gia hạn mới phải sau deadline gốc")
 

@@ -670,14 +670,14 @@ const PermissionManagementPage = () => {
                                         {dayjs(detailItem.updated_at).format('DD/MM/YYYY HH:mm:ss')}
                                     </Descriptions.Item>
                                 )}
-                                {detailItem.creator_name && (
+                                {detailItem.creator && (
                                     <Descriptions.Item label="Created by">
-                                        {detailItem.creator_name}
+                                        {detailItem.creator.name}
                                     </Descriptions.Item>
                                 )}
-                                {detailItem.updater_name && (
+                                {detailItem.updater && (
                                     <Descriptions.Item label="Updated by">
-                                        {detailItem.updater_name}
+                                        {detailItem.updater.name}
                                     </Descriptions.Item>
                                 )}
                             </Descriptions>

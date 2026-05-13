@@ -199,7 +199,7 @@ class GetBonusPointReportUseCase:
             if keyword and keyword.lower() not in record.owner.name.lower():
                 continue
 
-            u_id = record.user_id
+            u_id = record.owner.id
             if u_id not in user_stats:
                 user_stats[u_id] = {
                     "user_id": u_id,

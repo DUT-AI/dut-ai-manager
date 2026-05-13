@@ -54,7 +54,7 @@ class TeamModel(TimestampMixin, table=True):
                             user_id=tm.user.id,
                             user_name=tm.user.name,
                             email=tm.user.email,
-                            user_avatar=tm.user.avatar_url,
+                            user_avatar_url=tm.user.avatar_url,
                         )
                     )
 

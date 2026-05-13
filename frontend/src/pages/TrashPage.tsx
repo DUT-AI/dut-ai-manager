@@ -36,7 +36,7 @@ const itemVariants: Variants = {
 const UserDisplay = ({ record, label }: { record: any, label?: string }) => {
     if (!record) return null;
     const name = record.user_name || record.user?.name || record.owner?.name || record.creator?.name || '--';
-    const avatar = record.user_avatar || record.user?.avatar_url || record.owner?.avatar_url || record.owner?.avatar || record.creator?.avatar_url;
+    const avatar = record.owner?.avatar_url || record.user?.avatar_url || record.creator?.avatar_url;
     return (
         <Space>
             {avatar ? (

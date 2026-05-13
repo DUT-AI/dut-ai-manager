@@ -36,6 +36,8 @@ class PermissionRequestResponse(PermissionRequestBase):
 
     # Related objects
     owner: Optional[UserRef] = None
+    creator: Optional[UserRef] = None
+    updater: Optional[UserRef] = None
     homework: Optional[HomeworkResponse] = None
     meeting: Optional[MeetingResponse] = None
 

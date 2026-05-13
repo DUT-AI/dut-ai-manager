@@ -43,10 +43,11 @@ const BillingMatrixReport = () => {
   
   const filteredUsers = useMemo(() => {
     if (!selectedTeamId) return users;
-    // Assuming team relation exists or we just rely on users if they have team_id
-    // But if we can't filter users by team easily here, we just show all users for now
-    return users.filter(u => u.team_id === selectedTeamId || !selectedTeamId);
-  }, [users, selectedTeamId]);
+    const team = teams.find(t => t.id === selectedTeamId);
+    if (!team) return users;
+    const memberIds = team.members.map(m => m.user_id);
+    return users.filter(u => memberIds.includes(u.id));
+  }, [users, teams, selectedTeamId]);
 
   const onFinish = (values: any) => {
     if (!values.dateRange || values.dateRange.length !== 2) return;
@@ -214,7 +215,7 @@ const BillingMatrixReport = () => {
           >
             <Select placeholder="Tất cả nhóm" allowClear>
               {teams.map(t => (
-                <Option key={t.id} value={t.id}>{t.name}</Option>
+                <Option key={t.id} value={t.id}>{t.team_name}</Option>
               ))}
             </Select>
           </Form.Item>

@@ -19,7 +19,7 @@ class TeamUseCases:
                     user_id=tm.user_id,
                     user_name=tm.user_name,
                     email=tm.email,
-                    user_avatar=tm.user_avatar,
+                    user_avatar_url=tm.user_avatar_url,
                 )
             )
 

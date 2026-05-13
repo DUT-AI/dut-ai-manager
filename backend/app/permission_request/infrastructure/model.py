@@ -2,7 +2,9 @@ from datetime import datetime
 from typing import Optional, TYPE_CHECKING, cast
 
 from app.permission_request.domain.value_objects import RequestCategory
-from app.permission_request.domain.entity import PermissionRequest as PermissionRequestEntity
+from app.permission_request.domain.entity import (
+    PermissionRequest as PermissionRequestEntity,
+)
 from app.shared.domain.value_objects import UserRef
 from app.shared.infrastructure.base_model import TimestampMixin
 from sqlmodel import Field, Index, Relationship
@@ -38,6 +40,12 @@ class PermissionRequest(TimestampMixin, table=True):
     )
     homework: Optional["HomeworkModel"] = Relationship()
     meeting: Optional["Meeting"] = Relationship()
+    creator: Optional["UserModel"] = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "[PermissionRequest.created_by]"}
+    )
+    updater: Optional["UserModel"] = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "[PermissionRequest.updated_by]"}
+    )
 
     def to_entity(self) -> PermissionRequestEntity:
         if self.created_by is None:
@@ -55,14 +63,31 @@ class PermissionRequest(TimestampMixin, table=True):
             start_time=self.start_time,
             created_at=self.created_at,
             updated_at=self.updated_at,
-            # Map related entities
             owner=(
                 UserRef(
-                    id=cast(int, self.user.id),
+                    id=self.user.id,
                     name=self.user.name,
                     avatar_url=self.user.avatar_url,
                 )
                 if self.user
+                else None
+            ),
+            creator=(
+                UserRef(
+                    id=self.creator.id,
+                    name=self.creator.name,
+                    avatar_url=self.creator.avatar_url,
+                )
+                if self.creator
+                else None
+            ),
+            updater=(
+                UserRef(
+                    id=self.updater.id,
+                    name=self.updater.name,
+                    avatar_url=self.updater.avatar_url,
+                )
+                if self.updater
                 else None
             ),
             homework=self.homework.to_entity() if self.homework else None,
@@ -76,7 +101,7 @@ class PermissionRequest(TimestampMixin, table=True):
             e = cast(PermissionRequestEntity, entity)
         else:
             e = entity
-            
+
         return cls(
             id=e.id,
             category=e.category,

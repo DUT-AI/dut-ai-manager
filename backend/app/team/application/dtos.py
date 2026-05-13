@@ -29,8 +29,8 @@ class TeamMemberResponse(BaseModel):
 
 class TeamResponse(TeamBase):
     id: int
-    created_at: datetime
-    updated_at: datetime
+    created_at: datetime | None
+    updated_at: datetime | None
     member_count: int = 0
     members: List[TeamMemberResponse] = []
 

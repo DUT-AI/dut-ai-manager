@@ -11,7 +11,7 @@ class TeamMemberInfo(BaseEntity):
     user_id: int
     user_name: str
     email: str
-    user_avatar: Optional[str] = None
+    user_avatar_url: Optional[str] = None
 
 
 class Team(BaseEntity):

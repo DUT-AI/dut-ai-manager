@@ -62,33 +62,33 @@ class BonusPointModel(TimestampMixin, table=True):
             date=self.date,
             user_id=self.user_id,
             created_by=self.created_by,
-            updated_by=self.updated_by,  # type: ignore
-            created_at=self.created_at,  # type: ignore
-            updated_at=self.updated_at,  # type: ignore
-            is_deleted=self.is_deleted,  # type: ignore
+            updated_by=self.updated_by,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
+            is_deleted=self.is_deleted,
             owner=(
                 UserRef(
-                    id=self.user.id,  # type: ignore
-                    name=self.user.name,  # type: ignore
-                    avatar_url=self.user.avatar_url,  # type: ignore
+                    id=self.user.id,
+                    name=self.user.name,
+                    avatar_url=self.user.avatar_url,
                 )
                 if self.user
                 else None
             ),
             creator=(
                 UserRef(
-                    id=self.creator.id,  # type: ignore
-                    name=self.creator.name,  # type: ignore
-                    avatar_url=self.creator.avatar_url,  # type: ignore
+                    id=self.creator.id, 
+                    name=self.creator.name, 
+                    avatar_url=self.creator.avatar_url, 
                 )
                 if self.creator
                 else None
             ),
             updater=(
                 UserRef(
-                    id=self.updater.id,  # type: ignore
-                    name=self.updater.name,  # type: ignore
-                    avatar_url=self.updater.avatar_url,  # type: ignore
+                    id=self.updater.id, 
+                    name=self.updater.name, 
+                    avatar_url=self.updater.avatar_url, 
                 )
                 if self.updater
                 else None
