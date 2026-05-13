@@ -29,9 +29,11 @@ class ViolationModuleProvider(Provider):
 
     @provide
     def get_automated_violation_handler(
-        self, create_violation_uc: CreateViolationUseCase
+        self,
+        create_violation_uc: CreateViolationUseCase,
+        permission_repo: PermissionRequestRepository,
     ) -> AutomatedViolationHandler:
-        return AutomatedViolationHandler(create_violation_uc)
+        return AutomatedViolationHandler(create_violation_uc, permission_repo)
 
     @provide
     def get_violation_notification_handler(
