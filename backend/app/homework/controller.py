@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Annotated, List, Optional
 
 from app.core.deps import CurrentUser, hasPermission
 from app.core.permissions import HomeworkPermission, HomeworkSubmissionPermission
@@ -181,6 +181,19 @@ async def delete_homework(
     result = use_cases.delete(homework_id)
     if not result:
         raise HTTPException(status_code=404, detail="Homework not found")
+    return ApiResponse.success(data=result)
+
+
+@router.put("/{homework_id}/restore", response_model=ApiResponse[HomeworkResponse])
+@inject
+async def restore_homework(
+    homework_id: int,
+    use_cases: FromDishka[HomeworkUseCases],
+    _current_user: Annotated[CurrentUser, hasPermission(HomeworkPermission.DELETE)],
+):
+    result = use_cases.restore(homework_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Homework not found or not deleted")
     return ApiResponse.success(data=result)
 
 

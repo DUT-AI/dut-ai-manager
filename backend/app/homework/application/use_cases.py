@@ -1,15 +1,21 @@
 import asyncio
 import httpx
-from datetime import date
+from datetime import date, datetime
 from sqlmodel import Session
 from app.core.database import engine
 from app.core.config import settings
 from loguru import logger
-from typing import List, Optional, Set
+from typing import Any, List, Optional, Set, cast
 from app.core.context import get_current_user_id
 from app.homework.application.dtos import HomeworkCreate, HomeworkUpdate
+from app.homework.application.dtos import (
+    HomeworkReportResponse,
+    HomeworkResponse,
+    HomeworkSubmissionResponse,
+)
 from app.homework.domain.entity import Homework as HomeworkEntity
 from app.homework.domain.entity import HomeworkSubmission as HomeworkSubmissionEntity
+from app.shared.domain.value_objects import UserRef
 from app.homework.domain.value_objects import (
     HomeworkAssigned,
     HomeworkStatus,
@@ -287,6 +293,9 @@ class HomeworkUseCases:
             self.submission_repo.delete(submission.id)
         return self.homework_repo.delete_by_id(homework_id)
 
+    def restore(self, homework_id: int) -> Optional[HomeworkEntity]:
+        return self.homework_repo.restore(homework_id)
+
     # --- Homework submissions operations
 
     def get_submission_of_user(
@@ -359,8 +368,8 @@ class HomeworkUseCases:
         user_id = get_current_user_id()
         assert user_id is not None
 
-        if existing_submission and existing_submission.user_name:
-            user_name = existing_submission.user_name.replace(" ", "_")
+        if existing_submission and existing_submission.owner:
+            user_name = existing_submission.owner.name.replace(" ", "_")
         else:
             user = self.user_repo.get_by_id(user_id)
             user_name = user.name.replace(" ", "_") if user else f"user_{user_id}"
@@ -554,8 +563,11 @@ class HomeworkUseCases:
             report.append(
                 {
                     "user_id": u.id,
-                    "user_name": u.name,
-                    "user_avatar": u.avatar_url,
+                    "owner": UserRef(
+                        id=cast(int, u.id),
+                        name=u.name,
+                        avatar_url=u.avatar_url,
+                    ),
                     "unsubmitted_count": counts.get(u.id, 0),
                 }
             )

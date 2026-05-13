@@ -64,7 +64,8 @@ class BonusPointRepository(BaseRepository[BonusPointModel, BonusPoint]):
             statement = apply_query_support(statement, BonusPointModel, query_support)
         else:
             # Default sorting if no query support provided
-            statement = statement.order_by(col(BonusPointModel.created_at).desc())
+            sort_field = BonusPointModel.updated_at if deleted else BonusPointModel.created_at
+            statement = statement.order_by(col(sort_field).desc())
 
         models = self.session.exec(statement).all()
         return [self.to_entity(m) for m in models]

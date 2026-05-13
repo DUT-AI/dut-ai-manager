@@ -2,9 +2,9 @@ from datetime import datetime
 from typing import Optional
 
 from app.permission_request.domain.value_objects import RequestCategory
+from app.shared.domain.value_objects import UserRef
 from app.shared.domain.base_entity import BaseEntity
 
-from app.user.domain.entity import UserEntity
 from app.homework.domain.entity import Homework
 from app.meeting.domain.entity import Meeting
 
@@ -24,7 +24,7 @@ class PermissionRequest(BaseEntity):
     start_time: Optional[datetime] = None
 
     # Related entities (Optional)
-    user: Optional[UserEntity] = None
+    owner: Optional[UserRef] = None
     homework: Optional[Homework] = None
     meeting: Optional[Meeting] = None
 

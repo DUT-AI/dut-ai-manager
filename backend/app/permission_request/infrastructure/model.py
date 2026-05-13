@@ -1,12 +1,10 @@
 from datetime import datetime
 from typing import Optional, TYPE_CHECKING, cast
 
-from app.permission_request.domain.entity import (
-    PermissionRequest as PermissionRequestEntity,
-)
 from app.permission_request.domain.value_objects import RequestCategory
+from app.permission_request.domain.entity import PermissionRequest as PermissionRequestEntity
+from app.shared.domain.value_objects import UserRef
 from app.shared.infrastructure.base_model import TimestampMixin
-from app.shared.domain.base_entity import BaseEntity
 from sqlmodel import Field, Index, Relationship
 
 if TYPE_CHECKING:
@@ -58,13 +56,21 @@ class PermissionRequest(TimestampMixin, table=True):
             created_at=self.created_at,
             updated_at=self.updated_at,
             # Map related entities
-            user=self.user.to_entity() if self.user else None,
+            owner=(
+                UserRef(
+                    id=cast(int, self.user.id),
+                    name=self.user.name,
+                    avatar_url=self.user.avatar_url,
+                )
+                if self.user
+                else None
+            ),
             homework=self.homework.to_entity() if self.homework else None,
             meeting=self.meeting.to_entity() if self.meeting else None,
         )
 
     @classmethod
-    def from_entity(cls, entity: BaseEntity) -> "PermissionRequest":
+    def from_entity(cls, entity: PermissionRequestEntity):
         """Convert PermissionRequest domain entity to ORM model"""
         if not isinstance(entity, PermissionRequestEntity):
             e = cast(PermissionRequestEntity, entity)

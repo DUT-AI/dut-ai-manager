@@ -2,9 +2,9 @@ from datetime import datetime
 from typing import Optional
 
 from app.permission_request.domain.value_objects import RequestCategory
+from app.shared.domain.value_objects import UserRef
 from pydantic import BaseModel, ConfigDict
 
-from app.user.application.dtos import UserResponse
 from app.homework.application.dtos import HomeworkResponse
 from app.meeting.schemas import MeetingResponse
 
@@ -36,7 +36,7 @@ class PermissionRequestResponse(PermissionRequestBase):
     updated_at: datetime
 
     # Related objects
-    user: Optional[UserResponse] = None
+    owner: Optional[UserRef] = None
     homework: Optional[HomeworkResponse] = None
     meeting: Optional[MeetingResponse] = None
 

@@ -25,7 +25,7 @@ class ParticipantResponse(BaseModel):
     id: int
     user_id: int
     user_name: str
-    user_avatar: Optional[str] = None
+    user_avatar_url: Optional[str] = None
     check_in_at: Optional[datetime] = None
     check_out_at: Optional[datetime] = None
     status: ParticipantStatus
@@ -40,8 +40,8 @@ class ParticipantResponse(BaseModel):
             if user and isinstance(user, dict):
                 if not data.get("user_name"):
                     data["user_name"] = user.get("name")
-                if not data.get("user_avatar"):
-                    data["user_avatar"] = user.get("avatar_url")
+                if not data.get("user_avatar_url"):
+                    data["user_avatar_url"] = user.get("avatar_url")
         else:
             # Nếu là object (Domain Entity hoặc ORM)
             user = getattr(data, "user", None)
@@ -52,7 +52,7 @@ class ParticipantResponse(BaseModel):
                         "id": getattr(data, "id", None),
                         "user_id": getattr(data, "user_id", None),
                         "user_name": getattr(user, "name", ""),
-                        "user_avatar": getattr(user, "avatar_url", None),
+                        "user_avatar_url": getattr(user, "avatar_url", None),
                         "check_in_at": getattr(data, "check_in_at", None),
                         "check_out_at": getattr(data, "check_out_at", None),
                         "status": getattr(data, "status", None),
@@ -69,7 +69,7 @@ class ParticipantResponse(BaseModel):
             id=p.id,
             user_id=p.user_id,
             user_name=p.user.name if p.user else "",
-            user_avatar=p.user.avatar_url if p.user else None,
+            user_avatar_url=p.user.avatar_url if p.user else None,
             check_in_at=p.check_in_at,
             check_out_at=p.check_out_at,
             status=p.status,

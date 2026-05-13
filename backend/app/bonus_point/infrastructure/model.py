@@ -70,8 +70,7 @@ class BonusPointModel(TimestampMixin, table=True):
                 UserRef(
                     id=self.user.id,  # type: ignore
                     name=self.user.name,  # type: ignore
-                    avatar=self.user.avatar_url,  # type: ignore
-                    discord_id=self.user.discord_id,  # type: ignore
+                    avatar_url=self.user.avatar_url,  # type: ignore
                 )
                 if self.user
                 else None
@@ -80,8 +79,7 @@ class BonusPointModel(TimestampMixin, table=True):
                 UserRef(
                     id=self.creator.id,  # type: ignore
                     name=self.creator.name,  # type: ignore
-                    avatar=self.creator.avatar_url,  # type: ignore
-                    discord_id=self.creator.discord_id,  # type: ignore
+                    avatar_url=self.creator.avatar_url,  # type: ignore
                 )
                 if self.creator
                 else None
@@ -90,8 +88,7 @@ class BonusPointModel(TimestampMixin, table=True):
                 UserRef(
                     id=self.updater.id,  # type: ignore
                     name=self.updater.name,  # type: ignore
-                    avatar=self.updater.avatar_url,  # type: ignore
-                    discord_id=self.updater.discord_id,  # type: ignore
+                    avatar_url=self.updater.avatar_url,  # type: ignore
                 )
                 if self.updater
                 else None

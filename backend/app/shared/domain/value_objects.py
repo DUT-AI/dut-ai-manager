@@ -23,6 +23,4 @@ class UserRef(BaseModel):
 
     id: int
     name: str = ""
-    avatar: str | None = None
-    discord_id: str | None = None
-    zalo_bot_id: str | None = None
+    avatar_url: str | None = None

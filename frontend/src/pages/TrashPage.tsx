@@ -1,5 +1,5 @@
 import React from 'react';
-import { Space, Table, Button, message, Popconfirm, Typography, Card, Tabs, Grid, List } from 'antd';
+import { Space, Table, Button, message, Popconfirm, Typography, Card, Tabs, Grid, List, Tag } from 'antd';
 import type { TabsProps } from 'antd';
 import { UndoOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -33,6 +33,35 @@ const itemVariants: Variants = {
     }
 };
 
+const UserDisplay = ({ record, label }: { record: any, label?: string }) => {
+    if (!record) return null;
+    const name = record.user_name || record.user?.name || record.owner?.name || record.creator?.name || '--';
+    const avatar = record.user_avatar || record.user?.avatar_url || record.owner?.avatar_url || record.owner?.avatar || record.creator?.avatar_url;
+    console.log(record);
+    return (
+        <Space>
+            {avatar ? (
+                <img
+                    src={avatar}
+                    alt={name}
+                    className="w-8 h-8 rounded-full object-cover border border-gray-100 shadow-sm"
+                    onError={(e) => {
+                        (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
+                    }}
+                />
+            ) : (
+                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 border border-gray-200">
+                    {name.charAt(0).toUpperCase()}
+                </div>
+            )}
+            <div className="flex flex-col">
+                {label && <Text type="secondary" className="text-[10px] uppercase tracking-wider">{label}</Text>}
+                <Text strong className="text-sm">{name}</Text>
+            </div>
+        </Space>
+    );
+};
+
 const TrashMobileList = ({ dataSource, loading, columns, onRestore }: { dataSource: any[], loading: boolean, columns: string[], onRestore: (id: number) => void }) => (
     <div className="mt-4 px-3">
         <List
@@ -48,7 +77,12 @@ const TrashMobileList = ({ dataSource, loading, columns, onRestore }: { dataSour
                     >
                         <div className="flex flex-col gap-2 mb-4">
                             {columns.includes('title') && <Text strong className="text-base">{record.title}</Text>}
-                            {columns.includes('user_name') && <Text strong className="text-base">{record.user_name}</Text>}
+                            {columns.includes('user_name') && (
+                                <div className="mb-2">
+                                    {console.log('Mobile UserDisplay for:', record)}
+                                    <UserDisplay record={record} />
+                                </div>
+                            )}
                             {columns.includes('description') && <Text type="secondary" className="text-xs italic">{record.description}</Text>}
                             {columns.includes('reason') && (
                                 <div className="bg-gray-50 p-2 rounded text-xs border border-gray-100 italic">
@@ -119,6 +153,27 @@ export const TrashPage: React.FC = () => {
         queryFn: () => permissionService.getPermissions(undefined, undefined, undefined, undefined, true),
     });
 
+    // Sorted data
+    const sortedHomeworks = React.useMemo(() =>
+        [...(deletedHomeworks || [])].sort((a, b) => dayjs(b.updated_at).unix() - dayjs(a.updated_at).unix()),
+        [deletedHomeworks]
+    );
+
+    const sortedBonusPoints = React.useMemo(() =>
+        [...(deletedBonusPoints || [])].sort((a, b) => dayjs(b.updated_at).unix() - dayjs(a.updated_at).unix()),
+        [deletedBonusPoints]
+    );
+
+    const sortedViolations = React.useMemo(() =>
+        [...(deletedViolations || [])].sort((a, b) => dayjs(b.updated_at).unix() - dayjs(a.updated_at).unix()),
+        [deletedViolations]
+    );
+
+    const sortedPermissions = React.useMemo(() =>
+        [...(deletedPermissions || [])].sort((a, b) => dayjs(b.updated_at).unix() - dayjs(a.updated_at).unix()),
+        [deletedPermissions]
+    );
+
     // Restore Handlers
     const handleRestoreHomework = async (id: number) => {
         try {
@@ -167,7 +222,7 @@ export const TrashPage: React.FC = () => {
         { title: 'Hạn nộp', dataIndex: 'deadline', key: 'deadline', render: (date) => dayjs(date).format('DD/MM/YYYY HH:mm') },
         {
             title: 'Hành động', key: 'action', width: 120,
-            render: (_: any, record: Homework) => (
+            render: (record: Homework) => (
                 <Popconfirm title="Khôi phục?" onConfirm={() => handleRestoreHomework(record.id)}>
                     <Button icon={<UndoOutlined />} type="primary" ghost size="small">Khôi phục</Button>
                 </Popconfirm>
@@ -176,13 +231,17 @@ export const TrashPage: React.FC = () => {
     ];
 
     const bonusColumns: ColumnsType<any> = [
-        { title: 'Người nhận', dataIndex: 'user_name', key: 'user_name' },
+        {
+            title: 'Người nhận',
+            key: 'user_name',
+            render: (_, record) => <UserDisplay record={record} />
+        },
         { title: 'Điểm', dataIndex: 'points', key: 'points', render: (val) => <Text type="success">+{val}</Text> },
         { title: 'Lý do', dataIndex: 'reason', key: 'reason' },
         { title: 'Ngày', dataIndex: 'date', key: 'date', render: (date) => dayjs(date).format('DD/MM/YYYY') },
         {
             title: 'Hành động', key: 'action', width: 120,
-            render: (_: any, record: any) => (
+            render: (record: any) => (
                 <Popconfirm title="Khôi phục?" onConfirm={() => handleRestoreBonusPoint(record.id)}>
                     <Button icon={<UndoOutlined />} type="primary" ghost size="small">Khôi phục</Button>
                 </Popconfirm>
@@ -191,12 +250,19 @@ export const TrashPage: React.FC = () => {
     ];
 
     const violationColumns: ColumnsType<any> = [
-        { title: 'Người vi phạm', dataIndex: 'user_name', key: 'user_name' },
+        { 
+            title: 'Người vi phạm (Debug)', 
+            key: 'user_name', 
+            render: (_, record) => {
+                console.log('Rendering violation row:', record);
+                return <UserDisplay record={record} />;
+            }
+        },
         { title: 'Lý do', dataIndex: 'reason', key: 'reason' },
         { title: 'Ngày', dataIndex: 'date', key: 'date', render: (date) => dayjs(date).format('DD/MM/YYYY') },
         {
             title: 'Hành động', key: 'action', width: 120,
-            render: (_: any, record: any) => (
+            render: (record: any) => (
                 <Popconfirm title="Khôi phục?" onConfirm={() => handleRestoreViolation(record.id)}>
                     <Button icon={<UndoOutlined />} type="primary" ghost size="small">Khôi phục</Button>
                 </Popconfirm>
@@ -205,13 +271,17 @@ export const TrashPage: React.FC = () => {
     ];
 
     const permissionColumns: ColumnsType<any> = [
-        { title: 'Người gửi', dataIndex: 'user_name', key: 'user_name' },
-        { title: 'Loại', dataIndex: 'category', key: 'category' },
+        {
+            title: 'Người gửi',
+            key: 'user_name',
+            render: (_, record) => <UserDisplay record={record} />
+        },
+        { title: 'Loại', dataIndex: 'category', key: 'category', render: (val) => <Tag color="blue">{val}</Tag> },
         { title: 'Lý do/Ghi chú', dataIndex: 'note', key: 'note' },
         {
             title: 'Mục tiêu',
             key: 'target',
-            render: (_: any, record: any) => {
+            render: (record: any) => {
                 if (record.category === 'POSTPONE' && record.homework) {
                     return <Text strong className="text-indigo-600">{record.homework.title}</Text>;
                 }
@@ -223,7 +293,7 @@ export const TrashPage: React.FC = () => {
         },
         {
             title: 'Hành động', key: 'action', width: 120,
-            render: (_: any, record: any) => (
+            render: (record: any) => (
                 <Popconfirm title="Khôi phục?" onConfirm={() => handleRestorePermission(record.id)}>
                     <Button icon={<UndoOutlined />} type="primary" ghost size="small">Khôi phục</Button>
                 </Popconfirm>
@@ -239,13 +309,13 @@ export const TrashPage: React.FC = () => {
             label: 'Bài tập',
             children: !screens.md ? (
                 <TrashMobileList
-                    dataSource={deletedHomeworks || []}
+                    dataSource={sortedHomeworks}
                     loading={homeworkLoading}
                     columns={['title', 'description']}
                     onRestore={handleRestoreHomework}
                 />
             ) : (
-                <Table dataSource={deletedHomeworks || []} columns={homeworkColumns} rowKey="id" loading={homeworkLoading} pagination={{ pageSize: 10 }} locale={{ emptyText: "Thùng rác trống" }} />
+                <Table dataSource={sortedHomeworks} columns={homeworkColumns} rowKey="id" loading={homeworkLoading} pagination={{ pageSize: 10 }} locale={{ emptyText: "Thùng rác trống" }} />
             )
         },
         {
@@ -253,13 +323,13 @@ export const TrashPage: React.FC = () => {
             label: 'Điểm cộng',
             children: !screens.md ? (
                 <TrashMobileList
-                    dataSource={deletedBonusPoints || []}
+                    dataSource={sortedBonusPoints}
                     loading={bonusLoading}
                     columns={['user_name', 'points', 'reason']}
                     onRestore={handleRestoreBonusPoint}
                 />
             ) : (
-                <Table dataSource={deletedBonusPoints || []} columns={bonusColumns} rowKey="id" loading={bonusLoading} pagination={{ pageSize: 10 }} locale={{ emptyText: "Thùng rác trống" }} />
+                <Table dataSource={sortedBonusPoints} columns={bonusColumns} rowKey="id" loading={bonusLoading} pagination={{ pageSize: 10 }} locale={{ emptyText: "Thùng rác trống" }} />
             )
         },
         {
@@ -267,13 +337,13 @@ export const TrashPage: React.FC = () => {
             label: 'Vi phạm',
             children: !screens.md ? (
                 <TrashMobileList
-                    dataSource={deletedViolations || []}
+                    dataSource={sortedViolations}
                     loading={violationLoading}
                     columns={['user_name', 'reason']}
                     onRestore={handleRestoreViolation}
                 />
             ) : (
-                <Table dataSource={deletedViolations || []} columns={violationColumns} rowKey="id" loading={violationLoading} pagination={{ pageSize: 10 }} locale={{ emptyText: "Thùng rác trống" }} />
+                <Table dataSource={sortedViolations} columns={violationColumns} rowKey="id" loading={violationLoading} pagination={{ pageSize: 10 }} locale={{ emptyText: "Thùng rác trống" }} />
             )
         },
         {
@@ -281,13 +351,13 @@ export const TrashPage: React.FC = () => {
             label: 'Đơn phép',
             children: !screens.md ? (
                 <TrashMobileList
-                    dataSource={deletedPermissions || []}
+                    dataSource={sortedPermissions}
                     loading={permissionLoading}
                     columns={['user_name', 'category', 'note']}
                     onRestore={handleRestorePermission}
                 />
             ) : (
-                <Table dataSource={deletedPermissions || []} columns={permissionColumns} rowKey="id" loading={permissionLoading} pagination={{ pageSize: 10 }} locale={{ emptyText: "Thùng rác trống" }} />
+                <Table dataSource={sortedPermissions} columns={permissionColumns} rowKey="id" loading={permissionLoading} pagination={{ pageSize: 10 }} locale={{ emptyText: "Thùng rác trống" }} />
             )
         },
     ];

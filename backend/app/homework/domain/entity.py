@@ -5,6 +5,7 @@ import httpx
 from app.core.config import settings
 from app.homework.domain.value_objects import HomeworkStatus
 from app.shared.domain.base_entity import BaseEntity
+from app.shared.domain.value_objects import UserRef
 from loguru import logger
 
 
@@ -25,9 +26,8 @@ class HomeworkSubmission(BaseEntity):
     is_plagiarized: bool = False
     plagiarized_from_user_id: Optional[int] = None
 
-    # Read-only attributes mapped from user relation
-    user_name: Optional[str] = None
-    user_avatar: Optional[str] = None
+    # Standardized user reference
+    owner: Optional[UserRef] = None
     homework: Optional["Homework"] = None
 
     def update_grading_result(

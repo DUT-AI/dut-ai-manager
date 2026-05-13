@@ -63,9 +63,7 @@ class ViolationModel(TimestampMixin, table=True):
             owner_ref = UserRef(
                 id=cast(int, self.user.id),
                 name=self.user.name,
-                avatar=self.user.avatar_url,
-                discord_id=self.user.discord_id,
-                zalo_bot_id=self.user.zalo_bot_id,
+                avatar_url=self.user.avatar_url,
             )
 
         creator_ref = None
@@ -73,9 +71,7 @@ class ViolationModel(TimestampMixin, table=True):
             creator_ref = UserRef(
                 id=cast(int, self.creator_rel.id),
                 name=self.creator_rel.name,
-                avatar=self.creator_rel.avatar_url,
-                discord_id=self.creator_rel.discord_id,
-                zalo_bot_id=self.creator_rel.zalo_bot_id,
+                avatar_url=self.creator_rel.avatar_url,
             )
 
         updater_ref = None
@@ -83,9 +79,7 @@ class ViolationModel(TimestampMixin, table=True):
             updater_ref = UserRef(
                 id=cast(int, self.updater_rel.id),
                 name=self.updater_rel.name,
-                avatar=self.updater_rel.avatar_url,
-                discord_id=self.updater_rel.discord_id,
-                zalo_bot_id=self.updater_rel.zalo_bot_id,
+                avatar_url=self.updater_rel.avatar_url,
             )
 
         return Violation(

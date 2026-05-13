@@ -6,6 +6,7 @@ from app.homework.domain.entity import Homework as HomeworkEntity
 from app.homework.domain.entity import HomeworkStatus
 from app.homework.domain.entity import HomeworkSubmission as HomeworkSubmissionEntity
 from app.shared.infrastructure.base_model import TimestampMixin
+from app.shared.domain.value_objects import UserRef
 from sqlmodel import Field, Relationship
 
 if TYPE_CHECKING:
@@ -45,16 +46,16 @@ class HomeworkSubmissionModel(TimestampMixin, table=True):
         from sqlalchemy import inspect
 
         ins = inspect(self)
-        unloaded = getattr(ins, "unloaded", set())
-        user_name = None
-        user_avatar = None
-
-        if "owner" not in unloaded and self.owner:
-            user_name = self.owner.name
-            user_avatar = self.owner.avatar_url
+        owner_ref = None
+        if "owner" not in ins.unloaded and self.owner:
+            owner_ref = UserRef(
+                id=cast(int, self.owner.id),
+                name=self.owner.name,
+                avatar_url=self.owner.avatar_url,
+            )
 
         homework_entity = None
-        if "homework" not in unloaded and self.homework:
+        if "homework" not in ins.unloaded and self.homework:
             homework_entity = self.homework.to_entity()
 
         return HomeworkSubmissionEntity(
@@ -71,8 +72,7 @@ class HomeworkSubmissionModel(TimestampMixin, table=True):
             plagiarism_info=self.plagiarism_info,
             is_plagiarized=self.is_plagiarized,
             plagiarized_from_user_id=self.plagiarized_from_user_id,
-            user_name=user_name,
-            user_avatar=user_avatar,
+            owner=owner_ref,
             homework=homework_entity,
             created_at=self.created_at,
             updated_at=self.updated_at,

@@ -37,7 +37,7 @@ class TokenPayloadResponse(BaseModel):
     sub: int
     name: str
     role: str = ""
-    avatar: str = ""
+    avatar_url: str = ""
     permissions: list[str] = []
     type: Literal["access", "refresh"] = "access"
     exp: int

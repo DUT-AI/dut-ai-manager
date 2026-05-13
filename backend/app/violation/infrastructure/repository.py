@@ -42,10 +42,13 @@ class ViolationRepository(BaseRepository[ViolationModel, Violation]):
             from app.shared.domain.query_support import apply_query_support
             statement = apply_query_support(statement, ViolationModel, query_support)
         else:
-            statement = statement.order_by(desc(cast(Any, ViolationModel.created_at)))
+            # Default sorting for Trash
+            sort_field = ViolationModel.updated_at if deleted else ViolationModel.created_at
+            statement = statement.order_by(desc(cast(Any, sort_field)))
             statement = statement.offset(skip).limit(limit)
 
-        return [m.to_entity() for m in self.session.exec(statement).unique().all()]
+        results = self.session.exec(statement).unique().all()
+        return [m.to_entity() for m in results]
 
     def get_by_month(
         self,

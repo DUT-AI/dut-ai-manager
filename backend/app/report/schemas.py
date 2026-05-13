@@ -15,7 +15,7 @@ class BonusPointResponse(BaseModel):
     reason: str
     date: datetime
     user_name: Optional[str] = None
-    user_avatar: Optional[str] = None
+    user_avatar_url: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -29,7 +29,7 @@ class ViolationResponse(BaseModel):
     reason: str
     date: datetime
     user_name: Optional[str] = None
-    user_avatar: Optional[str] = None
+    user_avatar_url: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

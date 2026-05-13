@@ -51,7 +51,7 @@ class HomeworkRepository:
                 )
             )
             .where(cast(Any, HomeworkModel.is_deleted == deleted))
-            .order_by(desc(cast(Any, HomeworkModel.created_at)))
+            .order_by(desc(cast(Any, HomeworkModel.updated_at if deleted else HomeworkModel.created_at)))
             .offset(skip)
             .limit(limit)
         )
@@ -103,8 +103,22 @@ class HomeworkRepository:
         if model:
             model.is_deleted = True
             self.session.add(model)
+            self.session.flush()
             return True
         return False
+
+    def restore(self, homework_id: int) -> Optional[HomeworkEntity]:
+        statement = select(HomeworkModel).where(
+            cast(Any, HomeworkModel.id == homework_id),
+            cast(Any, HomeworkModel.is_deleted == True),
+        )
+        model = self.session.exec(statement).first()
+        if model:
+            model.is_deleted = False
+            self.session.add(model)
+            self.session.flush()
+            return model.to_entity()
+        return None
 
     def get_assigned_to_user(
         self, user_id: int, skip: int = 0, limit: int = 100

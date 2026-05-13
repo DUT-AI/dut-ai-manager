@@ -62,7 +62,7 @@ class GetPermissionRequestsUseCase:
         qs = build_query_support(
             skip=skip,
             limit=limit,
-            sort_by="created_at",
+            sort_by="updated_at" if deleted else "created_at",
             descending=True,
             filters=filters,
         )
@@ -167,7 +167,7 @@ class UpdatePermissionRequestUseCase:
         # Re-validate if POSTPONE
         if request.category == RequestCategory.POSTPONE:
             if not request.homework_id:
-                 raise HTTPException(status_code=400, detail="Vui lòng chọn bài tập cần hoãn")
+                raise HTTPException(status_code=400, detail="Vui lòng chọn bài tập cần hoãn")
             
             homework = self.homework_repo.get_by_id(request.homework_id)
             if not homework:

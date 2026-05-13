@@ -9,17 +9,7 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
-# --- Shared nested DTOs ---
-
-
-class UserRefResponse(BaseModel):
-    """Nested user info in responses."""
-
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    name: str = ""
-    avatar: str | None = None
+from app.shared.domain.value_objects import UserRef
 
 
 # --- Request DTOs ---
@@ -57,7 +47,7 @@ class ViolationResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    # Embedded user refs
-    owner: UserRefResponse | None = None
-    creator: UserRefResponse | None = None
-    updater: UserRefResponse | None = None
+    # Embedded user refs (Standardized)
+    owner: Optional[UserRef] = None
+    creator: Optional[UserRef] = None
+    updater: Optional[UserRef] = None

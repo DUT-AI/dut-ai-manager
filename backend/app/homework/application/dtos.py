@@ -3,6 +3,7 @@ from typing import List, Optional
 
 from app.homework.domain.entity import HomeworkStatus
 from app.homework.domain.value_objects import ScoreDetail
+from app.shared.domain.value_objects import UserRef
 from pydantic import BaseModel, HttpUrl
 
 
@@ -53,8 +54,7 @@ class HomeworkSubmissionResponse(BaseModel):
     id: int
     homework_id: int
     owner_id: int
-    user_name: Optional[str] = None
-    user_avatar: Optional[str] = None
+    owner: Optional[UserRef] = None
     created_by: Optional[int] = None
     link: str
     status: HomeworkStatus
@@ -76,6 +76,5 @@ class HomeworkSubmissionResponse(BaseModel):
 
 class HomeworkReportResponse(BaseModel):
     user_id: int
-    user_name: str
-    user_avatar: Optional[str] = None
+    owner: Optional[UserRef] = None
     unsubmitted_count: int
