@@ -1,5 +1,5 @@
 from typing import Literal
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 
 class LoginRequest(BaseModel):
@@ -34,21 +34,25 @@ class ChangePasswordRequest(BaseModel):
 class TokenPayloadResponse(BaseModel):
     """Token payload response schema"""
 
+    model_config = ConfigDict(from_attributes=True)
+
     sub: int
     name: str
     role: str = ""
-    avatar_url: str = ""
+    avatar_url: str | None = ""
     permissions: list[str] = []
     type: Literal["access", "refresh"] = "access"
     exp: int
 
 
 class UserReponseMe(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     is_deleted: bool
     name: str
     email: str
     status: str
-    avatar_url: str
-    role_name: str
+    avatar_url: str | None = None
+    role_name: str | None = None
     permissions: list[str]
