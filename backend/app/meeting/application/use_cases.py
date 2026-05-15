@@ -246,18 +246,14 @@ class CheckInUseCase:
         self.event_bus = event_bus
 
     async def execute(
-        self, meeting_id: int, user_ids: List[int], image: UploadFile
+        self, user_ids: List[int], image: UploadFile
     ) -> Tuple[List[MeetingParticipant], str]:
-        meeting = self.meeting_repo.get_by_id(meeting_id)
-        if not meeting:
-            raise BadRequestException("Không tìm thấy buổi họp")
-
         now = get_current_utc7_time()
 
-        # 1. Upload image
+        # 1. Upload image (Reuse for all meetings in this call)
         file_content = await image.read()
         timestamp = now.strftime("%Y%m%d_%H%M%S")
-        filename = f"meetings/{meeting_id}/checkin_{timestamp}_{image.filename}"
+        filename = f"meetings/checkin_bulk_{timestamp}_{image.filename}"
 
         image_url = self.minio_service.upload_file(
             file_data=file_content,
@@ -266,57 +262,67 @@ class CheckInUseCase:
         )
 
         # 2. Process check-in for each user
+        half_hour = timedelta(minutes=30)
+        window_start = now - half_hour
+        window_end = now + half_hour
+
         updated_participants = []
         messages = []
 
         for user_id in user_ids:
-            participant = self.participant_repo.get_by_meeting_and_user(
-                meeting_id, user_id
+            # Tìm tất cả các buổi họp của user trong khung ±30 phút
+            participations = self.participant_repo.find_all_participations_in_time_window(
+                user_id, window_start, window_end, now
             )
-            if not participant:
-                messages.append(f"Người dùng {user_id} không có trong danh sách")
+
+            if not participations:
+                messages.append(f"Người dùng {user_id} không có buổi họp nào trong khung thời gian này")
                 continue
 
-            logger.debug(f"Participant: {participant}")
+            for participant in participations:
+                meeting_id = participant.meeting_id
+                if meeting_id is None:
+                    continue
 
-            if participant.status == ParticipantStatus.JOINED:
-                logger.debug(
-                    f"Người dùng {participant.user.name if participant.user else user_id} đã điểm danh"
-                )
+                meeting = self.meeting_repo.get_domain_for_check_in(meeting_id)
+                if not meeting:
+                    continue
+
+                if participant.status == ParticipantStatus.JOINED:
+                    messages.append(
+                        f"Người dùng {participant.user.name if participant.user else user_id} đã điểm danh cho '{meeting.title}'"
+                    )
+                    continue
+
+                success, msg = participant.check_in(now, image_url)
+                if not success:
+                    messages.append(msg)
+                    updated_participants.append(participant)
+                    continue
+
+                # Logic: Lateness check & violation creation via events
+                is_late = meeting.is_late(now)
+
+                # Save participant state
+                saved_p = self.participant_repo.save(participant)
+                updated_participants.append(saved_p)
                 messages.append(
-                    f"Người dùng {participant.user.name if participant.user else user_id} đã điểm danh"
+                    f"Đã ghi nhận {participant.user.name if participant.user else user_id} cho '{meeting.title}'"
                 )
-                continue
 
-            success, msg = participant.check_in(now, image_url)
-            if not success:
-                messages.append(msg)
-                updated_participants.append(participant)
-                continue
-
-            # Logic: Lateness check & violation creation via events
-            is_late = meeting.is_late(now)
-
-            # Save participant state
-            saved_p = self.participant_repo.save(participant)
-            updated_participants.append(saved_p)
-            messages.append(
-                f"Đã ghi nhận {participant.user.name if participant.user else user_id}"
-            )
-
-            # Publish event (Violation Handler should handle lateness logic and permission requests)
-            await self.event_bus.publish(
-                cast(
-                    DomainEvent,
-                    ParticipantCheckedIn(
-                        meeting_id=meeting_id,
-                        user_id=user_id,
-                        check_in_at=now,
-                        is_late=is_late,
-                        meeting_title=meeting.title,
-                    ),
+                # Publish event
+                await self.event_bus.publish(
+                    cast(
+                        DomainEvent,
+                        ParticipantCheckedIn(
+                            meeting_id=meeting_id,
+                            user_id=user_id,
+                            check_in_at=now,
+                            is_late=is_late,
+                            meeting_title=meeting.title,
+                        ),
+                    )
                 )
-            )
 
         return updated_participants, ". ".join(messages)
 
@@ -396,38 +402,51 @@ class CheckOutUseCase:
         self.participant_repo = participant_repo
         self.event_bus = event_bus
 
-    async def execute(self, meeting_id: int, user_id: int) -> MeetingParticipant:
-        meeting = self.meeting_repo.get_by_id(meeting_id)
-        if not meeting:
-            raise BadRequestException("Không tìm thấy buổi họp")
-
-        participant = self.participant_repo.get_by_meeting_and_user(meeting_id, user_id)
-        if not participant:
-            raise BadRequestException("Bạn không có trong danh sách tham gia")
-
-        if not participant.check_in_at:
-            raise BadRequestException("Bạn chưa check-in")
-
-        if participant.check_out_at:
-            raise BadRequestException("Bạn đã check-out rồi")
-
+    async def execute(self, user_id: int) -> List[MeetingParticipant]:
         now = get_current_utc7_time()
-        updated = self.participant_repo.check_out(participant.id, now)
+        half_hour = timedelta(minutes=30)
+        window_start = now - half_hour
+        window_end = now + half_hour
 
-        # Publish event
-        await self.event_bus.publish(
-            cast(
-                DomainEvent,
-                ParticipantCheckedOut(
-                    meeting_id=meeting_id,
-                    user_id=user_id,
-                    check_out_at=now,
-                    meeting_title=meeting.title,
-                ),
-            )
+        # Tìm tất cả các buổi họp của user trong khung ±30 phút
+        participations = self.participant_repo.find_all_participations_in_time_window(
+            user_id, window_start, window_end, now
         )
 
-        return updated
+        updated_participants = []
+        for participant in participations:
+            # Chỉ check-out những buổi đã check-in và chưa check-out
+            if not participant.check_in_at or participant.check_out_at:
+                continue
+
+            meeting_id = participant.meeting_id
+            if meeting_id is None:
+                continue
+
+            meeting = self.meeting_repo.get_domain_for_check_in(meeting_id)
+            if not meeting:
+                continue
+
+            updated = self.participant_repo.check_out(participant.id, now)
+            updated_participants.append(updated)
+
+            # Publish event
+            await self.event_bus.publish(
+                cast(
+                    DomainEvent,
+                    ParticipantCheckedOut(
+                        meeting_id=meeting_id,
+                        user_id=user_id,
+                        check_out_at=now,
+                        meeting_title=meeting.title,
+                    ),
+                )
+            )
+
+        if not updated_participants:
+            raise BadRequestException("Không tìm thấy buổi họp nào đang tham gia để check-out")
+
+        return updated_participants
 
 
 class UpdateMeetingUseCase:

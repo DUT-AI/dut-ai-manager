@@ -453,6 +453,38 @@ class ParticipantRepository(BaseRepository[ORMParticipant, DomainParticipant]):
         )
         orm = self.session.exec(stmt).first()
         return self._to_domain(orm) if orm else None
+    def find_all_participations_in_time_window(
+        self,
+        user_id: int,
+        window_start: datetime,
+        window_end: datetime,
+        now: datetime,
+    ) -> List[DomainParticipant]:
+        """Lấy tất cả các buổi họp của user giao với [window_start, window_end]."""
+        ongoing_expr = and_(
+            cast(Any, ORMMeeting.start_time) <= now,
+            cast(Any, ORMMeeting.end_time) >= now,
+        )
+        stmt = (
+            select(ORMParticipant)
+            .join(ORMMeeting, cast(Any, ORMMeeting.id == ORMParticipant.meeting_id))
+            .where(
+                cast(Any, ORMMeeting.is_deleted).is_(False),
+                cast(Any, ORMParticipant.is_deleted).is_(False),
+                cast(Any, ORMParticipant.user_id) == user_id,
+                ORMMeeting.start_time < window_end,
+                ORMMeeting.end_time > window_start,
+            )
+            .options(
+                joinedload(cast(Any, ORMParticipant.user)),
+                joinedload(cast(Any, ORMParticipant.meeting)),
+            )
+            .order_by(
+                case({ongoing_expr: 0}, else_=1), desc(cast(Any, ORMMeeting.start_time))
+            )
+        )
+        orms = self.session.exec(stmt).all()
+        return [self._to_domain(orm) for orm in orms]
 
     def get_by_meeting_and_user(
         self, meeting_id: int, user_id: int

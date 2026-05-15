@@ -146,34 +146,30 @@ async def check_in_with_card(
 @router.post("/check-in", response_model=ApiResponse[List[ParticipantResponse]])
 @inject
 async def check_in(
-    meeting_id: int,
     uc: FromDishka[CheckInUseCase],
-    _: Annotated[CurrentUser, hasPermission(MeetingPermission.CHECK_IN)],
+    # _: Annotated[CurrentUser, hasPermission(MeetingPermission.CHECK_IN)],
     user_ids: List[int] = Form(...),
     image: UploadFile = File(...),
 ):
     """Thực hiện điểm danh (Check-in)"""
-    participants, message = await uc.execute(
-        meeting_id=meeting_id, user_ids=user_ids, image=image
-    )
+    participants, message = await uc.execute(user_ids=user_ids, image=image)
     return ApiResponse.success(
         data=[ParticipantResponse.from_domain(p) for p in participants],
         message=message,
     )
 
 
-@router.post("/{meeting_id}/check-out", response_model=ApiResponse[ParticipantResponse])
+@router.post("/check-out", response_model=ApiResponse[List[ParticipantResponse]])
 @inject
 async def check_out(
-    meeting_id: int,
     data: CheckOutRequest,
     uc: FromDishka[CheckOutUseCase],
-    _: Annotated[CurrentUser, hasPermission(MeetingPermission.CHECK_IN)],
+    # _: Annotated[CurrentUser, hasPermission(MeetingPermission.CHECK_IN)],
 ):
     """Thực hiện check-out khỏi buổi họp"""
-    participant = await uc.execute(meeting_id=meeting_id, user_id=data.user_id)
+    participants = await uc.execute(user_id=data.user_id)
     return ApiResponse.success(
-        data=ParticipantResponse.from_domain(participant),
+        data=[ParticipantResponse.from_domain(p) for p in participants],
         message="Checkout thành công",
     )
 
@@ -188,7 +184,7 @@ async def stream_meeting_events():
             "Cache-Control": "no-cache, no-transform",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",  # Disable buffering on Nginx
-            "X-Content-Type-Options": "nosniff", # Prevent MIME sniffing
+            "X-Content-Type-Options": "nosniff",  # Prevent MIME sniffing
         },
     )
 
