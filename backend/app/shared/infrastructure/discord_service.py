@@ -1,16 +1,18 @@
 """Discord Bot Service for sending messages."""
 
+from datetime import UTC
 from typing import Optional
 
 import aiohttp
-from app.core.config import settings
 from loguru import logger
+
+from app.core.config import settings
 
 
 class DiscordServiceError(Exception):
     """Custom exception for Discord service errors."""
 
-    def __init__(self, message: str, status_code: Optional[int] = None):
+    def __init__(self, message: str, status_code: int | None = None):
         self.message = message
         self.status_code = status_code
         super().__init__(self.message)
@@ -35,7 +37,7 @@ class DiscordService:
         }
 
     async def send_message_to_user(
-        self, user_id: str, content: str = "", embed: Optional[dict] = None
+        self, user_id: str, content: str = "", embed: dict | None = None
     ) -> dict:
         """
         Send a direct message to a Discord user.
@@ -69,14 +71,16 @@ class DiscordService:
 
                 # Then, send the message to the DM channel
                 send_message_url = f"{self.BASE_URL}/channels/{channel_id}/messages"
-                message_payload = {"content": content}
+                from typing import Any
+
+                message_payload: dict[str, Any] = {"content": content}
 
                 if embed:
                     # Discord REST API expects an array of embeds
                     if "timestamp" not in embed:
                         from datetime import datetime
 
-                        embed["timestamp"] = datetime.utcnow().isoformat()
+                        embed["timestamp"] = datetime.now(UTC).isoformat()
                     message_payload["embeds"] = [embed]
 
                 async with session.post(
@@ -101,7 +105,7 @@ class DiscordService:
             raise DiscordServiceError(f"Network error: {e}") from e
 
     async def send_message_to_room(
-        self, channel_id: str, content: str = "", embed: Optional[dict] = None
+        self, channel_id: str, content: str = "", embed: dict | None = None
     ) -> dict:
         """
         Send a message to a Discord channel (room/text channel).
@@ -111,17 +115,27 @@ class DiscordService:
             content: The message content to send.
             embed: Optional embed dictionary for rich content.
         """
+        from app.core.config import settings
+
+        if settings.ENVIRONMENT != "production":
+            logger.warning(
+                f"Skipping Discord message to room {channel_id} (not in production)"
+            )
+            return {}
+
         try:
             async with aiohttp.ClientSession() as session:
                 send_message_url = f"{self.BASE_URL}/channels/{channel_id}/messages"
-                payload = {"content": content}
+                from typing import Any
+
+                payload: dict[str, Any] = {"content": content}
 
                 if embed:
                     # Discord REST API expects an array of embeds
                     if "timestamp" not in embed:
                         from datetime import datetime
 
-                        embed["timestamp"] = datetime.utcnow().isoformat()
+                        embed["timestamp"] = datetime.now(UTC).isoformat()
                     payload["embeds"] = [embed]
 
                 async with session.post(

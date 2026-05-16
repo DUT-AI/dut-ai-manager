@@ -6,15 +6,18 @@ Provides Use Case instances to controller endpoints.
 
 from typing import Annotated
 
-from app.bonus_point.application.use_cases import (CreateBonusPointsUseCase,
-                                                   DeleteBonusPointUseCase,
-                                                   GetBonusPointsUseCase,
-                                                   RestoreBonusPointUseCase,
-                                                   UpdateBonusPointUseCase)
+from fastapi import Depends
+from sqlalchemy.orm import Session
+
+from app.bonus_point.application.use_cases import (
+    CreateBonusPointsUseCase,
+    DeleteBonusPointUseCase,
+    GetBonusPointsUseCase,
+    RestoreBonusPointUseCase,
+    UpdateBonusPointUseCase,
+)
 from app.bonus_point.infrastructure.repository import BonusPointRepository
 from app.shared.infrastructure.database import get_session
-from fastapi import Depends
-from sqlmodel import Session
 
 
 def _get_repo(

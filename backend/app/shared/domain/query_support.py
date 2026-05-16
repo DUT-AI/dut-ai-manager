@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any, ClassVar, List, Optional, Union
+from typing import Any, ClassVar, Union
 
 from sqlalchemy import and_, or_
+
 from app.core.queries.query_support.exceptions import PaginationError
 
 
@@ -21,11 +22,15 @@ class OffsetPaginationParams:
         if limit <= 0:
             raise PaginationError(f"Limit must be greater than 0, got {limit}")
         if limit > cls.MAX_INT32:
-            raise PaginationError(f"Limit cannot be greater than {cls.MAX_INT32}, got {limit}")
+            raise PaginationError(
+                f"Limit cannot be greater than {cls.MAX_INT32}, got {limit}"
+            )
         if offset < 0:
             raise PaginationError(f"Offset must be non-negative, got {offset}")
         if offset > cls.MAX_INT32:
-            raise PaginationError(f"Offset cannot be greater than {cls.MAX_INT32}, got {offset}")
+            raise PaginationError(
+                f"Offset cannot be greater than {cls.MAX_INT32}, got {offset}"
+            )
 
 
 class SortingOrder(StrEnum):
@@ -68,15 +73,15 @@ class FilterCriterion:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class FilterGroup:
     logic: LogicOperator
-    elements: List[Union[FilterCriterion, "FilterGroup"]]
+    elements: list[Union[FilterCriterion, "FilterGroup"]]
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class QuerySupport:
-    pagination: Optional[OffsetPaginationParams] = None
-    sorting: Optional[List[SortingParams]] = None
-    filters: Optional[Union[FilterGroup, FilterCriterion]] = None
-    include: Optional[List[str]] = None
+    pagination: OffsetPaginationParams | None = None
+    sorting: list[SortingParams] | None = None
+    filters: FilterGroup | FilterCriterion | None = None
+    include: list[str] | None = None
 
 
 def _apply_filters(model: Any, group: FilterGroup) -> Any:
@@ -110,9 +115,11 @@ def _apply_filters(model: Any, group: FilterGroup) -> Any:
                 clauses.append(col.is_(None))
             elif op == FilterOperator.MONTH_EQ:
                 from sqlalchemy import extract
+
                 clauses.append(extract("month", col) == val)
             elif op == FilterOperator.YEAR_EQ:
                 from sqlalchemy import extract
+
                 clauses.append(extract("year", col) == val)
 
     if not clauses:

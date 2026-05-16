@@ -5,13 +5,12 @@ without explicitly passing it through function arguments.
 """
 
 from contextvars import ContextVar
-from typing import Optional
 
 # Context variable to store the current user's ID for the request
-current_user_id: ContextVar[Optional[int]] = ContextVar("current_user_id", default=None)
+current_user_id: ContextVar[int | None] = ContextVar("current_user_id", default=None)
 
 
-def get_current_user_id() -> Optional[int]:
+def get_current_user_id() -> int | None:
     """Get the current user ID from context."""
     return current_user_id.get()
 

@@ -1,4 +1,3 @@
-from typing import Tuple
 import random
 import string
 
@@ -7,7 +6,7 @@ from app.utils.password import hash_password
 
 
 class AuthService:
-    def create_account(self, user_id: int) -> Tuple[str, Account]:
+    def create_account(self, user_id: int) -> tuple[str, Account]:
         password = self._generate_strong_password()
         account = Account(hash_password=hash_password(password), user_id=user_id)
         return password, account

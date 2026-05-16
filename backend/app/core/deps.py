@@ -3,7 +3,7 @@ from typing import Annotated, cast
 
 from fastapi import Depends, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlmodel import Session
+from sqlalchemy.orm import Session
 
 from app.core.context import set_current_user_id
 from app.core.database import get_session

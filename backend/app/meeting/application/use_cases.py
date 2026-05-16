@@ -1,6 +1,7 @@
-from loguru import logger
 from datetime import date, datetime, timedelta
-from typing import List, Optional, Tuple, cast
+from typing import cast
+
+from fastapi import UploadFile, status
 
 from app.core.config import settings
 from app.meeting.domain.entity import Meeting, MeetingParticipant
@@ -27,7 +28,6 @@ from app.shared.infrastructure.minio_service import MinioService
 from app.team.infrastructure.repository import TeamRepository
 from app.user.infrastructure.repository import UserRepository
 from app.utils.datetime import get_current_utc7_time
-from fastapi import UploadFile, status
 
 
 class CheckMeetingAttendanceUseCase:
@@ -41,7 +41,7 @@ class CheckMeetingAttendanceUseCase:
         self.meeting_repo = meeting_repo
         self.permission_repo = permission_repo
 
-    async def execute(self, target_date: Optional[date] = None):
+    async def execute(self, target_date: date | None = None):
         """
         Logic:
         1. Lấy tất cả các buổi họp diễn ra trong ngày hôm nay.
@@ -117,10 +117,10 @@ class GetMeetingsUseCase:
         self,
         skip: int = 0,
         limit: int = 100,
-        start_date: Optional[date] = None,
-        end_date: Optional[date] = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
         deleted: bool = False,
-    ) -> List[Meeting]:
+    ) -> list[Meeting]:
         filters = []
         if start_date:
             filters.append(
@@ -173,10 +173,10 @@ class CreateMeetingUseCase:
         title: str,
         start_time: datetime,
         end_time: datetime,
-        content: Optional[str] = None,
+        content: str | None = None,
         require_check_in: bool = True,
-        user_ids: Optional[List[int]] = None,
-        team_ids: Optional[List[int]] = None,
+        user_ids: list[int] | None = None,
+        team_ids: list[int] | None = None,
     ) -> Meeting:
         # Resolve team_ids to user_ids
         all_user_ids = set(user_ids or [])
@@ -246,8 +246,8 @@ class CheckInUseCase:
         self.event_bus = event_bus
 
     async def execute(
-        self, user_ids: List[int], image: UploadFile
-    ) -> Tuple[List[MeetingParticipant], str]:
+        self, user_ids: list[int], image: UploadFile
+    ) -> tuple[list[MeetingParticipant], str]:
         now = get_current_utc7_time()
 
         # 1. Upload image (Reuse for all meetings in this call)
@@ -271,12 +271,16 @@ class CheckInUseCase:
 
         for user_id in user_ids:
             # Tìm tất cả các buổi họp của user trong khung ±30 phút
-            participations = self.participant_repo.find_all_participations_in_time_window(
-                user_id, window_start, window_end, now
+            participations = (
+                self.participant_repo.find_all_participations_in_time_window(
+                    user_id, window_start, window_end, now
+                )
             )
 
             if not participations:
-                messages.append(f"Người dùng {user_id} không có buổi họp nào trong khung thời gian này")
+                messages.append(
+                    f"Người dùng {user_id} không có buổi họp nào trong khung thời gian này"
+                )
                 continue
 
             for participant in participations:
@@ -352,6 +356,7 @@ class CheckInWithCardUseCase:
             raise BadRequestException(f"Dang ky {code} tren web")
 
         uid = user.id
+        assert uid is not None
 
         now = get_current_utc7_time()
         half_hour = timedelta(minutes=30)
@@ -374,6 +379,7 @@ class CheckInWithCardUseCase:
 
         self.participant_repo.save(participant)
         is_late = meeting.is_late(now)
+        assert uid is not None
         await self.event_bus.publish(
             cast(
                 DomainEvent,
@@ -402,7 +408,7 @@ class CheckOutUseCase:
         self.participant_repo = participant_repo
         self.event_bus = event_bus
 
-    async def execute(self, user_id: int) -> List[MeetingParticipant]:
+    async def execute(self, user_id: int) -> list[MeetingParticipant]:
         now = get_current_utc7_time()
         half_hour = timedelta(minutes=30)
         window_start = now - half_hour
@@ -427,7 +433,10 @@ class CheckOutUseCase:
             if not meeting:
                 continue
 
-            updated = self.participant_repo.check_out(participant.id, now)
+            assert participant.id is not None
+            pid = participant.id
+
+            updated = self.participant_repo.check_out(pid, now)
             updated_participants.append(updated)
 
             # Publish event
@@ -444,7 +453,9 @@ class CheckOutUseCase:
             )
 
         if not updated_participants:
-            raise BadRequestException("Không tìm thấy buổi họp nào đang tham gia để check-out")
+            raise BadRequestException(
+                "Không tìm thấy buổi họp nào đang tham gia để check-out"
+            )
 
         return updated_participants
 
@@ -549,15 +560,15 @@ class MeetingUseCases:
     def get_by_id(self, meeting_id: int) -> Meeting:
         return self.get_meetings.get_by_id(meeting_id)
 
-    def get_by_date(self, target_date: date) -> List[Meeting]:
+    def get_by_date(self, target_date: date) -> list[Meeting]:
         return self.repo.get_by_date(target_date)
 
-    def get_all(self, **kwargs) -> List[Meeting]:
+    def get_all(self, **kwargs) -> list[Meeting]:
         return self.get_meetings.execute(**kwargs)
 
     def get_participating_meetings(
         self, user_id: int, month: int, year: int
-    ) -> List[Meeting]:
+    ) -> list[Meeting]:
 
         all_meetings = self.repo.get_all_with_participants(deleted=False)
         return [

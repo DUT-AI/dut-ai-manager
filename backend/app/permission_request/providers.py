@@ -1,17 +1,21 @@
 from dishka import Provider, Scope, provide
-from sqlmodel import Session
+from sqlalchemy.orm import Session
+
+from app.homework.infrastructure.repository import HomeworkRepository
+from app.permission_request.application.event_handlers import (
+    PermissionRequestNotificationHandler,
+)
+from app.permission_request.application.use_cases import (
+    CreatePermissionRequestUseCase,
+    DeletePermissionRequestUseCase,
+    GetPermissionRequestsUseCase,
+    RestorePermissionRequestUseCase,
+    UpdatePermissionRequestUseCase,
+)
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
-from app.permission_request.application.event_handlers import PermissionRequestNotificationHandler
 from app.shared.infrastructure.discord_service import DiscordService
 from app.user.infrastructure.repository import UserRepository
-from app.homework.infrastructure.repository import HomeworkRepository
-from app.permission_request.application.use_cases import (
-    GetPermissionRequestsUseCase,
-    CreatePermissionRequestUseCase,
-    UpdatePermissionRequestUseCase,
-    DeletePermissionRequestUseCase,
-    RestorePermissionRequestUseCase,
-)
+
 
 class PermissionRequestModuleProvider(Provider):
     scope = Scope.REQUEST

@@ -1,8 +1,10 @@
 from dataclasses import dataclass
 
+from app.shared.domain import DomainEvent
+
 
 @dataclass
-class ZaloAccountBound:
+class ZaloAccountBound(DomainEvent):
     """Sự kiện tài khoản Zalo được liên kết qua OAuth"""
 
     user_id: int
@@ -11,7 +13,7 @@ class ZaloAccountBound:
 
 
 @dataclass
-class ZaloBotLinked:
+class ZaloBotLinked(DomainEvent):
     """Sự kiện tài khoản Zalo được liên kết qua Zalo Bot (Bind Code)"""
 
     user_id: int

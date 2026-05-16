@@ -1,4 +1,6 @@
-from typing import Annotated, Any, Dict
+from typing import Annotated, Any
+
+from fastapi import APIRouter, Depends, Request
 
 from app.core.deps import CurrentUser
 from app.shared.application.response import ApiResponse
@@ -15,7 +17,6 @@ from app.zalo.deps import (
     get_login_url_uc,
 )
 from app.zalo.schemas import ZaloBindCodeResponse, ZaloBindRequest, ZaloLoginUrlResponse
-from fastapi import APIRouter, Depends, Request
 
 router = APIRouter(prefix="/zalo", tags=["Zalo"])
 
@@ -37,7 +38,7 @@ async def get_zalo_login_url(
     )
 
 
-@router.post("/bind", response_model=ApiResponse[Dict[str, Any]])
+@router.post("/bind", response_model=ApiResponse[dict[str, Any]])
 async def bind_zalo(
     data: ZaloBindRequest,
     uc: Annotated[BindZaloAccountUseCase, Depends(get_bind_account_uc)],
@@ -47,7 +48,7 @@ async def bind_zalo(
     Liên kết tài khoản Zalo bằng oauth_code.
     """
     profile = await uc.execute(
-        user_id=current_user.id,
+        user_id=current_user.id or 0,
         oauth_code=data.oauth_code,
         code_verifier=data.code_verifier,
     )
@@ -62,7 +63,7 @@ async def generate_zalo_bot_bind_code(
     current_user: Annotated[CurrentUser, Depends()],
 ):
     """Tạo mã 6 ký tự để người dùng chat với bot để liên kết."""
-    bind_code = uc.execute(current_user.id)
+    bind_code = uc.execute(current_user.id or 0)
     return ApiResponse.success(data=ZaloBindCodeResponse(bind_code=bind_code))
 
 

@@ -1,8 +1,9 @@
 import time
 
-from app.core.context import get_current_user_id
 from fastapi import Request
 from loguru import logger
+
+from app.core.context import get_current_user_id
 
 
 async def logging_middleware(request: Request, call_next):

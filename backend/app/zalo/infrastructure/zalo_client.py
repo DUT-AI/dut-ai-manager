@@ -1,9 +1,10 @@
-from typing import Any, Dict, Optional
+from typing import Any
 
 import aiohttp
+from loguru import logger
+
 from app.core.config import settings
 from app.zalo.domain.entity import ZaloProfile
-from loguru import logger
 
 
 class ZaloClient:
@@ -56,7 +57,7 @@ class ZaloClient:
                     raise Exception(error_msg)
                 return ZaloProfile(id=str(data["id"]), name=data.get("name", ""))
 
-    async def send_oa_message(self, user_id: str, text: str) -> Dict[str, Any]:
+    async def send_oa_message(self, user_id: str, text: str) -> dict[str, Any]:
         """Gửi tin nhắn qua Zalo Official Account"""
         if not settings.ZALO_OA_ACCESS_TOKEN:
             logger.warning("ZALO_OA_ACCESS_TOKEN chưa được cấu hình")

@@ -1,49 +1,42 @@
 import asyncio
-import httpx
-from datetime import date, datetime
-from sqlmodel import Session
-from app.core.database import engine
-from app.core.config import settings
+from datetime import date
+from typing import cast
+
+from fastapi import UploadFile
 from loguru import logger
-from typing import Any, List, Optional, Set, cast
+from sqlalchemy.orm import Session
+
 from app.core.context import get_current_user_id
-from app.homework.application.dtos import HomeworkCreate, HomeworkUpdate
+from app.core.database import engine
 from app.homework.application.dtos import (
-    HomeworkReportResponse,
-    HomeworkResponse,
-    HomeworkSubmissionResponse,
+    HomeworkCreate,
+    HomeworkUpdate,
 )
 from app.homework.domain.entity import Homework as HomeworkEntity
 from app.homework.domain.entity import HomeworkSubmission as HomeworkSubmissionEntity
-from app.shared.domain.value_objects import UserRef
 from app.homework.domain.value_objects import (
     HomeworkAssigned,
+    HomeworkGraded,
+    HomeworkOverdueDetected,
     HomeworkStatus,
     HomeworkSubmitted,
-    HomeworkGraded,
 )
+from app.homework.infrastructure.external_api import HomeworkGradingService
 from app.homework.infrastructure.repository import (
     HomeworkRepository,
     HomeworkSubmissionRepository,
 )
+from app.permission_request.infrastructure.repository import PermissionRequestRepository
 from app.rbac.domain.entity import RoleType
 from app.shared.application.response import BadRequestException
 from app.shared.domain.event_bus import EventBus
+from app.shared.domain.value_objects import UserRef
 from app.shared.infrastructure.minio_service import MinioService
 from app.team.domain.entity import Team
 from app.team.infrastructure.repository import TeamRepository
 from app.user.domain.entity import UserEntity
 from app.user.infrastructure.repository import UserRepository
 from app.utils.datetime import get_current_utc7_time
-from fastapi import UploadFile
-
-
-from app.permission_request.infrastructure.repository import PermissionRequestRepository
-from app.homework.infrastructure.model import HomeworkSubmissionModel
-from app.homework.domain.value_objects import HomeworkOverdueDetected
-
-
-from app.homework.infrastructure.external_api import HomeworkGradingService
 
 
 class CheckOverdueHomeworkUseCase:
@@ -57,7 +50,7 @@ class CheckOverdueHomeworkUseCase:
         self.submission_repo = submission_repo
         self.permission_repo = permission_repo
 
-    async def execute(self, target_date: Optional[date] = None):
+    async def execute(self, target_date: date | None = None):
         """
         Logic:
         1. Lấy tất cả các bài nộp chưa nộp có deadline là hôm nay.
@@ -158,21 +151,21 @@ class HomeworkUseCases:
 
     def get_all(
         self, skip: int = 0, limit: int = 100, deleted: bool = False
-    ) -> List[HomeworkEntity]:
+    ) -> list[HomeworkEntity]:
         return self.homework_repo.get_all(skip=skip, limit=limit, deleted=deleted)
 
     def get_assigned_to_user(
         self, user_id: int, skip: int = 0, limit: int = 100
-    ) -> List[HomeworkEntity]:
+    ) -> list[HomeworkEntity]:
         return self.homework_repo.get_assigned_to_user(user_id, skip=skip, limit=limit)
 
-    def get_by_id(self, homework_id: int) -> Optional[HomeworkEntity]:
+    def get_by_id(self, homework_id: int) -> HomeworkEntity | None:
         return self.homework_repo.get_by_id(homework_id)
 
     def _collect_assignee_ids(
-        self, assignee_ids: Optional[List[int]], team_ids: Optional[List[int]]
-    ) -> Set[int]:
-        all_ids: Set[int] = set()
+        self, assignee_ids: list[int] | None, team_ids: list[int] | None
+    ) -> set[int]:
+        all_ids: set[int] = set()
 
         if assignee_ids:
             all_ids.update(assignee_ids)
@@ -183,7 +176,9 @@ class HomeworkUseCases:
 
         return all_ids
 
-    async def create(self, data: HomeworkCreate, file: UploadFile) -> HomeworkEntity:
+    async def create(
+        self, data: HomeworkCreate, file: UploadFile | None = None
+    ) -> HomeworkEntity:
         file_url = None
         if file:
             file_url = await self._handle_file(file, data.title)
@@ -227,8 +222,8 @@ class HomeworkUseCases:
         return homework
 
     async def update(
-        self, homework_id: int, data: HomeworkUpdate, file: Optional[UploadFile] = None
-    ) -> Optional[HomeworkEntity]:
+        self, homework_id: int, data: HomeworkUpdate, file: UploadFile | None = None
+    ) -> HomeworkEntity | None:
         homework = self.get_by_id(homework_id)
         if not homework:
             return None
@@ -293,21 +288,21 @@ class HomeworkUseCases:
             self.submission_repo.delete(submission.id)
         return self.homework_repo.delete_by_id(homework_id)
 
-    def restore(self, homework_id: int) -> Optional[HomeworkEntity]:
+    def restore(self, homework_id: int) -> HomeworkEntity | None:
         return self.homework_repo.restore(homework_id)
 
     # --- Homework submissions operations
 
     def get_submission_of_user(
         self, homework_id: int
-    ) -> Optional[HomeworkSubmissionEntity]:
+    ) -> HomeworkSubmissionEntity | None:
         user_id = get_current_user_id()
         assert user_id is not None
         return self.submission_repo.get_by_homework_and_user(homework_id, user_id)
 
     def get_all_submissions_by_homework(
         self, homework_id: int, current_user: UserEntity
-    ) -> List[HomeworkSubmissionEntity]:
+    ) -> list[HomeworkSubmissionEntity]:
         homework_submissions = self.submission_repo.get_all_by_homework(homework_id)
 
         role_name = current_user.role_name or ""
@@ -318,7 +313,7 @@ class HomeworkUseCases:
             case RoleType.LEADER.value:
                 # Need to use team info to filter
                 team_member_ids = set()
-                teams: List[Team] = self.team_repo.get_all_with_members()
+                teams: list[Team] = self.team_repo.get_all_with_members()
                 # find teams that current user belongs to
                 my_teams = [
                     t
@@ -435,7 +430,7 @@ class HomeworkUseCases:
         submission_id: int,
         status: HomeworkStatus,
         current_user: UserEntity,
-    ) -> Optional[HomeworkSubmissionEntity]:
+    ) -> HomeworkSubmissionEntity | None:
         submission = self.submission_repo.get_by_id(submission_id)
         if not submission:
             raise BadRequestException("Không tồn tại submission này")
@@ -519,7 +514,7 @@ class HomeworkUseCases:
                     # 4. Lưu lại thông qua Repository (Infrastructure / Application)
                     repo.update(submission_entity)
                     session.commit()
-                    
+
                     is_plagiarized = submission_entity.is_plagiarized
 
             # 5. Phát sự kiện sau khi đã lưu xong
@@ -529,7 +524,7 @@ class HomeworkUseCases:
                     user_id=user_id,
                     score=score,
                     is_pass=is_pass,
-                    is_plagiarized=is_plagiarized
+                    is_plagiarized=is_plagiarized,
                 )
             )
 
@@ -542,7 +537,7 @@ class HomeworkUseCases:
                 f"Lỗi khi đánh giá bài chấm (submission_id={submission_id}): {str(e)}"
             )
 
-    def get_unsubmitted_by_user(self, user_id: int) -> List[HomeworkEntity]:
+    def get_unsubmitted_by_user(self, user_id: int) -> list[HomeworkEntity]:
         submissions = self.submission_repo.get_all_by_user(user_id)
         unsubmitted_homeworks = []
         for sub in submissions:
@@ -552,7 +547,7 @@ class HomeworkUseCases:
                     unsubmitted_homeworks.append(hw)
         return unsubmitted_homeworks
 
-    def get_unsubmitted_report(self) -> List[dict]:
+    def get_unsubmitted_report(self) -> list[dict]:
         counts = self.submission_repo.get_unsubmitted_counts_per_user()
         # get all active users
         users = self.user_repo.get_all()
@@ -568,7 +563,7 @@ class HomeworkUseCases:
                         name=u.name,
                         avatar_url=u.avatar_url,
                     ),
-                    "unsubmitted_count": counts.get(u.id, 0),
+                    "unsubmitted_count": counts.get(cast(int, u.id), 0),
                 }
             )
 

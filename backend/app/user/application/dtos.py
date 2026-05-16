@@ -1,17 +1,18 @@
-from typing import Any, Optional
+from typing import Any
+
+from pydantic import BaseModel, EmailStr, model_validator
 
 from app.user.domain.entity import UserEntity, UserStatus
-from pydantic import BaseModel, EmailStr, model_validator
 
 
 class UserBase(BaseModel):
     name: str
     email: EmailStr
-    phone_number: Optional[str] = None
+    phone_number: str | None = None
     status: UserStatus = UserStatus.ACTIVE
-    role_id: Optional[int] = None
-    avatar_url: Optional[str] = None
-    discord_id: Optional[str] = None
+    role_id: int | None = None
+    avatar_url: str | None = None
+    discord_id: str | None = None
 
 
 class UserCreate(UserBase):
@@ -19,21 +20,21 @@ class UserCreate(UserBase):
 
 
 class UserUpdate(BaseModel):
-    name: Optional[str] = None
-    email: Optional[EmailStr] = None
-    phone_number: Optional[str] = None
-    status: Optional[UserStatus] = None
-    role_id: Optional[int] = None
-    avatar_url: Optional[str] = None
-    discord_id: Optional[str] = None
-    check_in_card_code: Optional[str] = None
+    name: str | None = None
+    email: str | None = None
+    phone_number: str | None = None
+    role_id: int | None = None
+    status: UserStatus | None = None
+    avatar_url: str | None = None
+    discord_id: str | None = None
+    check_in_card_code: str | None = None
 
 
 class UserResponse(UserBase):
     """API: không trả về giá trị thật của check_in_card_code, chỉ cờ đã cấu hình."""
 
     id: int
-    role_name: Optional[str] = None
+    role_name: str | None = None
     permissions: list[str] = []
     check_in_card_code_configured: bool = False
 
@@ -63,9 +64,9 @@ class UserResponse(UserBase):
 
 
 class UserSettingsUpdate(BaseModel):
-    avatar_url: Optional[str] = None
-    discord_id: Optional[str] = None
-    check_in_card_code: Optional[str] = None
+    avatar_url: str | None = None
+    discord_id: str | None = None
+    check_in_card_code: str | None = None
 
 
 class UserImportResult(BaseModel):

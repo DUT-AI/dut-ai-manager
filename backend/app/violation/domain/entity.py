@@ -6,9 +6,11 @@ Contains business rules and validation for violations.
 
 from datetime import datetime
 
+from pydantic import field_validator
+
 from app.shared.domain.base_entity import BaseEntity
 from app.shared.domain.value_objects import UserRef
-from pydantic import field_validator
+from app.utils.datetime import get_current_utc7_time
 
 
 class Violation(BaseEntity):
@@ -52,4 +54,6 @@ class Violation(BaseEntity):
             user_id=user_id,
             created_by=system_user_id,
             updated_by=system_user_id,
+            created_at=get_current_utc7_time(),
+            updated_at=get_current_utc7_time(),
         )

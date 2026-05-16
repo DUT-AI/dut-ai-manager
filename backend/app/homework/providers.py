@@ -1,21 +1,24 @@
 from dishka import Provider, Scope, provide
-from sqlmodel import Session
+from sqlalchemy.orm import Session
+
+from app.homework.application.event_handlers import (
+    HomeworkGradedNotificationHandler,
+    HomeworkNotificationHandler,
+)
+from app.homework.application.use_cases import (
+    CheckOverdueHomeworkUseCase,
+    HomeworkUseCases,
+)
 from app.homework.infrastructure.repository import (
     HomeworkRepository,
     HomeworkSubmissionRepository,
 )
-from app.homework.application.use_cases import (HomeworkUseCases,
-                                                   CheckOverdueHomeworkUseCase)
-from app.homework.application.event_handlers import (
-    HomeworkNotificationHandler,
-    HomeworkGradedNotificationHandler
-)
-from app.user.infrastructure.repository import UserRepository
-from app.team.infrastructure.repository import TeamRepository
-from app.shared.infrastructure.minio_service import MinioService
-from app.shared.infrastructure.discord_service import DiscordService
-from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
+from app.shared.infrastructure.discord_service import DiscordService
+from app.shared.infrastructure.minio_service import MinioService
+from app.team.infrastructure.repository import TeamRepository
+from app.user.infrastructure.repository import UserRepository
+from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
 
 
 class HomeworkModuleProvider(Provider):
@@ -80,4 +83,3 @@ class HomeworkModuleProvider(Provider):
         return HomeworkGradedNotificationHandler(
             discord_service, homework_repo, user_repo, zalo_bot
         )
-

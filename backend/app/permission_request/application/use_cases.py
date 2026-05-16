@@ -1,8 +1,7 @@
 from datetime import datetime
-from typing import List, Optional, cast
+from typing import cast
 
 from fastapi import HTTPException
-from loguru import logger
 
 from app.core.context import get_current_user_id
 from app.homework.infrastructure.repository import HomeworkRepository
@@ -27,14 +26,14 @@ class GetPermissionRequestsUseCase:
 
     def execute(
         self,
-        user_id: Optional[int] = None,
-        month: Optional[int] = None,
-        year: Optional[int] = None,
-        category: Optional[RequestCategory] = None,
+        user_id: int | None = None,
+        month: int | None = None,
+        year: int | None = None,
+        category: RequestCategory | None = None,
         skip: int = 0,
         limit: int = 100,
         deleted: bool = False,
-    ) -> List[PermissionRequest]:
+    ) -> list[PermissionRequest]:
         filters = []
         if user_id:
             filters.append(
@@ -88,10 +87,10 @@ class CreatePermissionRequestUseCase:
         self,
         category: RequestCategory,
         note: str,
-        homework_id: Optional[int] = None,
-        meeting_id: Optional[int] = None,
-        start_time: Optional[datetime] = None,
-        user_id: Optional[int] = None,
+        homework_id: int | None = None,
+        meeting_id: int | None = None,
+        start_time: datetime | None = None,
+        user_id: int | None = None,
     ) -> PermissionRequest:
         current_user_id = user_id or get_current_user_id()
 
@@ -204,6 +203,6 @@ class RestorePermissionRequestUseCase:
     def __init__(self, repo: PermissionRequestRepository):
         self.repo = repo
 
-    def execute(self, request_id: int) -> Optional[PermissionRequest]:
+    def execute(self, request_id: int) -> PermissionRequest | None:
         dummy = PermissionRequest.model_construct(id=request_id)
         return self.repo.restore(dummy)

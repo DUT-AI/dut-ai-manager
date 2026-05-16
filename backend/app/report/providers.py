@@ -1,23 +1,25 @@
 from dishka import Provider, Scope, provide
-from app.report.application.use_cases import (
-    GetDailySummaryUseCase,
-    GetMonthlyActivityDatesUseCase,
-    GetDashboardOverviewUseCase,
-    GetBonusPointReportUseCase,
-    GetViolationReportUseCase,
-)
+
+from app.bonus_point.infrastructure.repository import BonusPointRepository
+from app.homework.infrastructure.repository import HomeworkSubmissionRepository
+from app.meeting.infrastructure.repository import MeetingRepository
+from app.permission_request.infrastructure.repository import PermissionRequestRepository
 from app.report.application.title_use_cases import (
+    AssignMonthlyTitlesUseCase,
     GetCurrentTitleUseCase,
     GetMonthlyTitlesReportUseCase,
-    AssignMonthlyTitlesUseCase,
 )
-from app.meeting.infrastructure.repository import MeetingRepository
+from app.report.application.use_cases import (
+    GetBonusPointReportUseCase,
+    GetDailySummaryUseCase,
+    GetDashboardOverviewUseCase,
+    GetMonthlyActivityDatesUseCase,
+    GetViolationReportUseCase,
+)
 from app.user.infrastructure.monthly_stats_repository import MonthlyUserStatsRepository
-from app.permission_request.infrastructure.repository import PermissionRequestRepository
-from app.violation.infrastructure.repository import ViolationRepository
-from app.bonus_point.infrastructure.repository import BonusPointRepository
 from app.user.infrastructure.repository import UserRepository
-from app.homework.infrastructure.repository import HomeworkSubmissionRepository
+from app.violation.infrastructure.repository import ViolationRepository
+
 
 class ReportModuleProvider(Provider):
     scope = Scope.REQUEST

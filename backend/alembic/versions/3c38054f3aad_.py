@@ -5,6 +5,7 @@ Revises: bcb89e1b71aa
 Create Date: 2026-04-01 14:01:09.686178
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
@@ -13,8 +14,8 @@ import sqlmodel
 
 
 # revision identifiers, used by Alembic.
-revision: str = '3c38054f3aad'
-down_revision: Union[str, Sequence[str], None] = 'bcb89e1b71aa'
+revision: str = "3c38054f3aad"
+down_revision: Union[str, Sequence[str], None] = "bcb89e1b71aa"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -25,46 +26,89 @@ def upgrade() -> None:
     conn = op.get_bind()
     inspector = sa.inspect(conn)
     tables = inspector.get_table_names()
-    
-    if 'role_api_keys' not in tables:
-        op.create_table('role_api_keys',
-        sa.Column('created_at', sa.DateTime(), nullable=False),
-        sa.Column('updated_at', sa.DateTime(), nullable=False),
-        sa.Column('is_deleted', sa.Boolean(), nullable=False),
-        sa.Column('created_by', sa.Integer(), nullable=True),
-        sa.Column('updated_by', sa.Integer(), nullable=True),
-        sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('name', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False),
-        sa.Column('key_hash', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column('prefix', sqlmodel.sql.sqltypes.AutoString(length=10), nullable=False),
-        sa.Column('is_active', sa.Boolean(), nullable=False),
-        sa.Column('role_id', sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(['created_by'], ['users.id'], ),
-        sa.ForeignKeyConstraint(['role_id'], ['roles.id'], ),
-        sa.ForeignKeyConstraint(['updated_by'], ['users.id'], ),
-        sa.PrimaryKeyConstraint('id')
+
+    if "role_api_keys" not in tables:
+        op.create_table(
+            "role_api_keys",
+            sa.Column("created_at", sa.DateTime(), nullable=False),
+            sa.Column("updated_at", sa.DateTime(), nullable=False),
+            sa.Column("is_deleted", sa.Boolean(), nullable=False),
+            sa.Column("created_by", sa.Integer(), nullable=True),
+            sa.Column("updated_by", sa.Integer(), nullable=True),
+            sa.Column("id", sa.Integer(), nullable=False),
+            sa.Column(
+                "name", sqlmodel.sql.sqltypes.AutoString(length=255), nullable=False
+            ),
+            sa.Column("key_hash", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+            sa.Column(
+                "prefix", sqlmodel.sql.sqltypes.AutoString(length=10), nullable=False
+            ),
+            sa.Column("is_active", sa.Boolean(), nullable=False),
+            sa.Column("role_id", sa.Integer(), nullable=False),
+            sa.ForeignKeyConstraint(
+                ["created_by"],
+                ["users.id"],
+            ),
+            sa.ForeignKeyConstraint(
+                ["role_id"],
+                ["roles.id"],
+            ),
+            sa.ForeignKeyConstraint(
+                ["updated_by"],
+                ["users.id"],
+            ),
+            sa.PrimaryKeyConstraint("id"),
         )
-        op.create_index(op.f('ix_role_api_keys_created_at'), 'role_api_keys', ['created_at'], unique=False)
-        op.create_index(op.f('ix_role_api_keys_key_hash'), 'role_api_keys', ['key_hash'], unique=False)
-        op.create_index(op.f('ix_role_api_keys_role_id'), 'role_api_keys', ['role_id'], unique=False)
+        op.create_index(
+            op.f("ix_role_api_keys_created_at"),
+            "role_api_keys",
+            ["created_at"],
+            unique=False,
+        )
+        op.create_index(
+            op.f("ix_role_api_keys_key_hash"),
+            "role_api_keys",
+            ["key_hash"],
+            unique=False,
+        )
+        op.create_index(
+            op.f("ix_role_api_keys_role_id"), "role_api_keys", ["role_id"], unique=False
+        )
     else:
         # If table exists, ensure indexes exist too
         # First, check column types if needed, but for now just check indexes
-        existing_indexes = [idx['name'] for idx in inspector.get_indexes('role_api_keys')]
-        if 'ix_role_api_keys_created_at' not in existing_indexes:
-            op.create_index(op.f('ix_role_api_keys_created_at'), 'role_api_keys', ['created_at'], unique=False)
-        if 'ix_role_api_keys_key_hash' not in existing_indexes:
-            op.create_index(op.f('ix_role_api_keys_key_hash'), 'role_api_keys', ['key_hash'], unique=False)
-        if 'ix_role_api_keys_role_id' not in existing_indexes:
-            op.create_index(op.f('ix_role_api_keys_role_id'), 'role_api_keys', ['role_id'], unique=False)
+        existing_indexes = [
+            idx["name"] for idx in inspector.get_indexes("role_api_keys")
+        ]
+        if "ix_role_api_keys_created_at" not in existing_indexes:
+            op.create_index(
+                op.f("ix_role_api_keys_created_at"),
+                "role_api_keys",
+                ["created_at"],
+                unique=False,
+            )
+        if "ix_role_api_keys_key_hash" not in existing_indexes:
+            op.create_index(
+                op.f("ix_role_api_keys_key_hash"),
+                "role_api_keys",
+                ["key_hash"],
+                unique=False,
+            )
+        if "ix_role_api_keys_role_id" not in existing_indexes:
+            op.create_index(
+                op.f("ix_role_api_keys_role_id"),
+                "role_api_keys",
+                ["role_id"],
+                unique=False,
+            )
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_index(op.f('ix_role_api_keys_role_id'), table_name='role_api_keys')
-    op.drop_index(op.f('ix_role_api_keys_key_hash'), table_name='role_api_keys')
-    op.drop_index(op.f('ix_role_api_keys_created_at'), table_name='role_api_keys')
-    op.drop_table('role_api_keys')
+    op.drop_index(op.f("ix_role_api_keys_role_id"), table_name="role_api_keys")
+    op.drop_index(op.f("ix_role_api_keys_key_hash"), table_name="role_api_keys")
+    op.drop_index(op.f("ix_role_api_keys_created_at"), table_name="role_api_keys")
+    op.drop_table("role_api_keys")
     # ### end Alembic commands ###

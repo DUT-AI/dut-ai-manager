@@ -1,17 +1,17 @@
 from dishka import Provider, Scope, provide
-from sqlmodel import Session
+from sqlalchemy.orm import Session
 
-from app.shared.infrastructure.email_service import EmailService
 from app.auth.account_notification_handler import AccountNotificationHandler
-from app.auth.application.user_event_handler import UserAccountHandler
 from app.auth.application.use_cases import (
     AuthenticateUseCase,
     ChangePasswordUseCase,
     CreateAccountUseCase,
     RefreshTokenUseCase,
 )
+from app.auth.application.user_event_handler import UserAccountHandler
 from app.auth.domain.service import AuthService
 from app.auth.infrastructure.repository import AccountRepository
+from app.shared.infrastructure.email_service import EmailService
 from app.user.infrastructure.repository import UserRepository
 
 

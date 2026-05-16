@@ -1,13 +1,16 @@
 from typing import Annotated
 
-from app.rbac.application.use_cases import RoleApiKeyUseCases, RoleUseCases
-from app.rbac.infrastructure.repository import (PermissionRepository,
-                                                RoleApiKeyRepository,
-                                                RolePermissionRepository,
-                                                RoleRepository)
-from app.shared.infrastructure.database import get_session
 from fastapi import Depends
-from sqlmodel import Session
+from sqlalchemy.orm import Session
+
+from app.rbac.application.use_cases import RoleApiKeyUseCases, RoleUseCases
+from app.rbac.infrastructure.repository import (
+    PermissionRepository,
+    RoleApiKeyRepository,
+    RolePermissionRepository,
+    RoleRepository,
+)
+from app.shared.infrastructure.database import get_session
 
 
 def get_role_repository(session: Session = Depends(get_session)) -> RoleRepository:

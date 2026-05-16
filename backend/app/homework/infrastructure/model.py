@@ -1,61 +1,62 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional, cast
+from typing import TYPE_CHECKING
 
-import sqlmodel
+from sqlalchemy import JSON, ForeignKey, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.homework.domain.entity import Homework as HomeworkEntity
 from app.homework.domain.entity import HomeworkStatus
 from app.homework.domain.entity import HomeworkSubmission as HomeworkSubmissionEntity
-from app.shared.infrastructure.base_model import TimestampMixin
 from app.shared.domain.value_objects import UserRef
-from sqlmodel import Field, Relationship
+from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
 
 if TYPE_CHECKING:
     from app.user.infrastructure.model import UserModel
 
 
-class HomeworkSubmissionModel(TimestampMixin, table=True):
+class HomeworkSubmissionModel(SQLAlchemyTimestampMixin, Base):
     """Homework submission model tracking user submissions"""
 
     __tablename__ = "homework_submissions"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
-    homework_id: int = Field(foreign_key="homeworks.id", index=True)
-    owner_id: int = Field(foreign_key="users.id", index=True)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    homework_id: Mapped[int] = mapped_column(ForeignKey("homeworks.id"), index=True)
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
 
-    link: str = Field(default="", max_length=500)
-    status: HomeworkStatus = Field(
-        default=HomeworkStatus.NOT_SUBMITTED, sa_type=sqlmodel.String, index=True
+    link: Mapped[str] = mapped_column(String(500), default="")
+    status: Mapped[HomeworkStatus] = mapped_column(
+        String(50), default=HomeworkStatus.NOT_SUBMITTED, index=True
     )
-    is_late: bool = Field(default=False)
+    is_late: Mapped[bool] = mapped_column(default=False)
 
-    is_pass: Optional[bool] = Field(default=None)
-    score: Optional[float] = Field(default=None)
-    feedback: Optional[str] = Field(default=None)
-    score_details: Optional[list] = Field(default=None, sa_column=sqlmodel.Column(sqlmodel.JSON))
-    plagiarism_info: Optional[list] = Field(default=None, sa_column=sqlmodel.Column(sqlmodel.JSON))
-    is_plagiarized: bool = Field(default=False, sa_column_kwargs={"server_default": "false"})
-    plagiarized_from_user_id: Optional[int] = Field(default=None, foreign_key="users.id")
+    is_pass: Mapped[bool | None] = mapped_column(default=None)
+    score: Mapped[float | None] = mapped_column(default=None)
+    feedback: Mapped[str | None] = mapped_column(default=None)
+    score_details: Mapped[list | None] = mapped_column(JSON, default=None)
+    plagiarism_info: Mapped[list | None] = mapped_column(JSON, default=None)
+    is_plagiarized: Mapped[bool] = mapped_column(default=False, server_default="false")
+    plagiarized_from_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id"), default=None, nullable=True
+    )
 
     # Relationships
-    homework: "HomeworkModel" = Relationship(back_populates="submissions")
-    owner: "UserModel" = Relationship(
-        sa_relationship_kwargs={"foreign_keys": "[HomeworkSubmissionModel.owner_id]"}
-    )
+    homework: Mapped["HomeworkModel"] = relationship(back_populates="submissions")
+    owner: Mapped["UserModel"] = relationship(foreign_keys=[owner_id])
 
     def to_entity(self) -> HomeworkSubmissionEntity:
         from sqlalchemy import inspect
 
         ins = inspect(self)
         owner_ref = None
-        if "owner" not in ins.unloaded and self.owner:
+        if ins is not None and "owner" not in ins.unloaded and self.owner:
             owner_ref = UserRef(
-                id=cast(int, self.owner.id),
+                id=self.owner.id,
                 name=self.owner.name,
                 avatar_url=self.owner.avatar_url,
             )
 
         homework_entity = None
-        if "homework" not in ins.unloaded and self.homework:
+        if ins is not None and "homework" not in ins.unloaded and self.homework:
             homework_entity = self.homework.to_entity()
 
         return HomeworkSubmissionEntity(
@@ -100,19 +101,21 @@ class HomeworkSubmissionModel(TimestampMixin, table=True):
         )
 
 
-class HomeworkModel(TimestampMixin, table=True):
+class HomeworkModel(SQLAlchemyTimestampMixin, Base):
     """Homework model containing assignment details"""
 
     __tablename__ = "homeworks"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
-    title: str = Field(max_length=255, index=True)
-    deadline: datetime = Field(index=True)
-    description: str  # Markdown text
-    file_url: Optional[str] = Field(default=None)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String(255), index=True)
+    deadline: Mapped[datetime] = mapped_column(index=True)
+    description: Mapped[str] = mapped_column(Text)
+    file_url: Mapped[str | None] = mapped_column(default=None)
 
     # Relationships
-    submissions: List[HomeworkSubmissionModel] = Relationship(back_populates="homework")
+    submissions: Mapped[list["HomeworkSubmissionModel"]] = relationship(
+        back_populates="homework"
+    )
 
     def to_entity(self) -> HomeworkEntity:
         from sqlalchemy import inspect
@@ -140,7 +143,7 @@ class HomeworkModel(TimestampMixin, table=True):
         )
 
     @classmethod
-    def from_entity(cls, entity: HomeworkEntity) -> "HomeworkModel":  # type: ignore[override]
+    def from_entity(cls, entity: HomeworkEntity) -> "HomeworkModel":
         return cls(
             id=entity.id,
             title=entity.title,

@@ -1,7 +1,15 @@
 from datetime import date
-from typing import List, Optional
+from typing import Optional
+
+from dishka.integrations.fastapi import FromDishka, inject
+from fastapi import APIRouter, Query
 
 from app.core.deps import CurrentUser
+from app.report.application.title_use_cases import (
+    GetCurrentTitleUseCase,
+    GetMonthlyTitlesReportUseCase,
+    TitleReportItem,
+)
 from app.report.application.use_cases import (
     GetBonusPointReportUseCase,
     GetDailySummaryUseCase,
@@ -9,19 +17,12 @@ from app.report.application.use_cases import (
     GetMonthlyActivityDatesUseCase,
     GetViolationReportUseCase,
 )
-from app.report.application.title_use_cases import (
-    GetCurrentTitleUseCase,
-    GetMonthlyTitlesReportUseCase,
-    TitleReportItem,
-)
 from app.report.schemas import (
     DailySummaryResponse,
     DashboardOverviewResponse,
     ReportResponse,
 )
 from app.shared.application.response import ApiResponse
-from fastapi import APIRouter, Query
-from dishka.integrations.fastapi import FromDishka, inject
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
 
@@ -38,7 +39,7 @@ async def get_daily_summary(
     return ApiResponse.success(data=summary)
 
 
-@router.get("/monthly-stats", response_model=ApiResponse[List[date]])
+@router.get("/monthly-stats", response_model=ApiResponse[list[date]])
 @inject
 async def get_monthly_activity_dates(
     uc: FromDishka[GetMonthlyActivityDatesUseCase],
@@ -65,6 +66,7 @@ async def get_dashboard_overview(
     Lấy thông tin tổng quan Dashboard cho người dùng trong một tháng cụ thể.
     Bao gồm: Yêu cầu xin phép, Điểm cộng, Vi phạm, Bài tập chưa nộp, Buổi sinh hoạt tham gia.
     """
+    assert current_user.id is not None
     overview = uc.execute(user_id=current_user.id, month=month, year=year)
     return ApiResponse.success(data=overview)
 
@@ -97,7 +99,7 @@ async def get_violation_report(
     return ApiResponse.success(data=report)
 
 
-@router.get("/titles", response_model=ApiResponse[List[TitleReportItem]])
+@router.get("/titles", response_model=ApiResponse[list[TitleReportItem]])
 @inject
 async def get_monthly_titles_report(
     uc: FromDishka[GetMonthlyTitlesReportUseCase],

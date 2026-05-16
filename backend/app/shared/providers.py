@@ -1,12 +1,14 @@
-from typing import Iterable
+from collections.abc import Iterable
 
 from dishka import Provider, Scope, provide
-from sqlmodel import Session, create_engine
+from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session
+
 from app.core.config import settings
+from app.shared.infrastructure.discord_service import DiscordService
 from app.shared.infrastructure.email_service import EmailService
 from app.shared.infrastructure.minio_service import MinioService
-from app.shared.infrastructure.discord_service import DiscordService
-from sqlalchemy.engine import Engine
 
 
 class InfrastructureProvider(Provider):

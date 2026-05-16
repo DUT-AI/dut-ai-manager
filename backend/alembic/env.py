@@ -1,29 +1,30 @@
 from logging.config import fileConfig
 
-from alembic import context
+from sqlalchemy import engine_from_config, pool
 
-# Import settings for database URL
-from app.core.config import settings
+from alembic import context
 
 # Import all models to register them with SQLModel
 from app.auth.infrastructure.model import AccountModel
-from app.user.infrastructure.model import UserModel
-from app.user.infrastructure.monthly_stats_model import MonthlyUserStatsModel
+from app.billing.infrastructure.model import InvoiceItemModel, InvoiceModel
+from app.bonus_point.infrastructure.model import BonusPointModel
+
+# Import settings for database URL
+from app.core.config import settings
+from app.homework.infrastructure.model import HomeworkModel, HomeworkSubmissionModel
+from app.meeting.infrastructure.model import Meeting, MeetingParticipant
+from app.permission_request.infrastructure.model import PermissionRequest
 from app.rbac.infrastructure.model import (
     PermissionModel,
     RoleApiKeyModel,
     RoleModel,
     RolePermissionModel,
 )
-from app.bonus_point.infrastructure.model import BonusPointModel
+from app.shared.infrastructure.base_model import Base
 from app.team.infrastructure.model import TeamMemberModel, TeamModel
-from app.permission_request.infrastructure.model import PermissionRequest
+from app.user.infrastructure.model import UserModel
+from app.user.infrastructure.monthly_stats_model import MonthlyUserStatsModel
 from app.violation.infrastructure.model import ViolationModel
-from app.meeting.infrastructure.model import MeetingParticipant, Meeting
-from app.homework.infrastructure.model import HomeworkSubmissionModel, HomeworkModel
-from app.billing.infrastructure.model import InvoiceModel, InvoiceItemModel
-from sqlalchemy import engine_from_config, pool
-from sqlmodel import SQLModel
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -39,7 +40,7 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-target_metadata = SQLModel.metadata
+target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

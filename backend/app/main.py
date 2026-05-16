@@ -82,7 +82,6 @@ def create_app():
             return await call_next(request)
         finally:
             if token:
-
                 _request_container_context.reset(token)
 
     # Dishka Setup (Should be called AFTER middlewares to be the OUTERMOST)

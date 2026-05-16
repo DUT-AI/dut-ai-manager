@@ -4,7 +4,9 @@ Bonus Point API Controller.
 Handles HTTP routes and mapping requests to Use Cases.
 """
 
-from typing import Annotated, Optional
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.bonus_point.application.dtos import (
     BonusPointCreate,
@@ -28,7 +30,6 @@ from app.bonus_point.deps import (
 from app.core.deps import hasPermission, hasTeamLeaderAccess
 from app.core.permissions import BonusPointPermission
 from app.shared.application.response import ApiResponse
-from fastapi import APIRouter, Depends, HTTPException
 
 router = APIRouter(prefix="/bonus-points", tags=["bonus-points"])
 
@@ -40,21 +41,16 @@ router = APIRouter(prefix="/bonus-points", tags=["bonus-points"])
 )
 async def get_bonus_points(
     uc: Annotated[GetBonusPointsUseCase, Depends(get_bonus_points_uc)],
-    user_id: Optional[int] = None,
-    month: Optional[int] = None,
-    year: Optional[int] = None,
+    user_id: int | None = None,
+    month: int | None = None,
+    year: int | None = None,
     skip: int = 0,
     limit: int = 100,
     deleted: bool = False,
 ):
     """Retrieve bonus points based on filters."""
     result = uc.execute(
-        user_id=user_id,
-        month=month,
-        year=year,
-        skip=skip,
-        limit=limit,
-        deleted=deleted
+        user_id=user_id, month=month, year=year, skip=skip, limit=limit, deleted=deleted
     )
     return ApiResponse.success(data=result)
 

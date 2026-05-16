@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List
+
 from app.shared.domain.event_bus import DomainEvent
 
 
@@ -8,7 +8,7 @@ class MeetingCreated(DomainEvent):
 
     meeting_id: int
     title: str
-    user_ids: List[int]
+    user_ids: list[int]
     start_time: str
     end_time: str
 
@@ -18,7 +18,7 @@ class MeetingUpdated(DomainEvent):
 
     meeting_id: int
     title: str
-    user_ids: List[int]
+    user_ids: list[int]
     start_time: str
     end_time: str
 

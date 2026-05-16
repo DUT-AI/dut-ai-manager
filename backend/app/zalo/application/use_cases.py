@@ -4,7 +4,9 @@ import random
 import secrets
 import string
 import urllib.parse
-from typing import Any, Dict, Optional
+from typing import Any
+
+from loguru import logger
 
 from app.core.config import settings
 from app.shared.application.response import BadRequestException
@@ -13,7 +15,6 @@ from app.zalo.domain.entity import ZaloOAuthState, ZaloProfile
 from app.zalo.domain.events import ZaloAccountBound, ZaloBotLinked
 from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
 from app.zalo.infrastructure.zalo_client import ZaloClient
-from loguru import logger
 
 
 class GetZaloLoginUrlUseCase:
@@ -125,7 +126,7 @@ class HandleBotWebhookUseCase:
         self.user_repo = user_repo
         self.event_bus = event_bus
 
-    async def execute(self, body: Dict[str, Any]) -> Dict[str, Any]:
+    async def execute(self, body: dict[str, Any]) -> dict[str, Any]:
         try:
             logger.info(f"Nhận Zalo Bot webhook: {body}")
 
@@ -180,9 +181,7 @@ class SendZaloNotificationUseCase:
         self.zalo_client = zalo_client
         self.bot_client = bot_client
 
-    async def execute(
-        self, zalo_id: Optional[str], zalo_bot_id: Optional[str], text: str
-    ):
+    async def execute(self, zalo_id: str | None, zalo_bot_id: str | None, text: str):
         if zalo_bot_id:
             await self.bot_client.send_message(zalo_bot_id, text)
             return

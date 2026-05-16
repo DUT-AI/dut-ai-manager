@@ -1,3 +1,8 @@
+from loguru import logger
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.auth.infrastructure.model import AccountModel
 from app.core.database import engine
 from app.core.permissions import (
     AccountPermission,
@@ -14,23 +19,17 @@ from app.core.permissions import (
     UserPermission,
     ViolationPermission,
 )
-from app.auth.infrastructure.model import AccountModel
-from app.rbac.infrastructure.model import PermissionModel, RoleModel, RolePermissionModel
 from app.rbac.domain.entity import RoleType
-from app.user.infrastructure.model import UserModel
+from app.rbac.infrastructure.model import (
+    PermissionModel,
+    RoleModel,
+    RolePermissionModel,
+)
 from app.user.domain.entity import UserStatus
+from app.user.infrastructure.model import UserModel
+from app.utils.password import hash_password
 
 # Import other models to register them in SQLModel registry for relationships
-from app.violation.infrastructure.model import ViolationModel
-from app.team.infrastructure.model import TeamModel, TeamMemberModel
-from app.meeting.infrastructure.model import Meeting, MeetingParticipant
-from app.bonus_point.infrastructure.model import BonusPointModel
-from app.homework.infrastructure.model import HomeworkModel, HomeworkSubmissionModel
-from app.permission_request.infrastructure.model import PermissionRequest
-
-from app.utils.password import hash_password
-from loguru import logger
-from sqlmodel import Session, select
 
 
 def seed_roles():
@@ -105,15 +104,14 @@ def seed_admin_user():
             role_id=admin_role.id,
         )
         session.add(user)
-        session.flush() # Get user.id
+        session.flush()  # Get user.id
 
         # Create account with phone_number as password linked to user
         account = AccountModel(
-            hash_password=hash_password(admin_data["phone_number"]),
-            user_id=user.id
+            hash_password=hash_password(admin_data["phone_number"]), user_id=user.id
         )
         session.add(account)
-        
+
         session.commit()
         logger.success(
             f"Added admin user: {admin_data['name']} ({admin_data['email']})"
@@ -153,7 +151,9 @@ def seed_permissions():
                     continue
 
                 # Check if permission already exists
-                statement = select(PermissionModel).where(PermissionModel.name == perm_name)
+                statement = select(PermissionModel).where(
+                    PermissionModel.name == perm_name
+                )
                 existing_perm = session.exec(statement).first()
 
                 if existing_perm:
@@ -190,24 +190,23 @@ def sync_admin_permissions():
 
         # Get all permissions
         all_permissions = session.exec(select(PermissionModel)).all()
-        
+
         # Get existing role permissions to avoid duplicates
         existing_perm_ids = session.exec(
             select(RolePermissionModel.permission_id).where(
                 RolePermissionModel.role_id == admin_role.id
             )
         ).all()
-        
+
         added_count = 0
         for perm in all_permissions:
             if perm.id not in existing_perm_ids:
                 role_perm = RolePermissionModel(
-                    role_id=admin_role.id,
-                    permission_id=perm.id
+                    role_id=admin_role.id, permission_id=perm.id
                 )
                 session.add(role_perm)
                 added_count += 1
-        
+
         session.commit()
         if added_count > 0:
             logger.success(f"Synced {added_count} new permissions to Admin role.")

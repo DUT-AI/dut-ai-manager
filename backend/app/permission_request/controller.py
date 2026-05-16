@@ -1,4 +1,7 @@
-from typing import Annotated, List, Optional
+from typing import Annotated
+
+from dishka.integrations.fastapi import FromDishka, inject
+from fastapi import APIRouter, HTTPException
 
 from app.core.deps import CurrentUser, hasPermission
 from app.core.permissions import PermissionRequestPermission
@@ -9,30 +12,28 @@ from app.permission_request.application.use_cases import (
     RestorePermissionRequestUseCase,
     UpdatePermissionRequestUseCase,
 )
+from app.permission_request.domain.value_objects import RequestCategory
 from app.permission_request.schemas import (
     PermissionRequestCreate,
     PermissionRequestResponse,
     PermissionRequestUpdate,
 )
-from app.permission_request.domain.value_objects import RequestCategory
 from app.shared.application.response import ApiResponse
-from fastapi import APIRouter, HTTPException
-from dishka.integrations.fastapi import FromDishka, inject
 
 router = APIRouter(prefix="/permissions", tags=["Permissions"])
 
 
-@router.get("", response_model=ApiResponse[List[PermissionRequestResponse]])
+@router.get("", response_model=ApiResponse[list[PermissionRequestResponse]])
 @inject
 async def get_permission_requests(
     uc: FromDishka[GetPermissionRequestsUseCase],
     _current_user: Annotated[
         CurrentUser, hasPermission(PermissionRequestPermission.READ)
     ],
-    user_id: Optional[int] = None,
-    month: Optional[int] = None,
-    year: Optional[int] = None,
-    category: Optional[RequestCategory] = None,
+    user_id: int | None = None,
+    month: int | None = None,
+    year: int | None = None,
+    category: RequestCategory | None = None,
     skip: int = 0,
     limit: int = 100,
     deleted: bool = False,
@@ -45,7 +46,7 @@ async def get_permission_requests(
         category=category,
         skip=skip,
         limit=limit,
-        deleted=deleted
+        deleted=deleted,
     )
     return ApiResponse.success(data=results)
 
@@ -65,7 +66,7 @@ async def create_permission_request(
         note=data.note,
         homework_id=data.homework_id,
         meeting_id=data.meeting_id,
-        start_time=data.start_time
+        start_time=data.start_time,
     )
     return ApiResponse.success(data=result)
 
@@ -99,7 +100,9 @@ async def delete_permission_request(
     return ApiResponse.success(data=result)
 
 
-@router.put("/{request_id}/restore", response_model=ApiResponse[PermissionRequestResponse])
+@router.put(
+    "/{request_id}/restore", response_model=ApiResponse[PermissionRequestResponse]
+)
 @inject
 async def restore_permission_request(
     request_id: int,
@@ -111,5 +114,7 @@ async def restore_permission_request(
     """Khôi phục yêu cầu đã xóa"""
     result = uc.execute(request_id)
     if not result:
-        raise HTTPException(status_code=404, detail="Yêu cầu không tìm thấy hoặc chưa được xóa")
+        raise HTTPException(
+            status_code=404, detail="Yêu cầu không tìm thấy hoặc chưa được xóa"
+        )
     return ApiResponse.success(data=result)

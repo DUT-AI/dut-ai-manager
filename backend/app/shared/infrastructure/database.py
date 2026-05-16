@@ -8,10 +8,12 @@ Session lifecycle:
     - This ensures ALL operations in a request = 1 atomic transaction
 """
 
-from app.core.config import settings
 from loguru import logger
-from sqlalchemy.orm import configure_mappers
-from sqlmodel import Session, SQLModel, create_engine
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, configure_mappers
+
+from app.core.config import settings
+from app.shared.infrastructure.base_model import Base
 
 # Create engine
 engine = create_engine(
@@ -24,7 +26,7 @@ def create_db_and_tables():
     """Create all database tables."""
 
     configure_mappers()
-    SQLModel.metadata.create_all(engine)
+    Base.metadata.create_all(engine)
 
 
 def get_session():

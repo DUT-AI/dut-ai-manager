@@ -1,20 +1,19 @@
 from datetime import datetime
-from typing import Optional
 
-from app.permission_request.domain.value_objects import RequestCategory
-from app.shared.domain.value_objects import UserRef
 from pydantic import BaseModel, ConfigDict
 
 from app.homework.application.dtos import HomeworkResponse
 from app.meeting.schemas import MeetingResponse
+from app.permission_request.domain.value_objects import RequestCategory
+from app.shared.domain.value_objects import UserRef
 
 
 class PermissionRequestBase(BaseModel):
     category: RequestCategory
     note: str
-    homework_id: Optional[int] = None
-    meeting_id: Optional[int] = None
-    start_time: Optional[datetime] = None
+    homework_id: int | None = None
+    meeting_id: int | None = None
+    start_time: datetime | None = None
 
 
 class PermissionRequestCreate(PermissionRequestBase):
@@ -22,11 +21,11 @@ class PermissionRequestCreate(PermissionRequestBase):
 
 
 class PermissionRequestUpdate(BaseModel):
-    category: Optional[RequestCategory] = None
-    note: Optional[str] = None
-    homework_id: Optional[int] = None
-    meeting_id: Optional[int] = None
-    start_time: Optional[datetime] = None
+    category: RequestCategory | None = None
+    note: str | None = None
+    homework_id: int | None = None
+    meeting_id: int | None = None
+    start_time: datetime | None = None
 
 
 class PermissionRequestResponse(PermissionRequestBase):
@@ -35,10 +34,10 @@ class PermissionRequestResponse(PermissionRequestBase):
     updated_at: datetime
 
     # Related objects
-    owner: Optional[UserRef] = None
-    creator: Optional[UserRef] = None
-    updater: Optional[UserRef] = None
-    homework: Optional[HomeworkResponse] = None
-    meeting: Optional[MeetingResponse] = None
+    owner: UserRef | None = None
+    creator: UserRef | None = None
+    updater: UserRef | None = None
+    homework: HomeworkResponse | None = None
+    meeting: MeetingResponse | None = None
 
     model_config = ConfigDict(from_attributes=True)

@@ -1,16 +1,17 @@
+from dishka import Provider, Scope, provide
+from sqlalchemy.orm import Session
+
 from app.billing.application.use_cases import (
     CreateInvoiceUseCase,
-    UpdateInvoiceUseCase,
     CreateMonthlyInvoicesUseCase,
     DeleteInvoiceUseCase,
     GetInvoicesUseCase,
     HandleSePayWebhookUseCase,
+    UpdateInvoiceUseCase,
 )
 from app.billing.infrastructure.repository import InvoiceRepository
-from app.violation.infrastructure.repository import ViolationRepository
 from app.team.infrastructure.repository import TeamRepository
-from dishka import Provider, Scope, provide
-from sqlmodel import Session
+from app.violation.infrastructure.repository import ViolationRepository
 
 
 class BillingModuleProvider(Provider):
@@ -38,10 +39,10 @@ class BillingModuleProvider(Provider):
 
     @provide
     def create_monthly_invoices_uc(
-        self, 
+        self,
         repo: InvoiceRepository,
         violation_repo: ViolationRepository,
-        team_repo: TeamRepository
+        team_repo: TeamRepository,
     ) -> CreateMonthlyInvoicesUseCase:
         return CreateMonthlyInvoicesUseCase(repo, violation_repo, team_repo)
 

@@ -1,8 +1,8 @@
-import asyncio
-import sys
-import os
 import argparse
-from datetime import datetime, date
+import asyncio
+import os
+import sys
+from datetime import date, datetime
 from pathlib import Path
 
 # Add the project root to sys.path
@@ -13,26 +13,26 @@ if "ENVIRONMENT" not in os.environ:
     os.environ["ENVIRONMENT"] = "local"
 
 from dishka import make_async_container
-from app.auth.providers import AuthModuleProvider
-from app.user.providers import UserModuleProvider
-from app.violation.providers import ViolationModuleProvider
-from app.permission_request.providers import PermissionRequestModuleProvider
-from app.report.providers import ReportModuleProvider
-from app.meeting.providers import MeetingModuleProvider
-from app.bonus_point.providers import BonusPointModuleProvider
-from app.homework.providers import HomeworkModuleProvider
-from app.team.providers import TeamModuleProvider
-from app.billing.providers import BillingModuleProvider
-from app.zalo.providers import ZaloModuleProvider
-from app.shared.providers import InfrastructureProvider
-from app.core.events import bootstrap_events
-from app.jobs.homework_checker_job import check_overdue_homework_submissions
-from app.jobs.meeting_checker_job import check_meeting_attendance
-from app.jobs.activity_scoring_job import calculate_activity_points
-from app.jobs.monthly_title_job import assign_monthly_titles
 from loguru import logger
 
+from app.auth.providers import AuthModuleProvider
+from app.billing.providers import BillingModuleProvider
+from app.bonus_point.providers import BonusPointModuleProvider
+from app.core.events import bootstrap_events
+from app.homework.providers import HomeworkModuleProvider
+from app.jobs.activity_scoring_job import calculate_activity_points
+from app.jobs.homework_checker_job import check_overdue_homework_submissions
+from app.jobs.meeting_checker_job import check_meeting_attendance
+from app.jobs.monthly_title_job import assign_monthly_titles
+from app.meeting.providers import MeetingModuleProvider
+from app.permission_request.providers import PermissionRequestModuleProvider
+from app.report.providers import ReportModuleProvider
 from app.shared.infrastructure.request_context import set_request_container
+from app.shared.providers import InfrastructureProvider
+from app.team.providers import TeamModuleProvider
+from app.user.providers import UserModuleProvider
+from app.violation.providers import ViolationModuleProvider
+from app.zalo.providers import ZaloModuleProvider
 
 
 async def run_jobs(target_date: date | None = None):

@@ -6,16 +6,17 @@ Enables decoupled cross-module communication:
     - Handlers (e.g. NotificationHandler) subscribe and react
 """
 
-from typing import Callable, Union
+from collections.abc import Callable
 
-from pydantic import BaseModel
 from loguru import logger
+from pydantic import BaseModel
+
 from app.shared.infrastructure.request_context import get_request_container
 
 
 class DomainEvent(BaseModel):
     """Base class for all domain events."""
-        
+
     pass
 
 
@@ -23,13 +24,13 @@ class EventBus:
     """Simple in-process event bus for domain events."""
 
     # Handlers can be either a callable or a class type to be resolved via DI
-    _handlers: dict[type, list[Union[Callable, type]]] = {}
+    _handlers: dict[type, list[Callable | type]] = {}
 
     @classmethod
     def subscribe(
         cls,
         event_type: type[DomainEvent],
-        handler: Union[Callable, type],
+        handler: Callable | type,
     ) -> None:
         """Register an async handler or a handler type for an event type."""
         if event_type not in cls._handlers:
@@ -41,20 +42,23 @@ class EventBus:
         """Publish an event to all registered handlers."""
         container = get_request_container()
         handler_types = cls._handlers.get(type(event), [])
-        
+
         for handler in handler_types:
             if isinstance(handler, type):
                 # If it's a class type, resolve it from Dishka
                 if container:
                     try:
                         instance = await container.get(handler)
-                        # Convention: Every handler class must have a handle(event) method
                         if hasattr(instance, "handle"):
-                            await instance.handle(event)
+                            await instance.handle(event)  # type: ignore
                         else:
-                            logger.error(f"Handler {handler} resolved but has no 'handle' method")
+                            logger.error(
+                                f"Handler {handler} resolved but has no 'handle' method"
+                            )
                     except Exception as e:
-                        logger.error(f"Error resolving or executing handler {handler}: {e}")
+                        logger.error(
+                            f"Error resolving or executing handler {handler}: {e}"
+                        )
                         raise
                 else:
                     logger.warning(f"No container found to resolve handler {handler}")
@@ -74,5 +78,7 @@ class EventBus:
             logger.info(f"Event: {event_type.__name__}")
             for handler in handlers:
                 # Check if it's a type or callable
-                name = handler.__name__ if hasattr(handler, "__name__") else str(handler)
+                name = (
+                    handler.__name__ if hasattr(handler, "__name__") else str(handler)
+                )
                 logger.info(f"  Handler: {name}")

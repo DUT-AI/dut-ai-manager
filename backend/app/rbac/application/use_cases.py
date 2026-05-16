@@ -1,19 +1,19 @@
 import secrets
-from typing import List, Optional, Tuple
 
+from app.rbac.application.dtos import (
+    PermissionCreate,
+    PermissionUpdate,
+    RoleApiKeyCreate,
+    RoleApiKeySecret,
+    RoleCreate,
+    RoleUpdate,
+)
 from app.rbac.domain.entity import Permission, Role, RoleApiKey, RolePermission
 from app.rbac.infrastructure.repository import (
     PermissionRepository,
     RoleApiKeyRepository,
     RolePermissionRepository,
     RoleRepository,
-)
-from app.rbac.application.dtos import RoleApiKeyCreate, RoleApiKeySecret
-from app.rbac.application.dtos import (
-    PermissionCreate,
-    PermissionUpdate,
-    RoleCreate,
-    RoleUpdate,
 )
 from app.utils.password import get_password_hash, verify_password
 
@@ -32,17 +32,17 @@ class RoleUseCases:
         self.role_permission_repo = role_permission_repo
 
     # --- Role Operations ---
-    def get_all_roles(self) -> List[Role]:
+    def get_all_roles(self) -> list[Role]:
         return self.role_repo.get_all_roles()
 
-    def get_role(self, role_id: int) -> Optional[Role]:
+    def get_role(self, role_id: int) -> Role | None:
         return self.role_repo.get_role_with_permissions(role_id)
 
     def create_role(self, role_data: RoleCreate) -> Role:
         role = Role(name=role_data.name, description=role_data.description)
         return self.role_repo.save(role)
 
-    def update_role(self, role_id: int, role_data: RoleUpdate) -> Optional[Role]:
+    def update_role(self, role_id: int, role_data: RoleUpdate) -> Role | None:
         role = self.role_repo.get_by_id(role_id)
         if not role:
             return None
@@ -56,7 +56,7 @@ class RoleUseCases:
         return self.role_repo.delete_by_id(role_id)
 
     # --- Permission Operations ---
-    def get_all_permissions(self) -> List[Permission]:
+    def get_all_permissions(self) -> list[Permission]:
         return self.permission_repo.get_all_permissions()
 
     def create_permission(self, perm_data: PermissionCreate) -> Permission:
@@ -70,7 +70,7 @@ class RoleUseCases:
 
     def update_permission(
         self, perm_id: int, perm_data: PermissionUpdate
-    ) -> Optional[Permission]:
+    ) -> Permission | None:
         perm = self.permission_repo.get_by_id(perm_id)
         if not perm:
             return None
@@ -88,7 +88,7 @@ class RoleUseCases:
         return self.permission_repo.delete_by_id(perm_id)
 
     # --- Role-Permission Linking ---
-    def add_permission_to_role(self, role_id: int, perm_id: int) -> Tuple[bool, str]:
+    def add_permission_to_role(self, role_id: int, perm_id: int) -> tuple[bool, str]:
         role = self.role_repo.get_by_id(role_id)
         perm = self.permission_repo.get_by_id(perm_id)
         if not role or not perm:
@@ -100,13 +100,13 @@ class RoleUseCases:
         if existing:
             return False, "Permission already assigned to this role"
 
-        link = RolePermission(role_id=role_id, permission_id=perm_id)
+        link = RolePermission(role_id=role_id, permission_id=perm_id, permission=perm)
         self.role_permission_repo.save(link)
         return True, "Permission assigned successfully"
 
     def remove_permission_from_role(
         self, role_id: int, perm_id: int
-    ) -> Tuple[bool, str]:
+    ) -> tuple[bool, str]:
         link = self.role_permission_repo.get_by_role_and_permission(role_id, perm_id)
         if not link:
             return False, "Permission not assigned to this role"
@@ -128,7 +128,7 @@ class RoleApiKeyUseCases:
 
     def create_api_key(
         self, data: RoleApiKeyCreate
-    ) -> Tuple[Optional[RoleApiKeySecret], str]:
+    ) -> tuple[RoleApiKeySecret | None, str]:
         """
         Create a new API key for a role.
         """
@@ -145,37 +145,37 @@ class RoleApiKeyUseCases:
             key_hash=key_hash,
             prefix=prefix,
             role_id=data.role_id,
+            role=role,
         )
         saved_key = self.api_key_repo.save(api_key)
-
+        assert saved_key.id is not None
         response = RoleApiKeySecret(
-            id=saved_key.id,  # type: ignore
+            id=saved_key.id,
             name=saved_key.name,
             prefix=saved_key.prefix,
             is_active=saved_key.is_active,
-            created_at=saved_key.created_at,  # type: ignore
+            created_at=saved_key.created_at,
             role_id=saved_key.role_id,
             secret_key=raw_key,
         )
 
         return response, ""
 
-    def get_by_role(self, role_id: int) -> List[RoleApiKey]:
+    def get_by_role(self, role_id: int) -> list[RoleApiKey]:
         """Get all API keys for a role"""
         return self.api_key_repo.get_by_role_id(role_id)
 
-    def revoke_api_key(self, key_id: int) -> Tuple[bool, str]:
+    def revoke_api_key(self, key_id: int) -> tuple[bool, str]:
         """Revoke (delete) an API key"""
         key = self.api_key_repo.get_by_id(key_id)
         if not key:
             return False, "API Key not found"
 
-        self.api_key_repo.delete_by_id(key.id) 
+        assert key.id is not None
+        self.api_key_repo.delete_by_id(key.id)
         return True, "API Key revoked successfully"
 
-    def verify_api_key(
-        self, raw_key: str
-    ) -> Tuple[Optional[Role], Optional[RoleApiKey]]:
+    def verify_api_key(self, raw_key: str) -> tuple[Role | None, RoleApiKey | None]:
         """
         Verify an API key and return the associated Role and ApiKey object.
         """
@@ -187,11 +187,6 @@ class RoleApiKeyUseCases:
 
         for key in candidates:
             if verify_password(raw_key, key.key_hash):
-                # We need to fetch the role fully populated if necessary,
-                # but `RoleApiKeyRepository` uses `selectinload(RoleApiKeyModel.role)`
-                # which gets mapped to `key.role` if such relation existed in entity.
-                # However, `RoleApiKey` entity does not have `.role`.
-                # So we fetch the Role explicitly.
                 role = self.role_repo.get_role_with_permissions(key.role_id)
                 return role, key
 

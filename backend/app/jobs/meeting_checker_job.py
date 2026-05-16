@@ -7,7 +7,6 @@ Uses Dishka for dependency injection and CheckMeetingAttendanceUseCase for busin
 """
 
 from datetime import date
-from typing import Optional
 
 from dishka import AsyncContainer
 from loguru import logger
@@ -20,14 +19,16 @@ from app.shared.infrastructure.request_context import (
 
 
 async def check_meeting_attendance(
-    container: AsyncContainer, target_date: Optional[date] = None
+    container: AsyncContainer, target_date: date | None = None
 ) -> None:
     """
     Check for ended meetings (target_date) with require_check_in=True
     and create violations for participants who didn't attend.
     Resolves CheckMeetingAttendanceUseCase from Dishka container.
     """
-    logger.info(f"🔍 [Meeting Checker] Starting meeting check for {target_date or 'today'}...")
+    logger.info(
+        f"🔍 [Meeting Checker] Starting meeting check for {target_date or 'today'}..."
+    )
 
     try:
         async with container() as request_container:
@@ -35,7 +36,9 @@ async def check_meeting_attendance(
             try:
                 use_case = await request_container.get(CheckMeetingAttendanceUseCase)
                 count = await use_case.execute(target_date=target_date)
-                logger.info(f"✅ [Meeting Checker] Completed - Violations created: {count}")
+                logger.info(
+                    f"✅ [Meeting Checker] Completed - Violations created: {count}"
+                )
             finally:
                 _request_container_context.reset(token)
     except Exception as e:

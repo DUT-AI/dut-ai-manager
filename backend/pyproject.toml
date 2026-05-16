@@ -24,10 +24,47 @@ dependencies = [
     "pyjwt>=2.10.1",
     "python-multipart>=0.0.21",
     "python-zalo-bot>=0.1.9",
-    "sqlmodel>=0.0.31",
+
     "uvicorn[standard]>=0.40.0",
     "dishka>=1.9.1", 
 ]
 
 [tool.pylint.main]
 extension-pkg-allow-list = ["jwt"]
+
+[dependency-groups]
+dev = [
+    "bs4>=0.0.2",
+    "ipykernel>=7.2.0",
+    "jupyterlab>=4.5.6",
+    "pip>=26.0.1",
+    "ruff>=0.15.12",
+    "selenium>=4.43.0",
+    "ty>=0.0.29",
+    "webdriver-manager>=4.0.2",
+]
+
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "C",   # flake8-comprehensions
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+]
+ignore = [
+    "B008", # do not perform function calls in argument defaults (common in FastAPI)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

@@ -15,8 +15,6 @@ class ViolationCreated(DomainEvent):
     user_id: int
     reason: str
     date: str  # ISO format string for serialization
-    user_discord_id: str | None = None
-    user_zalo_bot_id: str | None = None
     user_name: str | None = None
     creator_name: str | None = None
 

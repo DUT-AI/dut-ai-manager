@@ -1,9 +1,10 @@
+from loguru import logger
+
+from app.auth.domain.events import AccountCreated
 from app.auth.domain.service import AuthService
 from app.auth.infrastructure.repository import AccountRepository
-from app.user.domain.events import UserCreated
-from app.auth.domain.events import AccountCreated
 from app.shared.domain.event_bus import EventBus
-from loguru import logger
+from app.user.domain.events import UserCreated
 
 
 class UserAccountHandler:

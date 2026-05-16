@@ -13,6 +13,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
+from app.utils.datetime import get_current_utc7_time
+
 
 class BaseEntity(BaseModel):
     """Base domain entity — Pydantic BaseModel, NO ORM dependency."""
@@ -20,8 +22,8 @@ class BaseEntity(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int | None = None
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
+    created_at: datetime = get_current_utc7_time()
+    updated_at: datetime = get_current_utc7_time()
     created_by: int | None = None
     updated_by: int | None = None
     is_deleted: bool = False

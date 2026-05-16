@@ -1,13 +1,13 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
 import jwt
-from app.core.config import settings
 from jwt.exceptions import PyJWTError
 from loguru import logger
 from passlib.context import CryptContext
-from pydantic import (BaseModel, ConfigDict, Field, ValidationError,
-                      field_validator)
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+
+from app.core.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -73,7 +73,7 @@ def create_access_token(
     extra_claims: dict[str, Any] | None = None,
 ) -> str:
     """Tạo JWT access; exp là Unix timestamp (int)."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if expires_delta:
         exp_ts = int((now + expires_delta).timestamp())
     else:
@@ -90,7 +90,7 @@ def create_refresh_token(
     subject: TokenPayload, expires_delta: timedelta | None = None
 ) -> str:
     """Tạo JWT refresh; exp là Unix timestamp (int)."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if expires_delta:
         exp_ts = int((now + expires_delta).timestamp())
     else:

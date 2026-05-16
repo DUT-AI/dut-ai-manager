@@ -5,12 +5,10 @@ These are separate from Domain Entities. Schemas are for API serialization.
 """
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
 from app.shared.domain.value_objects import UserRef
-
 
 # --- Request DTOs ---
 
@@ -26,8 +24,8 @@ class ViolationCreate(BaseModel):
 class ViolationUpdate(BaseModel):
     """Request body for updating a violation."""
 
-    reason: Optional[str] = None
-    date: Optional[datetime] = None
+    reason: str | None = None
+    date: datetime | None = None
 
 
 # --- Response DTOs ---
@@ -42,12 +40,12 @@ class ViolationResponse(BaseModel):
     reason: str
     date: datetime
     user_id: int
-    created_by: Optional[int] = None
-    updated_by: Optional[int] = None
+    created_by: int | None = None
+    updated_by: int | None = None
     created_at: datetime
     updated_at: datetime
 
     # Embedded user refs (Standardized)
-    owner: Optional[UserRef] = None
-    creator: Optional[UserRef] = None
-    updater: Optional[UserRef] = None
+    owner: UserRef | None = None
+    creator: UserRef | None = None
+    updater: UserRef | None = None

@@ -1,43 +1,51 @@
 """
-Base ORM model mixin for SQLModel entities.
+Base ORM model and mixin for both SQLModel and pure SQLAlchemy 2.0 entities.
 
-Provides audit fields (created_at, updated_at, created_by, updated_by)
-and soft delete support.
-
-This is the INFRASTRUCTURE layer — only ORM models should use this mixin.
-Domain entities should NOT import from here.
+Allows incremental migration from SQLModel to SQLAlchemy 2.0.
 """
 
 from datetime import datetime
-from typing import Optional
+from typing import Any
+
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from app.core.context import get_current_user_id
-from app.shared.domain.base_entity import BaseEntity
 from app.utils.datetime import get_current_utc7_time
-from sqlmodel import Field, SQLModel
 
 
-class TimestampMixin(SQLModel):
-    """Mixin for created_at, updated_at timestamps and creator tracking."""
+class Base(DeclarativeBase):
+    """Base class for all SQLAlchemy ORM models."""
 
-    created_at: datetime = Field(default_factory=get_current_utc7_time, index=True)
-    updated_at: datetime = Field(
-        default_factory=get_current_utc7_time,
-        sa_column_kwargs={"onupdate": get_current_utc7_time},
+    pass
+
+
+class SQLAlchemyTimestampMixin:
+    """Mixin for created_at, updated_at timestamps and creator tracking using SQLAlchemy 2.0."""
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=get_current_utc7_time, index=True
     )
-    is_deleted: bool = Field(default=False)
-    created_by: Optional[int] = Field(
-        default_factory=get_current_user_id, foreign_key="users.id"
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=get_current_utc7_time,
+        onupdate=get_current_utc7_time,
     )
-    updated_by: Optional[int] = Field(
-        default_factory=get_current_user_id,
-        foreign_key="users.id",
-        sa_column_kwargs={"onupdate": get_current_user_id},
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_by: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("users.id"), default=get_current_user_id, nullable=True
+    )
+    updated_by: Mapped[int | None] = mapped_column(
+        Integer,
+        ForeignKey("users.id"),
+        default=get_current_user_id,
+        onupdate=get_current_user_id,
+        nullable=True,
     )
 
     @classmethod
-    def from_entity(cls, entity: BaseEntity) -> "TimestampMixin":
+    def from_entity(cls, entity: Any) -> Any:
         raise NotImplementedError("Subclasses must implement from_entity")
 
-    def to_entity(self) -> BaseEntity:
+    def to_entity(self) -> Any:
         raise NotImplementedError("Subclasses must implement to_entity")

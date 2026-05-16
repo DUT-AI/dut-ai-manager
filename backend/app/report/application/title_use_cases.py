@@ -1,5 +1,4 @@
 from datetime import timedelta
-from typing import List, Optional
 
 from loguru import logger
 from pydantic import BaseModel
@@ -15,7 +14,7 @@ from app.violation.infrastructure.repository import ViolationRepository
 
 class TitleReportItem(BaseModel):
     user: UserInfoResponse
-    title: Optional[str]
+    title: str | None
     total_points: int
     violation_count: int
     hours: float
@@ -27,7 +26,7 @@ class GetCurrentTitleUseCase:
     def __init__(self, stats_repo: MonthlyUserStatsRepository):
         self.stats_repo = stats_repo
 
-    def execute(self, user_id: int) -> Optional[str]:
+    def execute(self, user_id: int) -> str | None:
         return self.stats_repo.get_current_title(user_id)
 
 
@@ -42,7 +41,7 @@ class GetMonthlyTitlesReportUseCase:
         self.stats_repo = stats_repo
         self.user_repo = user_repo
 
-    def execute(self, month: int, year: int) -> List[TitleReportItem]:
+    def execute(self, month: int, year: int) -> list[TitleReportItem]:
         stats_list = self.stats_repo.get_by_month_year(month, year)
 
         report_items = []
@@ -86,8 +85,8 @@ class AssignMonthlyTitlesUseCase:
 
     def execute(
         self,
-        target_month: Optional[int] = None,
-        target_year: Optional[int] = None,
+        target_month: int | None = None,
+        target_year: int | None = None,
     ) -> int:
 
         now = get_current_utc7_time()
@@ -101,6 +100,7 @@ class AssignMonthlyTitlesUseCase:
         users = self.user_repo.get_active_users()
         count = 0
         for user in users:
+            assert user.id is not None
             try:
                 bonus_points = self.bonus_repo.get_by_user_id(
                     user.id, target_month, target_year

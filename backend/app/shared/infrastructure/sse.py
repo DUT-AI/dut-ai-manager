@@ -1,6 +1,7 @@
 import asyncio
 import json
-from typing import Any, AsyncGenerator, Dict, List
+from collections.abc import AsyncGenerator
+from typing import Any
 
 
 class SseBroadcaster:
@@ -10,7 +11,7 @@ class SseBroadcaster:
 
     def __init__(self):
         # Lưu trữ các queue của từng client đang lắng nghe
-        self.subscribers: List[asyncio.Queue] = []
+        self.subscribers: list[asyncio.Queue] = []
 
     async def subscribe(self) -> AsyncGenerator[str, None]:
         """Đăng ký một client mới và tạo queue cho client đó"""
@@ -24,7 +25,7 @@ class SseBroadcaster:
                     message = await asyncio.wait_for(queue.get(), timeout=30.0)
                     # Format dữ liệu theo chuẩn SSE: "data: <json>\n\n"
                     yield f"data: {json.dumps(message, ensure_ascii=False)}\n\n"
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     # Gửi heartbeat (comment trong SSE bắt đầu bằng dấu :) để giữ kết nối
                     yield ": keep-alive\n\n"
         finally:
@@ -32,7 +33,7 @@ class SseBroadcaster:
             if queue in self.subscribers:
                 self.subscribers.remove(queue)
 
-    async def broadcast(self, message: Dict[str, Any]):
+    async def broadcast(self, message: dict[str, Any]):
         """Gửi tin nhắn tới tất cả subscribers"""
         if not self.subscribers:
             return

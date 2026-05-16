@@ -1,67 +1,65 @@
 """
-Violation ORM Model — SQLModel, infrastructure layer.
+Violation ORM Model — SQLAlchemy 2.0, infrastructure layer.
 
 Only used for database mapping and entity conversion.
 Domain entity: app.violation.domain.entity.Violation
 """
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
+
+from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.shared.domain.value_objects import UserRef
-from app.shared.infrastructure.base_model import TimestampMixin
-from sqlmodel import Field, Relationship
+from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
 
 if TYPE_CHECKING:
     from app.user.infrastructure.model import UserModel
     from app.violation.domain.entity import Violation
 
 
-class ViolationModel(TimestampMixin, table=True):
+class ViolationModel(SQLAlchemyTimestampMixin, Base):
     """ORM model — maps to 'violations' table."""
 
     __tablename__ = "violations"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
-    reason: str = Field(max_length=500)
-    date: datetime = Field(index=True)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    reason: Mapped[str] = mapped_column(String(500))
+    date: Mapped[datetime] = mapped_column(DateTime, index=True)
 
     # Foreign keys
-    user_id: int = Field(foreign_key="users.id", index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
 
     # Relationships (ORM concern only)
-    user: "UserModel" = Relationship(
+    user: Mapped["UserModel"] = relationship(
         back_populates="violations",
-        sa_relationship_kwargs={"foreign_keys": "[ViolationModel.user_id]"},
+        foreign_keys=[user_id],
     )
-    creator_rel: Optional["UserModel"] = Relationship(
-        sa_relationship_kwargs={
-            "primaryjoin": "ViolationModel.created_by==UserModel.id",
-            "foreign_keys": "[ViolationModel.created_by]",
-            "overlaps": "violations",
-        }
+    creator_rel: Mapped["UserModel | None"] = relationship(
+        primaryjoin="ViolationModel.created_by==UserModel.id",
+        foreign_keys="ViolationModel.created_by",
+        overlaps="violations",
     )
-    updater_rel: Optional["UserModel"] = Relationship(
-        sa_relationship_kwargs={
-            "primaryjoin": "ViolationModel.updated_by==UserModel.id",
-            "foreign_keys": "[ViolationModel.updated_by]",
-            "overlaps": "violations,creator_rel",
-        }
+    updater_rel: Mapped["UserModel | None"] = relationship(
+        primaryjoin="ViolationModel.updated_by==UserModel.id",
+        foreign_keys="ViolationModel.updated_by",
+        overlaps="violations,creator_rel",
     )
 
     # --- Mapping methods ---
 
     def to_entity(self) -> "Violation":
         """ORM Model → Domain Entity with UserRef Value Objects."""
-        from app.violation.domain.entity import Violation
-        from typing import cast
         from sqlalchemy import inspect
-        
+
+        from app.violation.domain.entity import Violation
+
         insp = inspect(self)
         owner_ref = None
         if insp is not None and "user" not in insp.unloaded and self.user:
             owner_ref = UserRef(
-                id=cast(int, self.user.id),
+                id=self.user.id,
                 name=self.user.name,
                 avatar_url=self.user.avatar_url,
             )
@@ -69,7 +67,7 @@ class ViolationModel(TimestampMixin, table=True):
         creator_ref = None
         if insp is not None and "creator_rel" not in insp.unloaded and self.creator_rel:
             creator_ref = UserRef(
-                id=cast(int, self.creator_rel.id),
+                id=self.creator_rel.id,
                 name=self.creator_rel.name,
                 avatar_url=self.creator_rel.avatar_url,
             )
@@ -77,7 +75,7 @@ class ViolationModel(TimestampMixin, table=True):
         updater_ref = None
         if insp is not None and "updater_rel" not in insp.unloaded and self.updater_rel:
             updater_ref = UserRef(
-                id=cast(int, self.updater_rel.id),
+                id=self.updater_rel.id,
                 name=self.updater_rel.name,
                 avatar_url=self.updater_rel.avatar_url,
             )
@@ -100,8 +98,6 @@ class ViolationModel(TimestampMixin, table=True):
     @classmethod
     def from_entity(cls, entity: Any) -> "ViolationModel":
         """Domain Entity → ORM Model."""
-        # Note: Use Any to avoid circular import issues with BaseEntity at class level
-        # if needed, but typed correctly here for the implementation.
         return cls(
             id=entity.id,
             reason=entity.reason,
@@ -109,7 +105,5 @@ class ViolationModel(TimestampMixin, table=True):
             user_id=entity.user_id,
             created_by=entity.created_by,
             updated_by=entity.updated_by,
-            created_at=entity.created_at or datetime.now(),
-            updated_at=entity.updated_at or datetime.now(),
             is_deleted=entity.is_deleted,
         )

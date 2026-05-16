@@ -1,29 +1,27 @@
-from typing import Annotated, List
+from fastapi import APIRouter, status
 
 from app.core.deps import CurrentUser, hasPermission
 from app.core.permissions import RolePermission as CoreRolePermission
-from app.rbac.deps import RoleApiKeyUseCasesDI, RoleUseCasesDI
-from app.shared.application.response import ApiResponse
 from app.rbac.application.dtos import (
-    RoleApiKeyCreate,
-    RoleApiKeyResponse,
-    RoleApiKeySecret,
     PermissionCreate,
     PermissionResponse,
     PermissionUpdate,
+    RoleApiKeyCreate,
+    RoleApiKeyResponse,
+    RoleApiKeySecret,
     RoleCreate,
     RoleResponse,
     RoleUpdate,
 )
-
-from fastapi import APIRouter, status
+from app.rbac.deps import RoleApiKeyUseCasesDI, RoleUseCasesDI
+from app.shared.application.response import ApiResponse
 
 # Combined router — prefix khớp frontend: /api/v1/rbac/...
 router = APIRouter(prefix="/rbac", tags=["rbac"])
 
 
 # --- Role Endpoints ---
-@router.get("/roles", response_model=ApiResponse[List[RoleResponse]])
+@router.get("/roles", response_model=ApiResponse[list[RoleResponse]])
 async def get_roles(
     current_user: CurrentUser,
     use_cases: RoleUseCasesDI,
@@ -81,7 +79,7 @@ async def delete_role(
 
 
 # --- Permission Endpoints ---
-@router.get("/permissions", response_model=ApiResponse[List[PermissionResponse]])
+@router.get("/permissions", response_model=ApiResponse[list[PermissionResponse]])
 async def get_permissions(
     current_user: CurrentUser,
     use_cases: RoleUseCasesDI,
@@ -201,7 +199,7 @@ async def create_api_key(
 
 @router.get(
     "/api-keys/role/{role_id}",
-    response_model=ApiResponse[List[RoleApiKeyResponse]],
+    response_model=ApiResponse[list[RoleApiKeyResponse]],
     dependencies=[hasPermission(CoreRolePermission.UPDATE)],
 )
 async def get_role_api_keys(

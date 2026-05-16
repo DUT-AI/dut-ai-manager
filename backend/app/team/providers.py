@@ -1,7 +1,9 @@
 from dishka import Provider, Scope, provide
-from sqlmodel import Session
-from app.team.infrastructure.repository import TeamRepository
+from sqlalchemy.orm import Session
+
 from app.team.application.use_cases import TeamUseCases
+from app.team.infrastructure.repository import TeamRepository
+
 
 class TeamModuleProvider(Provider):
     scope = Scope.REQUEST

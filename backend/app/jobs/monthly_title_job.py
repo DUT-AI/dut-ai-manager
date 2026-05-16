@@ -5,8 +5,6 @@ Chạy vào 00:01 ngày đầu tiên của tháng mới.
 Xét danh hiệu cho tháng vừa kết thúc và lưu vào DB.
 """
 
-from typing import Optional
-
 from dishka import AsyncContainer
 from loguru import logger
 
@@ -19,8 +17,8 @@ from app.shared.infrastructure.request_context import (
 
 async def assign_monthly_titles(
     container: AsyncContainer,
-    target_month: Optional[int] = None,
-    target_year: Optional[int] = None,
+    target_month: int | None = None,
+    target_year: int | None = None,
 ) -> int:
     """
     Xét danh hiệu cho tháng target và lưu vào DB.

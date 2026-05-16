@@ -1,50 +1,58 @@
-from datetime import datetime
-from typing import Optional, TYPE_CHECKING, cast
+"""
+Permission Request ORM Model — SQLAlchemy 2.0, infrastructure layer.
+"""
 
-from app.permission_request.domain.value_objects import RequestCategory
+from datetime import datetime
+from typing import TYPE_CHECKING, cast
+
+from sqlalchemy import DateTime, ForeignKey, Index, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.permission_request.domain.entity import (
     PermissionRequest as PermissionRequestEntity,
 )
+from app.permission_request.domain.value_objects import RequestCategory
 from app.shared.domain.value_objects import UserRef
-from app.shared.infrastructure.base_model import TimestampMixin
-from sqlmodel import Field, Index, Relationship
+from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
 
 if TYPE_CHECKING:
-    from app.user.infrastructure.model import UserModel
     from app.homework.infrastructure.model import HomeworkModel
     from app.meeting.infrastructure.model import Meeting
+    from app.user.infrastructure.model import UserModel
 
 
-class PermissionRequest(TimestampMixin, table=True):
+class PermissionRequest(SQLAlchemyTimestampMixin, Base):
     """Permission Request model"""
 
     __tablename__ = "permission_requests"
     __table_args__ = (Index("ix_permission_requests_created_by", "created_by"),)
 
-    id: Optional[int] = Field(default=None, primary_key=True)
-    category: RequestCategory = Field(index=True)
-    note: str = Field(max_length=500)
-    start_time: Optional[datetime] = Field(default=None)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    category: Mapped[RequestCategory] = mapped_column(String(100), index=True)
+    note: Mapped[str] = mapped_column(String(500))
+    start_time: Mapped[datetime | None] = mapped_column(DateTime, default=None)
 
     # Specific metadata fields
-    homework_id: Optional[int] = Field(
-        default=None, foreign_key="homeworks.id", index=True
+    homework_id: Mapped[int | None] = mapped_column(
+        ForeignKey("homeworks.id"), default=None, index=True
     )
-    meeting_id: Optional[int] = Field(
-        default=None, foreign_key="meetings.id", index=True
+    meeting_id: Mapped[int | None] = mapped_column(
+        ForeignKey("meetings.id"), default=None, index=True
     )
 
     # Relationships
-    user: "UserModel" = Relationship(
-        sa_relationship_kwargs={"foreign_keys": "[PermissionRequest.created_by]"}
+    user: Mapped["UserModel"] = relationship(
+        foreign_keys="PermissionRequest.created_by",
+        overlaps="creator",
     )
-    homework: Optional["HomeworkModel"] = Relationship()
-    meeting: Optional["Meeting"] = Relationship()
-    creator: Optional["UserModel"] = Relationship(
-        sa_relationship_kwargs={"foreign_keys": "[PermissionRequest.created_by]"}
+    homework: Mapped["HomeworkModel | None"] = relationship()
+    meeting: Mapped["Meeting | None"] = relationship()
+    creator: Mapped["UserModel | None"] = relationship(
+        foreign_keys="PermissionRequest.created_by",
+        overlaps="user",
     )
-    updater: Optional["UserModel"] = Relationship(
-        sa_relationship_kwargs={"foreign_keys": "[PermissionRequest.updated_by]"}
+    updater: Mapped["UserModel | None"] = relationship(
+        foreign_keys="PermissionRequest.updated_by",
     )
 
     def to_entity(self) -> PermissionRequestEntity:
@@ -95,7 +103,7 @@ class PermissionRequest(TimestampMixin, table=True):
         )
 
     @classmethod
-    def from_entity(cls, entity: PermissionRequestEntity):
+    def from_entity(cls, entity: PermissionRequestEntity) -> "PermissionRequest":
         """Convert PermissionRequest domain entity to ORM model"""
         if not isinstance(entity, PermissionRequestEntity):
             e = cast(PermissionRequestEntity, entity)

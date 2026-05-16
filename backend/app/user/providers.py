@@ -1,6 +1,8 @@
 from dishka import Provider, Scope, provide
-from sqlmodel import Session
+from sqlalchemy.orm import Session
 
+from app.rbac.infrastructure.repository import RoleRepository
+from app.shared.infrastructure.minio_service import MinioService
 from app.user.application.use_cases import (
     CreateUserUseCase,
     DeleteUserUseCase,
@@ -9,9 +11,8 @@ from app.user.application.use_cases import (
     UpdateAvatarUseCase,
     UpdateUserUseCase,
 )
-from app.user.infrastructure.repository import UserRepository
 from app.user.infrastructure.monthly_stats_repository import MonthlyUserStatsRepository
-from app.shared.infrastructure.minio_service import MinioService
+from app.user.infrastructure.repository import UserRepository
 
 
 class UserModuleProvider(Provider):
@@ -24,6 +25,10 @@ class UserModuleProvider(Provider):
     @provide
     def get_monthly_stats_repo(self, session: Session) -> MonthlyUserStatsRepository:
         return MonthlyUserStatsRepository(session)
+
+    @provide
+    def get_role_repo(self, session: Session) -> RoleRepository:
+        return RoleRepository(session)
 
     @provide
     def get_user_uc(self, repo: UserRepository) -> GetUserUseCase:
@@ -43,9 +48,12 @@ class UserModuleProvider(Provider):
 
     @provide
     def import_users_uc(
-        self, create_uc: CreateUserUseCase, repo: UserRepository
+        self,
+        create_uc: CreateUserUseCase,
+        user_repo: UserRepository,
+        role_repo: RoleRepository,
     ) -> ImportUsersUseCase:
-        return ImportUsersUseCase(create_uc, repo)
+        return ImportUsersUseCase(create_uc, user_repo, role_repo)
 
     @provide
     def update_avatar_uc(

@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta
-from typing import List, Optional
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.meeting.domain.value_objects import ParticipantStatus
 from app.shared.domain.base_entity import BaseEntity
-from pydantic import BaseModel, ConfigDict, Field
 
 
 class UserRef(BaseModel):
@@ -13,19 +13,19 @@ class UserRef(BaseModel):
 
     id: int
     name: str = ""
-    avatar_url: Optional[str] = None
+    avatar_url: str | None = None
 
 
 class MeetingParticipant(BaseEntity):
     """Thành viên tham gia buổi họp (Domain Entity)"""
 
     user_id: int
-    meeting_id: Optional[int] = None
-    check_in_at: Optional[datetime] = None
-    check_out_at: Optional[datetime] = None
+    meeting_id: int | None = None
+    check_in_at: datetime | None = None
+    check_out_at: datetime | None = None
     status: ParticipantStatus = ParticipantStatus.NOT_JOINED
-    link_image: Optional[str] = None
-    user: Optional[UserRef] = None
+    link_image: str | None = None
+    user: UserRef | None = None
 
     def check_in(self, check_in_time: datetime, image_url: str | None = None):
         """Thực hiện check-in cho thành viên (image_url tùy chọn, ví dụ quẹt thẻ)."""
@@ -53,9 +53,9 @@ class Meeting(BaseEntity):
     title: str
     start_time: datetime
     end_time: datetime
-    content: Optional[str] = None
+    content: str | None = None
     require_check_in: bool = True
-    participants: List[MeetingParticipant] = Field(default_factory=list)
+    participants: list[MeetingParticipant] = Field(default_factory=list)
 
     def is_ongoing(self, current_time: datetime) -> bool:
         """Kiểm tra xem buổi họp có đang diễn ra hay không"""

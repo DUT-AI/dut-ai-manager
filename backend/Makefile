@@ -1,19 +1,16 @@
 .PHONY: quality format sort-imports typecheck lint bandit safety test
 
-# Chạy toàn bộ kiểm tra chất lượng (tương đương các lệnh bạn liệt kê)
-quality: format sort-imports typecheck lint bandit safety test
+# Chạy toàn bộ kiểm tra chất lượng
+quality: format lint typecheck bandit safety test
 
 format:
-	uv run black app tests
-
-sort-imports:
-	uv run isort app tests
+	uv run ruff format app tests
 
 typecheck:
-	uv run mypy app
+	uv run ty check app --exclude alembic/ --exclude tests/ --exclude scripts/ --exclude app/scripts/ --force-exclude
 
 lint:
-	uv run flake8 app
+	uv run ruff check app tests --fix
 
 bandit:
 	uv run bandit -r app

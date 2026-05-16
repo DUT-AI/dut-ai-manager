@@ -1,12 +1,13 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 import httpx
+from loguru import logger
+
 from app.core.config import settings
 from app.homework.domain.value_objects import HomeworkStatus
 from app.shared.domain.base_entity import BaseEntity
 from app.shared.domain.value_objects import UserRef
-from loguru import logger
 
 
 class HomeworkSubmission(BaseEntity):
@@ -18,25 +19,25 @@ class HomeworkSubmission(BaseEntity):
     status: HomeworkStatus = HomeworkStatus.NOT_SUBMITTED
     is_late: bool = False
 
-    is_pass: Optional[bool] = None
-    score: Optional[float] = None
-    feedback: Optional[str] = None
-    score_details: Optional[List[dict]] = None
-    plagiarism_info: Optional[List[dict]] = None
+    is_pass: bool | None = None
+    score: float | None = None
+    feedback: str | None = None
+    score_details: list[dict] | None = None
+    plagiarism_info: list[dict] | None = None
     is_plagiarized: bool = False
-    plagiarized_from_user_id: Optional[int] = None
+    plagiarized_from_user_id: int | None = None
 
     # Standardized user reference
-    owner: Optional[UserRef] = None
+    owner: UserRef | None = None
     homework: Optional["Homework"] = None
 
     def update_grading_result(
         self,
         is_pass: bool,
-        score: Optional[float],
-        feedback: Optional[str],
-        score_details: List[dict],
-        plagiarism_info: List[dict]
+        score: float | None,
+        feedback: str | None,
+        score_details: list[dict],
+        plagiarism_info: list[dict],
     ) -> None:
         """Cập nhật điểm và đánh giá đạo văn theo Business Rule."""
         self.is_pass = is_pass
@@ -69,8 +70,8 @@ class Homework(BaseEntity):
     title: str
     description: str
     deadline: datetime
-    file_url: Optional[str] = None
-    submissions: List[HomeworkSubmission] = []
+    file_url: str | None = None
+    submissions: list[HomeworkSubmission] = []
 
     @property
     def submission_count(self) -> int:

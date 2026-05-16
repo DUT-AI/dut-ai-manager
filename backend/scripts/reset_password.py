@@ -42,22 +42,30 @@ def generate_strong_password() -> str:
 def reset_password(email: str):
     with Session(engine) as session:
         # 1. Tìm user bằng email
-        user_query = text("SELECT id FROM users WHERE email = :email AND is_deleted = False")
+        user_query = text(
+            "SELECT id FROM users WHERE email = :email AND is_deleted = False"
+        )
         user = session.execute(user_query, {"email": email}).first()
 
         if not user:
-            print(f"Lỗi: Không tìm thấy người dùng (hoặc người dùng đã bị xóa) với email '{email}'.")
+            print(
+                f"Lỗi: Không tìm thấy người dùng (hoặc người dùng đã bị xóa) với email '{email}'."
+            )
             return
 
         user_id = user[0]
 
         # 2. Tìm tài khoản liên kết (AccountModel có user_id)
         # Kiểm tra xem account có tồn tại không
-        account_check = text("SELECT id FROM accounts WHERE user_id = :user_id AND is_deleted = False")
+        account_check = text(
+            "SELECT id FROM accounts WHERE user_id = :user_id AND is_deleted = False"
+        )
         account = session.execute(account_check, {"user_id": user_id}).first()
-        
+
         if not account:
-            print(f"Lỗi: Không tìm thấy tài khoản cho người dùng '{email}' (ID: {user_id}).")
+            print(
+                f"Lỗi: Không tìm thấy tài khoản cho người dùng '{email}' (ID: {user_id})."
+            )
             return
 
         # 3. Tạo mật khẩu mới
@@ -65,9 +73,11 @@ def reset_password(email: str):
         hashed = get_password_hash(new_password)
 
         # 4. Hash và cập nhật trong DB
-        update_query = text("UPDATE accounts SET hash_password = :hashed, updated_at = NOW() WHERE user_id = :user_id")
+        update_query = text(
+            "UPDATE accounts SET hash_password = :hashed, updated_at = NOW() WHERE user_id = :user_id"
+        )
         session.execute(update_query, {"hashed": hashed, "user_id": user_id})
-        
+
         # 5. Lưu thay đổi
         session.commit()
 

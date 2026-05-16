@@ -1,53 +1,51 @@
 """
-Bonus Point ORM Model — SQLModel, infrastructure layer.
+Bonus Point ORM Model — SQLAlchemy 2.0, infrastructure layer.
 
 Only used for database mapping and entity conversion.
 Domain entity: app.bonus_point.domain.entity.BonusPoint
 """
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
+
+from sqlalchemy import DateTime, ForeignKey, Integer, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.bonus_point.domain.entity import BonusPoint
 from app.shared.domain.value_objects import UserRef
-from app.shared.infrastructure.base_model import TimestampMixin
-from sqlmodel import Field, Relationship
+from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
 
 if TYPE_CHECKING:
     from app.user.infrastructure.model import UserModel
 
 
-class BonusPointModel(TimestampMixin, table=True):
+class BonusPointModel(SQLAlchemyTimestampMixin, Base):
     """ORM model — maps to 'bonus_points' table."""
 
     __tablename__ = "bonus_points"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
-    points: int = Field()
-    reason: str = Field(max_length=500)
-    date: datetime = Field(index=True)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    points: Mapped[int] = mapped_column(Integer)
+    reason: Mapped[str] = mapped_column(String(500))
+    date: Mapped[datetime] = mapped_column(DateTime, index=True)
 
     # Foreign keys
-    user_id: int = Field(foreign_key="users.id", index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
 
     # Relationships (ORM concern only)
-    user: "UserModel" = Relationship(
+    user: Mapped["UserModel"] = relationship(
         back_populates="bonus_points",
-        sa_relationship_kwargs={"foreign_keys": "[BonusPointModel.user_id]"},
+        foreign_keys=[user_id],
     )
-    creator: Optional["UserModel"] = Relationship(
-        sa_relationship_kwargs={
-            "primaryjoin": "BonusPointModel.created_by==UserModel.id",
-            "foreign_keys": "[BonusPointModel.created_by]",
-            "overlaps": "bonus_points",
-        }
+    creator: Mapped["UserModel | None"] = relationship(
+        primaryjoin="BonusPointModel.created_by==UserModel.id",
+        foreign_keys="BonusPointModel.created_by",
+        overlaps="bonus_points",
     )
-    updater: Optional["UserModel"] = Relationship(
-        sa_relationship_kwargs={
-            "primaryjoin": "BonusPointModel.updated_by==UserModel.id",
-            "foreign_keys": "[BonusPointModel.updated_by]",
-            "overlaps": "bonus_points",
-        }
+    updater: Mapped["UserModel | None"] = relationship(
+        primaryjoin="BonusPointModel.updated_by==UserModel.id",
+        foreign_keys="BonusPointModel.updated_by",
+        overlaps="bonus_points",
     )
 
     # --- Mapping methods ---
@@ -77,18 +75,18 @@ class BonusPointModel(TimestampMixin, table=True):
             ),
             creator=(
                 UserRef(
-                    id=self.creator.id, 
-                    name=self.creator.name, 
-                    avatar_url=self.creator.avatar_url, 
+                    id=self.creator.id,
+                    name=self.creator.name,
+                    avatar_url=self.creator.avatar_url,
                 )
                 if self.creator
                 else None
             ),
             updater=(
                 UserRef(
-                    id=self.updater.id, 
-                    name=self.updater.name, 
-                    avatar_url=self.updater.avatar_url, 
+                    id=self.updater.id,
+                    name=self.updater.name,
+                    avatar_url=self.updater.avatar_url,
                 )
                 if self.updater
                 else None

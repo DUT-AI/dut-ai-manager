@@ -5,6 +5,7 @@ Revises: 71e30cee170e
 Create Date: 2026-01-09 21:00:59.038827
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
@@ -13,8 +14,8 @@ import sqlmodel
 
 
 # revision identifiers, used by Alembic.
-revision: str = '053e3c2e8527'
-down_revision: Union[str, Sequence[str], None] = '71e30cee170e'
+revision: str = "053e3c2e8527"
+down_revision: Union[str, Sequence[str], None] = "71e30cee170e"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

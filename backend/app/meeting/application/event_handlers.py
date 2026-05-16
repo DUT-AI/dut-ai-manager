@@ -1,16 +1,18 @@
 import asyncio
 from datetime import datetime
 from typing import cast
+
 from loguru import logger
-from app.shared.infrastructure.discord_service import DiscordService
+
 from app.meeting.domain.events import (
-    ParticipantCheckedIn,
     MeetingCreated,
     MeetingUpdated,
+    ParticipantCheckedIn,
 )
+from app.shared.application.event_handler import EventHandler
+from app.shared.infrastructure.discord_service import DiscordService
 from app.user.infrastructure.repository import UserRepository
 from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
-from app.shared.application.event_handler import EventHandler
 
 
 class MeetingNotificationHandler(EventHandler):

@@ -1,5 +1,7 @@
 from enum import Enum
+
 from pydantic import BaseModel
+
 from app.shared.domain.event_bus import DomainEvent
 
 
@@ -12,10 +14,10 @@ class ScoreDetail(BaseModel):
 
 
 class HomeworkStatus(str, Enum):
-    NOT_SUBMITTED = "chưa nộp"
-    SUBMITTED = "đã nộp"
-    LEADER_CHECKED = "leader đã check"
-    FINISHED = "finish"
+    NOT_SUBMITTED = "NOT_SUBMITTED"
+    SUBMITTED = "SUBMITTED"
+    LEADER_CHECKED = "LEADER_CHECKED"
+    FINISHED = "FINISHED"
 
 
 class HomeworkAssigned(DomainEvent):
@@ -27,6 +29,7 @@ class HomeworkSubmitted(DomainEvent):
     homework_id: int
     user_id: int
     is_late: bool
+
 
 class HomeworkGraded(DomainEvent):
     homework_id: int

@@ -1,9 +1,7 @@
 from datetime import date
-from typing import Any, List, Optional, cast
 
-from sqlalchemy import desc, extract, func
-from sqlalchemy.orm import joinedload
-from sqlmodel import Session, select
+from sqlalchemy import desc, extract, func, select
+from sqlalchemy.orm import Session, joinedload
 
 from app.permission_request.domain.entity import PermissionRequest as DomainEntity
 from app.permission_request.domain.value_objects import RequestCategory
@@ -20,43 +18,43 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
 
     def get_all(
         self,
-        query_support: Optional[QuerySupport] = None,
+        query_support: QuerySupport | None = None,
         deleted: bool = False,
-    ) -> List[DomainEntity]:
+    ) -> list[DomainEntity]:
         stmt = select(ORMModel).options(
-            joinedload(cast(Any, ORMModel.user)),
-            joinedload(cast(Any, ORMModel.homework)),
-            joinedload(cast(Any, ORMModel.meeting)),
+            joinedload(ORMModel.user),
+            joinedload(ORMModel.homework),
+            joinedload(ORMModel.meeting),
         )
 
         if hasattr(ORMModel, "is_deleted"):
-            stmt = stmt.where(cast(Any, ORMModel.is_deleted) == deleted)
+            stmt = stmt.where(ORMModel.is_deleted == deleted)
 
         if query_support:
             stmt = apply_query_support(stmt, ORMModel, query_support)
         else:
             # Default sorting if no query support provided
-            stmt = stmt.order_by(desc(cast(Any, ORMModel.created_at)))
+            stmt = stmt.order_by(desc(ORMModel.created_at))
 
-        rows = self.session.exec(stmt).unique().all()
+        rows = self.session.scalars(stmt).unique().all()
         return [r.to_entity() for r in rows]
 
-    def get_by_date(self, target_date: date) -> List[DomainEntity]:
+    def get_by_date(self, target_date: date) -> list[DomainEntity]:
         """Lấy tất cả yêu cầu xin phép trong một ngày cụ thể."""
         stmt = (
             select(ORMModel)
             .options(
-                joinedload(cast(Any, ORMModel.user)),
-                joinedload(cast(Any, ORMModel.homework)),
-                joinedload(cast(Any, ORMModel.meeting)),
+                joinedload(ORMModel.user),
+                joinedload(ORMModel.homework),
+                joinedload(ORMModel.meeting),
             )
             .where(
-                getattr(ORMModel, "is_deleted").is_(False),
+                ORMModel.is_deleted.is_(False),
                 func.date(ORMModel.created_at) == target_date,
             )
-            .order_by(desc(cast(Any, ORMModel.created_at)))
+            .order_by(desc(ORMModel.created_at))
         )
-        rows = self.session.exec(stmt).unique().all()
+        rows = self.session.scalars(stmt).unique().all()
         return [r.to_entity() for r in rows]
 
     def get_by_month(
@@ -65,51 +63,51 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         year: int,
         limit: int = 1000,
         deleted: bool = False,
-    ) -> List[DomainEntity]:
+    ) -> list[DomainEntity]:
         stmt = (
             select(ORMModel)
             .options(
-                joinedload(cast(Any, ORMModel.user)),
-                joinedload(cast(Any, ORMModel.homework)),
-                joinedload(cast(Any, ORMModel.meeting)),
+                joinedload(ORMModel.user),
+                joinedload(ORMModel.homework),
+                joinedload(ORMModel.meeting),
             )
             .where(
-                getattr(ORMModel, "is_deleted") == deleted,
-                extract("month", cast(Any, ORMModel.created_at)) == month,
-                extract("year", cast(Any, ORMModel.created_at)) == year,
+                ORMModel.is_deleted == deleted,
+                extract("month", ORMModel.created_at) == month,
+                extract("year", ORMModel.created_at) == year,
             )
-            .order_by(desc(cast(Any, ORMModel.created_at)))
+            .order_by(desc(ORMModel.created_at))
             .limit(limit)
         )
-        rows = self.session.exec(stmt).unique().all()
+        rows = self.session.scalars(stmt).unique().all()
         return [r.to_entity() for r in rows]
 
     def get_by_user(
         self,
         user_id: int,
-        month: Optional[int] = None,
-        year: Optional[int] = None,
+        month: int | None = None,
+        year: int | None = None,
         deleted: bool = False,
-    ) -> List[DomainEntity]:
+    ) -> list[DomainEntity]:
         stmt = (
             select(ORMModel)
             .options(
-                joinedload(cast(Any, ORMModel.user)),
-                joinedload(cast(Any, ORMModel.homework)),
-                joinedload(cast(Any, ORMModel.meeting)),
+                joinedload(ORMModel.user),
+                joinedload(ORMModel.homework),
+                joinedload(ORMModel.meeting),
             )
             .where(
                 ORMModel.created_by == user_id,
-                getattr(ORMModel, "is_deleted") == deleted,
+                ORMModel.is_deleted == deleted,
             )
         )
         if month is not None:
-            stmt = stmt.where(extract("month", cast(Any, ORMModel.created_at)) == month)
+            stmt = stmt.where(extract("month", ORMModel.created_at) == month)
         if year is not None:
-            stmt = stmt.where(extract("year", cast(Any, ORMModel.created_at)) == year)
+            stmt = stmt.where(extract("year", ORMModel.created_at) == year)
 
-        stmt = stmt.order_by(desc(cast(Any, ORMModel.created_at)))
-        rows = self.session.exec(stmt).all()
+        stmt = stmt.order_by(desc(ORMModel.created_at))
+        rows = self.session.scalars(stmt).all()
         return [r.to_entity() for r in rows]
 
     def count_by_user_category_month(
@@ -118,64 +116,64 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         stmt = select(func.count(ORMModel.id)).where(
             ORMModel.created_by == user_id,
             ORMModel.category == category,
-            getattr(ORMModel, "is_deleted").is_(False),
-            extract("month", cast(Any, ORMModel.created_at)) == month,
-            extract("year", cast(Any, ORMModel.created_at)) == year,
+            ORMModel.is_deleted.is_(False),
+            extract("month", ORMModel.created_at) == month,
+            extract("year", ORMModel.created_at) == year,
         )
-        return self.session.exec(stmt).one()
+        return self.session.scalars(stmt).one()
 
     def has_postpone_request_for_date(self, user_id: int, target_date: date) -> bool:
         """Kiểm tra user có đơn xin tạm hoãn bài tập trong ngày không."""
         stmt = select(func.count(ORMModel.id)).where(
             ORMModel.created_by == user_id,
             ORMModel.category == RequestCategory.POSTPONE,
-            getattr(ORMModel, "is_deleted") == False,
+            ORMModel.is_deleted == False,
             func.date(ORMModel.created_at) == target_date,
         )
-        return self.session.exec(stmt).one() > 0
+        return self.session.scalars(stmt).one() > 0
 
     def has_absence_request_for_date(self, user_id: int, target_date: date) -> bool:
         """Kiểm tra user có đơn xin vắng sinh hoạt trong ngày không."""
         stmt = select(func.count(ORMModel.id)).where(
             ORMModel.created_by == user_id,
             ORMModel.category == RequestCategory.ABSENCE,
-            getattr(ORMModel, "is_deleted").is_(False),
+            ORMModel.is_deleted.is_(False),
             func.date(ORMModel.created_at) == target_date,
         )
-        return self.session.exec(stmt).one() > 0
+        return self.session.scalars(stmt).one() > 0
 
     def get_user_ids_with_requests_for_date(
-        self, user_ids: List[int], target_date: date, category: RequestCategory
+        self, user_ids: list[int], target_date: date, category: RequestCategory
     ) -> set[int]:
         """Lấy danh sách các user_id đã có đơn xin phép theo loại và ngày cụ thể (Batch)."""
         if not user_ids:
             return set()
 
         stmt = select(ORMModel.created_by).where(
-            cast(Any, ORMModel.created_by).in_(user_ids),
+            ORMModel.created_by.in_(user_ids),
             ORMModel.category == category,
-            getattr(ORMModel, "is_deleted") == False,
+            ORMModel.is_deleted == False,
             func.date(ORMModel.created_at) == target_date,
         )
 
-        rows = self.session.exec(stmt).unique().all()
-        return set(rows)
-        
+        rows = self.session.scalars(stmt).unique().all()
+        return {r for r in rows if r is not None}
+
     def get_postpone_requests_for_homeworks(
-        self, homework_ids: List[int], user_ids: List[int]
-    ) -> List[DomainEntity]:
+        self, homework_ids: list[int], user_ids: list[int]
+    ) -> list[DomainEntity]:
         """Lấy danh sách đơn xin hoãn cho các bài tập và user cụ thể."""
         if not homework_ids or not user_ids:
             return []
 
         stmt = select(ORMModel).where(
-            cast(Any, ORMModel.homework_id).in_(homework_ids),
-            cast(Any, ORMModel.created_by).in_(user_ids),
+            ORMModel.homework_id.in_(homework_ids),
+            ORMModel.created_by.in_(user_ids),
             ORMModel.category == RequestCategory.POSTPONE,
-            getattr(ORMModel, "is_deleted").is_(False),
+            ORMModel.is_deleted.is_(False),
         )
 
-        rows = self.session.exec(stmt).unique().all()
+        rows = self.session.scalars(stmt).unique().all()
         return [r.to_entity() for r in rows]
 
     def update(self, entity: DomainEntity) -> DomainEntity:

@@ -1,33 +1,34 @@
 """
-Account ORM Model — SQLModel, infrastructure layer.
+Account ORM Model — SQLAlchemy 2.0, infrastructure layer.
 """
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
+
+from sqlalchemy import ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.auth.domain.entity import Account as AccountEntity
-from app.shared.infrastructure.base_model import TimestampMixin
+from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
 
 if TYPE_CHECKING:
     from app.user.infrastructure.model import UserModel
 
-from sqlmodel import Field, Relationship
 
-
-class AccountModel(TimestampMixin, table=True):
+class AccountModel(SQLAlchemyTimestampMixin, Base):
     """ORM model — maps to 'accounts' table."""
 
     __tablename__ = "accounts"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
-    hash_password: str = Field(max_length=255)
-    user_id: Optional[int] = Field(
-        default=None, foreign_key="users.id", unique=True, index=True
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    hash_password: Mapped[str] = mapped_column(String(255))
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id"), unique=True, index=True, default=None
     )
 
     # Relationships
-    user: Optional["UserModel"] = Relationship(
+    user: Mapped["UserModel | None"] = relationship(
         back_populates="account",
-        sa_relationship_kwargs={"foreign_keys": "[AccountModel.user_id]"},
+        foreign_keys=[user_id],
     )
 
     def to_entity(self) -> AccountEntity:

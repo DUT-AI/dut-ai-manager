@@ -7,6 +7,8 @@ NO business logic here.
 
 from typing import Annotated
 
+from fastapi import APIRouter, Depends, HTTPException
+
 from app.core.deps import hasPermission
 from app.core.permissions import ViolationPermission
 from app.shared.application.response import ApiResponse
@@ -26,7 +28,6 @@ from app.violation.deps import (
     get_violations_uc,
 )
 from app.violation.schemas import ViolationCreate, ViolationResponse, ViolationUpdate
-from fastapi import APIRouter, Depends, HTTPException
 
 router = APIRouter(prefix="/violations", tags=["violations"])
 

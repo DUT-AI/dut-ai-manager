@@ -4,29 +4,34 @@ from app.auth.account_notification_handler import AccountNotificationHandler
 from app.auth.application.user_event_handler import UserAccountHandler
 from app.auth.domain.events import AccountCreated
 from app.homework.application.event_handlers import (
+    HomeworkGradedNotificationHandler,
     HomeworkNotificationHandler,
-    HomeworkGradedNotificationHandler
 )
-from app.homework.domain.value_objects import HomeworkAssigned, HomeworkOverdueDetected, HomeworkGraded
+from app.homework.domain.value_objects import (
+    HomeworkAssigned,
+    HomeworkGraded,
+    HomeworkOverdueDetected,
+)
+from app.meeting.application.event_handlers import MeetingNotificationHandler
+from app.meeting.application.sse_handler import MeetingSseHandler
+from app.meeting.domain.events import (
+    MeetingAbsenceDetected,
+    MeetingCreated,
+    MeetingUpdated,
+    ParticipantCheckedIn,
+    ParticipantCheckedOut,
+)
+from app.permission_request.application.event_handlers import (
+    PermissionRequestNotificationHandler,
+)
 from app.permission_request.domain.events import PermissionRequestCreated
 from app.shared.domain.event_bus import EventBus
 from app.user.domain.events import UserCreated
 from app.violation.application.event_handlers import AutomatedViolationHandler
-from app.violation.notification_handler import ViolationNotificationHandler
 from app.violation.domain.events import ViolationCreated
+from app.violation.notification_handler import ViolationNotificationHandler
 from app.violation.permission_handler import PermissionViolationHandler
-from app.meeting.domain.events import (
-    ParticipantCheckedIn,
-    ParticipantCheckedOut,
-    MeetingCreated,
-    MeetingUpdated,
-    MeetingAbsenceDetected,
-)
-from app.meeting.application.event_handlers import MeetingNotificationHandler
-from app.meeting.application.sse_handler import MeetingSseHandler
-from app.permission_request.application.event_handlers import (
-    PermissionRequestNotificationHandler,
-)
+
 
 async def bootstrap_events(container: AsyncContainer):
     """

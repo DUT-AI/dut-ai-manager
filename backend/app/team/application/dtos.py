@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -9,19 +8,19 @@ class TeamBase(BaseModel):
 
 
 class TeamCreate(TeamBase):
-    member_ids: Optional[List[int]] = []
+    member_ids: list[int] | None = []
 
 
 class TeamUpdate(BaseModel):
-    team_name: Optional[str] = None
-    member_ids: Optional[List[int]] = None
+    team_name: str | None = None
+    member_ids: list[int] | None = None
 
 
 class TeamMemberResponse(BaseModel):
     user_id: int
     user_name: str
     email: str
-    user_avatar_url: Optional[str] = None
+    user_avatar_url: str | None = None
 
     class Config:
         from_attributes = True
@@ -32,7 +31,7 @@ class TeamResponse(TeamBase):
     created_at: datetime | None
     updated_at: datetime | None
     member_count: int = 0
-    members: List[TeamMemberResponse] = []
+    members: list[TeamMemberResponse] = []
 
     class Config:
         from_attributes = True

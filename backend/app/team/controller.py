@@ -1,4 +1,4 @@
-from typing import List
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.deps import hasPermission
 from app.core.permissions import TeamPermission
@@ -10,14 +10,13 @@ from app.team.application.dtos import (
 )
 from app.team.application.use_cases import TeamUseCases
 from app.team.deps import get_team_usecases
-from fastapi import APIRouter, Depends, HTTPException
 
 router = APIRouter(prefix="/teams", tags=["teams"])
 
 
 @router.get(
     "",
-    response_model=ApiResponse[List[TeamResponse]],
+    response_model=ApiResponse[list[TeamResponse]],
     dependencies=[hasPermission(TeamPermission.READ)],
 )
 async def get_teams(

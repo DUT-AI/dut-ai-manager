@@ -1,6 +1,7 @@
+from fastapi import Request
+
 from app.core.context import set_current_user_id
 from app.utils.password import decode_token
-from fastapi import Request
 
 
 async def set_user_context(request: Request, call_next):

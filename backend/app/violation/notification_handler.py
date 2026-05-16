@@ -26,7 +26,6 @@ class ViolationNotificationHandler(EventHandler):
     async def handle(self, event: ViolationCreated) -> None:
         """Thông báo cho người dùng trên Discord và Zalo khi có vi phạm mới."""
         try:
-
             logger.info(f"Handling ViolationCreated for user {event.user_id}")
 
             asyncio.create_task(self._send_notifications_task(event))
@@ -40,6 +39,17 @@ class ViolationNotificationHandler(EventHandler):
     async def _send_notifications_task(self, event: ViolationCreated) -> None:
         """Hàm chạy ngầm để gửi thông báo qua Discord và Zalo."""
         try:
+            # 0. Fetch user to get notification IDs (kept lightweight in Event)
+            user = self.user_repo.get_by_id(event.user_id)
+            if not user:
+                logger.warning(
+                    f"Background: Could not find user {event.user_id} for violation notification"
+                )
+                return
+
+            user_discord_id = user.discord_id
+            user_zalo_bot_id = user.zalo_bot_id
+
             display_date = event.date
             if event.date:
                 try:
@@ -81,11 +91,11 @@ class ViolationNotificationHandler(EventHandler):
             )
 
             # --- Gửi Discord ---
-            if event.user_discord_id:
+            if user_discord_id:
                 try:
                     await self.discord_service.send_message_to_user(
-                        user_id=cast(str, event.user_discord_id),
-                        content=f"Chào <@{event.user_discord_id}>! Bạn có thông báo vi phạm mới.",
+                        user_id=cast(str, user_discord_id),
+                        content=f"Chào <@{user_discord_id}>! Bạn có thông báo vi phạm mới.",
                         embed=embed,
                     )
                     logger.info(
@@ -97,10 +107,10 @@ class ViolationNotificationHandler(EventHandler):
                     )
 
             # --- Gửi Zalo ---
-            if event.user_zalo_bot_id:
+            if user_zalo_bot_id:
                 try:
                     await self.zalo_bot.send_message(
-                        chat_id=event.user_zalo_bot_id, text=zalo_text
+                        chat_id=user_zalo_bot_id, text=zalo_text
                     )
                     logger.info(
                         f"Background: Sent Zalo violation notification to {event.user_name}"

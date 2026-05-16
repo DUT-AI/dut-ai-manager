@@ -6,14 +6,14 @@ Use cases orchestrate: repository + domain logic + events.
 """
 
 from datetime import datetime
-from typing import Optional
+
+from fastapi import HTTPException
+from loguru import logger
 
 from app.shared.domain.event_bus import EventBus
 from app.violation.domain.entity import Violation
 from app.violation.domain.events import ViolationCreated
 from app.violation.infrastructure.repository import ViolationRepository
-from fastapi import HTTPException
-from loguru import logger
 
 
 class CreateViolationUseCase:
@@ -39,7 +39,7 @@ class CreateViolationUseCase:
                 existing = self.repo.get_by_user_and_date(user_id, date)
                 if any(v.reason == reason for v in existing):
                     continue
-                    
+
                 violation = Violation.create_system_violation(
                     user_id=user_id,
                     reason=reason,
@@ -55,18 +55,17 @@ class CreateViolationUseCase:
 
         # Batch save violations
         saved_violations = self.repo.save_all(violations_to_create)
-        
+
         # Publish domain events for all saved violations
         for saved in saved_violations:
             logger.debug(f"Created violation id={saved.id} for user_id={saved.user_id}")
+            assert saved.id is not None
             await self.event_bus.publish(
                 ViolationCreated(
-                    violation_id=saved.id, # type: ignore
+                    violation_id=saved.id,
                     user_id=saved.user_id,
                     reason=saved.reason,
                     date=saved.date.isoformat() if saved.date else "",
-                    user_discord_id=saved.owner.discord_id if saved.owner else None,
-                    user_zalo_bot_id=saved.owner.zalo_bot_id if saved.owner else None,
                     user_name=saved.owner.name if saved.owner else None,
                     creator_name=saved.creator.name if saved.creator else None,
                 )
@@ -87,8 +86,13 @@ class GetViolationsUseCase:
         return self.repo.get_all(skip=skip, limit=limit, deleted=deleted)
 
     def get_by_month(
-        self, month: int, year: int, user_id: int | None = None
+        self, month: int | None, year: int | None, user_id: int | None = None
     ) -> list[Violation]:
+        if not month:
+            month = datetime.now().month
+        if not year:
+            year = datetime.now().year
+
         return self.repo.get_by_month(month=month, year=year, user_id=user_id)
 
     def get_by_id(self, item_id: int) -> Violation:
@@ -112,7 +116,7 @@ class UpdateViolationUseCase:
 
     def execute(
         self, item_id: int, reason: str | None = None, date: datetime | None = None
-    ) -> Optional[Violation]:
+    ) -> Violation | None:
         existing = self.repo.get_by_id(item_id)
         if not existing:
             return None
@@ -147,6 +151,6 @@ class RestoreViolationUseCase:
     def __init__(self, repo: ViolationRepository):
         self.repo = repo
 
-    def execute(self, item_id: int) -> Optional[Violation]:
+    def execute(self, item_id: int) -> Violation | None:
         dummy = Violation.model_construct(id=item_id)
         return self.repo.restore(dummy)

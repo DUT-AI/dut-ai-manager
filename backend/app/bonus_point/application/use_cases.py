@@ -1,5 +1,4 @@
-from datetime import timedelta, datetime
-from typing import List, Optional
+from datetime import datetime, timedelta
 
 from app.bonus_point.application.dtos import BonusPointCreate, BonusPointUpdate
 from app.bonus_point.domain.entity import BonusPoint
@@ -17,13 +16,13 @@ class GetBonusPointsUseCase:
 
     def execute(
         self,
-        user_id: Optional[int] = None,
-        month: Optional[int] = None,
-        year: Optional[int] = None,
+        user_id: int | None = None,
+        month: int | None = None,
+        year: int | None = None,
         skip: int = 0,
         limit: int = 100,
         deleted: bool = False,
-    ) -> List[BonusPoint]:
+    ) -> list[BonusPoint]:
         filters = []
         if user_id:
             filters.append(
@@ -52,12 +51,12 @@ class CreateBonusPointsUseCase:
     def __init__(
         self,
         repository: BonusPointRepository,
-        event_bus: Optional[EventBus] = None,
+        event_bus: EventBus | None = None,
     ):
         self.repository = repository
         self.event_bus = event_bus
 
-    def execute(self, data: BonusPointCreate) -> List[BonusPoint]:
+    def execute(self, data: BonusPointCreate) -> list[BonusPoint]:
         created_items = []
 
         # We bypass model_dump validation temporarily or dump base properties
@@ -81,7 +80,7 @@ class UpdateBonusPointUseCase:
     def __init__(
         self,
         repository: BonusPointRepository,
-        event_bus: Optional[EventBus] = None,
+        event_bus: EventBus | None = None,
     ):
         self.repository = repository
         self.event_bus = event_bus
@@ -90,7 +89,7 @@ class UpdateBonusPointUseCase:
         self,
         entity_id: int,
         data: BonusPointUpdate,
-    ) -> Optional[BonusPoint]:
+    ) -> BonusPoint | None:
         entity = self.repository.get_by_id(entity_id)
         if not entity:
             return None
@@ -117,7 +116,7 @@ class RestoreBonusPointUseCase:
     def __init__(self, repository: BonusPointRepository):
         self.repository = repository
 
-    def execute(self, entity_id: int) -> Optional[BonusPoint]:
+    def execute(self, entity_id: int) -> BonusPoint | None:
         return self.repository.restore_entity(entity_id)
 
 
@@ -130,7 +129,7 @@ class CalculateActivityPointsUseCase:
         self.participant_repo = participant_repo
         self.bonus_point_repo = bonus_point_repo
 
-    def execute(self, since: Optional[datetime] = None) -> int:
+    def execute(self, since: datetime | None = None) -> int:
 
         if since is None:
             since = get_current_utc7_time() - timedelta(hours=1)

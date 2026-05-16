@@ -1,13 +1,14 @@
 from enum import Enum
-from typing import Optional
+
 from app.shared.domain.base_entity import BaseEntity
 
 
 class UserTitle(str, Enum):
     """Các loại danh hiệu tháng"""
-    ACTIVE = "Tích cực"
-    NORMAL = "Bình thường"
-    POOR = "Hoạt động kém"
+
+    ACTIVE = "ACTIVE"
+    NORMAL = "NORMAL"
+    POOR = "POOR"
 
 
 class MonthlyUserStats(BaseEntity):
@@ -23,7 +24,7 @@ class MonthlyUserStats(BaseEntity):
     absent_count: int = 0
     violation_count: int = 0
 
-    assigned_title: Optional[UserTitle] = None
+    assigned_title: UserTitle | None = None
 
     def calculate_title(self) -> UserTitle:
         """Tính toán danh hiệu dựa trên thống kê"""

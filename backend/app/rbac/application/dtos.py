@@ -1,9 +1,4 @@
-from typing import List, Optional
-
-from pydantic import BaseModel
-
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -32,7 +27,7 @@ class RoleApiKeySecret(RoleApiKeyResponse):
 
 class PermissionBase(BaseModel):
     name: str
-    description: Optional[str] = None
+    description: str | None = None
     resource: str
     action: str
 
@@ -42,10 +37,10 @@ class PermissionCreate(PermissionBase):
 
 
 class PermissionUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    resource: Optional[str] = None
-    action: Optional[str] = None
+    name: str | None = None
+    description: str | None = None
+    resource: str | None = None
+    action: str | None = None
 
 
 class PermissionResponse(PermissionBase):
@@ -57,7 +52,7 @@ class PermissionResponse(PermissionBase):
 
 class RoleBase(BaseModel):
     name: str
-    description: Optional[str] = None
+    description: str | None = None
 
 
 class RoleCreate(RoleBase):
@@ -65,13 +60,13 @@ class RoleCreate(RoleBase):
 
 
 class RoleUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
+    name: str | None = None
+    description: str | None = None
 
 
 class RoleResponse(RoleBase):
     id: int
-    permissions: List[PermissionResponse] = []
+    permissions: list[PermissionResponse] = []
 
     class Config:
         from_attributes = True

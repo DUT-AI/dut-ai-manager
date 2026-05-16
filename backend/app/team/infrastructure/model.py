@@ -1,44 +1,46 @@
 """
-Team ORM Models — SQLModel, infrastructure layer.
+Team ORM Models — SQLAlchemy 2.0, infrastructure layer.
 """
 
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
-from app.shared.infrastructure.base_model import TimestampMixin
+from sqlalchemy import ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
 from app.team.domain.entity import Team as TeamEntity
 from app.team.domain.entity import TeamMemberInfo
-from sqlmodel import Field, Relationship
 
 if TYPE_CHECKING:
     from app.user.infrastructure.model import UserModel
 
 
-class TeamMemberModel(TimestampMixin, table=True):
+class TeamMemberModel(SQLAlchemyTimestampMixin, Base):
     """Junction table for Team and User"""
 
     __tablename__ = "team_members"
 
-    team_id: int = Field(foreign_key="teams.id", primary_key=True)
-    user_id: int = Field(foreign_key="users.id", primary_key=True)
+    team_id: Mapped[int] = mapped_column(ForeignKey("teams.id"), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
 
     # Relationships
-    team: "TeamModel" = Relationship(back_populates="team_members")
-    user: "UserModel" = Relationship(
+    team: Mapped["TeamModel"] = relationship(back_populates="team_members")
+    user: Mapped["UserModel"] = relationship(
         back_populates="team_members",
-        sa_relationship_kwargs={"foreign_keys": "[TeamMemberModel.user_id]"},
+        foreign_keys=[user_id],
     )
 
 
-class TeamModel(TimestampMixin, table=True):
+class TeamModel(SQLAlchemyTimestampMixin, Base):
     """Team model"""
 
     __tablename__ = "teams"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
-    team_name: str = Field(unique=True, index=True, max_length=255)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    team_name: Mapped[str] = mapped_column(String(255), unique=True, index=True)
 
     # Relationships
-    team_members: List[TeamMemberModel] = Relationship(back_populates="team")
+    team_members: Mapped[list[TeamMemberModel]] = relationship(back_populates="team")
 
     def to_entity(self) -> TeamEntity:
         """ORM Model → Domain Entity."""
@@ -63,11 +65,11 @@ class TeamModel(TimestampMixin, table=True):
             team_name=self.team_name,
             members=members,
             member_ids=member_ids,
-            created_at=self.created_at,  # type: ignore
-            updated_at=self.updated_at,  # type: ignore
+            created_at=self.created_at,
+            updated_at=self.updated_at,
             created_by=self.created_by,
-            updated_by=self.updated_by,  # type: ignore
-            is_deleted=self.is_deleted,  # type: ignore
+            updated_by=self.updated_by,
+            is_deleted=self.is_deleted,
         )
 
     @classmethod

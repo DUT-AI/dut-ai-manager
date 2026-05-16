@@ -6,7 +6,6 @@ Uses Dishka for dependency injection and CheckOverdueHomeworkUseCase for busines
 """
 
 from datetime import date
-from typing import Optional
 
 from dishka import AsyncContainer
 from loguru import logger
@@ -19,7 +18,7 @@ from app.shared.infrastructure.request_context import (
 
 
 async def check_overdue_homework_submissions(
-    container: AsyncContainer, target_date: Optional[date] = None
+    container: AsyncContainer, target_date: date | None = None
 ) -> None:
     """
     Check for homework submissions that are overdue (deadline = target_date) and create violations.

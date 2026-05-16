@@ -1,34 +1,32 @@
 from datetime import datetime
-from typing import Optional
-
-from app.permission_request.domain.value_objects import RequestCategory
-from app.shared.domain.value_objects import UserRef
-from app.shared.domain.base_entity import BaseEntity
 
 from app.homework.domain.entity import Homework
 from app.meeting.domain.entity import Meeting
+from app.permission_request.domain.value_objects import RequestCategory
+from app.shared.domain.base_entity import BaseEntity
+from app.shared.domain.value_objects import UserRef
 
 
 class PermissionRequest(BaseEntity):
     """Yêu cầu xin phép (Domain Entity)"""
 
-    user_id: Optional[int]
+    user_id: int | None
     category: RequestCategory
     note: str
 
     # Specific metadata based on category
-    homework_id: Optional[int] = None
-    meeting_id: Optional[int] = None
+    homework_id: int | None = None
+    meeting_id: int | None = None
 
     # Target time (arrival time or deadline time)
-    start_time: Optional[datetime] = None
+    start_time: datetime | None = None
 
     # Related entities (Optional)
-    owner: Optional[UserRef] = None
-    creator: Optional[UserRef] = None
-    updater: Optional[UserRef] = None
-    homework: Optional[Homework] = None
-    meeting: Optional[Meeting] = None
+    owner: UserRef | None = None
+    creator: UserRef | None = None
+    updater: UserRef | None = None
+    homework: Homework | None = None
+    meeting: Meeting | None = None
 
     def validate_postpone(self, homework: Homework) -> None:
         """Kiểm tra tính hợp lệ của đơn xin hoãn bài tập (tối đa 4 ngày)."""

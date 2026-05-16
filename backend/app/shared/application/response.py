@@ -1,4 +1,4 @@
-from typing import Any, Generic, Optional, TypeVar
+from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel
 
@@ -10,13 +10,13 @@ class ApiResponse(BaseModel, Generic[T]):
 
     is_success: bool
     status_code: int
-    data: Optional[T] = None
+    data: T | None = None
     message: str
 
     @classmethod
     def success(
         cls,
-        data: Optional[T] = None,
+        data: T | None = None,
         message: str = "Success",
         status_code: int = 200,
     ) -> "ApiResponse[T]":
@@ -33,7 +33,7 @@ class ApiResponse(BaseModel, Generic[T]):
         cls,
         message: str = "Error",
         status_code: int = 400,
-        data: Optional[T] = None,
+        data: T | None = None,
     ) -> "ApiResponse[T]":
         """Create an error response"""
         return cls(
@@ -46,7 +46,7 @@ class ApiResponse(BaseModel, Generic[T]):
     @classmethod
     def created(
         cls,
-        data: Optional[T] = None,
+        data: T | None = None,
         message: str = "Created",
         status_code: int = 201,
     ) -> "ApiResponse[T]":

@@ -3,15 +3,15 @@ User Domain Entity — pure Pydantic, NO ORM dependency.
 """
 
 from enum import Enum
-from typing import Optional
+
+from pydantic import Field
 
 from app.shared.domain.base_entity import BaseEntity
-from pydantic import Field
 
 
 class UserStatus(str, Enum):
-    ACTIVE = "active"
-    INACTIVE = "inactive"
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
 
 
 class UserEntity(BaseEntity):
@@ -19,22 +19,22 @@ class UserEntity(BaseEntity):
 
     name: str
     email: str
-    phone_number: Optional[str] = None
+    phone_number: str | None = None
     status: UserStatus = UserStatus.ACTIVE
-    avatar_url: Optional[str] = None
+    avatar_url: str | None = None
 
     # IDs for external services
-    discord_id: Optional[str] = None
-    check_in_card_code: Optional[str] = None
-    zalo_id: Optional[str] = None
-    zalo_bot_id: Optional[str] = None
-    zalo_bind_code: Optional[str] = None
+    discord_id: str | None = None
+    check_in_card_code: str | None = None
+    zalo_id: str | None = None
+    zalo_bot_id: str | None = None
+    zalo_bind_code: str | None = None
 
     # Relationship IDs
-    role_id: Optional[int] = None
+    role_id: int | None = None
 
     # Denormalized / Virtual fields (populated by repository)
-    role_name: Optional[str] = None
+    role_name: str | None = None
     permissions: set[str] = Field(default_factory=set)
 
     def has_permission(self, permission_name: str) -> bool:

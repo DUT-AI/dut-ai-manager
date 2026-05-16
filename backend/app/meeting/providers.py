@@ -1,29 +1,30 @@
 from dishka import Provider, Scope, provide
-from sqlmodel import Session
+from sqlalchemy.orm import Session
+
+from app.meeting.application.capacity_use_cases import CalculateCurrentCapacityUseCase
+from app.meeting.application.event_handlers import MeetingNotificationHandler
+from app.meeting.application.sse_handler import MeetingSseHandler
+from app.meeting.application.use_cases import (
+    CheckInUseCase,
+    CheckInWithCardUseCase,
+    CheckMeetingAttendanceUseCase,
+    CheckOutUseCase,
+    CreateMeetingUseCase,
+    DeleteMeetingUseCase,
+    GetMeetingsUseCase,
+    MeetingUseCases,
+    UpdateMeetingUseCase,
+)
 from app.meeting.infrastructure.repository import (
     MeetingRepository,
     ParticipantRepository,
 )
-from app.meeting.application.use_cases import (
-    GetMeetingsUseCase,
-    CreateMeetingUseCase,
-    CheckInUseCase,
-    CheckInWithCardUseCase,
-    CheckOutUseCase,
-    UpdateMeetingUseCase,
-    DeleteMeetingUseCase,
-    MeetingUseCases,
-    CheckMeetingAttendanceUseCase,
-)
-from app.meeting.application.capacity_use_cases import CalculateCurrentCapacityUseCase
-from app.meeting.application.event_handlers import MeetingNotificationHandler
-from app.meeting.application.sse_handler import MeetingSseHandler
-from app.user.infrastructure.repository import UserRepository
-from app.team.infrastructure.repository import TeamRepository
-from app.shared.infrastructure.minio_service import MinioService
-from app.shared.infrastructure.discord_service import DiscordService
-from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
+from app.shared.infrastructure.discord_service import DiscordService
+from app.shared.infrastructure.minio_service import MinioService
+from app.team.infrastructure.repository import TeamRepository
+from app.user.infrastructure.repository import UserRepository
+from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
 
 
 class MeetingModuleProvider(Provider):

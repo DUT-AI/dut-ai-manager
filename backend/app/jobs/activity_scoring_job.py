@@ -6,7 +6,6 @@ Chạy mỗi 30 phút để tạo BonusPoint cho participants đã check-out.
 """
 
 from datetime import datetime
-from typing import Optional
 
 from dishka import AsyncContainer
 from loguru import logger
@@ -19,7 +18,7 @@ from app.shared.infrastructure.request_context import (
 
 
 async def calculate_activity_points(
-    container: AsyncContainer, since: Optional[datetime] = None
+    container: AsyncContainer, since: datetime | None = None
 ) -> int:
     """
     Tính điểm cho các participants đã check-out.

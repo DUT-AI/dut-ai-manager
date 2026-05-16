@@ -1,4 +1,4 @@
-from typing import List, Optional, cast, Union
+from typing import cast
 
 from app.shared.domain.query_support import (
     FilterCriterion,
@@ -14,11 +14,11 @@ from app.shared.domain.query_support import (
 def build_query_support(
     skip: int = 0,
     limit: int = 100,
-    sort_by: Optional[str] = None,
+    sort_by: str | None = None,
     descending: bool = True,
-    filters: Optional[List[FilterCriterion]] = None,
-    filter_group: Optional[FilterGroup] = None,
-    include: Optional[List[str]] = None,
+    filters: list[FilterCriterion] | None = None,
+    filter_group: FilterGroup | None = None,
+    include: list[str] | None = None,
 ) -> QuerySupport:
     """
     Helper to build QuerySupport from common parameters.
@@ -33,13 +33,13 @@ def build_query_support(
     final_filter = filter_group
     if filters and not final_filter:
         final_filter = FilterGroup(
-            elements=cast(List[Union[FilterCriterion, FilterGroup]], filters),
+            elements=cast(list[FilterCriterion | FilterGroup], filters),
             logic=LogicOperator.AND,
         )
     elif filters and final_filter:
         # If both are provided, combine them (AND by default)
         combined_elements = list(final_filter.elements) + cast(
-            List[Union[FilterCriterion, FilterGroup]], list(filters)
+            list[FilterCriterion | FilterGroup], list(filters)
         )
         final_filter = FilterGroup(elements=combined_elements, logic=LogicOperator.AND)
 

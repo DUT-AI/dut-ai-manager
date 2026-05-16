@@ -1,8 +1,9 @@
 import asyncio
 
-from app.shared.infrastructure.email_service import EmailService
-from app.auth.domain.events import AccountCreated
 from loguru import logger
+
+from app.auth.domain.events import AccountCreated
+from app.shared.infrastructure.email_service import EmailService
 
 
 class AccountNotificationHandler:

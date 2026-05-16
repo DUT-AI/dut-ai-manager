@@ -1,16 +1,19 @@
 from typing import Annotated
 
+from fastapi import Depends
+from sqlalchemy.orm import Session
+
 from app.shared.infrastructure.database import get_session
 from app.user.infrastructure.repository import UserRepository
-from app.zalo.application.use_cases import (BindZaloAccountUseCase,
-                                            GenerateBotBindCodeUseCase,
-                                            GetZaloLoginUrlUseCase,
-                                            HandleBotWebhookUseCase,
-                                            SendZaloNotificationUseCase)
+from app.zalo.application.use_cases import (
+    BindZaloAccountUseCase,
+    GenerateBotBindCodeUseCase,
+    GetZaloLoginUrlUseCase,
+    HandleBotWebhookUseCase,
+    SendZaloNotificationUseCase,
+)
 from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
 from app.zalo.infrastructure.zalo_client import ZaloClient
-from fastapi import Depends
-from sqlmodel import Session
 
 
 def get_zalo_client() -> ZaloClient:

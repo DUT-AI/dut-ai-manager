@@ -2,13 +2,13 @@
 
 import json
 from io import BytesIO
-from typing import Optional
 
-from app.core.config import settings
-from app.shared.application.response import BadRequestException
 from loguru import logger
 from minio import Minio
 from minio.error import S3Error
+
+from app.core.config import settings
+from app.shared.application.response import BadRequestException
 
 
 class MinioService:
@@ -61,7 +61,7 @@ class MinioService:
             logger.error(f"Failed to ensure bucket exists: {e}")
             raise
 
-    def validate_file(self, filename: str, file_size: int) -> Optional[str]:
+    def validate_file(self, filename: str, file_size: int) -> str | None:
         """
         Validate file extension and size.
         Returns error message if invalid, None if valid.

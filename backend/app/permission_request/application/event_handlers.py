@@ -1,11 +1,13 @@
 import asyncio
-from app.shared.infrastructure.discord_service import DiscordService
-from app.permission_request.domain.events import PermissionRequestCreated
-from app.user.infrastructure.repository import UserRepository
+
 from loguru import logger
-from app.shared.application.event_handler import EventHandler
+
 from app.core.config import settings
+from app.permission_request.domain.events import PermissionRequestCreated
 from app.permission_request.domain.value_objects import RequestCategory
+from app.shared.application.event_handler import EventHandler
+from app.shared.infrastructure.discord_service import DiscordService
+from app.user.infrastructure.repository import UserRepository
 
 
 class PermissionRequestNotificationHandler(EventHandler[PermissionRequestCreated]):

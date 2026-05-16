@@ -1,7 +1,3 @@
-from dataclasses import dataclass, field
-from datetime import datetime
-from typing import List, Optional
-
 from app.shared.domain.base_entity import BaseEntity
 
 
@@ -11,15 +7,15 @@ class TeamMemberInfo(BaseEntity):
     user_id: int
     user_name: str
     email: str
-    user_avatar_url: Optional[str] = None
+    user_avatar_url: str | None = None
 
 
 class Team(BaseEntity):
     """Domain entity for a Team."""
 
     team_name: str
-    members: List[TeamMemberInfo] = []
-    member_ids: List[int] = []
+    members: list[TeamMemberInfo] = []
+    member_ids: list[int] = []
 
     @property
     def member_count(self) -> int:

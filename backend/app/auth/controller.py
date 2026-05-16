@@ -2,6 +2,10 @@
 Auth Web Controller — API routes for authentication.
 """
 
+from dishka.integrations.fastapi import FromDishka, inject
+from fastapi import APIRouter, Cookie, Response
+from loguru import logger
+
 from app.auth.application.dtos import (
     ChangePasswordRequest,
     LoginRequest,
@@ -17,9 +21,6 @@ from app.auth.application.use_cases import (
 from app.core.config import settings
 from app.core.deps import CurrentUser
 from app.shared.application.response import ApiResponse
-from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import APIRouter, Response, Cookie
-from loguru import logger
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

@@ -3,20 +3,23 @@ User Application Use Cases — business logic layer.
 """
 
 from datetime import datetime
-from typing import List
+from io import BytesIO
+from typing import cast
+
+import pandas as pd
+from fastapi import BackgroundTasks, HTTPException, UploadFile
+from loguru import logger
 
 from app.shared.application.query_support_utils import build_query_support
+from app.shared.domain.event_bus import EventBus
 from app.shared.domain.query_support import FilterCriterion, FilterOperator
 
 # External imports for complex use cases
 from app.shared.infrastructure.minio_service import MinioService
 from app.user.application.dtos import UserCreate, UserImportResult
 from app.user.domain.entity import UserEntity, UserStatus
-from app.user.infrastructure.repository import UserRepository
-from fastapi import BackgroundTasks, HTTPException, UploadFile
-from loguru import logger
-from app.shared.domain.event_bus import EventBus
 from app.user.domain.events import UserCreated
+from app.user.infrastructure.repository import UserRepository
 
 
 class GetUserUseCase:
@@ -42,7 +45,7 @@ class GetUserUseCase:
             raise HTTPException(status_code=404, detail="User not found")
         return user
 
-    def get_all(self) -> List[UserEntity]:
+    def get_all(self) -> list[UserEntity]:
         # Mặc định load đầy đủ role/permissions để to_entity chính xác
         qs = build_query_support(
             include=[
@@ -53,7 +56,7 @@ class GetUserUseCase:
         )
         return self.repo.get_all(qs)
 
-    def search(self, keyword: str) -> List[UserEntity]:
+    def search(self, keyword: str) -> list[UserEntity]:
         return self.repo.search_user(keyword)
 
 
@@ -185,24 +188,30 @@ class CreateUserUseCase:
         return saved_user
 
 
+from app.rbac.domain.entity import RoleType
+from app.rbac.infrastructure.repository import RoleRepository
+
+
 class ImportUsersUseCase:
     """Use case for bulk importing users from Excel/CSV."""
 
-    def __init__(self, create_user_uc: CreateUserUseCase, repo: UserRepository):
+    def __init__(
+        self,
+        create_user_uc: CreateUserUseCase,
+        user_repo: UserRepository,
+        role_repo: RoleRepository,
+    ):
         self.create_user_uc = create_user_uc
-        self.repo = repo
+        self.user_repo = user_repo
+        self.role_repo = role_repo
 
     async def execute(
         self, file: UploadFile, background_tasks: BackgroundTasks
     ) -> UserImportResult:
-        from io import BytesIO
-
-        import pandas as pd
 
         content = await file.read()
         try:
-            is_csv = file.filename and file.filename.endswith(".csv")
-            if is_csv:
+            if file.filename and file.filename.endswith(".csv"):
                 df = pd.read_csv(BytesIO(content))
             else:
                 df = pd.read_excel(BytesIO(content))
@@ -211,22 +220,72 @@ class ImportUsersUseCase:
                 status_code=400, detail=f"Invalid file format: {str(e)}"
             )
 
+        # Check columns
+        required_columns = ["name", "email", "phone_number"]
+        # Normalize columns to lowercase
+        assert df is not None
         df.columns = df.columns.astype(str).str.lower()
+
+        missing_cols = [col for col in required_columns if col not in df.columns]
+        if missing_cols:
+            raise HTTPException(
+                status_code=400, detail=f"Missing columns: {', '.join(missing_cols)}"
+            )
+
+        # Get Teammate Role
+        teammate_role = self.role_repo.get_by_name(RoleType.TEAMMATE.value)
+        if not teammate_role:
+            raise HTTPException(
+                status_code=400, detail="Default teammate role not found"
+            )
+
         summary = UserImportResult(
             total=len(df), success_count=0, error_count=0, errors=[]
         )
 
         for index, row in df.iterrows():
-            row_num = int(index) + 2
+            row_num = cast(int, index) + 2
             try:
-                email = str(row.get("email", "")).strip()
-                name = str(row.get("name", "")).strip()
+                # Safe get values
+                email_raw = row.get("email", "")
+                name_raw = row.get("name", "")
+                phone_raw = row.get("phone_number", "")
 
-                if not email or "@" not in email:
+                # Check for empty/NaN
+                if pd.isna(email_raw) or str(email_raw).strip() == "":
                     summary.error_count += 1
-                    summary.errors.append(f"Row {row_num}: Invalid email")
+                    summary.errors.append(f"Row {row_num}: Missing email address")
                     continue
 
+                if pd.isna(name_raw) or str(name_raw).strip() == "":
+                    summary.error_count += 1
+                    summary.errors.append(f"Row {row_num}: Missing user name")
+                    continue
+
+                email = str(email_raw).strip()
+                name = str(name_raw).strip()
+                phone = (
+                    str(phone_raw).strip()
+                    if pd.notna(phone_raw) and str(phone_raw).strip() != ""
+                    else None
+                )
+
+                # Basic email validation check
+                if "@" not in email:
+                    summary.error_count += 1
+                    summary.errors.append(
+                        f"Row {row_num}: Invalid email format ({email})"
+                    )
+                    continue
+
+                user_data = UserCreate(
+                    name=name,
+                    email=email,
+                    phone_number=phone,
+                    role_id=teammate_role.id,
+                )
+
+                # Check email existence manually
                 qs_email = build_query_support(
                     filters=[
                         FilterCriterion(
@@ -234,22 +293,23 @@ class ImportUsersUseCase:
                         )
                     ]
                 )
-                if self.repo.get_one(qs_email):
+                if self.user_repo.get_one(qs_email):
                     summary.error_count += 1
-                    summary.errors.append(f"Row {row_num}: Email exists ({email})")
+                    summary.errors.append(
+                        f"Row {row_num}: Email already exists ({email})"
+                    )
                     continue
 
-                # Mocking UserCreate for simplicity in import
-                # We assume a default role_id here or from request
-                user_data = UserCreate(
-                    name=name, email=email, role_id=row.get("role_id")
-                )
                 await self.create_user_uc.execute(user_data, background_tasks)
                 summary.success_count += 1
+
             except Exception as e:
+                error_msg = str(e)
+                if "validation error" in error_msg:
+                    error_msg = "Invalid data format"
+
                 summary.error_count += 1
-                error_msg = f"Row {row_num}: {str(e)}"
-                summary.errors.append(error_msg)
+                summary.errors.append(f"Row {row_num}: {error_msg}")
 
         return summary
 

@@ -1,12 +1,14 @@
 import asyncio
 from typing import cast
-from app.shared.infrastructure.discord_service import DiscordService
+
+from loguru import logger
+
 from app.homework.domain.value_objects import HomeworkAssigned, HomeworkGraded
 from app.homework.infrastructure.repository import HomeworkRepository
+from app.shared.application.event_handler import EventHandler
+from app.shared.infrastructure.discord_service import DiscordService
 from app.user.infrastructure.repository import UserRepository
 from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
-from loguru import logger
-from app.shared.application.event_handler import EventHandler
 
 
 class HomeworkNotificationHandler(EventHandler):
@@ -125,6 +127,7 @@ class HomeworkNotificationHandler(EventHandler):
         except Exception as e:
             logger.error(f"Unexpected error in background notification task: {e}")
 
+
 class HomeworkGradedNotificationHandler(EventHandler):
     """Xử lý gửi thông báo kết quả chấm điểm (Feedback) qua Discord và Zalo."""
 
@@ -143,21 +146,29 @@ class HomeworkGradedNotificationHandler(EventHandler):
     async def handle(self, event: HomeworkGraded) -> None:
         """Thông báo cho user kết quả chấm bài của họ."""
         try:
-            logger.info(f"Handling HomeworkGraded for user {event.user_id}, homework {event.homework_id}")
+            logger.info(
+                f"Handling HomeworkGraded for user {event.user_id}, homework {event.homework_id}"
+            )
             homework = self.homework_repo.get_by_id(event.homework_id)
             user = self.user_repo.get_by_id(event.user_id)
 
             if not homework or not user:
-                logger.error(f"Cannot find user {event.user_id} or homework {event.homework_id}")
+                logger.error(
+                    f"Cannot find user {event.user_id} or homework {event.homework_id}"
+                )
                 return
 
             asyncio.create_task(self._send_notifications_task(homework, user, event))
-            logger.info(f"Grading notifications for homework {event.homework_id} for user {event.user_id} scheduled.")
+            logger.info(
+                f"Grading notifications for homework {event.homework_id} for user {event.user_id} scheduled."
+            )
 
         except Exception as e:
             logger.error(f"Error in HomeworkGradedNotificationHandler: {e}")
 
-    async def _send_notifications_task(self, homework, user, event: HomeworkGraded) -> None:
+    async def _send_notifications_task(
+        self, homework, user, event: HomeworkGraded
+    ) -> None:
         try:
             pass_text = "ĐẠT ✅" if event.is_pass else "KHÔNG ĐẠT ❌"
             score_text = f"{event.score}/10" if event.score is not None else "0/10"
@@ -167,11 +178,17 @@ class HomeworkGradedNotificationHandler(EventHandler):
             embed = {
                 "title": "✅ KẾT QUẢ CHẤM BÀI TẬP",
                 "description": f"Bài tập **{homework.title}** của bạn đã được chấm xong.",
-                "color": 0x2ECC71 if event.is_pass else 0xE74C3C, # Green if pass, Red if not
+                "color": 0x2ECC71
+                if event.is_pass
+                else 0xE74C3C,  # Green if pass, Red if not
                 "fields": [
                     {"name": "🎯 Điểm số", "value": score_text, "inline": True},
                     {"name": "📊 Trạng thái", "value": pass_text, "inline": True},
-                    {"name": "🕵️ Phát hiện đạo văn", "value": plagiarized_text, "inline": True},
+                    {
+                        "name": "🕵️ Phát hiện đạo văn",
+                        "value": plagiarized_text,
+                        "inline": True,
+                    },
                     {
                         "name": "📋 Lời phê chi tiết",
                         "value": "Vui lòng truy cập website (mục **Bài tập của tôi**) để xem chi tiết lời phê.",
@@ -202,7 +219,9 @@ class HomeworkGradedNotificationHandler(EventHandler):
                         embed=embed,
                     )
                 except Exception as e:
-                    logger.error(f"Failed to send Discord graded notification to {user.name}: {e}")
+                    logger.error(
+                        f"Failed to send Discord graded notification to {user.name}: {e}"
+                    )
 
             # --- Zalo (Bot) ---
             if user.zalo_bot_id:
@@ -212,7 +231,11 @@ class HomeworkGradedNotificationHandler(EventHandler):
                     )
                     logger.info(f"Sent Zalo graded notification to {user.name}")
                 except Exception as e:
-                    logger.error(f"Failed to send Zalo graded notification to {user.name}: {e}")
+                    logger.error(
+                        f"Failed to send Zalo graded notification to {user.name}: {e}"
+                    )
 
         except Exception as e:
-            logger.error(f"Unexpected error in background graded notification task: {e}")
+            logger.error(
+                f"Unexpected error in background graded notification task: {e}"
+            )

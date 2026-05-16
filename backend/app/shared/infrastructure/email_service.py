@@ -3,8 +3,9 @@ from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-from app.core.config import settings
 from loguru import logger
+
+from app.core.config import settings
 
 
 class EmailService:
@@ -17,7 +18,11 @@ class EmailService:
         self.from_name = settings.EMAILS_FROM_NAME
 
     def _send_email(
-        self, to_email: str, subject: str, html_content: str, images: list = None
+        self,
+        to_email: str,
+        subject: str,
+        html_content: str,
+        images: list[MIMEImage] | None = None,
     ):
         if not self.username or not self.password:
             logger.warning("SMTP credentials not set. Email not sent.")

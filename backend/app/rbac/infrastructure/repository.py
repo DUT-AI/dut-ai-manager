@@ -1,4 +1,4 @@
-from typing import List, Optional
+from sqlalchemy.orm import Session
 
 from app.rbac.domain.entity import Permission, Role, RoleApiKey, RolePermission
 from app.rbac.infrastructure.model import (
@@ -7,10 +7,9 @@ from app.rbac.infrastructure.model import (
     RoleModel,
     RolePermissionModel,
 )
-from app.shared.infrastructure.base_repository import BaseRepository
 from app.shared.application.query_support_utils import build_query_support
 from app.shared.domain.query_support import FilterCriterion, FilterOperator
-from sqlmodel import Session
+from app.shared.infrastructure.base_repository import BaseRepository
 
 
 class RoleRepository(BaseRepository[RoleModel, Role]):
@@ -19,7 +18,7 @@ class RoleRepository(BaseRepository[RoleModel, Role]):
     def __init__(self, session: Session):
         super().__init__(session, RoleModel)
 
-    def get_all_roles(self, skip: int = 0, limit: int = 100) -> List[Role]:
+    def get_all_roles(self, skip: int = 0, limit: int = 100) -> list[Role]:
         """Get all roles with permissions using QuerySupport."""
         qs = build_query_support(
             skip=skip,
@@ -28,7 +27,7 @@ class RoleRepository(BaseRepository[RoleModel, Role]):
         )
         return self.get_all(qs)
 
-    def get_role_with_permissions(self, role_id: int) -> Optional[Role]:
+    def get_role_with_permissions(self, role_id: int) -> Role | None:
         """Get role with its permissions using get_one."""
         qs = build_query_support(
             filters=[
@@ -38,7 +37,7 @@ class RoleRepository(BaseRepository[RoleModel, Role]):
         )
         return self.get_one(qs)
 
-    def get_by_name(self, name: str) -> Optional[Role]:
+    def get_by_name(self, name: str) -> Role | None:
         """Get role by name."""
         qs = build_query_support(
             filters=[
@@ -61,7 +60,7 @@ class PermissionRepository(BaseRepository[PermissionModel, Permission]):
     def __init__(self, session: Session):
         super().__init__(session, PermissionModel)
 
-    def get_all_permissions(self, skip: int = 0, limit: int = 100) -> List[Permission]:
+    def get_all_permissions(self, skip: int = 0, limit: int = 100) -> list[Permission]:
         """Get all permissions using QuerySupport."""
         qs = build_query_support(skip=skip, limit=limit)
         return self.get_all(qs)
@@ -82,7 +81,7 @@ class RolePermissionRepository(BaseRepository[RolePermissionModel, RolePermissio
 
     def get_by_role_and_permission(
         self, role_id: int, permission_id: int
-    ) -> Optional[RolePermission]:
+    ) -> RolePermission | None:
         """Get link by role and permission IDs."""
         qs = build_query_support(
             filters=[
@@ -112,7 +111,7 @@ class RoleApiKeyRepository(BaseRepository[RoleApiKeyModel, RoleApiKey]):
     def __init__(self, session: Session):
         super().__init__(session, RoleApiKeyModel)
 
-    def get_by_key_hash(self, key_hash: str) -> Optional[RoleApiKey]:
+    def get_by_key_hash(self, key_hash: str) -> RoleApiKey | None:
         """Get API key by hash."""
         qs = build_query_support(
             filters=[

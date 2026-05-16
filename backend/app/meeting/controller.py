@@ -1,5 +1,9 @@
 from datetime import date
-from typing import Annotated, List, Optional
+from typing import Annotated
+
+from dishka.integrations.fastapi import FromDishka, inject
+from fastapi import APIRouter, File, Form, UploadFile, status
+from fastapi.responses import StreamingResponse
 
 from app.core.deps import CurrentUser, hasPermission
 from app.core.permissions import MeetingPermission
@@ -25,9 +29,6 @@ from app.meeting.schemas import (
 from app.shared.application.response import ApiResponse
 from app.shared.infrastructure.sse import sse_broadcaster
 from app.utils.text import remove_vietnamese_tones
-from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import APIRouter, File, Form, UploadFile, status
-from fastapi.responses import StreamingResponse
 
 router = APIRouter(prefix="/meetings", tags=["Meetings"])
 
@@ -57,15 +58,15 @@ async def create_meeting(
     )
 
 
-@router.get("", response_model=ApiResponse[List[MeetingResponse]])
+@router.get("", response_model=ApiResponse[list[MeetingResponse]])
 @inject
 async def get_meetings(
     uc: FromDishka[GetMeetingsUseCase],
     _: Annotated[CurrentUser, hasPermission(MeetingPermission.READ)],
     skip: int = 0,
     limit: int = 100,
-    start_date: Optional[date] = None,
-    end_date: Optional[date] = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
     deleted: bool = False,
 ):
     """Lấy danh sách các buổi họp"""
@@ -143,12 +144,12 @@ async def check_in_with_card(
     return ApiResponse.success(data=None, message=remove_vietnamese_tones(message))
 
 
-@router.post("/check-in", response_model=ApiResponse[List[ParticipantResponse]])
+@router.post("/check-in", response_model=ApiResponse[list[ParticipantResponse]])
 @inject
 async def check_in(
     uc: FromDishka[CheckInUseCase],
     # _: Annotated[CurrentUser, hasPermission(MeetingPermission.CHECK_IN)],
-    user_ids: List[int] = Form(...),
+    user_ids: list[int] = Form(...),
     image: UploadFile = File(...),
 ):
     """Thực hiện điểm danh (Check-in)"""
@@ -159,7 +160,7 @@ async def check_in(
     )
 
 
-@router.post("/check-out", response_model=ApiResponse[List[ParticipantResponse]])
+@router.post("/check-out", response_model=ApiResponse[list[ParticipantResponse]])
 @inject
 async def check_out(
     data: CheckOutRequest,

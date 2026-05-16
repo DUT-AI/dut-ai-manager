@@ -1,12 +1,16 @@
-from datetime import date, timedelta
-from typing import List, Optional
+from datetime import timedelta
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
 from app.shared.infrastructure.base_repository import BaseRepository
 from app.user.domain.monthly_stats import MonthlyUserStats
 from app.user.infrastructure.monthly_stats_model import MonthlyUserStatsModel
-from sqlmodel import Session, select
 
 
-class MonthlyUserStatsRepository(BaseRepository[MonthlyUserStatsModel, MonthlyUserStats]):
+class MonthlyUserStatsRepository(
+    BaseRepository[MonthlyUserStatsModel, MonthlyUserStats]
+):
     def __init__(self, session: Session):
         super().__init__(session, MonthlyUserStatsModel)
 
@@ -24,7 +28,9 @@ class MonthlyUserStatsRepository(BaseRepository[MonthlyUserStatsModel, MonthlyUs
             late_count=entity.late_count,
             absent_count=entity.absent_count,
             violation_count=entity.violation_count,
-            assigned_title=entity.assigned_title.value if entity.assigned_title else None,
+            assigned_title=entity.assigned_title.value
+            if entity.assigned_title
+            else None,
             created_at=entity.created_at,
             updated_at=entity.updated_at,
             is_deleted=entity.is_deleted,
@@ -32,16 +38,16 @@ class MonthlyUserStatsRepository(BaseRepository[MonthlyUserStatsModel, MonthlyUs
 
     def get_by_user_and_month(
         self, user_id: int, month: int, year: int
-    ) -> Optional[MonthlyUserStats]:
+    ) -> MonthlyUserStats | None:
         stmt = select(MonthlyUserStatsModel).where(
             MonthlyUserStatsModel.user_id == user_id,
             MonthlyUserStatsModel.month == month,
             MonthlyUserStatsModel.year == year,
         )
-        model = self.session.exec(stmt).first()
+        model = self.session.scalars(stmt).first()
         return self.to_entity(model) if model else None
 
-    def get_by_month_year(self, month: int, year: int) -> List[MonthlyUserStats]:
+    def get_by_month_year(self, month: int, year: int) -> list[MonthlyUserStats]:
         stmt = (
             select(MonthlyUserStatsModel)
             .where(
@@ -50,21 +56,20 @@ class MonthlyUserStatsRepository(BaseRepository[MonthlyUserStatsModel, MonthlyUs
             )
             .order_by(MonthlyUserStatsModel.total_bonus_points.desc())
         )
-        models = self.session.exec(stmt).all()
+        models = self.session.scalars(stmt).all()
         return [self.to_entity(m) for m in models]
 
-    def get_current_title(self, user_id: int) -> Optional[str]:
+    def get_current_title(self, user_id: int) -> str | None:
         """Lấy danh hiệu hiện tại (xét tháng trước, áp dụng tháng này)."""
         from app.utils.datetime import get_current_utc7_time
+
         now = get_current_utc7_time()
 
         # Lấy danh hiệu của tháng trước
         first_day = now.replace(day=1)
         last_month = first_day - timedelta(days=1)
 
-        stats = self.get_by_user_and_month(
-            user_id, last_month.month, last_month.year
-        )
+        stats = self.get_by_user_and_month(user_id, last_month.month, last_month.year)
         return stats.assigned_title.value if stats and stats.assigned_title else None
 
     def save(self, entity: MonthlyUserStats) -> MonthlyUserStats:
@@ -73,12 +78,15 @@ class MonthlyUserStatsRepository(BaseRepository[MonthlyUserStatsModel, MonthlyUs
         if existing and existing.id:
             # Update
             model = self.session.get(MonthlyUserStatsModel, existing.id)
+            assert model is not None
             model.total_activity_hours = entity.total_activity_hours
             model.total_bonus_points = entity.total_bonus_points
             model.late_count = entity.late_count
             model.absent_count = entity.absent_count
             model.violation_count = entity.violation_count
-            model.assigned_title = entity.assigned_title.value if entity.assigned_title else None
+            model.assigned_title = (
+                entity.assigned_title.value if entity.assigned_title else None
+            )
             self.session.add(model)
             self.session.flush()
             return self.to_entity(model)

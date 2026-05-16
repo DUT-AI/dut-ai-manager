@@ -5,7 +5,6 @@ Auth Application Use Cases — business logic layer.
 import random
 import string
 from datetime import timedelta
-from typing import Optional, Tuple
 
 from app.auth.domain.entity import Account
 from app.auth.infrastructure.repository import AccountRepository
@@ -19,7 +18,6 @@ from app.utils.password import (
     TokenPayload,
     create_access_token,
     create_refresh_token,
-    decode_access_token,
     decode_refresh_token,
     get_password_hash,
     hash_password,
@@ -34,10 +32,11 @@ class BaseAuthUseCase:
         self.account_repo = account_repo
         self.user_repo = user_repo
 
-    def create_tokens(self, user: UserEntity) -> Tuple[str, str]:
+    def create_tokens(self, user: UserEntity) -> tuple[str, str]:
         """Create access and refresh tokens for user."""
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
+        assert user.id is not None
         subject = TokenPayload(
             sub=user.id,
             name=user.name,
@@ -57,7 +56,7 @@ class BaseAuthUseCase:
 class AuthenticateUseCase(BaseAuthUseCase):
     """Authenticate and issue tokens."""
 
-    def execute(self, email: str, password: str) -> Tuple[UserEntity, str, str]:
+    def execute(self, email: str, password: str) -> tuple[UserEntity, str, str]:
         # 1. Tìm user theo email sử dụng get_one & QuerySupport
         # Cần include role và permissions để to_entity trả về đầy đủ permissions
         user_qs = build_query_support(
@@ -100,7 +99,7 @@ class AuthenticateUseCase(BaseAuthUseCase):
 class RefreshTokenUseCase(BaseAuthUseCase):
     """Issue new tokens given a valid refresh token."""
 
-    def execute(self, refresh_token_str: str) -> Tuple[str, str]:
+    def execute(self, refresh_token_str: str) -> tuple[str, str]:
         payload = decode_refresh_token(refresh_token_str)
         if not payload:
             raise BadRequestException(
@@ -156,7 +155,7 @@ class CreateAccountUseCase:
     def __init__(self, account_repo: AccountRepository):
         self.account_repo = account_repo
 
-    def execute(self, user_id: Optional[int] = None) -> Tuple[Account, str]:
+    def execute(self, user_id: int | None = None) -> tuple[Account, str]:
         password = self._generate_strong_password()
         account = Account(hash_password=hash_password(password), user_id=user_id)
         saved = self.account_repo.add(account)

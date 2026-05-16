@@ -1,21 +1,22 @@
-from datetime import datetime
-from typing import ClassVar, Optional
-from pydantic import BaseModel
+from datetime import UTC, datetime
 from enum import Enum
+from typing import ClassVar
+
+from pydantic import BaseModel
 
 
 class ParticipantStatus(str, Enum):
     """Trạng thái tham dự buổi họp"""
 
-    NOT_JOINED = "chưa tham gia"
-    JOINED = "đã checkin"
-    COMPLETED = "đã checkout"
+    NOT_JOINED = "NOT_JOINED"
+    JOINED = "JOINED"
+    COMPLETED = "COMPLETED"
 
 
 class CapacityStatus(str, Enum):
-    SAFE = "safe"  # < 15 người
-    WARNING = "warning"  # 15-19 người
-    OVERLOAD = "overload"  # >= 20 người
+    SAFE = "SAFE"  # < 15 người
+    WARNING = "WARNING"  # 15-19 người
+    OVERLOAD = "OVERLOAD"  # >= 20 người
 
 
 class CapacityMonitor(BaseModel):
@@ -61,5 +62,5 @@ class CapacityMonitor(BaseModel):
             future_count=n_future,
             epsilon=epsilon,
             status=status,
-            last_updated=datetime.utcnow(),
+            last_updated=datetime.now(UTC),
         )

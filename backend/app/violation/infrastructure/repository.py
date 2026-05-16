@@ -5,14 +5,15 @@ Uses flush() instead of commit(). Session commits at middleware level.
 Mapping delegated to ViolationModel.to_entity() / .from_entity().
 """
 
+from datetime import date, datetime, time
+from typing import Any
+
+from sqlalchemy import desc, extract, select
+from sqlalchemy.orm import Session, joinedload
+
+from app.shared.infrastructure.base_repository import BaseRepository
 from app.violation.domain.entity import Violation
 from app.violation.infrastructure.model import ViolationModel
-from app.shared.infrastructure.base_repository import BaseRepository
-from sqlalchemy import desc, extract
-from sqlalchemy.orm import joinedload
-from sqlmodel import Session, select
-from datetime import datetime, date, time
-from typing import List, Optional, Any, cast
 
 
 class ViolationRepository(BaseRepository[ViolationModel, Violation]):
@@ -23,64 +24,67 @@ class ViolationRepository(BaseRepository[ViolationModel, Violation]):
 
     def get_all(
         self,
-        query_support: Optional[Any] = None,
+        query_support: Any | None = None,
         deleted: bool = False,
         skip: int = 0,
         limit: int = 100,
-    ) -> List[Violation]:
+    ) -> list[Violation]:
         """Override get_all to include default relations and support skip/limit if no query_support."""
         statement = select(ViolationModel).where(ViolationModel.is_deleted == deleted)
 
         # Default includes
         statement = statement.options(
-            joinedload(cast(Any, ViolationModel.user)),
-            joinedload(cast(Any, ViolationModel.creator_rel)),
-            joinedload(cast(Any, ViolationModel.updater_rel)),
+            joinedload(ViolationModel.user),
+            joinedload(ViolationModel.creator_rel),
+            joinedload(ViolationModel.updater_rel),
         )
 
         if query_support:
             from app.shared.domain.query_support import apply_query_support
+
             statement = apply_query_support(statement, ViolationModel, query_support)
         else:
             # Default sorting for Trash
-            sort_field = ViolationModel.updated_at if deleted else ViolationModel.created_at
-            statement = statement.order_by(desc(cast(Any, sort_field)))
+            sort_field = (
+                ViolationModel.updated_at if deleted else ViolationModel.created_at
+            )
+            statement = statement.order_by(desc(sort_field))
             statement = statement.offset(skip).limit(limit)
 
-        results = self.session.exec(statement).unique().all()
+        results = self.session.scalars(statement).unique().all()
         return [m.to_entity() for m in results]
 
     def get_by_month(
         self,
-        month: Optional[int] = None,
-        year: Optional[int] = None,
-        user_id: Optional[int] = None,
-    ) -> List[Violation]:
+        month: int | None = None,
+        year: int | None = None,
+        user_id: int | None = None,
+    ) -> list[Violation]:
         """Get violations filtered by month/year/user."""
         statement = select(ViolationModel).where(ViolationModel.is_deleted == False)  # noqa: E712
-        
+
         if user_id:
             statement = statement.where(ViolationModel.user_id == user_id)
         if month is not None:
-            statement = statement.where(extract("month", cast(Any, ViolationModel.date)) == month)
+            statement = statement.where(extract("month", ViolationModel.date) == month)
         if year is not None:
-            statement = statement.where(extract("year", cast(Any, ViolationModel.date)) == year)
-            
-        statement = statement.options(
-            joinedload(cast(Any, ViolationModel.user)),
-            joinedload(cast(Any, ViolationModel.creator_rel)),
-            joinedload(cast(Any, ViolationModel.updater_rel)),
-        ).order_by(desc(cast(Any, ViolationModel.date)))
-        
-        return [m.to_entity() for m in self.session.exec(statement).unique().all()]
+            statement = statement.where(extract("year", ViolationModel.date) == year)
 
-    def get_by_date(self, target_date: date) -> List[Violation]:
+        statement = statement.options(
+            joinedload(ViolationModel.user),
+            joinedload(ViolationModel.creator_rel),
+            joinedload(ViolationModel.updater_rel),
+        ).order_by(desc(ViolationModel.date))
+
+        return [m.to_entity() for m in self.session.scalars(statement).unique().all()]
+
+    def get_by_date(self, target_date: date) -> list[Violation]:
         """Get all violations on a specific date (accepts date or datetime)."""
         # Tránh lỗi type hint nếu target_date là datetime
         d = target_date.date() if isinstance(target_date, datetime) else target_date
         start = datetime.combine(d, time.min)
         end = datetime.combine(d, time.max)
-        
+
         statement = (
             select(ViolationModel)
             .where(
@@ -89,19 +93,19 @@ class ViolationRepository(BaseRepository[ViolationModel, Violation]):
                 ViolationModel.date <= end,
             )
             .options(
-                joinedload(cast(Any, ViolationModel.user)),
-                joinedload(cast(Any, ViolationModel.creator_rel)),
-                joinedload(cast(Any, ViolationModel.updater_rel)),
+                joinedload(ViolationModel.user),
+                joinedload(ViolationModel.creator_rel),
+                joinedload(ViolationModel.updater_rel),
             )
         )
-        return [m.to_entity() for m in self.session.exec(statement).unique().all()]
+        return [m.to_entity() for m in self.session.scalars(statement).unique().all()]
 
-    def get_by_user_and_date(self, user_id: int, target_date: date) -> List[Violation]:
+    def get_by_user_and_date(self, user_id: int, target_date: date) -> list[Violation]:
         """Get violations for a specific user on a specific date."""
         d = target_date.date() if isinstance(target_date, datetime) else target_date
         start = datetime.combine(d, time.min)
         end = datetime.combine(d, time.max)
-        
+
         statement = (
             select(ViolationModel)
             .where(
@@ -111,10 +115,10 @@ class ViolationRepository(BaseRepository[ViolationModel, Violation]):
                 ViolationModel.date <= end,
             )
             .options(
-                joinedload(cast(Any, ViolationModel.user)),
+                joinedload(ViolationModel.user),
             )
         )
-        return [m.to_entity() for m in self.session.exec(statement).unique().all()]
+        return [m.to_entity() for m in self.session.scalars(statement).unique().all()]
 
     def save(self, entity: Violation) -> Violation:
         """Compatibility save method."""
@@ -122,28 +126,28 @@ class ViolationRepository(BaseRepository[ViolationModel, Violation]):
             return self.update(entity)
         return self.add(entity)
 
-    def save_all(self, entities: List[Violation]) -> List[Violation]:
+    def save_all(self, entities: list[Violation]) -> list[Violation]:
         """Save multiple violations in batch with eager loading to avoid N+1."""
         if not entities:
             return []
-            
+
         models = [ViolationModel.from_entity(e) for e in entities]
         for m in models:
             self.session.add(m)
         self.session.flush()
-        
+
         # Reload with relationships in one batch query
         ids = [m.id for m in models]
         statement = (
             select(ViolationModel)
-            .where(cast(Any, ViolationModel.id).in_(ids))
+            .where(ViolationModel.id.in_(ids))
             .options(
-                joinedload(cast(Any, ViolationModel.user)),
-                joinedload(cast(Any, ViolationModel.creator_rel)),
-                joinedload(cast(Any, ViolationModel.updater_rel)),
+                joinedload(ViolationModel.user),
+                joinedload(ViolationModel.creator_rel),
+                joinedload(ViolationModel.updater_rel),
             )
         )
-        
-        reloaded = self.session.exec(statement).unique().all()
+
+        reloaded = self.session.scalars(statement).unique().all()
         # Sort back to match original order if needed, but usually not critical for violations
         return [m.to_entity() for m in reloaded]

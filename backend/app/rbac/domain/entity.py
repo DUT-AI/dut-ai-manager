@@ -5,7 +5,7 @@ Provides core business objects decoupled from database ORMs.
 """
 
 from enum import Enum
-from typing import List, Optional
+from typing import Optional
 
 from app.shared.domain.base_entity import BaseEntity
 
@@ -22,7 +22,7 @@ class Permission(BaseEntity):
     """Permission entity."""
 
     name: str  # e.g., "user:read", "user:write"
-    description: Optional[str] = None
+    description: str | None = None
     resource: str  # e.g., "user", "role", "permission"
     action: str  # e.g., "create", "read", "update", "delete"
 
@@ -32,7 +32,7 @@ class RolePermission(BaseEntity):
 
     role_id: int
     permission_id: int
-    permission: Optional[Permission] = None
+    permission: Permission | None
 
 
 class RoleApiKey(BaseEntity):
@@ -43,19 +43,19 @@ class RoleApiKey(BaseEntity):
     prefix: str
     is_active: bool = True
     role_id: int
-    role: Optional["Role"] = None
+    role: Optional["Role"]
 
 
 class Role(BaseEntity):
     """Role entity."""
 
     name: str
-    description: Optional[str] = None
-    role_permissions: List[RolePermission] = []
-    api_keys: List[RoleApiKey] = []
+    description: str | None = None
+    role_permissions: list[RolePermission] = []
+    api_keys: list[RoleApiKey] = []
 
     @property
-    def permissions(self) -> List[Permission]:
+    def permissions(self) -> list[Permission]:
         """Flatten related permissions for ease of access, excluding deleted ones."""
         return [
             rp.permission

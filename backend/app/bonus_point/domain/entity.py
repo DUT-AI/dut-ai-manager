@@ -1,9 +1,9 @@
 from datetime import datetime
-from typing import Optional
+
+from pydantic import Field
 
 from app.shared.domain.base_entity import BaseEntity
 from app.shared.domain.value_objects import UserRef
-from pydantic import Field
 
 
 class BonusPoint(BaseEntity):
@@ -12,6 +12,7 @@ class BonusPoint(BaseEntity):
     points: int
     reason: str = Field(max_length=500)
     date: datetime
-    owner: Optional[UserRef] = None
-    creator: Optional[UserRef] = None
-    updater: Optional[UserRef] = None
+    user_id: int | None = None
+    owner: UserRef | None = None
+    creator: UserRef | None = None
+    updater: UserRef | None = None

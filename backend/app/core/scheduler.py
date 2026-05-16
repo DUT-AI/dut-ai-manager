@@ -11,14 +11,15 @@ the lock will run the scheduler.
 import fcntl
 import os
 
-from app.jobs.homework_checker_job import check_overdue_homework_submissions
-from app.jobs.meeting_checker_job import check_meeting_attendance
-from app.jobs.activity_scoring_job import calculate_activity_points
-from app.jobs.monthly_title_job import assign_monthly_titles
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from dishka import AsyncContainer
 from loguru import logger
+
+from app.jobs.activity_scoring_job import calculate_activity_points
+from app.jobs.homework_checker_job import check_overdue_homework_submissions
+from app.jobs.meeting_checker_job import check_meeting_attendance
+from app.jobs.monthly_title_job import assign_monthly_titles
 
 # Global scheduler instance
 scheduler: AsyncIOScheduler | None = None
@@ -43,7 +44,7 @@ def _acquire_scheduler_lock() -> bool:
         _lock_file.write(str(os.getpid()))
         _lock_file.flush()
         return True
-    except (IOError, OSError):
+    except OSError:
         # Another process has the lock
         if _lock_file:
             _lock_file.close()

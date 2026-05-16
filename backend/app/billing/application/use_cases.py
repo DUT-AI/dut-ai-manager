@@ -1,8 +1,9 @@
+import calendar
 import random
 import string
-import calendar
-from typing import List, Optional
 from datetime import datetime
+
+from fastapi import status
 
 from app.billing.domain.entity import (
     Invoice,
@@ -13,9 +14,8 @@ from app.billing.domain.entity import (
 from app.billing.infrastructure.repository import InvoiceRepository
 from app.core.config import settings
 from app.shared.application.response import BadRequestException
-from app.violation.infrastructure.repository import ViolationRepository
 from app.team.infrastructure.repository import TeamRepository
-from fastapi import status
+from app.violation.infrastructure.repository import ViolationRepository
 
 
 class CreateInvoiceUseCase:
@@ -25,7 +25,7 @@ class CreateInvoiceUseCase:
         self.repo = repo
 
     def execute(
-        self, user_id: int, items_data: List[dict], description: Optional[str] = None
+        self, user_id: int, items_data: list[dict], description: str | None = None
     ) -> Invoice:
         # 1. Calculate total amount and create items
         total_amount = 0
@@ -83,12 +83,14 @@ class UpdateInvoiceUseCase:
         self.repo = repo
 
     def execute(
-        self, invoice_id: int, items_data: List[dict], description: Optional[str] = None
+        self, invoice_id: int, items_data: list[dict], description: str | None = None
     ) -> Invoice:
         # 1. Get the invoice
         invoice = self.repo.get_by_id(invoice_id)
         if not invoice:
-            raise BadRequestException("Hóa đơn không tồn tại", status_code=status.HTTP_404_NOT_FOUND)
+            raise BadRequestException(
+                "Hóa đơn không tồn tại", status_code=status.HTTP_404_NOT_FOUND
+            )
 
         if invoice.status == InvoiceStatus.PAID:
             raise BadRequestException("Không thể sửa hóa đơn đã thanh toán")
@@ -133,7 +135,7 @@ class HandleSePayWebhookUseCase:
     def __init__(self, repo: InvoiceRepository):
         self.repo = repo
 
-    def execute(self, webhook_data: dict, auth_token: Optional[str] = None) -> bool:
+    def execute(self, webhook_data: dict, auth_token: str | None = None) -> bool:
         # 1. Verify token if configured
         if (
             settings.SEPAY_WEBHOOK_SECRET
@@ -169,7 +171,7 @@ class HandleSePayWebhookUseCase:
 
         return True
 
-    def _find_invoice_by_content(self, content: str) -> Optional[Invoice]:
+    def _find_invoice_by_content(self, content: str) -> Invoice | None:
         """Tìm hóa đơn bằng cách quét mã tham chiếu trong nội dung chuyển khoản."""
         import re
 
@@ -186,7 +188,7 @@ class GetInvoicesUseCase:
     def __init__(self, repo: InvoiceRepository):
         self.repo = repo
 
-    def get_user_invoices(self, user_id: int) -> List[Invoice]:
+    def get_user_invoices(self, user_id: int) -> list[Invoice]:
         return self.repo.get_by_user_id(user_id)
 
     def get_invoice_details(self, invoice_id: int) -> Invoice:
@@ -197,7 +199,7 @@ class GetInvoicesUseCase:
             )
         return invoice
 
-    def get_all_invoices(self, skip: int = 0, limit: int = 100) -> List[Invoice]:
+    def get_all_invoices(self, skip: int = 0, limit: int = 100) -> list[Invoice]:
         return self.repo.get_all_active(skip=skip, limit=limit)
 
     def get_matrix_report(
@@ -206,15 +208,24 @@ class GetInvoicesUseCase:
         start_year: int,
         end_month: int,
         end_year: int,
-        user_ids: Optional[List[int]] = None
-    ) -> List[Invoice]:
+        user_ids: list[int] | None = None,
+    ) -> list[Invoice]:
         try:
             start_date = datetime(year=start_year, month=start_month, day=1)
             last_day = calendar.monthrange(end_year, end_month)[1]
-            end_date = datetime(year=end_year, month=end_month, day=last_day, hour=23, minute=59, second=59)
+            end_date = datetime(
+                year=end_year,
+                month=end_month,
+                day=last_day,
+                hour=23,
+                minute=59,
+                second=59,
+            )
         except ValueError:
-            raise BadRequestException("Invalid date range", status_code=status.HTTP_400_BAD_REQUEST)
-            
+            raise BadRequestException(
+                "Invalid date range", status_code=status.HTTP_400_BAD_REQUEST
+            )
+
         return self.repo.get_matrix_report(start_date, end_date, user_ids)
 
 
@@ -252,11 +263,11 @@ class CreateMonthlyInvoicesUseCase:
         self,
         month: int,
         year: int,
-        team_id: Optional[int] = None,
-        user_ids: List[int] = [],
+        team_id: int | None = None,
+        user_ids: list[int] = [],
         violation_price: int = 20000,
         fund_amount: int = 50000,
-        extra_items: List[dict] = [],
+        extra_items: list[dict] = [],
         execute: bool = False,
     ) -> dict:
         target_users = {}  # user_id -> user_name
@@ -362,7 +373,7 @@ class CreateMonthlyInvoicesUseCase:
         import string
 
         chars = string.ascii_uppercase + string.digits
-        return f"DUT{ ''.join(random.choice(chars) for _ in range(length)) }"
+        return f"DUT{''.join(random.choice(chars) for _ in range(length))}"
 
 
 class DeleteInvoiceUseCase:

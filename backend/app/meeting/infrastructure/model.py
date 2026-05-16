@@ -1,30 +1,35 @@
+"""
+Meeting ORM Models — SQLAlchemy 2.0, infrastructure layer.
+"""
+
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional
+
+from sqlalchemy import Boolean, DateTime, ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.meeting.domain.entity import Meeting as MeetingEntity
 from app.meeting.domain.entity import MeetingParticipant as MeetingParticipantEntity
 from app.meeting.domain.entity import UserRef
 from app.meeting.domain.value_objects import ParticipantStatus
-from app.shared.infrastructure.base_model import TimestampMixin
+from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
 from app.user.infrastructure.model import UserModel
-from sqlmodel import Field, Relationship
 
 
-class Meeting(TimestampMixin, table=True):
+class Meeting(SQLAlchemyTimestampMixin, Base):
     """Buổi họp (ORM Model)"""
 
     __tablename__ = "meetings"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
-    title: str = Field(max_length=255)
-    content: Optional[str] = Field(default=None, max_length=1000)
-    start_time: datetime = Field(index=True)
-    end_time: datetime = Field(index=True)
-    require_check_in: bool = Field(default=True)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String(255))
+    content: Mapped[str | None] = mapped_column(String(1000), default=None)
+    start_time: Mapped[datetime] = mapped_column(DateTime, index=True)
+    end_time: Mapped[datetime] = mapped_column(DateTime, index=True)
+    require_check_in: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    participants: List["MeetingParticipant"] = Relationship(
+    participants: Mapped[list["MeetingParticipant"]] = relationship(
         back_populates="meeting",
-        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+        cascade="all, delete-orphan",
     )
 
     def to_entity(self) -> MeetingEntity:
@@ -43,24 +48,37 @@ class Meeting(TimestampMixin, table=True):
             is_deleted=self.is_deleted,
         )
 
+    @classmethod
+    def from_entity(cls, entity: MeetingEntity) -> "Meeting":
+        return cls(
+            id=entity.id,
+            title=entity.title,
+            content=entity.content,
+            start_time=entity.start_time,
+            end_time=entity.end_time,
+            require_check_in=entity.require_check_in,
+        )
 
-class MeetingParticipant(TimestampMixin, table=True):
+
+class MeetingParticipant(SQLAlchemyTimestampMixin, Base):
     """Bản ghi thành viên tham dự buổi họp (ORM Model)"""
 
     __tablename__ = "meeting_participants"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
-    meeting_id: int = Field(foreign_key="meetings.id", index=True)
-    user_id: int = Field(foreign_key="users.id", index=True)
-    check_in_at: Optional[datetime] = Field(default=None)
-    check_out_at: Optional[datetime] = Field(default=None)
-    status: ParticipantStatus = Field(default=ParticipantStatus.NOT_JOINED)
-    link_image: Optional[str] = Field(default=None, max_length=500)
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    meeting_id: Mapped[int] = mapped_column(ForeignKey("meetings.id"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    check_in_at: Mapped[datetime | None] = mapped_column(DateTime, default=None)
+    check_out_at: Mapped[datetime | None] = mapped_column(DateTime, default=None)
+    status: Mapped[ParticipantStatus] = mapped_column(
+        String(50), default=ParticipantStatus.NOT_JOINED
+    )
+    link_image: Mapped[str | None] = mapped_column(String(500), default=None)
 
-    meeting: Meeting = Relationship(back_populates="participants")
-    user: UserModel = Relationship(
+    meeting: Mapped[Meeting] = relationship(back_populates="participants")
+    user: Mapped[UserModel] = relationship(
         back_populates="meeting_participations",
-        sa_relationship_kwargs={"foreign_keys": "[MeetingParticipant.user_id]"},
+        foreign_keys=[user_id],
     )
 
     def to_entity(self) -> "MeetingParticipantEntity":
@@ -83,4 +101,16 @@ class MeetingParticipant(TimestampMixin, table=True):
             user=user_ref,
             created_at=self.created_at,
             updated_at=self.updated_at,
+        )
+
+    @classmethod
+    def from_entity(cls, entity: MeetingParticipantEntity) -> "MeetingParticipant":
+        return cls(
+            id=entity.id,
+            meeting_id=entity.meeting_id,
+            user_id=entity.user_id,
+            check_in_at=entity.check_in_at,
+            check_out_at=entity.check_out_at,
+            status=entity.status,
+            link_image=entity.link_image,
         )

@@ -1,5 +1,4 @@
 from datetime import date
-from typing import List, Optional
 
 from app.bonus_point.infrastructure.repository import BonusPointRepository
 from app.homework.application.dtos import HomeworkResponse
@@ -70,7 +69,7 @@ class GetMonthlyActivityDatesUseCase:
         self.violation_repo = violation_repo
         self.bonus_point_repo = bonus_point_repo
 
-    def execute(self, month: int, year: int) -> List[date]:
+    def execute(self, month: int, year: int) -> list[date]:
         activity_dates = set()
 
         # Thống kê từ các nguồn dữ liệu
@@ -185,9 +184,9 @@ class GetBonusPointReportUseCase:
 
     def execute(
         self,
-        month: Optional[int] = None,
-        year: Optional[int] = None,
-        keyword: Optional[str] = None,
+        month: int | None = None,
+        year: int | None = None,
+        keyword: str | None = None,
     ) -> ReportResponse:
         records = self.bonus_point_repo.get_by_month(month=month, year=year)[:2000]
 
@@ -245,9 +244,9 @@ class GetViolationReportUseCase:
 
     def execute(
         self,
-        month: Optional[int] = None,
-        year: Optional[int] = None,
-        keyword: Optional[str] = None,
+        month: int | None = None,
+        year: int | None = None,
+        keyword: str | None = None,
     ) -> ReportResponse:
         records = self.violation_repo.get_by_month(month=month, year=year)[:2000]
 

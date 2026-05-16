@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional, Any
+from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel, Field, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .domain.value_objects import ParticipantStatus
 
@@ -15,6 +15,7 @@ class CheckInWithCardRequest(BaseModel):
 
     card_code: str = Field(..., min_length=1, description="Mã thẻ check-in")
 
+
 class CheckOutRequest(BaseModel):
     user_id: int = Field(..., description="ID của user cần check-out")
 
@@ -25,11 +26,11 @@ class ParticipantResponse(BaseModel):
     id: int
     user_id: int
     user_name: str
-    user_avatar_url: Optional[str] = None
-    check_in_at: Optional[datetime] = None
-    check_out_at: Optional[datetime] = None
+    user_avatar_url: str | None = None
+    check_in_at: datetime | None = None
+    check_out_at: datetime | None = None
     status: ParticipantStatus
-    link_image: Optional[str] = None
+    link_image: str | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -79,22 +80,22 @@ class ParticipantResponse(BaseModel):
 
 class MeetingCreate(BaseModel):
     title: str = Field(..., max_length=255)
-    content: Optional[str] = Field(None, max_length=1000)
+    content: str | None = Field(None, max_length=1000)
     start_time: datetime
     end_time: datetime
     require_check_in: bool = True
-    user_ids: List[int] = []
-    team_ids: List[int] = []
+    user_ids: list[int] = []
+    team_ids: list[int] = []
 
 
 class MeetingUpdate(BaseModel):
-    title: Optional[str] = Field(None, max_length=255)
-    content: Optional[str] = Field(None, max_length=1000)
-    start_time: Optional[datetime] = None
-    end_time: Optional[datetime] = None
-    require_check_in: Optional[bool] = None
-    user_ids: Optional[List[int]] = None
-    team_ids: Optional[List[int]] = None
+    title: str | None = Field(None, max_length=255)
+    content: str | None = Field(None, max_length=1000)
+    start_time: datetime | None = None
+    end_time: datetime | None = None
+    require_check_in: bool | None = None
+    user_ids: list[int] | None = None
+    team_ids: list[int] | None = None
 
 
 class MeetingResponse(BaseModel):
@@ -102,11 +103,11 @@ class MeetingResponse(BaseModel):
 
     id: int
     title: str
-    content: Optional[str]
+    content: str | None
     start_time: datetime
     end_time: datetime
     require_check_in: bool
-    participants: List[ParticipantResponse] = []
+    participants: list[ParticipantResponse] = []
     created_at: datetime
     updated_at: datetime
 
@@ -115,7 +116,7 @@ class MeetingResponse(BaseModel):
         """Map domain Meeting → schema (user_name, timestamps, participant id)."""
         if m.id is None or m.created_at is None or m.updated_at is None:
             raise ValueError("Meeting thiếu id hoặc timestamps sau khi lưu")
-        participants: List[ParticipantResponse] = []
+        participants: list[ParticipantResponse] = []
         for p in m.participants:
             participants.append(ParticipantResponse.from_domain(p))
         return cls(

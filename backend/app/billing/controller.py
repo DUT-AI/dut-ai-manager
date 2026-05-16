@@ -1,27 +1,27 @@
-from typing import Annotated, List
+from typing import Annotated
+
+from dishka.integrations.fastapi import FromDishka, inject
+from fastapi import APIRouter, Depends, Header, status
 
 from app.billing.application.use_cases import (
     CreateInvoiceUseCase,
-    UpdateInvoiceUseCase,
     CreateMonthlyInvoicesUseCase,
     DeleteInvoiceUseCase,
     GetInvoicesUseCase,
     HandleSePayWebhookUseCase,
+    UpdateInvoiceUseCase,
 )
 from app.billing.schemas import (
     InvoiceCreate,
-    InvoiceUpdate,
     InvoiceResponse,
+    InvoiceUpdate,
     MonthlyInvoiceCreate,
     MonthlyInvoicePreviewResponse,
     SePayWebhookPayload,
 )
 from app.core.deps import CurrentUser, PermissionChecker
 from app.core.permissions import BillingPermission
-from app.rbac.domain.entity import RoleType
-from app.shared.application.response import ApiResponse, BadRequestException
-from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import APIRouter, Depends, Header, status
+from app.shared.application.response import ApiResponse
 
 router = APIRouter(prefix="/billing", tags=["Billing"])
 
@@ -72,7 +72,7 @@ async def update_invoice(
 
 @router.post(
     "/monthly",
-    response_model=ApiResponse[MonthlyInvoicePreviewResponse | List[InvoiceResponse]],
+    response_model=ApiResponse[MonthlyInvoicePreviewResponse | list[InvoiceResponse]],
 )
 @inject
 async def create_monthly_invoices(
@@ -103,7 +103,7 @@ async def create_monthly_invoices(
     return ApiResponse.created(data=invoices)
 
 
-@router.get("/me", response_model=ApiResponse[List[InvoiceResponse]])
+@router.get("/me", response_model=ApiResponse[list[InvoiceResponse]])
 @inject
 async def get_my_invoices(
     get_uc: FromDishka[GetInvoicesUseCase],
@@ -112,13 +112,13 @@ async def get_my_invoices(
     """
     Get invoices for the current logged-in user.
     """
-    
+    assert current_user.id is not None
     invoices = get_uc.get_user_invoices(current_user.id)
     data = [InvoiceResponse.from_domain(inv) for inv in invoices]
     return ApiResponse.success(data=data)
 
 
-@router.get("/", response_model=ApiResponse[List[InvoiceResponse]])
+@router.get("/", response_model=ApiResponse[list[InvoiceResponse]])
 @inject
 async def get_all_invoices(
     get_uc: FromDishka[GetInvoicesUseCase],
@@ -135,9 +135,9 @@ async def get_all_invoices(
 
 
 from fastapi import Query
-from datetime import datetime
 
-@router.get("/report/matrix", response_model=ApiResponse[List[InvoiceResponse]])
+
+@router.get("/report/matrix", response_model=ApiResponse[list[InvoiceResponse]])
 @inject
 async def get_matrix_report(
     get_uc: FromDishka[GetInvoicesUseCase],
@@ -146,7 +146,7 @@ async def get_matrix_report(
     start_year: int = Query(...),
     end_month: int = Query(...),
     end_year: int = Query(...),
-    user_ids: List[int] = Query(default=[]),
+    user_ids: list[int] = Query(default=[]),
 ):
     """
     Get invoices for the matrix report (Admin only).
@@ -156,9 +156,9 @@ async def get_matrix_report(
         start_year=start_year,
         end_month=end_month,
         end_year=end_year,
-        user_ids=user_ids if user_ids else None
+        user_ids=user_ids if user_ids else None,
     )
-    
+
     data = [InvoiceResponse.from_domain(inv) for inv in invoices]
     return ApiResponse.success(data=data)
 

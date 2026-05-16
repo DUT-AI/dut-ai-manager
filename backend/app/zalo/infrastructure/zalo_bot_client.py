@@ -1,8 +1,9 @@
-from typing import Any, Dict, Optional
+from typing import Any
 
 import zalo_bot
-from app.core.config import settings
 from loguru import logger
+
+from app.core.config import settings
 
 
 class ZaloBotClient:
@@ -12,7 +13,7 @@ class ZaloBotClient:
 
         self.bot = zalo_bot.Bot(token=settings.ZALO_BOT_TOKEN)
 
-    async def send_message(self, chat_id: str, text: str) -> Optional[Dict[str, Any]]:
+    async def send_message(self, chat_id: str, text: str) -> dict[str, Any] | None:
         try:
             async with self.bot:
                 msg = await self.bot.send_message(chat_id, text)

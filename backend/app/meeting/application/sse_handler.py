@@ -1,6 +1,7 @@
+from loguru import logger
+
 from app.meeting.domain.events import ParticipantCheckedIn, ParticipantCheckedOut
 from app.shared.infrastructure.sse import sse_broadcaster
-from loguru import logger
 
 
 class MeetingSseHandler:

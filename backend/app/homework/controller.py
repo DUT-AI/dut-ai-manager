@@ -1,5 +1,8 @@
 from datetime import datetime
-from typing import Annotated, List, Optional
+from typing import Annotated
+
+from dishka.integrations.fastapi import FromDishka, inject
+from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 
 from app.core.deps import CurrentUser, hasPermission
 from app.core.permissions import HomeworkPermission, HomeworkSubmissionPermission
@@ -13,16 +16,16 @@ from app.homework.application.dtos import (
 from app.homework.application.use_cases import HomeworkUseCases
 from app.homework.domain.value_objects import HomeworkStatus
 from app.shared.application.response import ApiResponse
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile, Query
-from dishka.integrations.fastapi import FromDishka, inject
 
 router = APIRouter(prefix="/homeworks", tags=["homeworks"])
-submission_router = APIRouter(prefix="/homework-submission", tags=["homework-submission"])
+submission_router = APIRouter(
+    prefix="/homework-submission", tags=["homework-submission"]
+)
 
 
 @router.get(
     "",
-    response_model=ApiResponse[List[HomeworkResponse]],
+    response_model=ApiResponse[list[HomeworkResponse]],
     dependencies=[hasPermission(HomeworkPermission.READ)],
 )
 @inject
@@ -38,7 +41,7 @@ async def get_all_homeworks(
 
 @router.get(
     "/me",
-    response_model=ApiResponse[List[HomeworkResponse]],
+    response_model=ApiResponse[list[HomeworkResponse]],
     dependencies=[hasPermission(HomeworkPermission.READ)],
 )
 @inject
@@ -65,9 +68,9 @@ async def create_homework(
     title: str = Form(...),
     description: str = Form(""),
     deadline: str = Form(...),
-    assignee_ids: Optional[List[int]] = Form(None),
-    team_ids: Optional[List[int]] = Form(None),
-    file: Optional[UploadFile] = File(None),
+    assignee_ids: list[int] | None = Form(None),
+    team_ids: list[int] | None = Form(None),
+    file: UploadFile | None = File(None),
 ):
     try:
         deadline_dt = datetime.fromisoformat(deadline.replace("Z", "+00:00"))
@@ -88,7 +91,7 @@ async def create_homework(
 
 @router.get(
     "/report/unsubmitted",
-    response_model=ApiResponse[List[HomeworkReportResponse]],
+    response_model=ApiResponse[list[HomeworkReportResponse]],
     dependencies=[hasPermission(HomeworkPermission.READ)],
 )
 @inject
@@ -102,7 +105,7 @@ async def get_unsubmitted_report(
 
 @router.get(
     "/report/unsubmitted/{user_id}",
-    response_model=ApiResponse[List[HomeworkResponse]],
+    response_model=ApiResponse[list[HomeworkResponse]],
     dependencies=[hasPermission(HomeworkPermission.READ)],
 )
 @inject
@@ -141,11 +144,11 @@ async def update_homework(
     homework_id: int,
     use_cases: FromDishka[HomeworkUseCases],
     title: str = Form(...),
-    description: Optional[str] = Form(None),
-    deadline: Optional[str] = Form(None),
-    assignee_ids: Optional[List[int]] = Form(None),
-    team_ids: Optional[List[int]] = Form(None),
-    file: Optional[UploadFile] = File(None),
+    description: str | None = Form(None),
+    deadline: str | None = Form(None),
+    assignee_ids: list[int] | None = Form(None),
+    team_ids: list[int] | None = Form(None),
+    file: UploadFile | None = File(None),
 ):
     deadline_dt = None
     if deadline:
@@ -220,14 +223,16 @@ async def submit_homework(
 
 @submission_router.get(
     "",
-    response_model=ApiResponse[List[HomeworkSubmissionResponse]],
+    response_model=ApiResponse[list[HomeworkSubmissionResponse]],
     dependencies=[hasPermission(HomeworkSubmissionPermission.READ)],
 )
 @inject
 async def get_submissions(
     current_user: CurrentUser,
     use_cases: FromDishka[HomeworkUseCases],
-    homework_id: int = Query(..., description="ID của bài tập để lấy danh sách bài nộp"),
+    homework_id: int = Query(
+        ..., description="ID của bài tập để lấy danh sách bài nộp"
+    ),
 ):
     """Lấy danh sách các bài nộp của một bài tập cụ thể"""
     result = use_cases.get_all_submissions_by_homework(homework_id, current_user)

@@ -1,6 +1,7 @@
 from datetime import datetime
-from typing import List, Optional
+
 from pydantic import BaseModel
+
 from app.shared.domain.value_objects import UserRef
 
 
@@ -11,21 +12,21 @@ class BonusPointBase(BaseModel):
 
 
 class BonusPointCreate(BonusPointBase):
-    user_ids: List[int]
+    user_ids: list[int]
 
 
 class BonusPointUpdate(BaseModel):
-    points: Optional[int] = None
-    reason: Optional[str] = None
-    date: Optional[datetime] = None
+    points: int | None = None
+    reason: str | None = None
+    date: datetime | None = None
 
 
 class BonusPointResponse(BonusPointBase):
     id: int
     user_id: int
-    owner: Optional[UserRef] = None
-    creator: Optional[UserRef] = None
-    updater: Optional[UserRef] = None
+    owner: UserRef | None = None
+    creator: UserRef | None = None
+    updater: UserRef | None = None
     created_at: datetime
     updated_at: datetime
 

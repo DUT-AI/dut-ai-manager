@@ -2,7 +2,10 @@
 User Web Controller — provides API routes.
 """
 
-from typing import Annotated, List, Optional
+from typing import Annotated
+
+from dishka.integrations.fastapi import FromDishka, inject
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, UploadFile
 
 from app.core.deps import CurrentUser, PermissionChecker
 from app.core.permissions import UserPermission
@@ -22,18 +25,16 @@ from app.user.application.use_cases import (
     UpdateAvatarUseCase,
     UpdateUserUseCase,
 )
-from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import APIRouter, BackgroundTasks, Depends, Query, UploadFile
 
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-@router.get("", response_model=ApiResponse[List[UserResponse]])
+@router.get("", response_model=ApiResponse[list[UserResponse]])
 @inject
 async def list_users(
     _: Annotated[CurrentUser, Depends(PermissionChecker(UserPermission.READ))],
     uc: FromDishka[GetUserUseCase],
-    keyword: Optional[str] = Query(None, description="Search by name or email"),
+    keyword: str | None = Query(None, description="Search by name or email"),
 ):
     """List all users or search by keyword."""
     if keyword:

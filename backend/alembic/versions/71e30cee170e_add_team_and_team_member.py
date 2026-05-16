@@ -5,6 +5,7 @@ Revises: 34d5f201eeab
 Create Date: 2026-01-09 20:59:42.245000
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
@@ -13,8 +14,8 @@ import sqlmodel
 
 
 # revision identifiers, used by Alembic.
-revision: str = '71e30cee170e'
-down_revision: Union[str, Sequence[str], None] = '34d5f201eeab'
+revision: str = "71e30cee170e"
+down_revision: Union[str, Sequence[str], None] = "34d5f201eeab"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
