@@ -1,8 +1,10 @@
 export const ParticipantStatus = {
-    NOT_JOINED: "chưa tham gia",
-    JOINED: "đã checkin"
+    NOT_JOINED: "NOT_JOINED",
+    JOINED: "JOINED",
+    COMPLETED: "COMPLETED"
 } as const;
 export type ParticipantStatus = typeof ParticipantStatus[keyof typeof ParticipantStatus];
+
 
 export interface MeetingCreate {
     title: string;

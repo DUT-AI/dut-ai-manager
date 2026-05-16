@@ -1,48 +1,48 @@
-import { useState, useMemo, useReducer } from 'react';
-import { motion, AnimatePresence, type Variants } from 'motion/react';
+import { useCreateUser, useDeleteUser, useImportUsers, useRoles, useUpdateUser, useUsers } from '@/hooks';
 import {
-    Table,
-    Button,
-    Card,
-    Tag,
-    Space,
-    Modal,
-    Form,
-    Input,
-    message,
-    Popconfirm,
-    Typography,
-    Select,
-    Badge,
-    Row,
-    Col,
-    Avatar,
-    Upload,
-    Alert,
-    Grid,
-    List
-} from 'antd';
-import {
-    PlusOutlined,
-    EditOutlined,
+    CheckCircleOutlined,
     DeleteOutlined,
-    UserOutlined,
+    DiscordOutlined,
+    EditOutlined,
+    FileExcelOutlined,
+    FilterOutlined,
     LockOutlined,
     MailOutlined,
     PhoneOutlined,
-    CheckCircleOutlined,
-    StopOutlined,
-    SearchOutlined,
-    FilterOutlined,
-    DiscordOutlined,
     PictureOutlined,
+    PlusOutlined,
+    SearchOutlined,
+    StopOutlined,
     UploadOutlined,
-    FileExcelOutlined
+    UserOutlined
 } from '@ant-design/icons';
-import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, useRoles, useImportUsers } from '@/hooks';
+import {
+    Alert,
+    Avatar,
+    Badge,
+    Button,
+    Card,
+    Col,
+    Form,
+    Grid,
+    Input,
+    List,
+    message,
+    Modal,
+    Popconfirm,
+    Row,
+    Select,
+    Space,
+    Table,
+    Tag,
+    Typography,
+    Upload
+} from 'antd';
+import { motion, type Variants } from 'motion/react';
+import { useMemo, useReducer, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { UserPermission } from '../types/rbac.types';
-import type { UserResponse } from '../types/user.types';
+import { UserStatus, type UserResponse } from '../types/user.types';
 
 import { useNavigate } from 'react-router-dom';
 
@@ -95,8 +95,8 @@ const MobileListView = ({ filteredUsers, isLoading, canUpdate, canDelete, onNavi
                                 {record.role_name || 'NO ROLE'}
                             </Tag>
                             <Badge
-                                status={record.status === 'active' ? 'success' : 'error'}
-                                text={<span className={record.status === 'active' ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>{record.status?.toUpperCase()}</span>}
+                                status={record.status === UserStatus.ACTIVE ? 'success' : 'error'}
+                                text={<span className={record.status === UserStatus.ACTIVE ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>{record.status}</span>}
                             />
                         </div>
 
@@ -310,10 +310,10 @@ const UserManagementPage = () => {
             title: 'Trạng thái',
             dataIndex: 'status',
             key: 'status',
-            render: (status: string) => (
+            render: (status: UserStatus) => (
                 <Badge
-                    status={status === 'active' ? 'success' : 'error'}
-                    text={status === 'active' ? <Tag color="success">ACTIVE</Tag> : <Tag color="error">INACTIVE</Tag>}
+                    status={status === UserStatus.ACTIVE ? 'success' : 'error'}
+                    text={status === UserStatus.ACTIVE ? <Tag color="success">ACTIVE</Tag> : <Tag color="error">INACTIVE</Tag>}
                 />
             ),
         },
@@ -382,7 +382,7 @@ const UserManagementPage = () => {
                                 icon={<PlusOutlined />}
                                 onClick={() => {
                                     form.resetFields();
-                                    form.setFieldsValue({ status: 'active' });
+                                    form.setFieldsValue({ status: UserStatus.ACTIVE });
                                     dispatch({ type: 'OPEN_USER_MODAL' });
                                 }}
                                 className="flex-1 md:flex-none bg-linear-to-r from-[#667eea] to-[#764ba2] border-none shadow-md h-10 font-semibold"
@@ -431,8 +431,8 @@ const UserManagementPage = () => {
                                 className="w-full"
                                 suffixIcon={<FilterOutlined />}
                             >
-                                <Option value="active">Active</Option>
-                                <Option value="inactive">Inactive</Option>
+                                <Option value={UserStatus.ACTIVE}>Active</Option>
+                                <Option value={UserStatus.INACTIVE}>Inactive</Option>
                             </Select>
                         </Col>
                         {(searchText || filterRole || filterStatus) && (
@@ -538,10 +538,10 @@ const UserManagementPage = () => {
                     <div className="grid grid-cols-2 gap-4">
                         <Form.Item name="status" label="Account Status" rules={[{ required: true }]}>
                             <Select>
-                                <Option value="active">
+                                <Option value={UserStatus.ACTIVE}>
                                     <Space><CheckCircleOutlined className="text-green-500" />Active</Space>
                                 </Option>
-                                <Option value="inactive">
+                                <Option value={UserStatus.INACTIVE}>
                                     <Space><StopOutlined className="text-red-500" />Inactive</Space>
                                 </Option>
                             </Select>

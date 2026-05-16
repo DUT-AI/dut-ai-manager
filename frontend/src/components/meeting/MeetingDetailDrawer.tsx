@@ -29,7 +29,7 @@ export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }
 
     if (!meeting) return null;
 
-    const checkedIn = meeting.participants.filter(p => p.status === ParticipantStatus.JOINED).length;
+    const checkedIn = meeting.participants.filter(p => p.status === ParticipantStatus.JOINED || p.status === ParticipantStatus.COMPLETED).length;
     const total = meeting.participants.length;
     const isOngoing = dayjs().isAfter(dayjs(meeting.start_time)) && dayjs().isBefore(dayjs(meeting.end_time));
     const isEnded = dayjs().isAfter(dayjs(meeting.end_time));
@@ -51,15 +51,31 @@ export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }
             dataIndex: 'status',
             key: 'status',
             render: (status: ParticipantStatus, record: ParticipantResponse) => {
+                const isJoinedOrCompleted = status === ParticipantStatus.JOINED || status === ParticipantStatus.COMPLETED;
                 const isLateNotJoined = status === ParticipantStatus.NOT_JOINED && dayjs().isAfter(dayjs(meeting.start_time).add(5, 'minute'));
-                const isLateJoined = status === ParticipantStatus.JOINED && record.check_in_at && dayjs(record.check_in_at).isAfter(dayjs(meeting.start_time).add(5, 'minute'));
+                const isLateJoined = isJoinedOrCompleted && record.check_in_at && dayjs(record.check_in_at).isAfter(dayjs(meeting.start_time).add(5, 'minute'));
+
+                let tagColor = 'default';
+                let tagIcon = <CloseCircleOutlined />;
+                let tagText = 'Chưa tham gia';
+
+                if (status === ParticipantStatus.COMPLETED) {
+                    tagColor = 'success';
+                    tagIcon = <CheckCircleOutlined />;
+                    tagText = 'Hoàn thành';
+                } else if (status === ParticipantStatus.JOINED) {
+                    tagColor = isLateJoined ? 'warning' : 'green';
+                    tagIcon = <CheckCircleOutlined />;
+                    tagText = isLateJoined ? 'Trễ (Đã có mặt)' : 'Đã checkin';
+                } else if (isLateNotJoined) {
+                    tagColor = 'orange';
+                    tagIcon = <ClockCircleOutlined />;
+                    tagText = 'Trễ (Chưa có mặt)';
+                }
 
                 return (
-                    <Tag
-                        color={status === ParticipantStatus.JOINED ? (isLateJoined ? 'warning' : 'green') : isLateNotJoined ? 'orange' : 'default'}
-                        icon={status === ParticipantStatus.JOINED ? <CheckCircleOutlined /> : isLateNotJoined ? <ClockCircleOutlined /> : <CloseCircleOutlined />}
-                    >
-                        {status === ParticipantStatus.JOINED ? (isLateJoined ? 'Trễ (Đã có mặt)' : 'Đã checkin') : isLateNotJoined ? 'Trễ (Chưa có mặt)' : 'Chưa tham gia'}
+                    <Tag color={tagColor} icon={tagIcon}>
+                        {tagText}
                     </Tag>
                 );
             },

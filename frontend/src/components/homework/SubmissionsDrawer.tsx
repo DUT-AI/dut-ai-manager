@@ -53,14 +53,24 @@ export const SubmissionsDrawer = ({ open, homework, onClose }: Props) => {
 
     const renderStatusTag = (status: HomeworkStatus, isLate: boolean) => {
         let color = 'default';
-        if (isLate) color = 'error';
-        else if (status === HomeworkStatus.SUBMITTED) color = 'processing';
-        else if (status === HomeworkStatus.LeaderChecked) color = 'warning';
-        else if (status === HomeworkStatus.FINISHED) color = 'success';
+        let label = status as string;
+        if (status === HomeworkStatus.NOT_SUBMITTED) {
+            color = 'default';
+            label = 'Chưa nộp';
+        } else if (status === HomeworkStatus.SUBMITTED) {
+            color = 'processing';
+            label = 'Đã nộp';
+        } else if (status === HomeworkStatus.LeaderChecked) {
+            color = 'warning';
+            label = 'Leader Check';
+        } else if (status === HomeworkStatus.FINISHED) {
+            color = 'success';
+            label = 'Hoàn thành';
+        }
 
         return (
             <Space>
-                <Tag color={color}>{status}</Tag>
+                <Tag color={color}>{label}</Tag>
                 {isLate && <Tag color="red">Nộp trễ</Tag>}
             </Space>
         );

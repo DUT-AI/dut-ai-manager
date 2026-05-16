@@ -435,7 +435,7 @@ const MeetingCalendarPage = () => {
 
                                         {positioned.map((pm) => {
                                             const checkedIn = pm.meeting.participants.filter(
-                                                p => p.status === ParticipantStatus.JOINED
+                                                p => p.status === ParticipantStatus.JOINED || p.status === ParticipantStatus.COMPLETED
                                             ).length;
                                             const total = pm.meeting.participants.length;
                                             const isCompact = pm.height < 50;

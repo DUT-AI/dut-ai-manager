@@ -1,10 +1,10 @@
 import type { UserRef } from './activity.types';
 
 export const HomeworkStatus = {
-    NOT_SUBMITTED: "chưa nộp",
-    SUBMITTED: "đã nộp",
-    LeaderChecked: "leader đã check",
-    FINISHED: "finish"
+    NOT_SUBMITTED: "NOT_SUBMITTED",
+    SUBMITTED: "SUBMITTED",
+    LeaderChecked: "LEADER_CHECKED",
+    FINISHED: "FINISHED"
 } as const;
 
 export type HomeworkStatus = typeof HomeworkStatus[keyof typeof HomeworkStatus];

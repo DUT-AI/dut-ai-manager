@@ -19,9 +19,11 @@ import {
   EyeOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
-  CloseCircleOutlined
+  CloseCircleOutlined,
+  WarningOutlined
 } from '@ant-design/icons';
 import { useMyInvoices, useInvoiceDetail } from '@/hooks/useBilling';
+import { useViolations } from '@/hooks';
 import { InvoiceStatus } from '@/types/billing.types';
 import type { InvoiceStatusType } from '@/types/billing.types';
 import dayjs from 'dayjs';
@@ -74,6 +76,19 @@ const InvoicesPage = () => {
     isModalOpen,
     selectedInvoiceId && invoices?.find(i => i.id === selectedInvoiceId)?.status === InvoiceStatus.PENDING ? 5000 : undefined
   );
+
+  const match = detail?.description.match(/tháng\s+(\d{2})\/(\d{4})/i);
+  const month = match ? parseInt(match[1]) : (detail ? dayjs(detail.created_at).month() + 1 : undefined);
+  const year = match ? parseInt(match[2]) : (detail ? dayjs(detail.created_at).year() : undefined);
+
+  const hasViolation = detail?.items.some(item => item.item_type === 'VIOLATION');
+
+  const { data: violations = [], isLoading: isViolationsLoading } = useViolations({
+    userId: detail?.user_id,
+    month,
+    year,
+    enabled: isModalOpen && !!detail && !!hasViolation && !!month && !!year
+  });
 
   useEffect(() => {
     if (detail?.status === InvoiceStatus.PAID && isModalOpen) {
@@ -211,6 +226,38 @@ const InvoicesPage = () => {
                     { title: 'Loại', dataIndex: 'item_type', key: 'item_type', render: (t) => <Tag>{t}</Tag> },
                     { title: 'Tiền', dataIndex: 'amount', key: 'amount', render: (a) => a.toLocaleString() },
                   ]}
+                />
+              </div>
+            )}
+
+            {hasViolation && violations.length > 0 && (
+              <div className="mb-6">
+                <Divider>
+                  <Space className="text-red-500 font-semibold">
+                    <WarningOutlined /> Chi tiết các lỗi vi phạm tháng {month && year ? `${month.toString().padStart(2, '0')}/${year}` : ''}
+                  </Space>
+                </Divider>
+                <Table
+                  dataSource={violations}
+                  loading={isViolationsLoading}
+                  pagination={false}
+                  size="small"
+                  rowKey="id"
+                  columns={[
+                    { 
+                      title: 'Ngày vi phạm', 
+                      dataIndex: 'date', 
+                      key: 'date',
+                      width: 140,
+                      render: (d) => dayjs(d).format('DD/MM/YYYY')
+                    },
+                    { 
+                      title: 'Lý do', 
+                      dataIndex: 'reason', 
+                      key: 'reason' 
+                    },
+                  ]}
+                  className="border border-red-100 rounded-lg overflow-hidden bg-red-50/10"
                 />
               </div>
             )}

@@ -36,6 +36,7 @@ import { zaloService } from '@/services/api/zalo.service';
 import type { BonusPointResponse, ViolationResponse, PermissionRequestResponse } from '../types/activity.types';
 import type { ColumnsType } from 'antd/es/table';
 import { motion, type Variants } from 'motion/react';
+import { UserStatus } from '../types/user.types';
 
 const { Title, Text } = Typography;
 
@@ -249,8 +250,8 @@ const ProfilePage = () => {
                                     <Title level={2} className="!m-0">{user.name}</Title>
                                     <Tag color="blue" className="mt-2 uppercase font-bold">{user.role_name}</Tag>
                                 </div>
-                                <Tag color={user.status === 'active' ? 'success' : 'error'} className="rounded-full px-4 sm:self-start">
-                                    {user.status.toUpperCase()}
+                                <Tag color={user.status === UserStatus.ACTIVE ? 'success' : 'error'} className="rounded-full px-4 sm:self-start">
+                                    {user.status}
                                 </Tag>
                             </div>
                         </div>

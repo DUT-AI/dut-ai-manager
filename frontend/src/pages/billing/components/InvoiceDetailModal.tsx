@@ -1,9 +1,10 @@
 import { Modal, Space, Descriptions, Avatar, Typography, Tag, Table, Spin } from 'antd';
-import { InfoCircleOutlined } from '@ant-design/icons';
+import { InfoCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { InvoiceStatus } from '@/types/billing.types';
 import type { Invoice } from '@/types/billing.types';
 import type { UserResponse } from '@/types/user.types';
+import { useViolations } from '@/hooks';
 
 const { Title, Text } = Typography;
 
@@ -23,6 +24,19 @@ const InvoiceDetailModal = ({
   isMobile
 }: InvoiceDetailModalProps) => {
   const user = users.find(u => u.id === detail?.user_id);
+
+  const match = detail?.description.match(/tháng\s+(\d{2})\/(\d{4})/i);
+  const month = match ? parseInt(match[1]) : (detail ? dayjs(detail.created_at).month() + 1 : undefined);
+  const year = match ? parseInt(match[2]) : (detail ? dayjs(detail.created_at).year() : undefined);
+
+  const hasViolation = detail?.items.some(item => item.item_type === 'VIOLATION');
+
+  const { data: violations = [], isLoading: isViolationsLoading } = useViolations({
+    userId: detail?.user_id,
+    month,
+    year,
+    enabled: isOpen && !!detail && !!hasViolation && !!month && !!year
+  });
 
   return (
     <Modal
@@ -69,8 +83,38 @@ const InvoiceDetailModal = ({
               { title: 'Loại', dataIndex: 'item_type', key: 'item_type' },
               { title: 'Tiền', dataIndex: 'amount', key: 'amount', render: (a) => a.toLocaleString() },
             ]}
-            className="border border-gray-100 rounded-lg overflow-hidden"
+            className="border border-gray-100 rounded-lg overflow-hidden mb-6"
           />
+
+          {hasViolation && violations.length > 0 && (
+            <div>
+              <Title level={5} className="mb-3 text-red-600 flex items-center gap-2">
+                <WarningOutlined /> Chi tiết các lỗi vi phạm tháng {month && year ? `${month.toString().padStart(2, '0')}/${year}` : ''}
+              </Title>
+              <Table
+                dataSource={violations}
+                loading={isViolationsLoading}
+                pagination={false}
+                size="small"
+                rowKey="id"
+                columns={[
+                  { 
+                    title: 'Ngày vi phạm', 
+                    dataIndex: 'date', 
+                    key: 'date',
+                    width: 140,
+                    render: (d) => dayjs(d).format('DD/MM/YYYY')
+                  },
+                  { 
+                    title: 'Lý do', 
+                    dataIndex: 'reason', 
+                    key: 'reason' 
+                  },
+                ]}
+                className="border border-red-100 rounded-lg overflow-hidden bg-red-50/10"
+              />
+            </div>
+          )}
         </div>
       ) : (
         <div className="py-12 flex justify-center"><Spin /></div>

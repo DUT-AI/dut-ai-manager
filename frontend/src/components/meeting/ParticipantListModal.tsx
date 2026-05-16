@@ -30,15 +30,31 @@ export const ParticipantListModal = ({ open, meeting, onCancel }: Props) => {
             dataIndex: 'status',
             key: 'status',
             render: (status: ParticipantStatus, record: ParticipantResponse) => {
+                const isJoinedOrCompleted = status === ParticipantStatus.JOINED || status === ParticipantStatus.COMPLETED;
                 const isLateNotJoined = status === ParticipantStatus.NOT_JOINED && meeting && dayjs().isAfter(dayjs(meeting.start_time).add(5, 'minute'));
-                const isLateJoined = status === ParticipantStatus.JOINED && record.check_in_at && meeting && dayjs(record.check_in_at).isAfter(dayjs(meeting.start_time).add(5, 'minute'));
+                const isLateJoined = isJoinedOrCompleted && record.check_in_at && meeting && dayjs(record.check_in_at).isAfter(dayjs(meeting.start_time).add(5, 'minute'));
                 
+                let tagColor = 'default';
+                let tagIcon = <CloseCircleOutlined />;
+                let tagText = 'CHƯA THAM GIA';
+
+                if (status === ParticipantStatus.COMPLETED) {
+                    tagColor = 'success';
+                    tagIcon = <CheckCircleOutlined />;
+                    tagText = 'HOÀN THÀNH';
+                } else if (status === ParticipantStatus.JOINED) {
+                    tagColor = isLateJoined ? 'warning' : 'green';
+                    tagIcon = <CheckCircleOutlined />;
+                    tagText = isLateJoined ? 'TRỄ (ĐÃ CÓ MẶT)' : 'ĐÃ CHECKIN';
+                } else if (isLateNotJoined) {
+                    tagColor = 'orange';
+                    tagIcon = <ClockCircleOutlined />;
+                    tagText = 'TRỄ (CHƯA CÓ MẶT)';
+                }
+
                 return (
-                    <Tag 
-                        color={status === ParticipantStatus.JOINED ? (isLateJoined ? 'warning' : 'green') : isLateNotJoined ? 'orange' : 'default'} 
-                        icon={status === ParticipantStatus.JOINED ? <CheckCircleOutlined /> : isLateNotJoined ? <ClockCircleOutlined /> : <CloseCircleOutlined />}
-                    >
-                        {status === ParticipantStatus.JOINED ? (isLateJoined ? 'TRỄ (ĐÃ CÓ MẶT)' : 'ĐÃ CHECKIN') : isLateNotJoined ? 'TRỄ (CHƯA CÓ MẶT)' : 'CHƯA THAM GIA'}
+                    <Tag color={tagColor} icon={tagIcon}>
+                        {tagText}
                     </Tag>
                 );
             },

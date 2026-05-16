@@ -133,7 +133,12 @@ export const SubmitHomeworkModal = ({ open, homework, onSuccess, onCancel }: Pro
                         <Card size="small" className="mb-4 border-blue-200 bg-blue-50">
                             <Statistic
                                 title="Trạng thái hiện tại"
-                                value={mySubmission.status}
+                                value={
+                                    mySubmission.status === HomeworkStatus.NOT_SUBMITTED ? 'Chưa nộp' :
+                                    mySubmission.status === HomeworkStatus.SUBMITTED ? 'Đã nộp' :
+                                    mySubmission.status === HomeworkStatus.LeaderChecked ? 'Leader Check' :
+                                    mySubmission.status === HomeworkStatus.FINISHED ? 'Hoàn thành' : mySubmission.status
+                                }
                                 valueStyle={{ fontSize: 16, color: '#1890ff' }}
                             />
                             <div className="mt-2">
