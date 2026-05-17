@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Form, Input, Button, Card, Typography, message, Flex } from 'antd';
+import { Form, Input, Button, Card, Typography, message, Flex, Modal } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { authService } from '../services/api/auth.service';
 import { useAuth } from '../context/AuthContext';
@@ -17,6 +17,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     const { login } = useAuth();
     const [loading, setLoading] = useState(false);
     const [messageApi, contextHolder] = message.useMessage();
+    const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
+    const [forgotLoading, setForgotLoading] = useState(false);
+    const [forgotForm] = Form.useForm();
 
     const onFinish = async (values: LoginRequest) => {
         setLoading(true);
@@ -35,6 +38,25 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             messageApi.error(errorMessage);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const onForgotFinish = async (values: { email: string }) => {
+        setForgotLoading(true);
+        try {
+            const response = await authService.forgotPassword(values.email);
+            if (response.is_success) {
+                messageApi.success('Chúng tôi đã gửi mật khẩu mới vào email của bạn. Vui lòng kiểm tra!');
+                setIsForgotModalOpen(false);
+                forgotForm.resetFields();
+            } else {
+                messageApi.error(response.message || 'Có lỗi xảy ra khi khôi phục mật khẩu.');
+            }
+        } catch (error: any) {
+            const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi khôi phục mật khẩu.';
+            messageApi.error(errorMessage);
+        } finally {
+            setForgotLoading(false);
         }
     };
 
@@ -99,7 +121,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                             <Form.Item
                                 name="password"
                                 rules={[{ required: true, message: 'Please enter your password' }]}
-                                className="mb-6"
+                                className="mb-2"
                             >
                                 <Input.Password
                                     prefix={<LockOutlined className="text-[#667eea]" />}
@@ -107,6 +129,16 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                                     className="rounded-lg h-12 border-gray-200"
                                 />
                             </Form.Item>
+
+                            <div style={{ textAlign: 'right', marginBottom: '24px' }}>
+                                <Button
+                                    type="link"
+                                    onClick={() => setIsForgotModalOpen(true)}
+                                    className="text-[#667eea] p-0 font-medium hover:text-[#764ba2]"
+                                >
+                                    Quên mật khẩu?
+                                </Button>
+                            </div>
 
                             <Form.Item className="mb-0">
                                 <Button
@@ -123,6 +155,60 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                     </Flex>
                 </Card>
             </div>
+
+            <Modal
+                title={
+                    <Title level={4} style={{ margin: 0, textAlign: 'center', color: '#1a1a2e' }}>
+                        Khôi phục mật khẩu
+                    </Title>
+                }
+                open={isForgotModalOpen}
+                onCancel={() => {
+                    setIsForgotModalOpen(false);
+                    forgotForm.resetFields();
+                }}
+                footer={null}
+                centered
+                width={400}
+            >
+                <div style={{ padding: '12px 0' }}>
+                    <Text type="secondary" style={{ display: 'block', textAlign: 'center', marginBottom: '24px' }}>
+                        Nhập email tài khoản của bạn. Hệ thống sẽ tạo mật khẩu mới và gửi trực tiếp qua email.
+                    </Text>
+                    <Form
+                        form={forgotForm}
+                        onFinish={onForgotFinish}
+                        layout="vertical"
+                        size="large"
+                    >
+                        <Form.Item
+                            name="email"
+                            rules={[
+                                { required: true, message: 'Vui lòng nhập email!' },
+                                { type: 'email', message: 'Email không hợp lệ!' },
+                            ]}
+                        >
+                            <Input
+                                prefix={<UserOutlined className="text-[#667eea]" />}
+                                placeholder="Email tài khoản"
+                                className="rounded-lg h-12 border-gray-200"
+                            />
+                        </Form.Item>
+
+                        <Form.Item style={{ marginBottom: 0 }}>
+                            <Button
+                                type="primary"
+                                htmlType="submit"
+                                loading={forgotLoading}
+                                block
+                                className="h-12 rounded-lg bg-linear-to-r from-[#667eea] to-[#764ba2] border-none text-base font-semibold shadow-md hover:opacity-90 transform transition hover:-translate-y-0.5"
+                            >
+                                Gửi yêu cầu
+                            </Button>
+                        </Form.Item>
+                    </Form>
+                </div>
+            </Modal>
         </>
     );
 };

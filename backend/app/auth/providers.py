@@ -6,13 +6,16 @@ from app.auth.application.use_cases import (
     AuthenticateUseCase,
     ChangePasswordUseCase,
     CreateAccountUseCase,
+    ForgotPasswordUseCase,
     RefreshTokenUseCase,
 )
 from app.auth.application.user_event_handler import UserAccountHandler
 from app.auth.domain.service import AuthService
 from app.auth.infrastructure.repository import AccountRepository
+from app.shared.infrastructure.discord_service import DiscordService
 from app.shared.infrastructure.email_service import EmailService
 from app.user.infrastructure.repository import UserRepository
+from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
 
 
 class AuthModuleProvider(Provider):
@@ -62,6 +65,20 @@ class AuthModuleProvider(Provider):
 
     @provide
     def get_account_notif_handler(
-        self, email_service: EmailService
+        self,
+        email_service: EmailService,
+        discord_service: DiscordService,
+        zalo_bot: ZaloBotClient,
+        user_repo: UserRepository,
     ) -> AccountNotificationHandler:
-        return AccountNotificationHandler(email_service)
+        return AccountNotificationHandler(
+            email_service, discord_service, zalo_bot, user_repo
+        )
+
+    @provide
+    def forgot_password_uc(
+        self,
+        account_repo: AccountRepository,
+        user_repo: UserRepository,
+    ) -> ForgotPasswordUseCase:
+        return ForgotPasswordUseCase(account_repo, user_repo)

@@ -6,3 +6,10 @@ class AccountCreated(DomainEvent):
     email: str
     name: str
     password: str
+
+
+class ForgotPasswordRequested(DomainEvent):
+    user_id: int
+    email: str
+    name: str
+    password: str

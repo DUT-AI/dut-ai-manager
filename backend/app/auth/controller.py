@@ -8,6 +8,7 @@ from loguru import logger
 
 from app.auth.application.dtos import (
     ChangePasswordRequest,
+    ForgotPasswordRequest,
     LoginRequest,
     RefreshTokenRequest,
     TokenResponse,
@@ -16,6 +17,7 @@ from app.auth.application.dtos import (
 from app.auth.application.use_cases import (
     AuthenticateUseCase,
     ChangePasswordUseCase,
+    ForgotPasswordUseCase,
     RefreshTokenUseCase,
 )
 from app.core.config import settings
@@ -139,3 +141,16 @@ async def logout(response: Response):
     response.delete_cookie(key="access_token")
     response.delete_cookie(key="refresh_token")
     return ApiResponse.success(message="Successfully logged out", data=None)
+
+
+@router.post("/forgot-password", response_model=ApiResponse)
+@inject
+async def forgot_password(
+    request: ForgotPasswordRequest,
+    uc: FromDishka[ForgotPasswordUseCase],
+):
+    """Reset password and send reset email."""
+    await uc.execute(request.email)
+    return ApiResponse.success(
+        message="Chúng tôi đã gửi mật khẩu mới vào email của bạn", data=None
+    )

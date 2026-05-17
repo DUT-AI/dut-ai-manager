@@ -2,7 +2,7 @@ from dishka import AsyncContainer
 
 from app.auth.account_notification_handler import AccountNotificationHandler
 from app.auth.application.user_event_handler import UserAccountHandler
-from app.auth.domain.events import AccountCreated
+from app.auth.domain.events import AccountCreated, ForgotPasswordRequested
 from app.homework.application.event_handlers import (
     HomeworkGradedNotificationHandler,
     HomeworkNotificationHandler,
@@ -43,6 +43,7 @@ async def bootstrap_events(container: AsyncContainer):
     # Auth Module
     EventBus.subscribe(UserCreated, UserAccountHandler)
     EventBus.subscribe(AccountCreated, AccountNotificationHandler)
+    EventBus.subscribe(ForgotPasswordRequested, AccountNotificationHandler)
 
     # Violation Module
     EventBus.subscribe(PermissionRequestCreated, PermissionViolationHandler)

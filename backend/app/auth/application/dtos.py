@@ -57,3 +57,9 @@ class UserReponseMe(BaseModel):
     avatar_url: str | None = None
     role_name: str | None = None
     permissions: list[str]
+
+
+class ForgotPasswordRequest(BaseModel):
+    """Forgot password request schema"""
+
+    email: EmailStr

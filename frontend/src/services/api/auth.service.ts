@@ -35,4 +35,9 @@ export const authService = {
     });
     return response.data;
   },
+
+  forgotPassword: async (email: string): Promise<ApiResponse<null>> => {
+    const response = await axiosInstance.post<ApiResponse<null>>('/auth/forgot-password', { email });
+    return response.data;
+  },
 };
