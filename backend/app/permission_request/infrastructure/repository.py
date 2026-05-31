@@ -3,6 +3,7 @@ from datetime import date
 from sqlalchemy import desc, extract, func, select
 from sqlalchemy.orm import Session, joinedload
 
+from app.meeting.infrastructure.model import Meeting
 from app.permission_request.domain.entity import PermissionRequest as DomainEntity
 from app.permission_request.domain.value_objects import RequestCategory
 from app.permission_request.infrastructure.model import PermissionRequest as ORMModel
@@ -149,11 +150,15 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         if not user_ids:
             return set()
 
-        stmt = select(ORMModel.created_by).where(
-            ORMModel.created_by.in_(user_ids),
-            ORMModel.category == category,
-            ORMModel.is_deleted == False,
-            func.date(ORMModel.created_at) == target_date,
+        stmt = (
+            select(ORMModel.created_by)
+            .join(Meeting, ORMModel.meeting_id == Meeting.id)
+            .where(
+                ORMModel.created_by.in_(user_ids),
+                ORMModel.category == category,
+                ORMModel.is_deleted == False,
+                func.date(Meeting.start_time) == target_date,
+            )
         )
 
         rows = self.session.scalars(stmt).unique().all()

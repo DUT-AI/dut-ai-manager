@@ -2,7 +2,7 @@ from datetime import date
 from typing import Annotated
 
 from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import APIRouter, File, Form, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 from fastapi.responses import StreamingResponse
 
 from app.core.deps import CurrentUser, hasPermission
@@ -26,7 +26,7 @@ from app.meeting.schemas import (
     MeetingUpdate,
     ParticipantResponse,
 )
-from app.shared.application.response import ApiResponse
+from app.shared.application.response import ApiResponse, BadRequestException
 from app.shared.infrastructure.sse import sse_broadcaster
 from app.utils.text import remove_vietnamese_tones
 
@@ -98,6 +98,21 @@ async def get_meeting(
     )
 
 
+@inject
+async def check_meeting_ownership(
+    meeting_id: int,
+    current_user: CurrentUser,
+    uc: FromDishka[GetMeetingsUseCase],
+):
+    """Kiểm tra xem người dùng hiện tại có quyền sở hữu cuộc họp (hoặc là Admin) không"""
+    meeting = uc.get_by_id(meeting_id)
+    if current_user.role_name != "admin" and meeting.created_by != current_user.id:
+        raise BadRequestException(
+            message="Bạn không có quyền chỉnh sửa hoặc xóa buổi họp này",
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+
+
 @router.put("/{meeting_id}", response_model=ApiResponse[MeetingResponse])
 @inject
 async def update_meeting(
@@ -105,6 +120,7 @@ async def update_meeting(
     data: MeetingUpdate,
     uc: FromDishka[UpdateMeetingUseCase],
     _current_user: Annotated[CurrentUser, hasPermission(MeetingPermission.UPDATE)],
+    _: Annotated[None, Depends(check_meeting_ownership)],
 ):
     """Cập nhật thông tin buổi họp"""
     meeting = await uc.execute(meeting_id=meeting_id, data=data)
@@ -119,7 +135,8 @@ async def update_meeting(
 async def delete_meeting(
     meeting_id: int,
     uc: FromDishka[DeleteMeetingUseCase],
-    _: Annotated[CurrentUser, hasPermission(MeetingPermission.DELETE)],
+    _current_user: Annotated[CurrentUser, hasPermission(MeetingPermission.DELETE)],
+    _: Annotated[None, Depends(check_meeting_ownership)],
 ):
     """Xóa buổi họp"""
     result = uc.execute(meeting_id=meeting_id)
