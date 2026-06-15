@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Tag, Tooltip } from 'antd';
-import { TrophyOutlined, StarOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { TrophyOutlined, StarOutlined, ExclamationCircleOutlined, StopOutlined } from '@ant-design/icons';
 
 interface UserTitleBadgeProps {
   userId: number;
@@ -22,6 +22,11 @@ const TITLE_CONFIG: Record<string, { color: string; icon: React.ReactNode; descr
     color: 'red',
     icon: <ExclamationCircleOutlined />,
     description: 'Hoạt động kém - vi phạm nhiều hoặc vắng mặt',
+  },
+  'Chưa hoạt động': {
+    color: 'default',
+    icon: <StopOutlined />,
+    description: 'Chưa có hoạt động nào trong tháng',
   },
 };
 

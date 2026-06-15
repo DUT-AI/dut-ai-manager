@@ -15,6 +15,10 @@ from app.report.application.participation_use_cases import (
     GetParticipationLeaderboardUseCase,
     ParticipationStats,
 )
+from app.report.application.trend_use_cases import (
+    GetActivityTrendUseCase,
+    ActivityTrendItem,
+)
 from app.report.application.use_cases import (
     GetBonusPointReportUseCase,
     GetDailySummaryUseCase,
@@ -152,3 +156,16 @@ async def get_participation_leaderboard(
 ):
     """Bảng xếp hạng mức độ tham gia trong tháng."""
     return ApiResponse.success(data=uc.execute(month, year))
+
+
+@router.get("/activity-trend", response_model=ApiResponse[list[ActivityTrendItem]])
+@inject
+async def get_activity_trend(
+    uc: FromDishka[GetActivityTrendUseCase],
+    _current_user: CurrentUser,
+    month: int = Query(..., description="Month (1-12)"),
+    year: int = Query(..., description="Year"),
+    mode: str = Query("week", description="Aggregation mode: 'week' or 'month'"),
+):
+    """Lấy dữ liệu xu hướng hoạt động (điểm cộng + vi phạm) theo tuần hoặc tháng."""
+    return ApiResponse.success(data=uc.execute(month, year, mode))

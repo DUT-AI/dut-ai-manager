@@ -19,6 +19,7 @@ import { MeetingDetailDrawer } from '@/components/meeting/MeetingDetailDrawer';
 import { MeetingModal } from '@/components/meeting/MeetingModal';
 import { useUsers } from '@/hooks/useUsers';
 import { motion, type Variants } from 'motion/react';
+import { useCapacity } from '@/context/CapacityContext';
 
 dayjs.extend(isoWeek);
 
@@ -115,6 +116,10 @@ const MeetingCalendarPage = () => {
     const [modalInitialDate, setModalInitialDate] = useState<Dayjs>(() => dayjs());
     const [modalState, dispatch] = useReducer(meetingModalReducer, meetingModalInitialState);
     const { selectedMeeting, drawerOpen, modalOpen, editingMeeting } = modalState;
+
+    // Capacity overload check
+    const { capacityStatus } = useCapacity();
+    const isOverload = capacityStatus === 'overload';
 
 
 
@@ -319,7 +324,13 @@ const MeetingCalendarPage = () => {
                             </Button>
                             <Button icon={<RightOutlined />} onClick={goToNextWeek} />
                         </Button.Group>
-                        <Button type="primary" icon={<PlusOutlined />} onClick={() => handleCreate(dayjs())}>
+                        <Button
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            onClick={() => handleCreate(dayjs())}
+                            disabled={isOverload}
+                            title={isOverload ? 'Phòng lab đang quá tải, không thể tạo lịch mới' : undefined}
+                        >
                             Tạo mới
                         </Button>
                     </div>
@@ -370,10 +381,10 @@ const MeetingCalendarPage = () => {
                                     <div
                                         role="button"
                                         tabIndex={0}
-                                        className={`h-16 flex flex-col items-center justify-center border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50 ${today ? 'bg-indigo-50' : ''
+                                        className={`h-16 flex flex-col items-center justify-center border-b border-gray-100 transition-colors ${isOverload ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-gray-50'} ${today ? 'bg-indigo-50' : ''
                                             }`}
-                                        onClick={() => handleCreate(day)}
-                                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCreate(day); }}
+                                        onClick={() => !isOverload && handleCreate(day)}
+                                        onKeyDown={(e) => { if (!isOverload && (e.key === 'Enter' || e.key === ' ')) handleCreate(day); }}
                                     >
                                         <Text
                                             className={`text-xs font-semibold uppercase tracking-wide ${today ? '!text-indigo-600' : '!text-gray-500'
@@ -419,7 +430,7 @@ const MeetingCalendarPage = () => {
                                         )}
 
                                         {/* Meeting blocks */}
-                                        {positioned.length === 0 && (
+                                        {positioned.length === 0 && !isOverload && (
                                             <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                                                 <Button
                                                     type="dashed"

@@ -4,6 +4,7 @@ from loguru import logger
 from pydantic import BaseModel
 
 from app.bonus_point.infrastructure.repository import BonusPointRepository
+from app.report.application.participation_use_cases import GetParticipationAnalysisUseCase
 from app.shared.application.response import UserInfoResponse
 from app.user.domain.monthly_stats import MonthlyUserStats
 from app.user.infrastructure.monthly_stats_repository import MonthlyUserStatsRepository
@@ -59,8 +60,8 @@ class GetMonthlyTitlesReportUseCase:
                 )
             )
 
-        # Sắp xếp: Tích cực trước, rồi Bình thường, Hoạt động kém cuối
-        title_order = {"Tích cực": 0, "Bình thường": 1, "Hoạt động kém": 2}
+        # Sắp xếp: Tích cực trước, rồi Bình thường, Hoạt động kém, Chưa hoạt động cuối
+        title_order = {"Tích cực": 0, "Bình thường": 1, "Hoạt động kém": 2, "Chưa hoạt động": 3}
         report_items.sort(
             key=lambda x: title_order.get(x.title or "", 99), reverse=False
         )
@@ -77,11 +78,13 @@ class AssignMonthlyTitlesUseCase:
         bonus_repo: BonusPointRepository,
         violation_repo: ViolationRepository,
         user_repo: UserRepository,
+        analysis_uc: GetParticipationAnalysisUseCase,
     ):
         self.stats_repo = stats_repo
         self.bonus_repo = bonus_repo
         self.violation_repo = violation_repo
         self.user_repo = user_repo
+        self.analysis_uc = analysis_uc
 
     def execute(
         self,
@@ -119,11 +122,17 @@ class AssignMonthlyTitlesUseCase:
                     if "vắng" in v.reason.lower() or "không" in v.reason.lower()
                 )
 
+                participation_stats = self.analysis_uc.execute(user.id, target_month, target_year)
+                total_hours = participation_stats.total_hours
+                attendance_bonus = participation_stats.attendance_bonus_points
+
+                total_bonus = sum(bp.points for bp in bonus_points) + attendance_bonus
+
                 stats = MonthlyUserStats(
                     user_id=user.id,
                     month=target_month,
                     year=target_year,
-                    total_activity_hours=float(total_bonus),
+                    total_activity_hours=total_hours,
                     total_bonus_points=total_bonus,
                     late_count=late_count,
                     absent_count=absent_count,

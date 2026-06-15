@@ -13,6 +13,7 @@ from app.report.application.participation_use_cases import (
     GetParticipationAnalysisUseCase,
     GetParticipationLeaderboardUseCase,
 )
+from app.report.application.trend_use_cases import GetActivityTrendUseCase
 from app.report.application.use_cases import (
     GetBonusPointReportUseCase,
     GetDailySummaryUseCase,
@@ -104,9 +105,10 @@ class ReportModuleProvider(Provider):
         bonus_repo: BonusPointRepository,
         violation_repo: ViolationRepository,
         user_repo: UserRepository,
+        analysis_uc: GetParticipationAnalysisUseCase,
     ) -> AssignMonthlyTitlesUseCase:
         return AssignMonthlyTitlesUseCase(
-            stats_repo, bonus_repo, violation_repo, user_repo
+            stats_repo, bonus_repo, violation_repo, user_repo, analysis_uc
         )
 
     @provide
@@ -125,3 +127,12 @@ class ReportModuleProvider(Provider):
         analysis_uc: GetParticipationAnalysisUseCase,
     ) -> GetParticipationLeaderboardUseCase:
         return GetParticipationLeaderboardUseCase(user_repo, stats_repo, analysis_uc)
+
+    @provide
+    def get_activity_trend_uc(
+        self,
+        bonus_point_repo: BonusPointRepository,
+        violation_repo: ViolationRepository,
+        participant_repo: ParticipantRepository,
+    ) -> GetActivityTrendUseCase:
+        return GetActivityTrendUseCase(bonus_point_repo, violation_repo, participant_repo)

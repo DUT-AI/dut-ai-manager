@@ -46,6 +46,8 @@ export interface ParticipationStats {
         avatar_url?: string;
     } | null;
     total_points: number;
+    total_bonus_points: number;
+    violation_count: number;
     month: number;
     year: number;
     total_sessions: number;
@@ -56,4 +58,10 @@ export interface ParticipationStats {
     on_time_rate: number;
     late_count: number;
     absent_count: number;
+}
+
+export interface ActivityTrendItem {
+    label: string;
+    total_bonus_points: number;
+    violation_count: number;
 }
