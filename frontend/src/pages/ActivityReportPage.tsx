@@ -18,14 +18,15 @@ import {
     WarningOutlined,
     UserOutlined,
     BarChartOutlined,
-    CrownOutlined
+    CrownOutlined,
+    CalendarOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { reportService } from '@/services/api/report.service';
-import type { ReportItem, ReportResponse, TitleReportItem } from '@/types/report.types';
+import type { ReportItem, ReportResponse, TitleReportItem, ParticipationStats } from '@/types/report.types';
 import type { ColumnsType } from 'antd/es/table';
 import { useDebounce } from '@/hooks/useDebounce';
-import { motion, type Variants } from 'motion/react';
+import { motion, AnimatePresence, type Variants } from 'motion/react';
 import { TitleBadge } from '@/components/UserTitleBadge';
 
 const { Title, Text } = Typography;
@@ -173,13 +174,21 @@ const QuickStats = ({ data }: { data: any[] }) => {
 const LeaderboardHero = ({ data }: { data: any[] }) => {
     // Sort by points to ensure correct ranking even if API returns unsorted
     const top3 = [...data].sort((a, b) => (b.total_points || 0) - (a.total_points || 0)).slice(0, 3);
-    if (top3.length === 0) return null;
 
     return (
-        <div className="bg-gradient-to-br from-orange-500 to-amber-400 rounded-3xl p-6 md:p-8 mb-8 text-white shadow-xl shadow-orange-200 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-8 opacity-10">
-                <CrownOutlined style={{ fontSize: '120px' }} />
-            </div>
+        <AnimatePresence>
+            {top3.length > 0 && (
+                <motion.div 
+                    key="leaderboard-hero"
+                    initial={{ opacity: 0, y: -20, height: 0 }}
+                    animate={{ opacity: 1, y: 0, height: 'auto' }}
+                    exit={{ opacity: 0, y: -20, height: 0 }}
+                    transition={{ duration: 0.4, ease: "easeInOut" }}
+                    className="bg-gradient-to-br from-orange-500 to-amber-400 rounded-3xl p-6 md:p-8 mb-8 text-white shadow-xl shadow-orange-200 relative overflow-hidden"
+                >
+                    <div className="absolute top-0 right-0 p-8 opacity-10">
+                        <CrownOutlined style={{ fontSize: '120px' }} />
+                    </div>
             
             <div className="relative z-10">
                 <Title level={4} className="text-white opacity-80 mb-6 uppercase tracking-wider text-xs font-bold">Bảng vinh danh tháng này</Title>
@@ -234,7 +243,9 @@ const LeaderboardHero = ({ data }: { data: any[] }) => {
                     )}
                 </div>
             </div>
-        </div>
+        </motion.div>
+        )}
+        </AnimatePresence>
     );
 };
 
@@ -329,8 +340,9 @@ const ActivityReportPage = () => {
     const [data, setData] = useState<ReportItem[]>([]);
     const [titleData, setTitleData] = useState<TitleReportItem[]>([]);
     const [leaderboardData, setLeaderboardData] = useState<TitleReportItem[]>([]);
+    const [participationData, setParticipationData] = useState<ParticipationStats[]>([]);
 
-    const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(null);
+    const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(dayjs());
     const [searchText, setSearchText] = useState('');
     const debouncedSearchText = useDebounce(searchText, 500);
 
@@ -359,6 +371,11 @@ const ActivityReportPage = () => {
             if (activeTab === 'title') {
                 // If on title tab, we use the already fetched or newly fetched leaderboard data
                 await fetchLeaderboardData();
+            } else if (activeTab === 'participation') {
+                const targetMonth = month || dayjs().month() + 1;
+                const targetYear = year || dayjs().year();
+                const participation = await reportService.getParticipationLeaderboard(targetMonth, targetYear);
+                setParticipationData(participation || []);
             } else {
                 let response: ReportResponse;
                 if (activeTab === 'bonus') {
@@ -523,8 +540,8 @@ const ActivityReportPage = () => {
                                                 <Space>
                                                     <Avatar src={item.user?.avatar_url} icon={<UserOutlined />} />
                                                     <div className="flex flex-col">
-                                                        <span>{item.user?.name}</span>
-                                                        <span className="text-xs text-gray-500">{item.user?.email}</span>
+                                                        <span>{item.user?.name || `Thành viên #${item.user?.id || '?'}`}</span>
+                                                        <span className="text-xs text-gray-500">{item.user?.email || 'Chưa cập nhật email'}</span>
                                                     </div>
                                                 </Space>
                                             )},
@@ -536,6 +553,41 @@ const ActivityReportPage = () => {
                                         ]}
                                         dataSource={titleData}
                                         rowKey={(record) => record.user?.id}
+                                        loading={loading}
+                                        pagination={{ pageSize: 10 }}
+                                        className="p-4"
+                                    />
+                                )
+                            },
+                            {
+                                key: 'participation',
+                                label: (
+                                    <Space>
+                                        <CalendarOutlined />
+                                        <span>Điểm danh</span>
+                                    </Space>
+                                ),
+                                children: (
+                                    <Table
+                                        columns={[
+                                            { title: 'Xếp hạng', key: 'rank', render: (_, __, index) => <RankBadge rank={index + 1} />, width: 80 },
+                                            { title: 'Thành viên', key: 'user', render: (item: ParticipationStats) => (
+                                                <Space>
+                                                    <Avatar src={item.user?.avatar_url} icon={<UserOutlined />} />
+                                                    <div className="flex flex-col">
+                                                        <span>{item.user?.name || `Thành viên #${item.user_id}`}</span>
+                                                        <span className="text-xs text-gray-500">{item.user?.email || 'Chưa cập nhật email'}</span>
+                                                    </div>
+                                                </Space>
+                                            )},
+                                            { title: 'Giờ hoạt động', key: 'hours', render: (item: ParticipationStats) => item.total_sessions === 0 ? <Tag>Chưa sinh hoạt</Tag> : <Tag color="blue">{item.total_hours}h</Tag> },
+                                            { title: 'Buổi tham gia', key: 'sessions', render: (item: ParticipationStats) => item.total_sessions === 0 ? <Tag>Chưa sinh hoạt</Tag> : <Tag>{item.total_sessions} buổi</Tag> },
+                                            { title: 'Chuỗi (Streak)', key: 'streak', render: (item: ParticipationStats) => item.total_sessions === 0 ? <Tag>Chưa sinh hoạt</Tag> : <Tag color="orange">🔥 {item.longest_streak}</Tag> },
+                                            { title: 'Đúng giờ', key: 'ontime', render: (item: ParticipationStats) => item.total_sessions === 0 ? <Tag>Chưa sinh hoạt</Tag> : <Tag color={item.on_time_rate >= 0.8 ? "success" : "warning"}>{(item.on_time_rate * 100).toFixed(0)}%</Tag> },
+                                            { title: 'Điểm', key: 'points', render: (item: ParticipationStats) => <span className="font-bold text-orange-500">+{item.total_points}</span> },
+                                        ]}
+                                        dataSource={participationData}
+                                        rowKey={(record) => record.user_id}
                                         loading={loading}
                                         pagination={{ pageSize: 10 }}
                                         className="p-4"

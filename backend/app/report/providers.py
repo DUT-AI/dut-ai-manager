@@ -2,12 +2,16 @@ from dishka import Provider, Scope, provide
 
 from app.bonus_point.infrastructure.repository import BonusPointRepository
 from app.homework.infrastructure.repository import HomeworkSubmissionRepository
-from app.meeting.infrastructure.repository import MeetingRepository
+from app.meeting.infrastructure.repository import MeetingRepository, ParticipantRepository
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
 from app.report.application.title_use_cases import (
     AssignMonthlyTitlesUseCase,
     GetCurrentTitleUseCase,
     GetMonthlyTitlesReportUseCase,
+)
+from app.report.application.participation_use_cases import (
+    GetParticipationAnalysisUseCase,
+    GetParticipationLeaderboardUseCase,
 )
 from app.report.application.use_cases import (
     GetBonusPointReportUseCase,
@@ -104,3 +108,20 @@ class ReportModuleProvider(Provider):
         return AssignMonthlyTitlesUseCase(
             stats_repo, bonus_repo, violation_repo, user_repo
         )
+
+    @provide
+    def get_participation_analysis_uc(
+        self,
+        participant_repo: ParticipantRepository,
+        violation_repo: ViolationRepository,
+    ) -> GetParticipationAnalysisUseCase:
+        return GetParticipationAnalysisUseCase(participant_repo, violation_repo)
+
+    @provide
+    def get_participation_leaderboard_uc(
+        self,
+        user_repo: UserRepository,
+        stats_repo: MonthlyUserStatsRepository,
+        analysis_uc: GetParticipationAnalysisUseCase,
+    ) -> GetParticipationLeaderboardUseCase:
+        return GetParticipationLeaderboardUseCase(user_repo, stats_repo, analysis_uc)

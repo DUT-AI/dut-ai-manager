@@ -5,12 +5,18 @@ Contains business rules and validation for violations.
 """
 
 from datetime import datetime
+from enum import Enum
 
 from pydantic import field_validator
 
 from app.shared.domain.base_entity import BaseEntity
 from app.shared.domain.value_objects import UserRef
 from app.utils.datetime import get_current_utc7_time
+
+class ViolationType(str, Enum):
+    LATE = "LATE"
+    ABSENT = "ABSENT"
+    OTHER = "OTHER"
 
 
 class Violation(BaseEntity):
@@ -57,3 +63,14 @@ class Violation(BaseEntity):
             created_at=get_current_utc7_time(),
             updated_at=get_current_utc7_time(),
         )
+
+    @property
+    def type(self) -> ViolationType:
+        """Phân loại vi phạm dựa trên lý do (dùng cho thống kê/streak)."""
+        r = self.reason.lower()
+        if "trễ" in r:
+            return ViolationType.LATE
+        if "vắng" in r:
+            return ViolationType.ABSENT
+        return ViolationType.OTHER
+

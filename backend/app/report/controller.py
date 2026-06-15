@@ -10,6 +10,11 @@ from app.report.application.title_use_cases import (
     GetMonthlyTitlesReportUseCase,
     TitleReportItem,
 )
+from app.report.application.participation_use_cases import (
+    GetParticipationAnalysisUseCase,
+    GetParticipationLeaderboardUseCase,
+    ParticipationStats,
+)
 from app.report.application.use_cases import (
     GetBonusPointReportUseCase,
     GetDailySummaryUseCase,
@@ -122,3 +127,28 @@ async def get_user_current_title(
     """Lấy danh hiệu hiện tại của user"""
     title = uc.execute(user_id=user_id)
     return ApiResponse.success(data=title)
+
+
+@router.get("/users/{user_id}/participation", response_model=ApiResponse[ParticipationStats])
+@inject
+async def get_participation_analysis(
+    user_id: int,
+    uc: FromDishka[GetParticipationAnalysisUseCase],
+    _current_user: CurrentUser,
+    month: int = Query(...),
+    year: int = Query(...),
+):
+    """Phân tích mức độ tham gia: số lần, giờ, tần suất, streak, tỉ lệ đúng giờ"""
+    return ApiResponse.success(data=uc.execute(user_id, month, year))
+
+
+@router.get("/participation/leaderboard", response_model=ApiResponse[list[ParticipationStats]])
+@inject
+async def get_participation_leaderboard(
+    uc: FromDishka[GetParticipationLeaderboardUseCase],
+    _current_user: CurrentUser,
+    month: int = Query(...),
+    year: int = Query(...),
+):
+    """Bảng xếp hạng mức độ tham gia trong tháng."""
+    return ApiResponse.success(data=uc.execute(month, year))

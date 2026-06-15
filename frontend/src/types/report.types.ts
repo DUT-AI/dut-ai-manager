@@ -36,3 +36,24 @@ export interface TitleReportItem {
     violation_count: number;
     hours: number;
 }
+
+export interface ParticipationStats {
+    user_id: number;
+    user: {
+        id: number;
+        name: string;
+        email: string;
+        avatar_url?: string;
+    } | null;
+    total_points: number;
+    month: number;
+    year: number;
+    total_sessions: number;
+    total_hours: number;
+    weekly_frequency: number;
+    current_streak: number;
+    longest_streak: number;
+    on_time_rate: number;
+    late_count: number;
+    absent_count: number;
+}

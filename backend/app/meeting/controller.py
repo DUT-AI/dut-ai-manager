@@ -211,7 +211,6 @@ async def stream_meeting_events():
 @inject
 async def get_capacity_status(
     use_case: FromDishka[CalculateCurrentCapacityUseCase],
-    _current_user: CurrentUser,
 ):
     """Lấy trạng thái capacity hiện tại"""
     monitor = use_case.execute()
@@ -222,7 +221,6 @@ async def get_capacity_status(
 @inject
 async def get_capacity_forecast(
     use_case: FromDishka[CalculateCurrentCapacityUseCase],
-    _current_user: CurrentUser,
 ):
     """Lấy dự báo 30 phút tới"""
     monitor = use_case.execute()

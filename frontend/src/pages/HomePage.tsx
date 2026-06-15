@@ -8,7 +8,9 @@ import {
     ExclamationCircleOutlined,
     StarOutlined,
     FileTextOutlined,
-    TeamOutlined
+    TeamOutlined,
+    FireOutlined,
+    CheckCircleOutlined
 } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import { motion, type Variants } from "motion/react";
@@ -62,6 +64,12 @@ const HomePage = () => {
         queryFn: () => reportService.getDashboardOverview(date.month() + 1, date.year()),
     });
 
+    const { data: participationData, isLoading: isPartLoading } = useQuery({
+        queryKey: ['participation-analysis', user?.id, date.month(), date.year()],
+        queryFn: () => reportService.getParticipationAnalysis(user!.id, date.month() + 1, date.year()),
+        enabled: !!user?.id,
+    });
+
     const stats = [
         {
             title: "Điểm cộng",
@@ -86,6 +94,33 @@ const HomePage = () => {
             value: data?.unsubmitted_homeworks.length || 0,
             icon: <ClockCircleOutlined className="text-orange-500 text-2xl" />,
             color: "bg-orange-50",
+        },
+    ];
+
+    const partStats = [
+        {
+            title: "Giờ hoạt động",
+            value: participationData ? `${participationData.total_hours}h` : '0h',
+            icon: <ClockCircleOutlined className="text-indigo-500 text-2xl" />,
+            color: "bg-indigo-50",
+        },
+        {
+            title: "Chuỗi kỷ lục",
+            value: participationData ? `🔥 ${participationData.longest_streak}` : '0',
+            icon: <FireOutlined className="text-orange-500 text-2xl" />,
+            color: "bg-orange-50",
+        },
+        {
+            title: "Tỉ lệ đúng giờ",
+            value: participationData ? `${(participationData.on_time_rate * 100).toFixed(0)}%` : '0%',
+            icon: <CheckCircleOutlined className="text-green-500 text-2xl" />,
+            color: "bg-green-50",
+        },
+        {
+            title: "Số buổi tham gia",
+            value: participationData ? `${participationData.total_sessions}` : '0',
+            icon: <TeamOutlined className="text-blue-500 text-2xl" />,
+            color: "bg-blue-50",
         },
     ];
 
@@ -128,6 +163,32 @@ const HomePage = () => {
                                         <Text type="secondary" className="text-xs uppercase font-bold tracking-wider">{stat.title}</Text>
                                         <div className="mt-1">
                                             <Title level={2} className="!m-0 !text-gray-800">{stat.value}</Title>
+                                        </div>
+                                    </div>
+                                    <div className="p-3 bg-white/60 rounded-xl shadow-xs">
+                                        {stat.icon}
+                                    </div>
+                                </div>
+                            </Card>
+                        </motion.div>
+                    </Col>
+                ))}
+            </Row>
+
+            <Title level={5} className="!mb-4 text-gray-500">Tiến độ tham gia tháng này</Title>
+            <Row gutter={[20, 20]} className="mb-10">
+                {partStats.map((stat, index) => (
+                    <Col xs={24} sm={12} lg={6} key={index}>
+                        <motion.div
+                            variants={itemVariants}
+                            whileHover={{ y: -5, transition: { duration: 0.2 } }}
+                        >
+                            <Card bordered={false} className={`${stat.color} shadow-xs rounded-xl overflow-hidden`}>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <Text type="secondary" className="text-xs uppercase font-bold tracking-wider">{stat.title}</Text>
+                                        <div className="mt-1">
+                                            {isPartLoading ? <Spin size="small"/> : <Title level={2} className="!m-0 !text-gray-800">{stat.value}</Title>}
                                         </div>
                                     </div>
                                     <div className="p-3 bg-white/60 rounded-xl shadow-xs">
