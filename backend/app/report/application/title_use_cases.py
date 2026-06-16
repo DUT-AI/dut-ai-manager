@@ -4,13 +4,14 @@ from loguru import logger
 from pydantic import BaseModel
 
 from app.bonus_point.infrastructure.repository import BonusPointRepository
-from app.report.application.participation_use_cases import GetParticipationAnalysisUseCase
 from app.shared.application.response import UserInfoResponse
 from app.user.domain.monthly_stats import MonthlyUserStats
 from app.user.infrastructure.monthly_stats_repository import MonthlyUserStatsRepository
 from app.user.infrastructure.repository import UserRepository
 from app.utils.datetime import get_current_utc7_time
 from app.violation.infrastructure.repository import ViolationRepository
+from app.violation.domain.entity import ViolationType
+from app.report.application.participation_use_cases import GetParticipationAnalysisUseCase
 
 
 class TitleReportItem(BaseModel):
@@ -60,8 +61,8 @@ class GetMonthlyTitlesReportUseCase:
                 )
             )
 
-        # Sắp xếp: Tích cực trước, rồi Bình thường, Hoạt động kém, Chưa hoạt động cuối
-        title_order = {"Tích cực": 0, "Bình thường": 1, "Hoạt động kém": 2, "Chưa hoạt động": 3}
+        # Sắp xếp: Tích cực trước, rồi Bình thường, Hoạt động kém cuối
+        title_order = {"Tích cực": 0, "Bình thường": 1, "Hoạt động kém": 2}
         report_items.sort(
             key=lambda x: title_order.get(x.title or "", 99), reverse=False
         )
@@ -105,35 +106,25 @@ class AssignMonthlyTitlesUseCase:
         for user in users:
             assert user.id is not None
             try:
-                bonus_points = self.bonus_repo.get_by_user_id(
-                    user.id, target_month, target_year
-                )
-                total_bonus = sum(bp.points for bp in bonus_points)
-
                 violations = self.violation_repo.get_by_month(
                     user.id, target_month, target_year
                 )
-                violation_count = len(violations)
+                
+                late_count = sum(1 for v in violations if v.type == ViolationType.LATE)
+                absent_count = sum(1 for v in violations if v.type == ViolationType.ABSENT)
+                violation_count = late_count + absent_count
 
-                late_count = sum(1 for v in violations if "trễ" in v.reason.lower())
-                absent_count = sum(
-                    1
-                    for v in violations
-                    if "vắng" in v.reason.lower() or "không" in v.reason.lower()
-                )
-
-                participation_stats = self.analysis_uc.execute(user.id, target_month, target_year)
-                total_hours = participation_stats.total_hours
-                attendance_bonus = participation_stats.attendance_bonus_points
-
-                total_bonus = sum(bp.points for bp in bonus_points) + attendance_bonus
-
+                # Lấy số giờ hoạt động để tính điểm cộng
+                analysis = self.analysis_uc.execute(user.id, target_month, target_year)
+                total_hours = analysis.total_hours
+                attendance_bonus = int(total_hours) # Cứ 60 phút hoạt động liên tục được 1 điểm
+                
                 stats = MonthlyUserStats(
                     user_id=user.id,
                     month=target_month,
                     year=target_year,
                     total_activity_hours=total_hours,
-                    total_bonus_points=total_bonus,
+                    total_bonus_points=attendance_bonus,
                     late_count=late_count,
                     absent_count=absent_count,
                     violation_count=violation_count,

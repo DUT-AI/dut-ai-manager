@@ -133,6 +133,6 @@ class ReportModuleProvider(Provider):
         self,
         bonus_point_repo: BonusPointRepository,
         violation_repo: ViolationRepository,
-        participant_repo: ParticipantRepository,
+        meeting_repo: MeetingRepository,
     ) -> GetActivityTrendUseCase:
-        return GetActivityTrendUseCase(bonus_point_repo, violation_repo, participant_repo)
+        return GetActivityTrendUseCase(bonus_point_repo, violation_repo, meeting_repo)

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Card,
     Tabs,
@@ -9,6 +9,9 @@ import {
     Tag,
     Avatar,
     Grid,
+    Row,
+    Col,
+    Statistic,
 } from 'antd';
 import {
     SearchOutlined,
@@ -29,10 +32,11 @@ const { useBreakpoint } = Grid;
 
 import { Agentation } from 'agentation';
 
-import { 
-    ResponsiveContainer, 
-    BarChart,
+import {
+    ResponsiveContainer,
+    ComposedChart,
     Bar,
+    Line,
     CartesianGrid,
     XAxis,
     YAxis,
@@ -40,13 +44,17 @@ import {
     Legend
 } from 'recharts';
 
-// --- Custom Tooltip for BarChart ---
 const CustomChartTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
+    
+    const uniquePayload = payload.filter((entry: any, index: number, self: any[]) =>
+        index === self.findIndex((e: any) => e.dataKey === entry.dataKey)
+    );
+
     return (
         <div className="bg-white p-3 rounded-xl shadow-lg border border-gray-100">
             <Text strong className="text-xs block mb-2">{label}</Text>
-            {payload.map((entry: any, idx: number) => (
+            {uniquePayload.map((entry: any, idx: number) => (
                 <div key={idx} className="flex items-center gap-2 text-xs">
                     <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
                     <span className="text-gray-500">{entry.name}:</span>
@@ -57,10 +65,18 @@ const CustomChartTooltip = ({ active, payload, label }: any) => {
     );
 };
 
-// --- TrendChart: BarChart showing monthly aggregation only ---
+const CustomOffsetDot = (props: any) => {
+    const { cx, cy, stroke, value, offset, r, fill, strokeWidth } = props;
+    if (value === null || value === undefined) return null;
+    return (
+        <circle cx={cx + offset} cy={cy} r={r || 4} stroke={stroke} strokeWidth={strokeWidth || 2} fill={fill || "white"} />
+    );
+};
+
 const TrendChart = () => {
     const [allData, setAllData] = useState<ActivityTrendItem[]>([]);
     const [loading, setLoading] = useState(false);
+    const scrollRef = useRef<HTMLDivElement>(null);
 
     const fetchTrend = useCallback(async () => {
         setLoading(true);
@@ -69,7 +85,7 @@ const TrendChart = () => {
             const data = await reportService.getActivityTrend(
                 now.month() + 1,
                 now.year(),
-                'month'
+                'week'
             );
             setAllData(data || []);
         } catch (error) {
@@ -83,70 +99,137 @@ const TrendChart = () => {
         fetchTrend();
     }, [fetchTrend]);
 
+    // Drag to paginate logic
+    const [offset, setOffset] = useState(0);
+    const [isDragging, setIsDragging] = useState(false);
+    const [startX, setStartX] = useState(0);
+
+    const WEEKS_TO_SHOW = 8;
+    const SHIFT_STEP = 4;
+    const maxOffset = Math.max(0, allData.length - WEEKS_TO_SHOW);
+
+    const endIndex = allData.length - offset;
+    const startIndex = Math.max(0, endIndex - WEEKS_TO_SHOW);
+    const currentData = allData.slice(startIndex, endIndex);
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        setIsDragging(true);
+        setStartX(e.pageX);
+    };
+
+    const handleMouseLeave = () => {
+        setIsDragging(false);
+    };
+
+    const handleMouseUp = (e: React.MouseEvent) => {
+        if (!isDragging) return;
+        setIsDragging(false);
+        const walk = e.pageX - startX;
+        
+        if (walk > 50 && offset < maxOffset) {
+            setOffset(prev => Math.min(maxOffset, prev + SHIFT_STEP)); // Swipe Right -> Older
+        } else if (walk < -50 && offset > 0) {
+            setOffset(prev => Math.max(0, prev - SHIFT_STEP)); // Swipe Left -> Newer
+        }
+    };
+
     return (
         <motion.div variants={itemVariants} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-8">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
                 <div>
                     <Title level={5} className="m-0">Xu hướng Hoạt động</Title>
-                    <Text type="secondary" className="text-xs">Theo dõi biến động điểm cộng & vi phạm theo tháng</Text>
+                    <Text type="secondary" className="text-xs">Theo dõi biến động điểm cộng & vi phạm (Vuốt ngang để xem lịch sử 6 tháng)</Text>
                 </div>
             </div>
-            <div className="h-[280px] w-full" style={{ opacity: loading ? 0.5 : 1, transition: 'opacity 0.3s' }}>
+            <div 
+                ref={scrollRef} 
+                className={`h-[280px] w-full overflow-hidden ${isDragging ? 'cursor-grabbing' : 'cursor-grab'} select-none`} 
+                style={{ opacity: loading ? 0.5 : 1, transition: 'opacity 0.3s' }}
+                onMouseDown={handleMouseDown}
+                onMouseLeave={handleMouseLeave}
+                onMouseUp={handleMouseUp}
+            >
                 {allData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={allData} margin={{ top: 5, right: 60, left: 20, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                            <XAxis
-                                dataKey="label"
-                                axisLine={false}
-                                tickLine={false}
-                                tick={{ fontSize: 12, fill: '#94a3b8' }}
-                                dy={10}
-                            />
-                            {/* Left Y-axis: Bonus Points */}
-                            <YAxis
-                                yAxisId="bonus"
-                                orientation="left"
-                                domain={[0, 'dataMax']}
-                                tickFormatter={(v: number) => `+${v}`}
-                                stroke="#22c55e"
-                                axisLine={false}
-                                tickLine={false}
-                                tick={{ fontSize: 11, fill: '#22c55e' }}
-                            />
-                            {/* Right Y-axis: Violations */}
-                            <YAxis
-                                yAxisId="violation"
-                                orientation="right"
-                                domain={[0, 'dataMax']}
-                                stroke="#ef4444"
-                                axisLine={false}
-                                tickLine={false}
-                                tick={{ fontSize: 11, fill: '#ef4444' }}
-                            />
-                            <RechartsTooltip content={<CustomChartTooltip />} />
-                            <Legend
-                                iconType="circle"
-                                wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }}
-                            />
-                            <Bar
-                                yAxisId="bonus"
-                                dataKey="total_bonus_points"
-                                name="Điểm cộng"
-                                fill="#22c55e"
-                                radius={[4, 4, 0, 0]}
-                                barSize={32}
-                            />
-                            <Bar
-                                yAxisId="violation"
-                                dataKey="violation_count"
-                                name="Vi phạm"
-                                fill="#ef4444"
-                                radius={[4, 4, 0, 0]}
-                                barSize={32}
-                            />
-                        </BarChart>
-                    </ResponsiveContainer>
+                    <div style={{ width: '100%', height: '100%', pointerEvents: isDragging ? 'none' : 'auto' }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <ComposedChart data={currentData} margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis
+                                    dataKey="label"
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tick={{ fontSize: 11, fill: '#94a3b8' }}
+                                    dy={10}
+                                />
+                                {/* Left Y-axis: Bonus Points */}
+                                <YAxis
+                                    yAxisId="bonus"
+                                    orientation="left"
+                                    domain={[0, 'dataMax']}
+                                    tickFormatter={(v: number) => `+${v}`}
+                                    stroke="#22c55e"
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tick={{ fontSize: 11, fill: '#22c55e' }}
+                                />
+                                {/* Right Y-axis: Violations */}
+                                <YAxis
+                                    yAxisId="violation"
+                                    orientation="right"
+                                    domain={[0, 'dataMax']}
+                                    stroke="#ef4444"
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tick={{ fontSize: 11, fill: '#ef4444' }}
+                                />
+                                <RechartsTooltip content={<CustomChartTooltip />} />
+                                <Legend
+                                    iconType="circle"
+                                    wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }}
+                                />
+                                <Bar
+                                    yAxisId="bonus"
+                                    dataKey="total_bonus_points"
+                                    name="Điểm cộng"
+                                    fill="#22c55e"
+                                    radius={[4, 4, 0, 0]}
+                                    barSize={20}
+                                />
+                                <Bar
+                                    yAxisId="violation"
+                                    dataKey="violation_count"
+                                    name="Vi phạm"
+                                    fill="#ef4444"
+                                    radius={[4, 4, 0, 0]}
+                                    barSize={20}
+                                />
+                                <Line
+                                    yAxisId="bonus"
+                                    type="monotone"
+                                    dataKey="total_bonus_points"
+                                    name="Điểm cộng"
+                                    className="line-bonus"
+                                    stroke="#16a34a"
+                                    strokeWidth={2}
+                                    dot={<CustomOffsetDot offset={-12} />}
+                                    activeDot={<CustomOffsetDot offset={-12} r={6} stroke="#16a34a" />}
+                                    legendType="none"
+                                />
+                                <Line
+                                    yAxisId="violation"
+                                    type="monotone"
+                                    dataKey="violation_count"
+                                    name="Vi phạm"
+                                    className="line-violation"
+                                    stroke="#dc2626"
+                                    strokeWidth={2}
+                                    dot={<CustomOffsetDot offset={12} />}
+                                    activeDot={<CustomOffsetDot offset={12} r={6} stroke="#dc2626" />}
+                                    legendType="none"
+                                />
+                            </ComposedChart>
+                        </ResponsiveContainer>
+                    </div>
                 ) : (
                     <div className="flex items-center justify-center h-full text-gray-400">
                         <Text type="secondary">Chưa có dữ liệu cho khoảng thời gian này</Text>
@@ -157,83 +240,7 @@ const TrendChart = () => {
     );
 };
 
-const LeaderboardHero = ({ data }: { data: any[] }) => {
-    // Sort by points to ensure correct ranking even if API returns unsorted
-    const top3 = [...data].sort((a, b) => (b.total_points || 0) - (a.total_points || 0)).slice(0, 3);
 
-    return (
-        <AnimatePresence>
-            {top3.length > 0 && (
-                <motion.div 
-                    key="leaderboard-hero"
-                    initial={{ opacity: 0, y: -20, height: 0 }}
-                    animate={{ opacity: 1, y: 0, height: 'auto' }}
-                    exit={{ opacity: 0, y: -20, height: 0 }}
-                    transition={{ duration: 0.4, ease: "easeInOut" }}
-                    className="bg-gradient-to-br from-orange-500 to-amber-400 rounded-3xl p-6 md:p-8 mb-8 text-white shadow-xl shadow-orange-200 relative overflow-hidden"
-                >
-                    <div className="absolute top-0 right-0 p-8 opacity-10">
-                        <CrownOutlined style={{ fontSize: '120px' }} />
-                    </div>
-            
-            <div className="relative z-10">
-                <Title level={4} className="text-white opacity-80 mb-6 uppercase tracking-wider text-xs font-bold">Bảng vinh danh tháng này</Title>
-                
-                <div className="flex flex-col md:flex-row items-center justify-around gap-8">
-                    {/* Rank 2 */}
-                    {top3[1] && (
-                        <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="flex flex-col items-center order-2 md:order-1">
-                            <div className="relative mb-3">
-                                <Avatar size={70} src={top3[1].user?.avatar_url} className="border-4 border-white/30 shadow-lg" />
-                                <div className="absolute -bottom-2 -right-2 bg-gray-300 text-gray-700 w-8 h-8 rounded-full flex items-center justify-center font-bold border-2 border-white text-xs">2</div>
-                            </div>
-                            <Text strong className="text-white text-sm">{top3[1].user?.name}</Text>
-                            <div className="flex flex-col items-center">
-                                <Text className="text-white/70 text-[10px]">+{top3[1].total_points} pts</Text>
-                                {top3[1].title && <div className="scale-75 origin-top mt-1"><TitleBadge title={top3[1].title} /></div>}
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {/* Rank 1 */}
-                    {top3[0] && (
-                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center order-1 md:order-2 scale-110">
-                            <div className="relative mb-4">
-                                <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-amber-200 animate-bounce">
-                                    <CrownOutlined style={{ fontSize: '24px' }} />
-                                </div>
-                                <Avatar size={90} src={top3[0].user?.avatar_url} className="border-4 border-amber-200 shadow-2xl shadow-orange-900/20" />
-                                <div className="absolute -bottom-2 -right-2 bg-amber-400 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold border-2 border-white text-lg">1</div>
-                            </div>
-                            <Text strong className="text-white text-lg">{top3[0].user?.name}</Text>
-                            <div className="flex flex-col items-center">
-                                <Text className="text-amber-100 font-medium">+{top3[0].total_points} pts</Text>
-                                {top3[0].title && <div className="mt-1"><TitleBadge title={top3[0].title} /></div>}
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {/* Rank 3 */}
-                    {top3[2] && (
-                        <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }} className="flex flex-col items-center order-3 md:order-3">
-                            <div className="relative mb-3">
-                                <Avatar size={70} src={top3[2].user?.avatar_url} className="border-4 border-white/30 shadow-lg" />
-                                <div className="absolute -bottom-2 -right-2 bg-orange-300 text-orange-900 w-8 h-8 rounded-full flex items-center justify-center font-bold border-2 border-white text-xs">3</div>
-                            </div>
-                            <Text strong className="text-white text-sm">{top3[2].user?.name}</Text>
-                            <div className="flex flex-col items-center">
-                                <Text className="text-white/70 text-[10px]">+{top3[2].total_points} pts</Text>
-                                {top3[2].title && <div className="scale-75 origin-top mt-1"><TitleBadge title={top3[2].title} /></div>}
-                            </div>
-                        </motion.div>
-                    )}
-                </div>
-            </div>
-        </motion.div>
-        )}
-        </AnimatePresence>
-    );
-};
 
 const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -341,138 +348,203 @@ const ActivityReportPage = () => {
 
     const screens = useBreakpoint();
 
+    const totalPoints = participationData.reduce((sum, item) => sum + (item.total_points || 0), 0);
+    const totalBonusPoints = participationData.reduce((sum, item) => sum + (item.total_bonus_points || 0), 0);
+    const totalViolations = participationData.reduce((sum, item) => sum + (item.violation_count || 0), 0);
+    const avgPoints = participationData.length > 0 ? (totalPoints / participationData.length).toFixed(2) : "0.00";
+    const avgBonus = participationData.length > 0 ? (totalBonusPoints / participationData.length).toFixed(2) : "0.00";
+
     return (
         <>
-        <motion.div 
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="p-4 md:p-6 max-w-7xl mx-auto"
-        >
-            {/* The Hall of Fame now ALWAYS uses leaderboardData (Title-based) */}
-            <LeaderboardHero data={leaderboardData} />
-            
-            <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 px-3 md:px-0">
-                <Space size="middle">
-                    <div className="hidden md:flex w-12 h-12 rounded-xl bg-orange-50 items-center justify-center text-orange-600 shadow-sm">
-                        <BarChartOutlined className="text-2xl" />
+            <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="p-4 md:p-6 max-w-7xl mx-auto"
+            >
+
+
+                <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 px-3 md:px-0">
+                    <Space size="middle">
+                        <div className="hidden md:flex w-12 h-12 rounded-xl bg-orange-50 items-center justify-center text-orange-600 shadow-sm">
+                            <BarChartOutlined className="text-2xl" />
+                        </div>
+                        <div>
+                            <Title level={3} className="text-xl md:text-2xl mt-4 text-orange-600">Báo cáo Hoạt động</Title>
+                            <Text type="secondary" className="text-xs md:text-sm">Xem thống kê tham gia hoạt động và bảng xếp hạng</Text>
+                        </div>
+                    </Space>
+                    <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                        <Input
+                            prefix={<SearchOutlined className="text-gray-400" />}
+                            placeholder="Tìm thành viên..."
+                            value={searchText}
+                            onChange={e => setSearchText(e.target.value)}
+                            allowClear
+                            className="w-full sm:w-64"
+                        />
                     </div>
-                    <div>
-                        <Title level={3} className="text-xl md:text-2xl mt-4 text-orange-600">Báo cáo Hoạt động</Title>
-                        <Text type="secondary" className="text-xs md:text-sm">Xem thống kê tham gia hoạt động và bảng xếp hạng</Text>
-                    </div>
-                </Space>
-                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                    <Input
-                        prefix={<SearchOutlined className="text-gray-400" />}
-                        placeholder="Tìm thành viên..."
-                        value={searchText}
-                        onChange={e => setSearchText(e.target.value)}
-                        allowClear
-                        className="w-full sm:w-64"
-                    />
+                </motion.div>
+
+                <motion.div variants={itemVariants}>
+                    <Card className={!screens.md ? "bg-transparent shadow-none border-none" : "shadow-xs border-none bg-white/80 backdrop-blur-md"} styles={{ body: { padding: !screens.md ? 0 : undefined } }}>
+                        <Tabs
+                            activeKey={activeTab}
+                            onChange={(key) => setActiveTab(key as any)}
+                            tabBarStyle={{ padding: !screens.md ? '0 12px' : '0 24px', margin: 0, borderBottom: '1px solid #f1f5f9' }}
+                            size="large"
+                            className="custom-report-tabs"
+                            items={[
+                                {
+                                    key: 'participation',
+                                    label: (
+                                        <Space>
+                                            <CalendarOutlined />
+                                            <span>Điểm danh</span>
+                                        </Space>
+                                    ),
+                                    children: (
+                                        <Table
+                                            columns={[
+                                                { title: 'Xếp hạng', key: 'rank', render: (_, __, index) => <RankBadge rank={(participationPage - 1) * PAGE_SIZE + index + 1} />, width: 80 },
+                                                {
+                                                    title: 'Thành viên', key: 'user', render: (item: ParticipationStats) => (
+                                                        <Space>
+                                                            <Avatar src={item.user?.avatar_url} icon={<UserOutlined />} />
+                                                            <div className="flex flex-col">
+                                                                <span>{item.user?.name || `Thành viên #${item.user_id}`}</span>
+                                                                <span className="text-xs text-gray-500">{item.user?.email || 'Chưa cập nhật email'}</span>
+                                                            </div>
+                                                        </Space>
+                                                    )
+                                                },
+                                                { title: 'Giờ hoạt động', key: 'hours', render: (item: ParticipationStats) => item.total_sessions === 0 ? <Tag>Chưa sinh hoạt</Tag> : <Tag color="blue">{item.total_hours}h</Tag> },
+                                                { title: 'Buổi tham gia', key: 'sessions', render: (item: ParticipationStats) => item.total_sessions === 0 ? <Tag>Chưa sinh hoạt</Tag> : <Tag>{item.total_sessions} buổi</Tag> },
+                                                { title: 'Đúng giờ', key: 'ontime', render: (item: ParticipationStats) => item.total_sessions === 0 ? <Tag>Chưa sinh hoạt</Tag> : <Tag color={item.on_time_rate >= 0.8 ? "success" : "warning"}>{(item.on_time_rate * 100).toFixed(0)}%</Tag> },
+                                                { title: 'Điểm cộng', key: 'bonus', render: (item: ParticipationStats) => <Tag color="green">+{item.total_bonus_points ?? 0}</Tag> },
+                                                { 
+                                                    title: 'Vi phạm', 
+                                                    key: 'violations', 
+                                                    render: (item: ParticipationStats) => {
+                                                        const penalty = (item.late_count || 0) * 2 + (item.absent_count || 0) * 5;
+                                                        return <Tag color="red">{penalty > 0 ? `-${penalty}` : 0}</Tag>;
+                                                    }
+                                                },
+                                                { title: 'Điểm tổng', key: 'total', render: (item: ParticipationStats) => <Tag color={item.total_points > 0 ? "success" : item.total_points < 0 ? "error" : "default"} className="font-bold">{item.total_points > 0 ? `+${item.total_points}` : item.total_points}</Tag> },
+                                            ]}
+                                            dataSource={filteredParticipationData}
+                                            rowKey={(record) => record.user_id}
+                                            loading={loading}
+                                            pagination={{
+                                                pageSize: PAGE_SIZE,
+                                                current: participationPage,
+                                                onChange: (page) => setParticipationPage(page),
+                                            }}
+                                            className="p-4"
+                                        />
+                                    )
+                                },
+
+                                {
+                                    key: 'title',
+                                    label: (
+                                        <Space>
+                                            <CrownOutlined />
+                                            <span>Danh hiệu</span>
+                                        </Space>
+                                    ),
+                                    children: (
+                                        <Table
+                                            columns={[
+                                                { title: 'Xếp hạng', key: 'rank', render: (_, __, index) => <RankBadge rank={(titlePage - 1) * PAGE_SIZE + index + 1} />, width: 80 },
+                                                {
+                                                    title: 'Thành viên', key: 'user', render: (item: TitleReportItem) => (
+                                                        <Space>
+                                                            <Avatar src={item.user?.avatar_url} icon={<UserOutlined />} />
+                                                            <div className="flex flex-col">
+                                                                <span>{item.user?.name || `Thành viên #${item.user?.id || '?'}`}</span>
+                                                                <span className="text-xs text-gray-500">{item.user?.email || 'Chưa cập nhật email'}</span>
+                                                            </div>
+                                                        </Space>
+                                                    )
+                                                },
+                                                {
+                                                    title: 'Danh hiệu', key: 'title', render: (item: TitleReportItem) => (
+                                                        item.title ? <TitleBadge title={item.title} /> : <Tag>Chưa có</Tag>
+                                                    )
+                                                },
+                                                { title: 'Điểm tích lũy', key: 'points', render: (item: TitleReportItem) => <Tag color="green">+{item.total_points}</Tag> },
+                                                { title: 'Vi phạm', key: 'violations', render: (item: TitleReportItem) => <Tag color="red">{item.violation_count}</Tag> },
+                                            ]}
+                                            dataSource={filteredTitleData}
+                                            rowKey={(record) => record.user?.id}
+                                            loading={loading}
+                                            pagination={{
+                                                pageSize: PAGE_SIZE,
+                                                current: titlePage,
+                                                onChange: (page) => setTitlePage(page),
+                                            }}
+                                            className="p-4"
+                                        />
+                                    )
+                                },
+                            ]}
+                        />
+                    </Card>
+                </motion.div>
+
+                <motion.div variants={itemVariants} className="mt-6 mb-8">
+                    <Row gutter={[16, 16]}>
+                        <Col xs={24} sm={12} md={6}>
+                            <Card className="shadow-sm border-gray-100 rounded-2xl h-full flex flex-col justify-center">
+                                <Statistic
+                                    title="Tổng điểm của tháng"
+                                    value={Math.abs(totalPoints)}
+                                    valueStyle={{ color: totalPoints >= 0 ? '#22c55e' : '#ef4444', fontWeight: 'bold' }}
+                                    prefix={totalPoints >= 0 ? "+" : "-"}
+                                />
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={12} md={6}>
+                            <Card className="shadow-sm border-gray-100 rounded-2xl h-full flex flex-col justify-center">
+                                <Statistic
+                                    title="Tổng điểm cộng"
+                                    value={totalBonusPoints}
+                                    valueStyle={{ color: '#22c55e', fontWeight: 'bold' }}
+                                    prefix="+"
+                                />
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={12} md={6}>
+                            <Card className="shadow-sm border-gray-100 rounded-2xl h-full flex flex-col justify-center">
+                                <Statistic
+                                    title="Tổng vi phạm"
+                                    value={totalViolations}
+                                    valueStyle={{ color: '#ef4444', fontWeight: 'bold' }}
+                                />
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={12} md={6}>
+                            <Card className="shadow-sm border-gray-100 rounded-2xl h-full flex flex-col justify-center">
+                                <Statistic
+                                    title="Điểm trung bình"
+                                    value={Math.abs(Number(avgPoints))}
+                                    valueStyle={{ color: Number(avgPoints) >= 0 ? '#3b82f6' : '#ef4444', fontWeight: 'bold' }}
+                                    prefix={Number(avgPoints) >= 0 ? "+" : "-"}
+                                />
+                                <Text type="secondary" className="text-xs mt-1">
+                                    Điểm cộng TB: <span className="text-green-500 font-semibold">+{avgBonus}</span>
+                                </Text>
+                            </Card>
+                        </Col>
+                    </Row>
+                </motion.div>
+
+                <div className="mt-12">
+                    <TrendChart />
                 </div>
             </motion.div>
-
-            <motion.div variants={itemVariants}>
-                <Card className={!screens.md ? "bg-transparent shadow-none border-none" : "shadow-xs border-none bg-white/80 backdrop-blur-md"} styles={{ body: { padding: !screens.md ? 0 : undefined } }}>
-                    <Tabs
-                        activeKey={activeTab}
-                        onChange={(key) => setActiveTab(key as any)}
-                        tabBarStyle={{ padding: !screens.md ? '0 12px' : '0 24px', margin: 0, borderBottom: '1px solid #f1f5f9' }}
-                        size="large"
-                        className="custom-report-tabs"
-                        items={[
-                            {
-                                key: 'participation',
-                                label: (
-                                    <Space>
-                                        <CalendarOutlined />
-                                        <span>Điểm danh</span>
-                                    </Space>
-                                ),
-                                children: (
-                                    <Table
-                                        columns={[
-                                            { title: 'Xếp hạng', key: 'rank', render: (_, __, index) => <RankBadge rank={(participationPage - 1) * PAGE_SIZE + index + 1} />, width: 80 },
-                                            { title: 'Thành viên', key: 'user', render: (item: ParticipationStats) => (
-                                                <Space>
-                                                    <Avatar src={item.user?.avatar_url} icon={<UserOutlined />} />
-                                                    <div className="flex flex-col">
-                                                        <span>{item.user?.name || `Thành viên #${item.user_id}`}</span>
-                                                        <span className="text-xs text-gray-500">{item.user?.email || 'Chưa cập nhật email'}</span>
-                                                    </div>
-                                                </Space>
-                                            )},
-                                            { title: 'Giờ hoạt động', key: 'hours', render: (item: ParticipationStats) => item.total_sessions === 0 ? <Tag>Chưa sinh hoạt</Tag> : <Tag color="blue">{item.total_hours}h</Tag> },
-                                            { title: 'Buổi tham gia', key: 'sessions', render: (item: ParticipationStats) => item.total_sessions === 0 ? <Tag>Chưa sinh hoạt</Tag> : <Tag>{item.total_sessions} buổi</Tag> },
-                                            { title: 'Đúng giờ', key: 'ontime', render: (item: ParticipationStats) => item.total_sessions === 0 ? <Tag>Chưa sinh hoạt</Tag> : <Tag color={item.on_time_rate >= 0.8 ? "success" : "warning"}>{(item.on_time_rate * 100).toFixed(0)}%</Tag> },
-                                            { title: 'Điểm cộng', key: 'bonus', render: (item: ParticipationStats) => <Tag color="green">+{item.total_bonus_points ?? 0}</Tag> },
-                                            { title: 'Vi phạm', key: 'violations', render: (item: ParticipationStats) => <Tag color="red">{item.violation_count ?? 0}</Tag> },
-                                            { title: 'Điểm tổng', key: 'total', render: (item: ParticipationStats) => <Tag color={item.total_points > 0 ? "success" : item.total_points < 0 ? "error" : "default"} className="font-bold">{item.total_points > 0 ? `+${item.total_points}` : item.total_points}</Tag> },
-                                        ]}
-                                        dataSource={filteredParticipationData}
-                                        rowKey={(record) => record.user_id}
-                                        loading={loading}
-                                        pagination={{
-                                            pageSize: PAGE_SIZE,
-                                            current: participationPage,
-                                            onChange: (page) => setParticipationPage(page),
-                                        }}
-                                        className="p-4"
-                                    />
-                                )
-                            },
-
-                            {
-                                key: 'title',
-                                label: (
-                                    <Space>
-                                        <CrownOutlined />
-                                        <span>Danh hiệu</span>
-                                    </Space>
-                                ),
-                                children: (
-                                    <Table
-                                        columns={[
-                                            { title: 'Xếp hạng', key: 'rank', render: (_, __, index) => <RankBadge rank={(titlePage - 1) * PAGE_SIZE + index + 1} />, width: 80 },
-                                            { title: 'Thành viên', key: 'user', render: (item: TitleReportItem) => (
-                                                <Space>
-                                                    <Avatar src={item.user?.avatar_url} icon={<UserOutlined />} />
-                                                    <div className="flex flex-col">
-                                                        <span>{item.user?.name || `Thành viên #${item.user?.id || '?'}`}</span>
-                                                        <span className="text-xs text-gray-500">{item.user?.email || 'Chưa cập nhật email'}</span>
-                                                    </div>
-                                                </Space>
-                                            )},
-                                            { title: 'Danh hiệu', key: 'title', render: (item: TitleReportItem) => (
-                                                item.title ? <TitleBadge title={item.title} /> : <Tag>Chưa có</Tag>
-                                            )},
-                                            { title: 'Điểm tích lũy', key: 'points', render: (item: TitleReportItem) => <Tag color="green">+{item.total_points}</Tag> },
-                                            { title: 'Vi phạm', key: 'violations', render: (item: TitleReportItem) => <Tag color="red">{item.violation_count}</Tag> },
-                                        ]}
-                                        dataSource={filteredTitleData}
-                                        rowKey={(record) => record.user?.id}
-                                        loading={loading}
-                                        pagination={{
-                                            pageSize: PAGE_SIZE,
-                                            current: titlePage,
-                                            onChange: (page) => setTitlePage(page),
-                                        }}
-                                        className="p-4"
-                                    />
-                                )
-                            },
-                        ]}
-                    />
-                </Card>
-            </motion.div>
-
-            <div className="mt-12">
-                <TrendChart />
-            </div>
-        </motion.div>
-        <style>{`
+            <style>{`
             .custom-report-tabs .ant-tabs-nav::before {
                 display: none;
             }
@@ -489,6 +561,12 @@ const ActivityReportPage = () => {
                 background: #f97316 !important;
                 height: 3px !important;
                 border-radius: 3px 3px 0 0;
+            }
+            .line-bonus path.recharts-curve.recharts-line-curve {
+                transform: translateX(-12px);
+            }
+            .line-violation path.recharts-curve.recharts-line-curve {
+                transform: translateX(12px);
             }
             .ant-table-thead > tr > th {
                 background: #fcfcfd !important;
@@ -507,7 +585,7 @@ const ActivityReportPage = () => {
                 background: #fffaf5 !important;
             }
         `}</style>
-        <Agentation />
+            <Agentation />
         </>
     );
 };

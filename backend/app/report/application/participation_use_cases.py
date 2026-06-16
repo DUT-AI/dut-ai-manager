@@ -14,9 +14,8 @@ class ParticipationStats(BaseModel):
     user_id: int
     user: UserInfoResponse | None = None
     total_points: int = 0
-    total_bonus_points: int = 0  # NEW: total bonus points from MonthlyUserStats
-    attendance_bonus_points: int = 0 # NEW: calculated points based on session length
-    violation_count: int = 0     # NEW: total violations from MonthlyUserStats
+    total_bonus_points: int = 0
+    violation_count: int = 0
     month: int
     year: int
     total_sessions: int
@@ -65,13 +64,6 @@ class GetParticipationAnalysisUseCase:
             if p.check_in_at and p.check_out_at
         )
 
-        # Điểm thưởng theo session (mỗi 60p = 1 điểm)
-        attendance_bonus_points = sum(
-            int((p.check_out_at - p.check_in_at).total_seconds() / 3600)
-            for p in participants
-            if p.check_in_at and p.check_out_at
-        )
-
         # Tần suất theo tuần
         active_weeks = {p.check_in_at.isocalendar().week for p in participants if p.check_in_at}
         # Số tuần trong tháng (thường 4-5)
@@ -102,7 +94,6 @@ class GetParticipationAnalysisUseCase:
             on_time_rate=round(on_time_rate, 2),
             late_count=late_count,
             absent_count=absent_count,
-            attendance_bonus_points=attendance_bonus_points,
         )
 
 
@@ -128,10 +119,9 @@ class GetParticipationLeaderboardUseCase:
             # Add UserInfo
             stat.user = UserInfoResponse(**u.model_dump())
             
-            # Fetch Total Points and Violation Count from MonthlyUserStats
-            m_stat = self.stats_repo.get_by_user_and_month(u.id, month, year)
-            stat.total_bonus_points = m_stat.total_bonus_points if m_stat else 0
-            stat.violation_count = m_stat.violation_count if m_stat else 0
+            # Calculate metrics
+            stat.total_bonus_points = int(stat.total_hours)
+            stat.violation_count = stat.late_count + stat.absent_count
             stat.total_points = stat.total_bonus_points - (2 * stat.late_count + 5 * stat.absent_count)
             
             stats_list.append(stat)
