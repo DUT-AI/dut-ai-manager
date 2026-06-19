@@ -67,10 +67,10 @@ const BillingTable = ({
       },
     },
     {
-      title: 'Ngày tạo',
-      dataIndex: 'created_at',
-      key: 'created_at',
-      render: (date: string) => dayjs(date).format('DD/MM/YYYY'),
+      title: 'Kỳ hóa đơn',
+      dataIndex: 'billing_period',
+      key: 'billing_period',
+      render: (date: string) => dayjs(date).format('MM/YYYY'),
     },
     {
       title: 'Thao tác',

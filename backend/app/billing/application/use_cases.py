@@ -1,7 +1,7 @@
 import calendar
 import random
 import string
-from datetime import datetime
+from datetime import date, datetime
 
 from fastapi import status
 
@@ -25,7 +25,11 @@ class CreateInvoiceUseCase:
         self.repo = repo
 
     def execute(
-        self, user_id: int, items_data: list[dict], description: str | None = None
+        self,
+        user_id: int,
+        items_data: list[dict],
+        billing_period: date,
+        description: str | None = None,
     ) -> Invoice:
         # 1. Calculate total amount and create items
         total_amount = 0
@@ -63,6 +67,7 @@ class CreateInvoiceUseCase:
             status=InvoiceStatus.PENDING,
             description=description or f"Thanh toán các khoản thu - {reference_code}",
             reference_code=reference_code,
+            billing_period=billing_period,
             items=invoice_items,
         )
 
@@ -199,8 +204,21 @@ class GetInvoicesUseCase:
             )
         return invoice
 
-    def get_all_invoices(self, skip: int = 0, limit: int = 100) -> list[Invoice]:
-        return self.repo.get_all_active(skip=skip, limit=limit)
+    def get_all_invoices(
+        self,
+        user_id: int | None = None,
+        status: str | None = None,
+        billing_period: date | None = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> list[Invoice]:
+        return self.repo.get_all_active(
+            user_id=user_id,
+            status=status,
+            billing_period=billing_period,
+            skip=skip,
+            limit=limit,
+        )
 
     def get_matrix_report(
         self,
@@ -211,16 +229,8 @@ class GetInvoicesUseCase:
         user_ids: list[int] | None = None,
     ) -> list[Invoice]:
         try:
-            start_date = datetime(year=start_year, month=start_month, day=1)
-            last_day = calendar.monthrange(end_year, end_month)[1]
-            end_date = datetime(
-                year=end_year,
-                month=end_month,
-                day=last_day,
-                hour=23,
-                minute=59,
-                second=59,
-            )
+            start_date = date(year=start_year, month=start_month, day=1)
+            end_date = date(year=end_year, month=end_month, day=1)
         except ValueError:
             raise BadRequestException(
                 "Invalid date range", status_code=status.HTTP_400_BAD_REQUEST
@@ -332,7 +342,7 @@ class CreateMonthlyInvoicesUseCase:
                 if fund_amount > 0:
                     invoice_items.append(
                         InvoiceItem(
-                            item_type=InvoiceItemType.OTHER,
+                            item_type=InvoiceItemType.FUND,
                             amount=fund_amount,
                             note=f"Tiền quỹ tháng {month:02d}/{year}",
                         )
@@ -355,6 +365,7 @@ class CreateMonthlyInvoicesUseCase:
                     status=InvoiceStatus.PENDING,
                     description=description,
                     reference_code=ref,
+                    billing_period=date(year, month, 1),
                     items=invoice_items,
                 )
 

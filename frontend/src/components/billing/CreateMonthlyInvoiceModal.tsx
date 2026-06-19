@@ -53,8 +53,8 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
       setIsPreviewing(true);
       
       const payload = {
-        month: values.date.month() + 1,
-        year: values.date.year(),
+        month: values.billing_period.month() + 1,
+        year: values.billing_period.year(),
         team_id: values.team_id,
         user_ids: values.user_ids || [],
         violation_price: values.violation_price,
@@ -80,8 +80,8 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
       const values = await form.validateFields();
       
       const payload = {
-        month: values.date.month() + 1,
-        year: values.date.year(),
+        month: values.billing_period.month() + 1,
+        year: values.billing_period.year(),
         team_id: values.team_id,
         user_ids: values.user_ids || [],
         violation_price: values.violation_price,
@@ -173,7 +173,7 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
         form={form}
         layout="vertical"
         initialValues={{ 
-          date: dayjs(), 
+          billing_period: dayjs(), 
           violation_price: 20000, 
           fund_amount: 50000,
           extra_items: [] 
@@ -182,11 +182,11 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Form.Item
-            name="date"
-            label="Chọn tháng/năm"
-            rules={[{ required: true, message: 'Vui lòng chọn thời gian' }]}
+            name="billing_period"
+            label="Kỳ hóa đơn (Tháng/Năm)"
+            rules={[{ required: true, message: 'Vui lòng chọn kỳ hóa đơn' }]}
           >
-            <DatePicker picker="month" className="w-full" format="MM/YYYY" />
+            <DatePicker picker="month" className="w-full" format="MM/YYYY" placeholder="Chọn tháng/năm" />
           </Form.Item>
 
           <Form.Item

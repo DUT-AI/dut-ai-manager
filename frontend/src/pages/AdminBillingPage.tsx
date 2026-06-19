@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Card, Button, Typography, Space, Form, message, Grid, Tabs } from 'antd';
+import { Card, Button, Typography, Space, Form, message, Grid, Tabs, Select, DatePicker, Row, Col } from 'antd';
 import { PlusOutlined, AuditOutlined, CalendarOutlined, TableOutlined, BarChartOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import { useAllInvoices, useCreateInvoice, useUpdateInvoice, useInvoiceDetail, useDeleteInvoice } from '@/hooks/useBilling';
 import { useUsers } from '@/hooks';
 import CreateMonthlyInvoiceModal from '@/components/billing/CreateMonthlyInvoiceModal';
@@ -38,7 +39,15 @@ const itemVariants: Variants = {
 
 const AdminBillingPage = () => {
   const screens = useBreakpoint();
-  const { data: invoices = [], isLoading } = useAllInvoices();
+  const [filterUser, setFilterUser] = useState<number | undefined>(undefined);
+  const [filterStatus, setFilterStatus] = useState<string | undefined>(undefined);
+  const [filterPeriod, setFilterPeriod] = useState<dayjs.Dayjs | null>(null);
+
+  const { data: invoices = [], isLoading } = useAllInvoices({
+    user_id: filterUser,
+    status: filterStatus,
+    billing_period: filterPeriod ? filterPeriod.startOf('month').format('YYYY-MM-DD') : undefined,
+  });
   const { data: users = [] } = useUsers();
   const createInvoice = useCreateInvoice();
   const updateInvoice = useUpdateInvoice();
@@ -61,6 +70,7 @@ const AdminBillingPage = () => {
       const payload: InvoiceCreate = {
         user_id: values.user_id,
         description: values.description,
+        billing_period: values.billing_period ? values.billing_period.startOf('month').format('YYYY-MM-DD') : '',
         items: values.items.map((item: any) => ({
           item_type: item.item_type,
           amount: item.amount,
@@ -134,15 +144,64 @@ const AdminBillingPage = () => {
         </span>
       ),
       children: (
-        <BillingTable
-          invoices={invoices}
-          isLoading={isLoading}
-          users={users}
-          onViewDetail={handleViewDetail}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          deletingId={deleteInvoice.isPending ? selectedInvoiceId : null}
-        />
+        <div className="p-4">
+          <Row gutter={[16, 16]} align="middle" className="bg-gray-50/50 p-4 rounded-xl border border-gray-100 mb-4">
+            <Col xs={24} sm={8} md={8} lg={6}>
+              <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Thành viên</div>
+              <Select
+                showSearch
+                placeholder="Tất cả thành viên"
+                style={{ width: '100%' }}
+                allowClear
+                onChange={(value) => setFilterUser(value)}
+                optionFilterProp="children"
+              >
+                {users.map(u => (
+                  <Select.Option key={u.id} value={u.id}>
+                    {u.name}
+                  </Select.Option>
+                ))}
+              </Select>
+            </Col>
+            
+            <Col xs={24} sm={8} md={8} lg={6}>
+              <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Trạng thái</div>
+              <Select
+                placeholder="Tất cả trạng thái"
+                style={{ width: '100%' }}
+                allowClear
+                onChange={(value) => setFilterStatus(value)}
+              >
+                <Select.Option value="PENDING">Chờ thanh toán (PENDING)</Select.Option>
+                <Select.Option value="PAID">Đã thanh toán (PAID)</Select.Option>
+                <Select.Option value="CANCELLED">Đã hủy (CANCELLED)</Select.Option>
+                <Select.Option value="EXPIRED">Hết hạn (EXPIRED)</Select.Option>
+              </Select>
+            </Col>
+
+            <Col xs={24} sm={8} md={8} lg={6}>
+              <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Kỳ hóa đơn</div>
+              <DatePicker
+                picker="month"
+                format="MM/YYYY"
+                placeholder="Tất cả các kỳ"
+                style={{ width: '100%' }}
+                allowClear
+                onChange={(value) => setFilterPeriod(value)}
+              />
+            </Col>
+          </Row>
+
+          <BillingTable
+            invoices={invoices}
+            isLoading={isLoading}
+            users={users}
+            onViewDetail={handleViewDetail}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            deletingId={deleteInvoice.isPending ? selectedInvoiceId : null}
+          />
+        </div>
       ),
     },
     {

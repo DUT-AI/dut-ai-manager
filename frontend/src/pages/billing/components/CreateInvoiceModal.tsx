@@ -1,4 +1,4 @@
-import { Modal, Form, Select, Input, Divider, Space, InputNumber, Button } from 'antd';
+import { Modal, Form, Select, Input, Divider, Space, InputNumber, Button, DatePicker } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { InvoiceItemType } from '@/types/billing.types';
 import type { UserResponse } from '@/types/user.types';
@@ -56,6 +56,14 @@ const CreateInvoiceModal = ({
               <Option key={u.id} value={u.id}>{u.name} ({u.email})</Option>
             ))}
           </Select>
+        </Form.Item>
+
+        <Form.Item 
+          name="billing_period" 
+          label="Kỳ hóa đơn (Tháng/Năm)" 
+          rules={[{ required: true, message: 'Vui lòng chọn kỳ hóa đơn' }]}
+        >
+          <DatePicker picker="month" format="MM/YYYY" placeholder="Chọn tháng/năm" style={{ width: '100%' }} />
         </Form.Item>
 
         <Form.Item name="description" label="Ghi chú tổng quát">

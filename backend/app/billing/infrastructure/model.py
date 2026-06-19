@@ -2,9 +2,10 @@
 Billing ORM Models — SQLAlchemy 2.0, infrastructure layer.
 """
 
+from datetime import date
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy import Date, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.billing.domain.entity import (
@@ -37,6 +38,7 @@ class InvoiceModel(SQLAlchemyTimestampMixin, Base):
     transaction_id: Mapped[str | None] = mapped_column(
         String(255), unique=True, index=True, default=None
     )
+    billing_period: Mapped[date] = mapped_column(Date, nullable=False, index=True)
 
     # Relationships
     items: Mapped[list["InvoiceItemModel"]] = relationship(
@@ -58,6 +60,7 @@ class InvoiceModel(SQLAlchemyTimestampMixin, Base):
             reference_code=self.reference_code,
             payment_method=self.payment_method,
             transaction_id=self.transaction_id,
+            billing_period=self.billing_period,
             created_at=self.created_at,
             updated_at=self.updated_at,
             created_by=self.created_by,
@@ -78,6 +81,7 @@ class InvoiceModel(SQLAlchemyTimestampMixin, Base):
             reference_code=entity.reference_code,
             payment_method=entity.payment_method,
             transaction_id=entity.transaction_id,
+            billing_period=entity.billing_period,
             created_at=entity.created_at or get_current_utc7_time(),
             updated_at=entity.updated_at or get_current_utc7_time(),
             created_by=entity.created_by,

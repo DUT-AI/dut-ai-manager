@@ -33,6 +33,7 @@ export interface Invoice {
   reference_code: string;
   payment_method: string;
   transaction_id: string | null;
+  billing_period: string;
   created_at: string;
   updated_at: string;
   items: InvoiceItem[];
@@ -49,6 +50,7 @@ export interface InvoiceCreateItem {
 export interface InvoiceCreate {
   user_id: number;
   items: InvoiceCreateItem[];
+  billing_period: string;
   description?: string;
 }
 

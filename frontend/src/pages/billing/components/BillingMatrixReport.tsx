@@ -135,7 +135,7 @@ const BillingMatrixReport = () => {
     const activeUserIds = new Set<number>();
 
     invoices.forEach(invoice => {
-      const dDate = dayjs(invoice.created_at);
+      const dDate = dayjs(invoice.billing_period);
       const monthKey = dDate.format('YYYY-MM');
       const uid = invoice.user_id;
       
@@ -239,11 +239,11 @@ const BillingMatrixReport = () => {
           
           <Form.Item 
             name="dateRange" 
-            label="Khoảng thời gian" 
-            rules={[{ required: true, message: 'Vui lòng chọn thời gian' }]}
+            label="Kỳ hóa đơn (Khoảng thời gian)" 
+            rules={[{ required: true, message: 'Vui lòng chọn kỳ hóa đơn' }]}
             className="mb-0 min-w-[250px]"
           >
-            <RangePicker picker="month" format="MM/YYYY" className="w-full" />
+            <RangePicker picker="month" format="MM/YYYY" className="w-full" placeholder={['Tháng bắt đầu', 'Tháng kết thúc']} />
           </Form.Item>
           
           <div className="flex items-end mb-0">

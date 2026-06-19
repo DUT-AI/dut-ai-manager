@@ -1,7 +1,8 @@
+from datetime import date
 from typing import Annotated
 
 from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import APIRouter, Depends, Header, status
+from fastapi import APIRouter, Depends, Header, Query, status
 
 from app.billing.application.use_cases import (
     CreateInvoiceUseCase,
@@ -11,6 +12,7 @@ from app.billing.application.use_cases import (
     HandleSePayWebhookUseCase,
     UpdateInvoiceUseCase,
 )
+from app.billing.domain.entity import InvoiceStatus
 from app.billing.schemas import (
     InvoiceCreate,
     InvoiceResponse,
@@ -43,6 +45,7 @@ async def create_invoice(
     invoice = create_uc.execute(
         user_id=data.user_id,
         items_data=[item.model_dump() for item in data.items],
+        billing_period=data.billing_period,
         description=data.description,
     )
     return ApiResponse.created(data=InvoiceResponse.from_domain(invoice))
@@ -123,18 +126,24 @@ async def get_my_invoices(
 async def get_all_invoices(
     get_uc: FromDishka[GetInvoicesUseCase],
     _: Annotated[CurrentUser, Depends(PermissionChecker(BillingPermission.READ))],
+    user_id: int | None = Query(default=None),
+    bill_status: InvoiceStatus | None = Query(default=None),
+    billing_period: date | None = Query(default=None),
     skip: int = 0,
     limit: int = 100,
 ):
     """
     Get all invoices (Admin only).
     """
-    invoices = get_uc.get_all_invoices(skip=skip, limit=limit)
+    invoices = get_uc.get_all_invoices(
+        user_id=user_id,
+        status=bill_status,
+        billing_period=billing_period,
+        skip=skip,
+        limit=limit,
+    )
     data = [InvoiceResponse.from_domain(inv) for inv in invoices]
     return ApiResponse.success(data=data)
-
-
-from fastapi import Query
 
 
 @router.get("/report/matrix", response_model=ApiResponse[list[InvoiceResponse]])

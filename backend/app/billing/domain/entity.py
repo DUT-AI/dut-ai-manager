@@ -2,6 +2,7 @@
 Billing Domain Entities — pure Pydantic, NO ORM dependency.
 """
 
+from datetime import date
 from enum import Enum
 
 from app.shared.domain.base_entity import BaseEntity
@@ -41,6 +42,9 @@ class Invoice(BaseEntity):
     reference_code: str  # Unique code for payment (e.g., DUTINV12345)
     payment_method: str = "sepay"
     transaction_id: str | None = None  # From SePay after payment
+    billing_period: (
+        date  # The period this invoice belongs to (e.g., first day of month)
+    )
 
     # Relationship items
     items: list[InvoiceItem] = []

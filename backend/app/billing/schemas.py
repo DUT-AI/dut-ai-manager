@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import cast
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
@@ -27,6 +27,7 @@ class InvoiceItemResponse(InvoiceItemBase):
 class InvoiceCreate(BaseModel):
     user_id: int
     items: list[InvoiceItemCreate]
+    billing_period: date
     description: str | None = None
 
 
@@ -46,6 +47,7 @@ class InvoiceResponse(BaseModel):
     reference_code: str
     payment_method: str
     transaction_id: str | None
+    billing_period: date
     created_at: datetime
     updated_at: datetime
     items: list[InvoiceItemResponse] = []
@@ -81,6 +83,7 @@ class InvoiceResponse(BaseModel):
             reference_code=invoice.reference_code,
             payment_method=invoice.payment_method,
             transaction_id=invoice.transaction_id,
+            billing_period=invoice.billing_period,
             created_at=invoice.created_at or datetime.now(),
             updated_at=invoice.updated_at or datetime.now(),
             items=items,

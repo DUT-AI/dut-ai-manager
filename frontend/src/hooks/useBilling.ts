@@ -22,11 +22,15 @@ export const useMyInvoices = () => {
   });
 };
 
-export const useAllInvoices = (skip = 0, limit = 100) => {
+export const useAllInvoices = (
+  filters?: { user_id?: number; status?: string; billing_period?: string },
+  skip = 0,
+  limit = 100
+) => {
   return useQuery({
-    queryKey: billingKeys.list(skip, limit),
+    queryKey: ['billing', 'list', { filters, skip, limit }],
     queryFn: async () => {
-      const response = await billingService.getAllInvoices(skip, limit);
+      const response = await billingService.getAllInvoices(filters, skip, limit);
       return response.data ?? [];
     },
     staleTime: 30 * 1000,
