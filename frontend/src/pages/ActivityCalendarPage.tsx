@@ -49,6 +49,7 @@ import useToggle from '@/hooks/useToggle';
 import { useAuth } from '@/context/AuthContext';
 import { useCapacity } from '@/context/CapacityContext';
 import { CapacityWarning } from '@/components/CapacityWarning';
+import { Agentation } from 'agentation';
 import { BonusPointPermission, PermissionRequestPermission, ViolationPermission } from '@/types/rbac.types';
 import { motion, type Variants } from 'motion/react';
 
@@ -627,6 +628,8 @@ const ActivityCalendarPage = () => {
                 onSubmit={handleViolationSubmit}
                 onCancel={() => dispatch({ type: 'CLOSE_VIOLATION' })}
             />
+
+            <Agentation />
 
             <style>{`
                 .custom-calendar .ant-picker-calendar-header {

@@ -168,9 +168,30 @@ async def check_in(
     # _: Annotated[CurrentUser, hasPermission(MeetingPermission.CHECK_IN)],
     user_ids: list[int] = Form(...),
     image: UploadFile = File(...),
+    occurred_at: str | None = Form(None),
+    check_in_at: str | None = Form(None),
+    checkin_at: str | None = Form(None),
+    check_in_time: str | None = Form(None),
+    checkin_time: str | None = Form(None),
+    timestamp: str | None = Form(None),
+    client_time: str | None = Form(None),
+    client_event_id: str | None = Form(None),
+    event_id: str | None = Form(None),
+    idempotency_key: str | None = Form(None),
 ):
     """Thực hiện điểm danh (Check-in)"""
-    participants, message = await uc.execute(user_ids=user_ids, image=image)
+    client_time_val = (
+        occurred_at or check_in_at or checkin_at or check_in_time or
+        checkin_time or timestamp or client_time
+    )
+    idem_key = client_event_id or event_id or idempotency_key
+
+    participants, message = await uc.execute(
+        user_ids=user_ids, 
+        image=image, 
+        client_time=client_time_val, 
+        client_event_id=idem_key
+    )
     return ApiResponse.success(
         data=[ParticipantResponse.from_domain(p) for p in participants],
         message=message,
@@ -185,7 +206,11 @@ async def check_out(
     # _: Annotated[CurrentUser, hasPermission(MeetingPermission.CHECK_IN)],
 ):
     """Thực hiện check-out khỏi buổi họp"""
-    participants = await uc.execute(user_id=data.user_id)
+    participants = await uc.execute(
+        user_id=data.user_id,
+        client_time=data.get_client_time(),
+        client_event_id=data.get_idempotency_key()
+    )
     return ApiResponse.success(
         data=[ParticipantResponse.from_domain(p) for p in participants],
         message="Checkout thành công",

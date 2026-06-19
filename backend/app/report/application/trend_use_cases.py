@@ -62,7 +62,7 @@ class GetActivityTrendUseCase:
         for i in range(WEEKS_COUNT):
             current_start = current_end - timedelta(days=6)
 
-            label = f"{current_start.strftime('%d/%m')}-{current_end.strftime('%d/%m')}"
+            label = current_start.strftime('%d/%m')
 
             # Calculate violations
             week_v = [

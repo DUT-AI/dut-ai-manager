@@ -19,6 +19,7 @@ import {
     BarChartOutlined,
     CrownOutlined,
     CalendarOutlined,
+    LineChartOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { reportService } from '@/services/api/report.service';
@@ -329,13 +330,26 @@ const ActivityReportPage = () => {
         fetchData();
     }, [activeTab, debouncedSearchText]);
 
-    // Filter data by search text
+    // Filter and sort data
     const filteredParticipationData = participationData.filter(item => {
         if (!debouncedSearchText) return true;
         const name = item.user?.name?.toLowerCase() || '';
         const email = item.user?.email?.toLowerCase() || '';
         const search = debouncedSearchText.toLowerCase();
         return name.includes(search) || email.includes(search);
+    }).sort((a, b) => {
+        // 1. Điểm tổng (descending)
+        const pointsDiff = (b.total_points || 0) - (a.total_points || 0);
+        if (pointsDiff !== 0) return pointsDiff;
+        
+        // 2. Giờ hoạt động (descending)
+        const hoursDiff = (b.total_hours || 0) - (a.total_hours || 0);
+        if (hoursDiff !== 0) return hoursDiff;
+        
+        // 3. Alphabet thành viên (ascending)
+        const nameA = a.user?.name || '';
+        const nameB = b.user?.name || '';
+        return nameA.localeCompare(nameB);
     });
 
     const filteredTitleData = titleData.filter(item => {
@@ -400,7 +414,7 @@ const ActivityReportPage = () => {
                                     label: (
                                         <Space>
                                             <CalendarOutlined />
-                                            <span>Điểm danh</span>
+                                            <span>Chi tiết</span>
                                         </Space>
                                     ),
                                     children: (
@@ -473,7 +487,7 @@ const ActivityReportPage = () => {
                                                         item.title ? <TitleBadge title={item.title} /> : <Tag>Chưa có</Tag>
                                                     )
                                                 },
-                                                { title: 'Điểm tích lũy', key: 'points', render: (item: TitleReportItem) => <Tag color="green">+{item.total_points}</Tag> },
+                                                { title: 'Tổng điểm', key: 'points', render: (item: TitleReportItem) => <Tag color="green">+{item.total_points}</Tag> },
                                                 { title: 'Vi phạm', key: 'violations', render: (item: TitleReportItem) => <Tag color="red">{item.violation_count}</Tag> },
                                             ]}
                                             dataSource={filteredTitleData}
@@ -488,6 +502,20 @@ const ActivityReportPage = () => {
                                         />
                                     )
                                 },
+                                {
+                                    key: 'trend',
+                                    label: (
+                                        <Space>
+                                            <LineChartOutlined />
+                                            <span>Xu hướng hoạt động</span>
+                                        </Space>
+                                    ),
+                                    children: (
+                                        <div className="pt-4">
+                                            <TrendChart />
+                                        </div>
+                                    )
+                                },
                             ]}
                         />
                     </Card>
@@ -495,17 +523,7 @@ const ActivityReportPage = () => {
 
                 <motion.div variants={itemVariants} className="mt-6 mb-8">
                     <Row gutter={[16, 16]}>
-                        <Col xs={24} sm={12} md={6}>
-                            <Card className="shadow-sm border-gray-100 rounded-2xl h-full flex flex-col justify-center">
-                                <Statistic
-                                    title="Tổng điểm của tháng"
-                                    value={Math.abs(totalPoints)}
-                                    valueStyle={{ color: totalPoints >= 0 ? '#22c55e' : '#ef4444', fontWeight: 'bold' }}
-                                    prefix={totalPoints >= 0 ? "+" : "-"}
-                                />
-                            </Card>
-                        </Col>
-                        <Col xs={24} sm={12} md={6}>
+                        <Col xs={24} sm={12} md={8}>
                             <Card className="shadow-sm border-gray-100 rounded-2xl h-full flex flex-col justify-center">
                                 <Statistic
                                     title="Tổng điểm cộng"
@@ -515,7 +533,7 @@ const ActivityReportPage = () => {
                                 />
                             </Card>
                         </Col>
-                        <Col xs={24} sm={12} md={6}>
+                        <Col xs={24} sm={12} md={8}>
                             <Card className="shadow-sm border-gray-100 rounded-2xl h-full flex flex-col justify-center">
                                 <Statistic
                                     title="Tổng vi phạm"
@@ -524,25 +542,19 @@ const ActivityReportPage = () => {
                                 />
                             </Card>
                         </Col>
-                        <Col xs={24} sm={12} md={6}>
+                        <Col xs={24} sm={12} md={8}>
                             <Card className="shadow-sm border-gray-100 rounded-2xl h-full flex flex-col justify-center">
                                 <Statistic
-                                    title="Điểm trung bình"
-                                    value={Math.abs(Number(avgPoints))}
-                                    valueStyle={{ color: Number(avgPoints) >= 0 ? '#3b82f6' : '#ef4444', fontWeight: 'bold' }}
-                                    prefix={Number(avgPoints) >= 0 ? "+" : "-"}
+                                    title="Điểm cộng TB"
+                                    value={avgBonus}
+                                    valueStyle={{ color: '#22c55e', fontWeight: 'bold' }}
+                                    prefix="+"
                                 />
-                                <Text type="secondary" className="text-xs mt-1">
-                                    Điểm cộng TB: <span className="text-green-500 font-semibold">+{avgBonus}</span>
-                                </Text>
                             </Card>
                         </Col>
                     </Row>
                 </motion.div>
 
-                <div className="mt-12">
-                    <TrendChart />
-                </div>
             </motion.div>
             <style>{`
             .custom-report-tabs .ant-tabs-nav::before {

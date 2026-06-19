@@ -25,6 +25,7 @@ class MeetingParticipant(BaseEntity):
     check_out_at: datetime | None = None
     status: ParticipantStatus = ParticipantStatus.NOT_JOINED
     link_image: str | None = None
+    client_event_id: str | None = None
     user: UserRef | None = None
 
     def check_in(self, check_in_time: datetime, image_url: str | None = None):

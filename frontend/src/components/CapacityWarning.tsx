@@ -62,12 +62,6 @@ export const CapacityWarning = () => {
         description={
           <div>
             <div>{description}</div>
-            <div className="mt-2">
-              <Tag color="blue">Hiện tại: {current_count}</Tag>
-              <Tag color="orange">Sắp đến: +{capacity.incoming_count}</Tag>
-              <Tag color="green">Sắp đi: -{capacity.outgoing_count}</Tag>
-              <Tag color="purple">Dự báo: {future_count}</Tag>
-            </div>
           </div>
         }
         showIcon
@@ -91,9 +85,9 @@ export const CapacityWarning = () => {
         ]}
       >
         <div className="py-3">
-          <p>Phòng lab hiện có <Text strong>{capacity?.current_count}</Text> người.</p>
+          <p>Không gian DUT Maker hiện có <Text strong>{capacity?.current_count}</Text> người.</p>
           <p>Dự báo 30 phút tới: <Text strong>{capacity?.future_count}/{capacity?.max_capacity}</Text> người.</p>
-          <p className="text-gray-500 mt-2">Hạn chế đăng ký thêm buổi họp để tránh quá tải.</p>
+          <p className="text-gray-500 mt-2">Vui lòng cân nhắc khi đăng kí!</p>
         </div>
       </Modal>
 
@@ -104,7 +98,7 @@ export const CapacityWarning = () => {
         title={
           <div className="flex items-center gap-2">
             <ExclamationCircleOutlined className="text-red-500 text-xl" />
-            <span>Quá tải: Phòng lab đã vượt giới hạn</span>
+            <span>Quá tải: Không gian DUT Maker đã vượt giới hạn</span>
           </div>
         }
         footer={[
@@ -115,7 +109,7 @@ export const CapacityWarning = () => {
       >
         <div className="py-3">
           <p>Dự báo số người: <Text strong type="danger">{capacity?.future_count}/{capacity?.max_capacity}</Text>.</p>
-          <p className="text-red-500 font-medium mt-2">Việc tạo lịch họp mới đã bị tạm thời vô hiệu hóa.</p>
+          <p className="text-red-500 font-medium mt-2">Đăng kí hiện tại bị vô hiệu hóa. Vui lòng đăng kí vào khung giờ khác!</p>
         </div>
       </Modal>
     </>

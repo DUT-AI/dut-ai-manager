@@ -18,6 +18,30 @@ class CheckInWithCardRequest(BaseModel):
 
 class CheckOutRequest(BaseModel):
     user_id: int = Field(..., description="ID của user cần check-out")
+    occurred_at: str | None = None
+    check_out_at: str | None = None
+    checkout_at: str | None = None
+    check_out_time: str | None = None
+    checkout_time: str | None = None
+    timestamp: str | None = None
+    client_time: str | None = None
+    client_event_id: str | None = None
+    event_id: str | None = None
+    idempotency_key: str | None = None
+
+    def get_client_time(self) -> str | None:
+        return (
+            self.occurred_at
+            or self.check_out_at
+            or self.checkout_at
+            or self.check_out_time
+            or self.checkout_time
+            or self.timestamp
+            or self.client_time
+        )
+    
+    def get_idempotency_key(self) -> str | None:
+        return self.client_event_id or self.event_id or self.idempotency_key
 
 
 class ParticipantResponse(BaseModel):

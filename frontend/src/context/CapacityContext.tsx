@@ -35,18 +35,18 @@ export const CapacityProvider = ({ children }: { children: ReactNode }) => {
     fetchRef.current = true;
     setLoading(true);
     try {
-      /* 
+
       // MỞ COMMENT ĐOẠN NÀY ĐỂ MOCK DỮ LIỆU UI (NHỚ NHẤN F5 ĐỂ ÁP DỤNG)
       setCapacity({
-        current_count: 55,
-        incoming_count: 10,
-        outgoing_count: 2,
-        future_count: 63,
-        status: 'overload', // thay đổi: 'safe' | 'warning' | 'overload'
-        max_capacity: 50
+        current_count: 15,
+        incoming_count: 5,
+        outgoing_count: 0,
+        future_count: 20,
+        status: 'warning', // thay đ1ổi: 'safe' | 'warning' | 'overload'
+        max_capacity: 20
       });
       return;
-      */
+
 
       const response = await fetch('/api/v1/capacity/forecast');
       const result = await response.json();

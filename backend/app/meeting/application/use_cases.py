@@ -246,9 +246,21 @@ class CheckInUseCase:
         self.event_bus = event_bus
 
     async def execute(
-        self, user_ids: list[int], image: UploadFile
+        self, 
+        user_ids: list[int], 
+        image: UploadFile,
+        client_time: str | None = None,
+        client_event_id: str | None = None
     ) -> tuple[list[MeetingParticipant], str]:
         now = get_current_utc7_time()
+        
+        check_in_dt = now
+        if client_time:
+            try:
+                # Python 3.11+ supports 'Z' suffix natively, but replacing to be safe
+                check_in_dt = datetime.fromisoformat(client_time.replace("Z", "+00:00"))
+            except ValueError:
+                raise BadRequestException("Invalid occurred_at")
 
         # 1. Upload image (Reuse for all meetings in this call)
         file_content = await image.read()
@@ -293,19 +305,26 @@ class CheckInUseCase:
                     continue
 
                 if participant.status == ParticipantStatus.JOINED:
+                    if client_event_id and participant.client_event_id == client_event_id:
+                        messages.append(f"Yêu cầu trùng lặp (client_event_id), đã bỏ qua cho '{meeting.title}'")
+                        continue
                     messages.append(
                         f"Người dùng {participant.user.name if participant.user else user_id} đã điểm danh cho '{meeting.title}'"
                     )
                     continue
 
-                success, msg = participant.check_in(now, image_url)
+                success, msg = participant.check_in(check_in_dt, image_url)
                 if not success:
                     messages.append(msg)
                     updated_participants.append(participant)
                     continue
+                
+                # Lưu thông tin idempotency nếu có
+                if client_event_id:
+                    participant.client_event_id = client_event_id
 
                 # Logic: Lateness check & violation creation via events
-                is_late = meeting.is_late(now)
+                is_late = meeting.is_late(check_in_dt)
 
                 # Save participant state
                 saved_p = self.participant_repo.save(participant)
@@ -321,7 +340,7 @@ class CheckInUseCase:
                         ParticipantCheckedIn(
                             meeting_id=meeting_id,
                             user_id=user_id,
-                            check_in_at=now,
+                            check_in_at=check_in_dt,
                             is_late=is_late,
                             meeting_title=meeting.title,
                         ),
@@ -408,8 +427,21 @@ class CheckOutUseCase:
         self.participant_repo = participant_repo
         self.event_bus = event_bus
 
-    async def execute(self, user_id: int) -> list[MeetingParticipant]:
+    async def execute(
+        self, 
+        user_id: int,
+        client_time: str | None = None,
+        client_event_id: str | None = None
+    ) -> list[MeetingParticipant]:
         now = get_current_utc7_time()
+        
+        check_out_dt = now
+        if client_time:
+            try:
+                check_out_dt = datetime.fromisoformat(client_time.replace("Z", "+00:00"))
+            except ValueError:
+                raise BadRequestException("Invalid occurred_at")
+
         half_hour = timedelta(minutes=30)
         window_start = now - half_hour
         window_end = now + half_hour
@@ -421,9 +453,20 @@ class CheckOutUseCase:
 
         updated_participants = []
         for participant in participations:
+            # Check idempotency first
+            if participant.status == ParticipantStatus.COMPLETED and client_event_id and participant.client_event_id == client_event_id:
+                # Already processed this event
+                continue
+
             # Chỉ check-out những buổi đã check-in và chưa check-out
             if not participant.check_in_at or participant.check_out_at:
                 continue
+            
+            # Validation: check_out_at must be after check_in_at
+            # Because datetime could be timezone-aware or naive, we should compare safely
+            # Here assuming both are same timezone representation
+            if participant.check_in_at and check_out_dt.timestamp() < participant.check_in_at.timestamp():
+                raise BadRequestException("check_out_at must be after check_in_at")
 
             meeting_id = participant.meeting_id
             if meeting_id is None:
@@ -436,7 +479,11 @@ class CheckOutUseCase:
             assert participant.id is not None
             pid = participant.id
 
-            updated = self.participant_repo.check_out(pid, now)
+            updated = self.participant_repo.check_out(pid, check_out_dt)
+            if client_event_id:
+                updated.client_event_id = client_event_id
+                self.participant_repo.save(updated)
+            
             updated_participants.append(updated)
 
             # Publish event
@@ -446,7 +493,7 @@ class CheckOutUseCase:
                     ParticipantCheckedOut(
                         meeting_id=meeting_id,
                         user_id=user_id,
-                        check_out_at=now,
+                        check_out_at=check_out_dt,
                         meeting_title=meeting.title,
                     ),
                 )
