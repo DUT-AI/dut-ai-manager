@@ -330,10 +330,14 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
     def get_present_participants_count(self, now: datetime) -> int:
         """
         N_current: người đã check-in và chưa check-out (hoặc check-out sau now).
+        Chỉ tính những người check-in trong ngày hôm nay để tránh lỗi đọng dữ liệu cũ.
         """
+        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        
         stmt = select(func.count(ORMParticipant.id)).where(
             ORMParticipant.is_deleted.is_(False),
             ORMParticipant.check_in_at.is_not(None),
+            ORMParticipant.check_in_at >= start_of_day,
             or_(
                 ORMParticipant.check_out_at.is_(None),
                 ORMParticipant.check_out_at > now,
