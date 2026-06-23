@@ -40,6 +40,8 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
                     user=user_ref,
                     created_at=p.created_at,
                     updated_at=p.updated_at,
+                    created_by=p.created_by,
+                    updated_by=p.updated_by,
                 )
             )
 
@@ -53,6 +55,8 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
             participants=participants,
             created_at=orm.created_at,
             updated_at=orm.updated_at,
+            created_by=orm.created_by,
+            updated_by=orm.updated_by,
         )
 
     def get_with_participants(self, meeting_id: int) -> DomainMeeting | None:
@@ -60,8 +64,10 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
             select(ORMMeeting)
             .outerjoin(
                 ORMParticipant,
-                ORMMeeting.id
-                == ORMParticipant.meeting_id & (ORMParticipant.is_deleted.is_(False)),
+                and_(
+                    ORMMeeting.id == ORMParticipant.meeting_id,
+                    ORMParticipant.is_deleted.is_(False),
+                ),
             )
             .where(
                 ORMMeeting.is_deleted.is_(False),

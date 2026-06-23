@@ -45,6 +45,8 @@ class Meeting(SQLAlchemyTimestampMixin, Base):
             ),
             created_at=self.created_at,
             updated_at=self.updated_at,
+            created_by=self.created_by,
+            updated_by=self.updated_by,
             is_deleted=self.is_deleted,
         )
 
@@ -103,6 +105,8 @@ class MeetingParticipant(SQLAlchemyTimestampMixin, Base):
             user=user_ref,
             created_at=self.created_at,
             updated_at=self.updated_at,
+            created_by=self.created_by,
+            updated_by=self.updated_by,
         )
 
     @classmethod
