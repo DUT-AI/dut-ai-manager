@@ -10,6 +10,8 @@ from app.user.infrastructure.monthly_stats_repository import MonthlyUserStatsRep
 from app.user.infrastructure.repository import UserRepository
 from app.utils.datetime import get_current_utc7_time
 from app.violation.infrastructure.repository import ViolationRepository
+from app.violation.domain.entity import ViolationType
+from app.report.application.participation_use_cases import GetParticipationAnalysisUseCase
 
 
 class TitleReportItem(BaseModel):
@@ -77,11 +79,13 @@ class AssignMonthlyTitlesUseCase:
         bonus_repo: BonusPointRepository,
         violation_repo: ViolationRepository,
         user_repo: UserRepository,
+        analysis_uc: GetParticipationAnalysisUseCase,
     ):
         self.stats_repo = stats_repo
         self.bonus_repo = bonus_repo
         self.violation_repo = violation_repo
         self.user_repo = user_repo
+        self.analysis_uc = analysis_uc
 
     def execute(
         self,
@@ -102,29 +106,25 @@ class AssignMonthlyTitlesUseCase:
         for user in users:
             assert user.id is not None
             try:
-                bonus_points = self.bonus_repo.get_by_user_id(
-                    user.id, target_month, target_year
-                )
-                total_bonus = sum(bp.points for bp in bonus_points)
-
                 violations = self.violation_repo.get_by_month(
                     user.id, target_month, target_year
                 )
-                violation_count = len(violations)
+                
+                late_count = sum(1 for v in violations if v.type == ViolationType.LATE)
+                absent_count = sum(1 for v in violations if v.type == ViolationType.ABSENT)
+                violation_count = late_count + absent_count
 
-                late_count = sum(1 for v in violations if "trễ" in v.reason.lower())
-                absent_count = sum(
-                    1
-                    for v in violations
-                    if "vắng" in v.reason.lower() or "không" in v.reason.lower()
-                )
-
+                # Lấy số giờ hoạt động để tính điểm cộng
+                analysis = self.analysis_uc.execute(user.id, target_month, target_year)
+                total_hours = analysis.total_hours
+                attendance_bonus = int(total_hours) # Cứ 60 phút hoạt động liên tục được 1 điểm
+                
                 stats = MonthlyUserStats(
                     user_id=user.id,
                     month=target_month,
                     year=target_year,
-                    total_activity_hours=float(total_bonus),
-                    total_bonus_points=total_bonus,
+                    total_activity_hours=total_hours,
+                    total_bonus_points=attendance_bonus,
                     late_count=late_count,
                     absent_count=absent_count,
                     violation_count=violation_count,

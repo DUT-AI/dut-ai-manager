@@ -6,9 +6,10 @@ from app.shared.domain.base_entity import BaseEntity
 class UserTitle(str, Enum):
     """Các loại danh hiệu tháng"""
 
-    ACTIVE = "ACTIVE"
-    NORMAL = "NORMAL"
-    POOR = "POOR"
+    ACTIVE = "Tích cực"
+    NORMAL = "Bình thường"
+    POOR = "Hoạt động kém"
+    INACTIVE = "Chưa hoạt động"
 
 
 class MonthlyUserStats(BaseEntity):
@@ -28,8 +29,14 @@ class MonthlyUserStats(BaseEntity):
 
     def calculate_title(self) -> UserTitle:
         """Tính toán danh hiệu dựa trên thống kê"""
+        if self.total_activity_hours == 0 and self.late_count == 0 and self.absent_count == 0 and self.total_bonus_points == 0 and self.violation_count == 0:
+            return UserTitle.INACTIVE
+
+        total_score = self.total_bonus_points - (2 * self.late_count + 5 * self.absent_count)
+
         if self.violation_count >= 3:
             return UserTitle.POOR
-        if self.total_bonus_points > 30:
+        elif total_score > 30:
             return UserTitle.ACTIVE
-        return UserTitle.NORMAL
+        else:
+            return UserTitle.NORMAL

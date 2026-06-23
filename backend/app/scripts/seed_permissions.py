@@ -30,6 +30,10 @@ from app.user.infrastructure.model import UserModel
 from app.utils.password import hash_password
 
 # Import other models to register them in SQLModel registry for relationships
+from app.violation.infrastructure.model import ViolationModel
+from app.team.infrastructure.model import TeamMemberModel
+from app.bonus_point.infrastructure.model import BonusPointModel
+from app.meeting.infrastructure.model import MeetingParticipant
 
 
 def seed_roles():
@@ -46,7 +50,7 @@ def seed_roles():
         for role_data in roles_data:
             # Check if role already exists
             statement = select(RoleModel).where(RoleModel.name == role_data["name"])
-            existing_role = session.exec(statement).first()
+            existing_role = session.scalars(statement).first()
 
             if existing_role:
                 logger.info(
@@ -79,7 +83,7 @@ def seed_admin_user():
     with Session(engine) as session:
         # Check if admin already exists
         statement = select(UserModel).where(UserModel.email == admin_data["email"])
-        existing_user = session.exec(statement).first()
+        existing_user = session.scalars(statement).first()
 
         if existing_user:
             logger.info(
@@ -89,7 +93,7 @@ def seed_admin_user():
 
         # Get admin role
         role_statement = select(RoleModel).where(RoleModel.name == RoleType.ADMIN)
-        admin_role = session.exec(role_statement).first()
+        admin_role = session.scalars(role_statement).first()
 
         if not admin_role:
             logger.error("Admin role not found. Please run seed_roles first.")
@@ -154,7 +158,7 @@ def seed_permissions():
                 statement = select(PermissionModel).where(
                     PermissionModel.name == perm_name
                 )
-                existing_perm = session.exec(statement).first()
+                existing_perm = session.scalars(statement).first()
 
                 if existing_perm:
                     logger.info(f"Permission '{perm_name}' already exists, skipping...")
@@ -180,7 +184,7 @@ def sync_admin_permissions():
     """
     with Session(engine) as session:
         # Get admin role
-        admin_role = session.exec(
+        admin_role = session.scalars(
             select(RoleModel).where(RoleModel.name == RoleType.ADMIN)
         ).first()
 
@@ -189,10 +193,10 @@ def sync_admin_permissions():
             return
 
         # Get all permissions
-        all_permissions = session.exec(select(PermissionModel)).all()
+        all_permissions = session.scalars(select(PermissionModel)).all()
 
         # Get existing role permissions to avoid duplicates
-        existing_perm_ids = session.exec(
+        existing_perm_ids = session.scalars(
             select(RolePermissionModel.permission_id).where(
                 RolePermissionModel.role_id == admin_role.id
             )

@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Any, cast
 
-from sqlalchemy import and_, case, desc, func, or_, select
+from sqlalchemy import and_, case, desc, extract, func, or_, select
 from sqlalchemy.orm import Session, contains_eager, joinedload
 
 from app.shared.domain.query_support import QuerySupport, apply_query_support
@@ -549,3 +549,22 @@ class ParticipantRepository(BaseRepository[ORMParticipant, DomainParticipant]):
             orm.is_deleted = True
             self.session.add(orm)
         return True
+
+    def get_by_user_and_month(
+        self, user_id: int, month: int, year: int
+    ) -> list[DomainParticipant]:
+        """Lấy tất cả session đã check-in của user trong tháng."""
+        stmt = (
+            select(ORMParticipant)
+            .join(ORMMeeting, ORMParticipant.meeting_id == ORMMeeting.id)
+            .where(
+                ORMParticipant.is_deleted.is_(False),
+                ORMParticipant.user_id == user_id,
+                ORMParticipant.check_in_at.is_not(None),
+                extract("month", ORMMeeting.start_time) == month,
+                extract("year", ORMMeeting.start_time) == year,
+            )
+            .order_by(ORMMeeting.start_time.asc())
+            .options(joinedload(ORMParticipant.user))
+        )
+        return [self._to_domain(orm) for orm in self.session.scalars(stmt).all()]

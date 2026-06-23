@@ -73,6 +73,7 @@ class UserInfoResponse(BaseModel):
 
     id: int
     name: str
+    email: str | None = None
     avatar_url: str | None = None
 
     class Config:

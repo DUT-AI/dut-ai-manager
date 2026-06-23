@@ -14,25 +14,25 @@ class ParticipantStatus(str, Enum):
 
 
 class CapacityStatus(str, Enum):
-    SAFE = "SAFE"  # < 15 người
-    WARNING = "WARNING"  # 15-19 người
-    OVERLOAD = "OVERLOAD"  # >= 20 người
+    SAFE = "SAFE"  # < 2 người
+    WARNING = "WARNING"  # = 2 người
+    OVERLOAD = "OVERLOAD"  # >= 3 người
 
 
 class CapacityMonitor(BaseModel):
     """Trạng thái cảnh báo quá tải (Value Object)"""
 
-    MAX_CAPACITY: ClassVar[int] = 20
-    WARNING_THRESHOLD: ClassVar[int] = 15
-    OVERLOAD_THRESHOLD: ClassVar[int] = 20
+    MAX_CAPACITY: ClassVar[int] = 3
+    WARNING_THRESHOLD: ClassVar[int] = 2
+    OVERLOAD_THRESHOLD: ClassVar[int] = 3
     FORECAST_WINDOW_MINUTES: ClassVar[int] = 30
-    EPSILON: ClassVar[int] = 2
+    EPSILON: ClassVar[int] = 0
 
     current_count: int = 0
     incoming_count: int = 0
     outgoing_count: int = 0
     future_count: int = 0
-    epsilon: int = 2  # Use literal or field default
+    epsilon: int = 0  # Use literal or field default
 
     status: CapacityStatus = CapacityStatus.SAFE
     last_updated: datetime
@@ -43,7 +43,7 @@ class CapacityMonitor(BaseModel):
         n_current: int,
         n_incoming: int,
         n_outgoing: int,
-        epsilon: int = 2,
+        epsilon: int = 0,
     ) -> "CapacityMonitor":
         """Tính toán capacity từ các thành phần"""
         n_future = n_current + n_incoming - n_outgoing + epsilon

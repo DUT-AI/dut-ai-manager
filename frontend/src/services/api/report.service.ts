@@ -1,6 +1,6 @@
 import axiosInstance from "../axiosInstance";
 import type { ApiResponse } from "../../types/api.types";
-import type { DashboardOverviewResponse, ReportResponse, TitleReportItem } from "../../types/report.types";
+import type { DashboardOverviewResponse, ReportResponse, TitleReportItem, ParticipationStats, ActivityTrendItem } from "../../types/report.types";
 
 export const reportService = {
   getDashboardOverview: async (month: number, year: number): Promise<DashboardOverviewResponse> => {
@@ -43,5 +43,26 @@ export const reportService = {
         params: { month, year }
     });
     return response.data.data as TitleReportItem[];
+  },
+
+  getParticipationAnalysis: async (userId: number, month: number, year: number): Promise<ParticipationStats> => {
+    const response = await axiosInstance.get<ApiResponse<ParticipationStats>>(`/reports/users/${userId}/participation`, {
+        params: { month, year }
+    });
+    return response.data.data as ParticipationStats;
+  },
+
+  getParticipationLeaderboard: async (month: number, year: number): Promise<ParticipationStats[]> => {
+    const response = await axiosInstance.get<ApiResponse<ParticipationStats[]>>('/reports/participation/leaderboard', {
+        params: { month, year }
+    });
+    return response.data.data as ParticipationStats[];
+  },
+
+  getActivityTrend: async (month: number, year: number, mode: 'week' | 'month' = 'week'): Promise<ActivityTrendItem[]> => {
+    const response = await axiosInstance.get<ApiResponse<ActivityTrendItem[]>>('/reports/activity-trend', {
+        params: { month, year, mode }
+    });
+    return response.data.data as ActivityTrendItem[];
   }
 };

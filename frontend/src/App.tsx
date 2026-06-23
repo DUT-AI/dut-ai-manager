@@ -1,4 +1,5 @@
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { CapacityProvider } from '@/context/CapacityContext';
 import DashboardPage from '@/pages/DashboardPage';
 import LoginPage from '@/pages/LoginPage';
 import ZaloCallback from '@/pages/Auth/ZaloCallback';
@@ -61,7 +62,9 @@ function App() {
       >
         <BrowserRouter>
           <AuthProvider>
-            <AppContent />
+            <CapacityProvider>
+              <AppContent />
+            </CapacityProvider>
           </AuthProvider>
         </BrowserRouter>
       </ConfigProvider>
@@ -69,5 +72,6 @@ function App() {
     </QueryClientProvider>
   );
 }
+
 
 export default App;

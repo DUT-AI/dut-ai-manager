@@ -47,6 +47,9 @@ import {
 import { meetingService } from '@/services/api/meeting.service';
 import useToggle from '@/hooks/useToggle';
 import { useAuth } from '@/context/AuthContext';
+import { useCapacity } from '@/context/CapacityContext';
+import { CapacityWarning } from '@/components/CapacityWarning';
+import { Agentation } from 'agentation';
 import { BonusPointPermission, PermissionRequestPermission, ViolationPermission } from '@/types/rbac.types';
 import { motion, type Variants } from 'motion/react';
 
@@ -268,6 +271,9 @@ function activityModalReducer(state: ActivityModalState, action: ActivityModalAc
 
 const ActivityCalendarPage = () => {
     const { hasPermission } = useAuth();
+    const { capacityStatus } = useCapacity();
+    const isOverload = capacityStatus === 'overload';
+
     // State
     const [selectedDate, setSelectedDate] = useState<Dayjs>(() => dayjs());
     const [drawerVisible, setDrawerVisible] = useToggle(false);
@@ -462,6 +468,7 @@ const ActivityCalendarPage = () => {
             animate="visible"
             className="md:p-6 pb-20 md:pb-6 min-h-full"
         >
+            <CapacityWarning />
             <Card
                 className={`border-none ${screens.md ? 'shadow-md rounded-2xl' : 'shadow-none rounded-none'}`}
                 styles={{ body: { padding: screens.md ? '24px' : '16px' } }}
@@ -511,8 +518,10 @@ const ActivityCalendarPage = () => {
                         <Button
                             type="primary"
                             icon={<PlusOutlined />}
-                            className="bg-blue-600 hover:bg-blue-700 border-none rounded-xl h-10 font-semibold text-xs md:text-sm px-2 md:px-4 col-span-2 md:col-auto"
+                            className={`border-none rounded-xl h-10 font-semibold text-xs md:text-sm px-2 md:px-4 col-span-2 md:col-auto ${isOverload ? 'bg-gray-400 text-gray-200 opacity-70 cursor-not-allowed hover:bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'}`}
                             onClick={openAddMeeting}
+                            disabled={isOverload}
+                            title={isOverload ? 'Phòng lab đang quá tải, không thể tạo lịch mới' : undefined}
                         >
                             Tạo Meeting
                         </Button>
@@ -619,6 +628,8 @@ const ActivityCalendarPage = () => {
                 onSubmit={handleViolationSubmit}
                 onCancel={() => dispatch({ type: 'CLOSE_VIOLATION' })}
             />
+
+            <Agentation />
 
             <style>{`
                 .custom-calendar .ant-picker-calendar-header {
