@@ -23,7 +23,7 @@ const CapacityContext = createContext<CapacityContextType>({
 
 export const useCapacity = () => useContext(CapacityContext);
 
-const REFRESH_INTERVAL = 15 * 60 * 1000; // 15 minutes
+const REFRESH_INTERVAL = 30 * 1000; // 30 seconds
 
 export const CapacityProvider = ({ children }: { children: ReactNode }) => {
   const [capacity, setCapacity] = useState<CapacityStatus | null>(null);
