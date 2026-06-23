@@ -14,15 +14,16 @@ export const CapacityWarning = () => {
   useEffect(() => {
     if (!capacity) return;
 
+    const currentStatus = capacity.status?.toLowerCase();
     // Only show popup when status CHANGES to warning/overload
     // (avoid popup every 15 min if status unchanged)
-    if (capacity.status === 'warning' && prevStatus.current !== 'warning') {
+    if (currentStatus === 'warning' && prevStatus.current !== 'warning') {
       setWarningModalVisible(true);
     }
-    if (capacity.status === 'overload' && prevStatus.current !== 'overload') {
+    if (currentStatus === 'overload' && prevStatus.current !== 'overload') {
       setOverloadModalVisible(true);
     }
-    prevStatus.current = capacity.status;
+    prevStatus.current = currentStatus;
   }, [capacity]);
 
   if (!capacity) return null;
@@ -50,7 +51,8 @@ export const CapacityWarning = () => {
     },
   };
 
-  const { icon, color, message, description } = config[status];
+  const configKey = status?.toLowerCase() as 'safe' | 'warning' | 'overload';
+  const { icon, color, message, description } = config[configKey] || config.safe;
 
   return (
     <>

@@ -33,6 +33,7 @@ class CapacityMonitor(BaseModel):
     outgoing_count: int = 0
     future_count: int = 0
     epsilon: int = 0  # Use literal or field default
+    max_capacity: int = 3
 
     status: CapacityStatus = CapacityStatus.SAFE
     last_updated: datetime
@@ -61,6 +62,7 @@ class CapacityMonitor(BaseModel):
             outgoing_count=n_outgoing,
             future_count=n_future,
             epsilon=epsilon,
+            max_capacity=cls.MAX_CAPACITY,
             status=status,
             last_updated=datetime.now(UTC),
         )

@@ -242,20 +242,11 @@ async def get_capacity_status(
     return ApiResponse.success(data=monitor)
 
 
-@router.get("/capacity/forecast")
+@router.get("/capacity/forecast", response_model=ApiResponse[CapacityMonitor])
 @inject
 async def get_capacity_forecast(
     use_case: FromDishka[CalculateCurrentCapacityUseCase],
 ):
     """Lấy dự báo 30 phút tới"""
     monitor = use_case.execute()
-    return ApiResponse.success(
-        data={
-            "current": monitor.current_count,
-            "incoming": monitor.incoming_count,
-            "outgoing": monitor.outgoing_count,
-            "future": monitor.future_count,
-            "status": monitor.status.value,
-            "max_capacity": monitor.MAX_CAPACITY,
-        }
-    )
+    return ApiResponse.success(data=monitor)
