@@ -48,9 +48,14 @@ export const CapacityProvider = ({ children }: { children: ReactNode }) => {
       // return;
 
 
-      const response = await fetch('/api/v1/capacity/forecast');
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+      const response = await fetch(`${apiUrl}/meetings/capacity/forecast`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`
+        }
+      });
       const result = await response.json();
-      if (result.success) {
+      if (result.is_success || result.success) {
         setCapacity(result.data);
       }
     } catch (error) {
@@ -63,11 +68,12 @@ export const CapacityProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     fetchCapacity();
-    const interval = setInterval(fetchCapacity, REFRESH_INTERVAL);
-    return () => clearInterval(interval);
+    const timer = setInterval(fetchCapacity, 30 * 1000); // 30s
+
+    return () => clearInterval(timer);
   }, [fetchCapacity]);
 
-  const capacityStatus = capacity?.status ?? null;
+  const capacityStatus = capacity?.status?.toLowerCase() ?? null;
 
   return (
     <CapacityContext.Provider value={{ capacity, capacityStatus, loading }}>
