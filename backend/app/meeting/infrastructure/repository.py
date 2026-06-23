@@ -331,6 +331,7 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         """
         N_current: người đã check-in và chưa check-out (hoặc check-out sau now).
         Chỉ tính những người check-in trong ngày hôm nay để tránh lỗi đọng dữ liệu cũ.
+        Và chỉ tính những người có status là JOINED (chưa checkout).
         """
         start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
         
@@ -338,6 +339,7 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
             ORMParticipant.is_deleted.is_(False),
             ORMParticipant.check_in_at.is_not(None),
             ORMParticipant.check_in_at >= start_of_day,
+            ORMParticipant.status == ParticipantStatus.JOINED,
             or_(
                 ORMParticipant.check_out_at.is_(None),
                 ORMParticipant.check_out_at > now,
