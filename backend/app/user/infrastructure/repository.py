@@ -5,7 +5,7 @@ User Repository — infrastructure layer.
 from typing import cast
 
 from sqlalchemy import or_, select
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, selectinload
 
 from app.rbac.infrastructure.model import RoleModel, RolePermissionModel
 from app.shared.infrastructure.base_repository import BaseRepository
@@ -18,8 +18,13 @@ class UserRepository(BaseRepository[UserModel, UserEntity]):
         super().__init__(session, UserModel)
 
     def add(self, entity: UserEntity) -> UserEntity:
-        """Add user with eager loading of role/permissions to avoid N+1."""
+        """Add user with eager loading of roles/permissions to avoid N+1."""
         model = UserModel.from_entity(entity)
+        if entity.role_ids:
+            roles = self.session.scalars(
+                select(RoleModel).where(RoleModel.id.in_(entity.role_ids))
+            ).all()
+            model.roles = list(roles)
         self.session.add(model)
         self.session.flush()
 
@@ -33,9 +38,30 @@ class UserRepository(BaseRepository[UserModel, UserEntity]):
         return refreshed_model.to_entity()
 
     def update(self, entity: UserEntity) -> UserEntity:
-        """Update user with eager loading of role/permissions to avoid N+1."""
-        model = UserModel.from_entity(entity)
-        self.session.merge(model)
+        """Update user with eager loading of roles/permissions to avoid N+1."""
+        model = self.session.get(UserModel, entity.id)
+        if not model:
+            raise Exception("User not found")
+
+        model.name = entity.name
+        model.email = entity.email
+        model.phone_number = entity.phone_number
+        model.status = entity.status
+        model.avatar_url = entity.avatar_url
+        model.discord_id = entity.discord_id
+        model.check_in_card_code = entity.check_in_card_code
+        model.zalo_id = entity.zalo_id
+        model.zalo_bot_id = entity.zalo_bot_id
+        model.zalo_bind_code = entity.zalo_bind_code
+
+        if entity.role_ids:
+            roles = self.session.scalars(
+                select(RoleModel).where(RoleModel.id.in_(entity.role_ids))
+            ).all()
+            model.roles = list(roles)
+        else:
+            model.roles = []
+
         self.session.flush()
 
         # Refresh with full details to avoid N+1 when calling to_entity()
@@ -47,11 +73,11 @@ class UserRepository(BaseRepository[UserModel, UserEntity]):
         return refreshed_model.to_entity()
 
     def _get_base_query(self):
-        """Query với role và toàn bộ permission (tránh N+1 khi to_entity)."""
+        """Query với roles và toàn bộ permission (tránh N+1 khi to_entity)."""
         return select(UserModel).options(
-            joinedload(UserModel.role)
-            .joinedload(RoleModel.role_permissions)
-            .joinedload(RolePermissionModel.permission)
+            selectinload(UserModel.roles)
+            .selectinload(RoleModel.role_permissions)
+            .selectinload(RolePermissionModel.permission)
         )
 
     def get_by_id(self, id: int) -> UserEntity | None:

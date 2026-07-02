@@ -93,7 +93,7 @@ const HeaderLayout = ({ showMenuButton, onMenuClick }: HeaderLayoutProps) => {
                         <Text className="font-semibold text-sm group-hover:text-white transition-colors" style={{ color: '#ffffff' }}>{user?.name}</Text>
                         <div className="flex items-center gap-1.5 mt-0.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
-                            <Text className="text-[10px] uppercase font-bold tracking-wider opacity-80" style={{ color: '#ffffff' }}>{user?.role_name}</Text>
+                            <Text className="text-[10px] uppercase font-bold tracking-wider opacity-80" style={{ color: '#ffffff' }}>{user?.role_names?.join(', ')}</Text>
                         </div>
                     </div>
                 </Space>

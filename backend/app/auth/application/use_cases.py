@@ -43,7 +43,7 @@ class BaseAuthUseCase:
             sub=user.id,
             name=user.name,
             email=user.email,
-            role=user.role_name or "",
+            roles=user.role_names,
             avatar=user.avatar_url or "",
             permissions=sorted(user.permissions),
         )
@@ -66,9 +66,9 @@ class AuthenticateUseCase(BaseAuthUseCase):
                 FilterCriterion(field="email", operator=FilterOperator.EQ, value=email)
             ],
             include=[
-                "role",
-                "role.role_permissions",
-                "role.role_permissions.permission",
+                "roles",
+                "roles.role_permissions",
+                "roles.role_permissions.permission",
             ],
         )
         user = self.user_repo.get_one(user_qs)
@@ -116,9 +116,9 @@ class RefreshTokenUseCase(BaseAuthUseCase):
                 )
             ],
             include=[
-                "role",
-                "role.role_permissions",
-                "role.role_permissions.permission",
+                "roles",
+                "roles.role_permissions",
+                "roles.role_permissions.permission",
             ],
         )
         user = self.user_repo.get_one(user_qs)

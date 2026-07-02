@@ -25,6 +25,20 @@ if TYPE_CHECKING:
     from app.violation.infrastructure.model import ViolationModel
 
 
+class UserRoleModel(SQLAlchemyTimestampMixin, Base):
+    """Database ORM mapping to 'user_roles' table."""
+
+    __tablename__ = "user_roles"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    role_id: Mapped[int] = mapped_column(
+        ForeignKey("roles.id", ondelete="CASCADE"), index=True
+    )
+
+
 class UserModel(SQLAlchemyTimestampMixin, Base):
     """ORM model — maps to 'users' table."""
 
@@ -52,15 +66,12 @@ class UserModel(SQLAlchemyTimestampMixin, Base):
     )
     avatar_url: Mapped[str | None] = mapped_column(default=None)
 
-    # Foreign keys
-    role_id: Mapped[int | None] = mapped_column(
-        ForeignKey("roles.id"), default=None, index=True
-    )
-
     # Relationships
-    role: Mapped["RoleModel | None"] = relationship(
+    roles: Mapped[list["RoleModel"]] = relationship(
+        secondary="user_roles",
+        primaryjoin="UserModel.id == UserRoleModel.user_id",
+        secondaryjoin="RoleModel.id == UserRoleModel.role_id",
         back_populates="users",
-        foreign_keys=[role_id],
     )
     account: Mapped["AccountModel | None"] = relationship(
         back_populates="user",
@@ -87,18 +98,18 @@ class UserModel(SQLAlchemyTimestampMixin, Base):
         """ORM Model → Domain Entity."""
         # Calculate permissions only if relations are loaded to avoid N+1
         permissions = set()
-        role_name = None
+        role_names = []
+        role_ids = []
 
-        if "role" in self.__dict__ and self.role:
-            role_name = self.role.name
-
-            # Check if nested role_permissions is also loaded
-            if "role_permissions" in self.role.__dict__:
-                permissions = {
-                    rp.permission.name
-                    for rp in self.role.role_permissions
-                    if "permission" in rp.__dict__ and rp.permission
-                }
+        if "roles" in self.__dict__ and self.roles:
+            for r in self.roles:
+                role_names.append(r.name)
+                role_ids.append(r.id)
+                # Check if nested role_permissions is also loaded
+                if "role_permissions" in r.__dict__:
+                    for rp in r.role_permissions:
+                        if "permission" in rp.__dict__ and rp.permission:
+                            permissions.add(rp.permission.name)
 
         return UserEntity(
             id=self.id,
@@ -112,8 +123,8 @@ class UserModel(SQLAlchemyTimestampMixin, Base):
             zalo_id=self.zalo_id,
             zalo_bot_id=self.zalo_bot_id,
             zalo_bind_code=self.zalo_bind_code,
-            role_id=self.role_id,
-            role_name=role_name,
+            role_ids=role_ids,
+            role_names=role_names,
             permissions=permissions,
             created_at=self.created_at,
             updated_at=self.updated_at,
@@ -137,5 +148,4 @@ class UserModel(SQLAlchemyTimestampMixin, Base):
             zalo_id=entity.zalo_id,
             zalo_bot_id=entity.zalo_bot_id,
             zalo_bind_code=entity.zalo_bind_code,
-            role_id=entity.role_id,
         )

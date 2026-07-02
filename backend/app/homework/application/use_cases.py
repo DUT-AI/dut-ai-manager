@@ -305,40 +305,38 @@ class HomeworkUseCases:
     ) -> list[HomeworkSubmissionEntity]:
         homework_submissions = self.submission_repo.get_all_by_homework(homework_id)
 
-        role_name = current_user.role_name or ""
-        role_name = role_name.lower()
-        match role_name:
-            case RoleType.ADMIN.value:
-                return homework_submissions
-            case RoleType.LEADER.value:
-                # Need to use team info to filter
-                team_member_ids = set()
-                teams: list[Team] = self.team_repo.get_all_with_members()
-                # find teams that current user belongs to
-                my_teams = [
-                    t
-                    for t in teams
-                    if any(tm.user_id == current_user.id for tm in t.members)
-                ]
-                for tm in my_teams:
-                    for member in tm.members:
-                        team_member_ids.add(member.user_id)
+        role_names = [r.lower() for r in current_user.role_names]
+        if RoleType.ADMIN.value in role_names:
+            return homework_submissions
+        elif RoleType.LEADER.value in role_names:
+            # Need to use team info to filter
+            team_member_ids = set()
+            teams: list[Team] = self.team_repo.get_all_with_members()
+            # find teams that current user belongs to
+            my_teams = [
+                t
+                for t in teams
+                if any(tm.user_id == current_user.id for tm in t.members)
+            ]
+            for tm in my_teams:
+                for member in tm.members:
+                    team_member_ids.add(member.user_id)
 
-                filter_submissions = [
-                    item
-                    for item in homework_submissions
-                    if item.owner_id in team_member_ids
-                ]
-                return filter_submissions
-            case RoleType.TEAMMATE.value:
-                filter_submissions = [
-                    item
-                    for item in homework_submissions
-                    if item.owner_id == current_user.id
-                ]
-                return filter_submissions
-            case _:
-                raise BadRequestException("Không có quyền xem bài nộp")
+            filter_submissions = [
+                item
+                for item in homework_submissions
+                if item.owner_id in team_member_ids
+            ]
+            return filter_submissions
+        elif RoleType.TEAMMATE.value in role_names:
+            filter_submissions = [
+                item
+                for item in homework_submissions
+                if item.owner_id == current_user.id
+            ]
+            return filter_submissions
+        else:
+            raise BadRequestException("Không có quyền xem bài nộp")
 
     async def submit_homework(
         self, homework_id: int, file: UploadFile
@@ -441,39 +439,38 @@ class HomeworkUseCases:
         if submission.status == HomeworkStatus.NOT_SUBMITTED:
             raise BadRequestException("Submission chưa được nộp, không được check")
 
-        assert current_user.role_name is not None
-        match current_user.role_name:
-            case RoleType.ADMIN.value:
-                pass
-            case RoleType.LEADER.value:
-                if submission.status == HomeworkStatus.LEADER_CHECKED:
-                    raise BadRequestException(
-                        "Submission đã được đánh dấu 'leader đã check'"
-                    )
+        role_names = [r.lower() for r in current_user.role_names]
+        if RoleType.ADMIN.value in role_names:
+            pass
+        elif RoleType.LEADER.value in role_names:
+            if submission.status == HomeworkStatus.LEADER_CHECKED:
+                raise BadRequestException(
+                    "Submission đã được đánh dấu 'leader đã check'"
+                )
 
-                if status != HomeworkStatus.LEADER_CHECKED:
-                    raise BadRequestException(
-                        "Leader chỉ có thể đánh dấu 'leader đã check'"
-                    )
+            if status != HomeworkStatus.LEADER_CHECKED:
+                raise BadRequestException(
+                    "Leader chỉ có thể đánh dấu 'leader đã check'"
+                )
 
-                # Collect team members
-                team_member_ids = set()
-                teams = self.team_repo.get_all_with_members()
-                my_teams = [
-                    t
-                    for t in teams
-                    if any(tm.user_id == current_user.id for tm in t.members)
-                ]
-                for tm in my_teams:
-                    for member in tm.members:
-                        team_member_ids.add(member.user_id)
+            # Collect team members
+            team_member_ids = set()
+            teams = self.team_repo.get_all_with_members()
+            my_teams = [
+                t
+                for t in teams
+                if any(tm.user_id == current_user.id for tm in t.members)
+            ]
+            for tm in my_teams:
+                for member in tm.members:
+                    team_member_ids.add(member.user_id)
 
-                if submission.owner_id not in team_member_ids:
-                    raise BadRequestException(
-                        "Bạn chỉ có thể update submission của thành viên cùng team"
-                    )
-            case _:
-                raise BadRequestException("Bạn không có quyền thực hiện hành động này")
+            if submission.owner_id not in team_member_ids:
+                raise BadRequestException(
+                    "Bạn chỉ có thể update submission của thành viên cùng team"
+                )
+        else:
+            raise BadRequestException("Bạn không có quyền thực hiện hành động này")
 
         submission.status = status
         return self.submission_repo.update(submission)

@@ -12,8 +12,8 @@ export interface UserResponse {
   email: string;
   phone_number: string | null;
   status: UserStatus;
-  role_id: number | null;
-  role_name: string | null;
+  role_ids: number[];
+  role_names: string[];
   permissions: string[];
   discord_id: string | null;
   zalo_id: string | null;
@@ -28,7 +28,7 @@ export interface UserCreate {
   password: string;
   phone_number?: string;
   status?: UserStatus;
-  role_id?: number;
+  role_ids?: number[];
   discord_id?: string;
   zalo_id?: string;
   avatar_url?: string;
@@ -40,7 +40,7 @@ export interface UserUpdate {
   password?: string;
   phone_number?: string;
   status?: UserStatus;
-  role_id?: number;
+  role_ids?: number[];
   discord_id?: string;
   zalo_id?: string;
   avatar_url?: string;

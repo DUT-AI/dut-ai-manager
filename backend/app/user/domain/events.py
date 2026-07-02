@@ -5,4 +5,4 @@ class UserCreated(DomainEvent):
     user_id: int
     name: str
     email: str
-    role_id: int | None = None
+    role_ids: list[int] = []

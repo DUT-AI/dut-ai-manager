@@ -197,7 +197,7 @@ test.describe('UserManagementPage — mobile list', () => {
         }));
         await page.route(`${API}/users`, (r) => r.fulfill({
             status: 200, contentType: 'application/json',
-            body: JSON.stringify({ is_success: true, data: [{ id: 2, name: 'Trần Thị B', email: 'b@test.com', role_name: 'teammate', status: 'active', phone_number: '0987654321', avatar_url: null, discord_id: null }] }),
+            body: JSON.stringify({ is_success: true, data: [{ id: 2, name: 'Trần Thị B', email: 'b@test.com', role_ids: [2], role_names: ['teammate'], status: 'active', phone_number: '0987654321', avatar_url: null, discord_id: null }] }),
         }));
 
         const keyWarnings: string[] = [];

@@ -20,7 +20,7 @@ class TokenPayload(BaseModel):
     sub: int
     name: str
     email: str = ""
-    role: str = ""
+    roles: list[str] = Field(default_factory=list)
     avatar: str = ""
     permissions: list[str] = Field(default_factory=list)
 
@@ -34,7 +34,7 @@ class AccessTokenPayload(BaseModel):
     type: Literal["access"]
     name: str = ""
     email: str = ""
-    role: str = ""
+    roles: list[str] = Field(default_factory=list)
     avatar: str = ""
     permissions: list[str] = Field(default_factory=list)
 

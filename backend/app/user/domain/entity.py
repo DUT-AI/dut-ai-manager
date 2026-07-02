@@ -31,14 +31,14 @@ class UserEntity(BaseEntity):
     zalo_bind_code: str | None = None
 
     # Relationship IDs
-    role_id: int | None = None
+    role_ids: list[int] = Field(default_factory=list)
 
     # Denormalized / Virtual fields (populated by repository)
-    role_name: str | None = None
+    role_names: list[str] = Field(default_factory=list)
     permissions: set[str] = Field(default_factory=set)
 
     def has_permission(self, permission_name: str) -> bool:
-        if self.role_name == "admin":
+        if "admin" in self.role_names:
             return True
         return permission_name in self.permissions
 

@@ -91,9 +91,17 @@ const MobileListView = ({ filteredUsers, isLoading, canUpdate, canDelete, onNavi
                         styles={{ body: { padding: '16px' } }}
                     >
                         <div className="flex items-center justify-between mb-4">
-                            <Tag color={record.role_name === 'admin' ? 'volcano' : record.role_name === 'leader' ? 'blue' : 'green'} className="uppercase font-bold m-0 px-3 rounded-full">
-                                {record.role_name || 'NO ROLE'}
-                            </Tag>
+                            <div className="flex flex-wrap gap-1">
+                                {record.role_names && record.role_names.length > 0 ? (
+                                    record.role_names.map((rn) => (
+                                        <Tag key={rn} color={rn === 'admin' ? 'volcano' : rn === 'leader' ? 'blue' : 'green'} className="uppercase font-bold m-0 px-3 rounded-full">
+                                            {rn}
+                                        </Tag>
+                                    ))
+                                ) : (
+                                    <Tag className="uppercase font-bold m-0 px-3 rounded-full">NO ROLE</Tag>
+                                )}
+                            </div>
                             <Badge
                                 status={record.status === UserStatus.ACTIVE ? 'success' : 'error'}
                                 text={<span className={record.status === UserStatus.ACTIVE ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>{record.status}</span>}
@@ -218,7 +226,7 @@ const UserManagementPage = () => {
                 user.phone_number?.toLowerCase().includes(searchText.toLowerCase());
 
             // Role filter
-            const matchRole = !filterRole || user.role_name === filterRole;
+            const matchRole = !filterRole || (user.role_names && user.role_names.includes(filterRole));
 
             // Status filter
             const matchStatus = !filterStatus || user.status === filterStatus;
@@ -298,12 +306,20 @@ const UserManagementPage = () => {
         },
         {
             title: 'Vai trò',
-            dataIndex: 'role_name',
+            dataIndex: 'role_names',
             key: 'role',
-            render: (role: string) => (
-                <Tag color={role === 'admin' ? 'volcano' : role === 'leader' ? 'blue' : 'green'} className="uppercase font-bold min-w-[80px] text-center">
-                    {role || 'NO ROLE'}
-                </Tag>
+            render: (roles: string[]) => (
+                <div className="flex flex-wrap gap-1">
+                    {roles && roles.length > 0 ? (
+                        roles.map((r) => (
+                            <Tag key={r} color={r === 'admin' ? 'volcano' : r === 'leader' ? 'blue' : 'green'} className="uppercase font-bold min-w-[70px] text-center m-0">
+                                {r}
+                            </Tag>
+                        ))
+                    ) : (
+                        <Tag className="uppercase font-bold min-w-[70px] text-center m-0">NO ROLE</Tag>
+                    )}
+                </div>
             ),
         },
         {
@@ -522,11 +538,17 @@ const UserManagementPage = () => {
                         <Form.Item name="phone_number" label="Phone Number">
                             <Input prefix={<PhoneOutlined className="text-gray-400" />} placeholder="+84 123 456 789" />
                         </Form.Item>
-                        <Form.Item name="role_id" label="System Role" rules={[{ required: true, message: 'Please select a role!' }]}>
-                            <Select placeholder="Select a role">
+                        <Form.Item name="role_ids" label="System Roles" rules={[{ required: true, message: 'Please select at least one role!' }]}>
+                            <Select 
+                                mode="multiple" 
+                                placeholder="Select roles" 
+                                style={{ width: '100%' }}
+                                optionFilterProp="label"
+                                showSearch
+                            >
                                 {roles.map(role => (
-                                    <Option key={role.id} value={role.id}>
-                                        <Tag color={role.name === 'admin' ? 'volcano' : role.name === 'leader' ? 'blue' : 'green'}>
+                                    <Option key={role.id} value={role.id} label={role.name}>
+                                        <Tag color={role.name === 'admin' ? 'volcano' : role.name === 'leader' ? 'blue' : 'green'} className="m-0">
                                             {role.name.toUpperCase()}
                                         </Tag>
                                     </Option>

@@ -30,10 +30,6 @@ from app.user.infrastructure.model import UserModel
 from app.utils.password import hash_password
 
 # Import other models to register them in SQLModel registry for relationships
-from app.violation.infrastructure.model import ViolationModel
-from app.team.infrastructure.model import TeamMemberModel
-from app.bonus_point.infrastructure.model import BonusPointModel
-from app.meeting.infrastructure.model import MeetingParticipant
 
 
 def seed_roles():

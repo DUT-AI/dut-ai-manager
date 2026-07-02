@@ -2,16 +2,19 @@ from dishka import Provider, Scope, provide
 
 from app.bonus_point.infrastructure.repository import BonusPointRepository
 from app.homework.infrastructure.repository import HomeworkSubmissionRepository
-from app.meeting.infrastructure.repository import MeetingRepository, ParticipantRepository
+from app.meeting.infrastructure.repository import (
+    MeetingRepository,
+    ParticipantRepository,
+)
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
+from app.report.application.participation_use_cases import (
+    GetParticipationAnalysisUseCase,
+    GetParticipationLeaderboardUseCase,
+)
 from app.report.application.title_use_cases import (
     AssignMonthlyTitlesUseCase,
     GetCurrentTitleUseCase,
     GetMonthlyTitlesReportUseCase,
-)
-from app.report.application.participation_use_cases import (
-    GetParticipationAnalysisUseCase,
-    GetParticipationLeaderboardUseCase,
 )
 from app.report.application.trend_use_cases import GetActivityTrendUseCase
 from app.report.application.use_cases import (

@@ -1,7 +1,6 @@
-import calendar
 import random
 import string
-from datetime import date, datetime
+from datetime import date
 
 from fastapi import status
 

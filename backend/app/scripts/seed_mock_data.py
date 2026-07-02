@@ -1,21 +1,20 @@
 import datetime
+
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.bonus_point.infrastructure.model import BonusPointModel
 from app.core.database import engine
+from app.meeting.infrastructure.model import Meeting
+from app.rbac.domain.entity import RoleType
+from app.rbac.infrastructure.model import RoleModel
 from app.user.domain.entity import UserStatus
+from app.user.domain.monthly_stats import UserTitle
 from app.user.infrastructure.model import UserModel
 from app.user.infrastructure.monthly_stats_model import MonthlyUserStatsModel
-from app.rbac.infrastructure.model import RoleModel
-from app.rbac.domain.entity import RoleType
-from app.meeting.infrastructure.model import Meeting, MeetingParticipant
 from app.violation.infrastructure.model import ViolationModel
-from app.bonus_point.infrastructure.model import BonusPointModel
-from app.violation.domain.entity import ViolationType
-from app.user.domain.monthly_stats import UserTitle
-from app.auth.infrastructure.model import AccountModel
-from app.team.infrastructure.model import TeamMemberModel
+
 
 def seed_mock_data():
     with Session(engine) as session:
@@ -52,7 +51,7 @@ def seed_mock_data():
                 created_users.append(existing)
 
         session.commit()
-        
+
         user_a = created_users[0]
         user_b = created_users[1]
         user_c = created_users[2]
@@ -107,7 +106,7 @@ def seed_mock_data():
             add_participant(user_b.id, m_may_2, checkin_offset=0)
 
             add_participant(user_a.id, m_june_1, checkin_offset=0)
-            
+
             # Bonus points & violations
             v1 = ViolationModel(user_id=user_b.id, date=m_may_1.start_time, reason="Đi trễ")
             b1 = BonusPointModel(user_id=user_a.id, points=10, reason="Phát biểu tích cực", date=m_may_1.start_time)
@@ -119,7 +118,7 @@ def seed_mock_data():
             # Monthly stats
             stat_a_may = MonthlyUserStatsModel(user_id=user_a.id, month=last_month, year=last_month_year, total_activity_hours=4.0, total_bonus_points=10, violation_count=0, assigned_title=UserTitle.ACTIVE.value)
             stat_b_may = MonthlyUserStatsModel(user_id=user_b.id, month=last_month, year=last_month_year, total_activity_hours=3.6, total_bonus_points=5, late_count=1, violation_count=1, assigned_title=UserTitle.NORMAL.value)
-            
+
             stat_a_june = MonthlyUserStatsModel(user_id=user_a.id, month=current_month, year=current_year, total_activity_hours=2.0, total_bonus_points=15, violation_count=0)
             stat_b_june = MonthlyUserStatsModel(user_id=user_b.id, month=current_month, year=current_year, total_activity_hours=0.0, total_bonus_points=0, violation_count=0)
 

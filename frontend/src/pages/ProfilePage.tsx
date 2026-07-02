@@ -248,7 +248,11 @@ const ProfilePage = () => {
                             <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
                                 <div>
                                     <Title level={2} className="!m-0">{user.name}</Title>
-                                    <Tag color="blue" className="mt-2 uppercase font-bold">{user.role_name}</Tag>
+                                    <div className="flex flex-wrap gap-1 mt-2">
+                                        {user.role_names?.map((rn) => (
+                                            <Tag key={rn} color="blue" className="uppercase font-bold m-0">{rn}</Tag>
+                                        ))}
+                                    </div>
                                 </div>
                                 <Tag color={user.status === UserStatus.ACTIVE ? 'success' : 'error'} className="rounded-full px-4 sm:self-start">
                                     {user.status}
@@ -321,7 +325,11 @@ const ProfilePage = () => {
                                                             <SafetyCertificateOutlined className="text-indigo-500" />
                                                             <Text>Vai trò hiện tại</Text>
                                                         </Space>
-                                                        <Tag color="purple">{user.role_name}</Tag>
+                                                         <div className="flex flex-wrap gap-1 justify-end">
+                                                             {user.role_names?.map((rn) => (
+                                                                 <Tag key={rn} color="purple" className="m-0">{rn}</Tag>
+                                                             ))}
+                                                         </div>
                                                     </div>
                                                 </Space>
                                             </div>

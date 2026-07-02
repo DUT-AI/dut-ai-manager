@@ -2,7 +2,7 @@
 Billing Repository — data access layer.
 """
 
-from datetime import date, datetime
+from datetime import date
 
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session, joinedload

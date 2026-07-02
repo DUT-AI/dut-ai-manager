@@ -340,7 +340,7 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         Và chỉ tính những người có status là JOINED (chưa checkout).
         """
         start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        
+
         stmt = select(func.count(ORMParticipant.id)).where(
             ORMParticipant.is_deleted.is_(False),
             ORMParticipant.check_in_at.is_not(None),

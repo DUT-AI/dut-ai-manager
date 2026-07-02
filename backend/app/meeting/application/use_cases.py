@@ -246,14 +246,14 @@ class CheckInUseCase:
         self.event_bus = event_bus
 
     async def execute(
-        self, 
-        user_ids: list[int], 
+        self,
+        user_ids: list[int],
         image: UploadFile,
         client_time: str | None = None,
         client_event_id: str | None = None
     ) -> tuple[list[MeetingParticipant], str]:
         now = get_current_utc7_time()
-        
+
         check_in_dt = now
         if client_time:
             try:
@@ -318,7 +318,7 @@ class CheckInUseCase:
                     messages.append(msg)
                     updated_participants.append(participant)
                     continue
-                
+
                 # Lưu thông tin idempotency nếu có
                 if client_event_id:
                     participant.client_event_id = client_event_id
@@ -428,13 +428,13 @@ class CheckOutUseCase:
         self.event_bus = event_bus
 
     async def execute(
-        self, 
+        self,
         user_id: int,
         client_time: str | None = None,
         client_event_id: str | None = None
     ) -> list[MeetingParticipant]:
         now = get_current_utc7_time()
-        
+
         check_out_dt = now
         if client_time:
             try:
@@ -461,7 +461,7 @@ class CheckOutUseCase:
             # Chỉ check-out những buổi đã check-in và chưa check-out
             if not participant.check_in_at or participant.check_out_at:
                 continue
-            
+
             # Validation: check_out_at must be after check_in_at
             # Because datetime could be timezone-aware or naive, we should compare safely
             # Here assuming both are same timezone representation
@@ -483,7 +483,7 @@ class CheckOutUseCase:
             if client_event_id:
                 updated.client_event_id = client_event_id
                 self.participant_repo.save(updated)
-            
+
             updated_participants.append(updated)
 
             # Publish event

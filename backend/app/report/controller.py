@@ -5,19 +5,19 @@ from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, Query
 
 from app.core.deps import CurrentUser
-from app.report.application.title_use_cases import (
-    GetCurrentTitleUseCase,
-    GetMonthlyTitlesReportUseCase,
-    TitleReportItem,
-)
 from app.report.application.participation_use_cases import (
     GetParticipationAnalysisUseCase,
     GetParticipationLeaderboardUseCase,
     ParticipationStats,
 )
+from app.report.application.title_use_cases import (
+    GetCurrentTitleUseCase,
+    GetMonthlyTitlesReportUseCase,
+    TitleReportItem,
+)
 from app.report.application.trend_use_cases import (
-    GetActivityTrendUseCase,
     ActivityTrendItem,
+    GetActivityTrendUseCase,
 )
 from app.report.application.use_cases import (
     GetBonusPointReportUseCase,

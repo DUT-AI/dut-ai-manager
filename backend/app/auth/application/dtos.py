@@ -39,7 +39,7 @@ class TokenPayloadResponse(BaseModel):
 
     sub: int
     name: str
-    role: str = ""
+    roles: list[str] = []
     avatar_url: str | None = ""
     permissions: list[str] = []
     type: Literal["access", "refresh"] = "access"
@@ -55,7 +55,7 @@ class UserReponseMe(BaseModel):
     email: str
     status: str
     avatar_url: str | None = None
-    role_name: str | None = None
+    role_names: list[str] = []
     permissions: list[str]
 
 

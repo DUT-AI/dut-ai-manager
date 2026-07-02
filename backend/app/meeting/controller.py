@@ -106,7 +106,7 @@ async def check_meeting_ownership(
 ):
     """Kiểm tra xem người dùng hiện tại có quyền sở hữu cuộc họp (hoặc là Admin) không"""
     meeting = uc.get_by_id(meeting_id)
-    if current_user.role_name != "admin" and meeting.created_by != current_user.id:
+    if "admin" not in current_user.role_names and meeting.created_by != current_user.id:
         raise BadRequestException(
             message="Bạn không có quyền chỉnh sửa hoặc xóa buổi họp này",
             status_code=status.HTTP_403_FORBIDDEN,
@@ -187,9 +187,9 @@ async def check_in(
     idem_key = client_event_id or event_id or idempotency_key
 
     participants, message = await uc.execute(
-        user_ids=user_ids, 
-        image=image, 
-        client_time=client_time_val, 
+        user_ids=user_ids,
+        image=image,
+        client_time=client_time_val,
         client_event_id=idem_key
     )
     return ApiResponse.success(

@@ -35,9 +35,9 @@ class GetUserUseCase:
                 FilterCriterion(field="id", operator=FilterOperator.EQ, value=user_id)
             ],
             include=[
-                "role",
-                "role.role_permissions",
-                "role.role_permissions.permission",
+                "roles",
+                "roles.role_permissions",
+                "roles.role_permissions.permission",
             ],
         )
         user = self.repo.get_one(qs)
@@ -49,9 +49,9 @@ class GetUserUseCase:
         # Mặc định load đầy đủ role/permissions để to_entity chính xác
         qs = build_query_support(
             include=[
-                "role",
-                "role.role_permissions",
-                "role.role_permissions.permission",
+                "roles",
+                "roles.role_permissions",
+                "roles.role_permissions.permission",
             ]
         )
         return self.repo.get_all(qs)
@@ -72,9 +72,9 @@ class UpdateUserUseCase:
                 FilterCriterion(field="id", operator=FilterOperator.EQ, value=user_id)
             ],
             include=[
-                "role",
-                "role.role_permissions",
-                "role.role_permissions.permission",
+                "roles",
+                "roles.role_permissions",
+                "roles.role_permissions.permission",
             ],
         )
         user = self.repo.get_one(qs)
@@ -167,7 +167,7 @@ class CreateUserUseCase:
             status=(
                 UserStatus(user_data.status) if user_data.status else UserStatus.ACTIVE
             ),
-            role_id=user_data.role_id,
+            role_ids=user_data.role_ids,
         )
         saved_user = self.repo.add(new_user)
         self.repo.flush()
@@ -181,7 +181,7 @@ class CreateUserUseCase:
                 user_id=saved_user.id,
                 name=saved_user.name,
                 email=saved_user.email,
-                role_id=saved_user.role_id,
+                role_ids=saved_user.role_ids,
             )
         )
 
@@ -282,7 +282,7 @@ class ImportUsersUseCase:
                     name=name,
                     email=email,
                     phone_number=phone,
-                    role_id=teammate_role.id,
+                    role_ids=[teammate_role.id] if teammate_role.id else [],
                 )
 
                 # Check email existence manually
@@ -327,9 +327,9 @@ class UpdateAvatarUseCase:
                 FilterCriterion(field="id", operator=FilterOperator.EQ, value=user_id)
             ],
             include=[
-                "role",
-                "role.role_permissions",
-                "role.role_permissions.permission",
+                "roles",
+                "roles.role_permissions",
+                "roles.role_permissions.permission",
             ],
         )
         user = self.repo.get_one(qs)

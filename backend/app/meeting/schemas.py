@@ -39,7 +39,7 @@ class CheckOutRequest(BaseModel):
             or self.timestamp
             or self.client_time
         )
-    
+
     def get_idempotency_key(self) -> str | None:
         return self.client_event_id or self.event_id or self.idempotency_key
 

@@ -10,7 +10,7 @@ class UserBase(BaseModel):
     email: EmailStr
     phone_number: str | None = None
     status: UserStatus = UserStatus.ACTIVE
-    role_id: int | None = None
+    role_ids: list[int] = []
     avatar_url: str | None = None
     discord_id: str | None = None
 
@@ -23,7 +23,7 @@ class UserUpdate(BaseModel):
     name: str | None = None
     email: str | None = None
     phone_number: str | None = None
-    role_id: int | None = None
+    role_ids: list[int] | None = None
     status: UserStatus | None = None
     avatar_url: str | None = None
     discord_id: str | None = None
@@ -34,7 +34,7 @@ class UserResponse(UserBase):
     """API: không trả về giá trị thật của check_in_card_code, chỉ cờ đã cấu hình."""
 
     id: int
-    role_name: str | None = None
+    role_names: list[str] = []
     permissions: list[str] = []
     check_in_card_code_configured: bool = False
 

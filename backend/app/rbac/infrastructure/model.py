@@ -158,8 +158,10 @@ class RoleModel(SQLAlchemyTimestampMixin, Base):
     description: Mapped[str | None] = mapped_column(String(255), default=None)
 
     users: Mapped[list["UserModel"]] = relationship(
-        back_populates="role",
-        foreign_keys="UserModel.role_id",
+        secondary="user_roles",
+        primaryjoin="RoleModel.id == UserRoleModel.role_id",
+        secondaryjoin="UserModel.id == UserRoleModel.user_id",
+        back_populates="roles",
     )
     role_permissions: Mapped[list["RolePermissionModel"]] = relationship(
         back_populates="role"

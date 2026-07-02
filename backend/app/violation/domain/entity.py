@@ -13,6 +13,7 @@ from app.shared.domain.base_entity import BaseEntity
 from app.shared.domain.value_objects import UserRef
 from app.utils.datetime import get_current_utc7_time
 
+
 class ViolationType(str, Enum):
     LATE = "LATE"
     ABSENT = "ABSENT"

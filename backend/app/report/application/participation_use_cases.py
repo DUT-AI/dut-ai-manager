@@ -3,9 +3,9 @@ from datetime import timedelta
 from pydantic import BaseModel
 
 from app.meeting.infrastructure.repository import ParticipantRepository
-from app.user.infrastructure.repository import UserRepository
-from app.user.infrastructure.monthly_stats_repository import MonthlyUserStatsRepository
 from app.shared.application.response import UserInfoResponse
+from app.user.infrastructure.monthly_stats_repository import MonthlyUserStatsRepository
+from app.user.infrastructure.repository import UserRepository
 from app.violation.domain.entity import ViolationType
 from app.violation.infrastructure.repository import ViolationRepository
 
@@ -115,16 +115,16 @@ class GetParticipationLeaderboardUseCase:
         stats_list = []
         for u in users:
             stat = self.analysis_uc.execute(u.id, month, year)
-            
+
             # Add UserInfo
             stat.user = UserInfoResponse(**u.model_dump())
-            
+
             # Calculate metrics
             stat.total_bonus_points = int(stat.total_hours)
             stat.violation_count = stat.late_count + stat.absent_count
             stat.total_points = stat.total_bonus_points - (2 * stat.late_count + 5 * stat.absent_count)
-            
+
             stats_list.append(stat)
-            
+
         # Sort theo total_points desc, tie-break bằng user.name asc
         return sorted(stats_list, key=lambda x: (-x.total_points, x.user.name.lower() if x.user and x.user.name else ""))

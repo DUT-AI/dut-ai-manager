@@ -1,5 +1,6 @@
 import calendar
 from typing import Literal
+
 from pydantic import BaseModel
 
 from app.bonus_point.infrastructure.repository import BonusPointRepository
@@ -37,7 +38,6 @@ class GetActivityTrendUseCase:
 
     def _aggregate_by_week(self, month: int, year: int) -> list[ActivityTrendItem]:
         from datetime import date, timedelta
-        import calendar
 
         last_day = calendar.monthrange(year, month)[1]
         end_date = date(year, month, last_day)

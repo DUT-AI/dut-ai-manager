@@ -266,7 +266,7 @@ const HomePage = () => {
                                                     <List.Item.Meta
                                                         avatar={<div className="w-2 h-2 rounded-full bg-green-400 mt-4" />}
                                                         title={<Text strong className="text-sm">{u.name}</Text>}
-                                                        description={<Text type="secondary" className="text-[10px] uppercase font-bold">{u.role_name}</Text>}
+                                                        description={<Text type="secondary" className="text-[10px] uppercase font-bold">{u.role_names?.join(', ')}</Text>}
                                                     />
                                                 </List.Item>
                                             </motion.div>

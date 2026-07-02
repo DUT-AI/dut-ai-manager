@@ -145,7 +145,7 @@ const GeneralContent: React.FC<GeneralContentProps> = ({ user, loading, uploadin
                     <Text type="secondary" className="text-sm">{user?.email}</Text>
                     <div className="mt-3">
                         <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 shadow-sm uppercase tracking-wider">
-                            {user?.role_name?.toUpperCase()}
+                            {user?.role_names?.join(', ')?.toUpperCase()}
                         </span>
                     </div>
                 </div>

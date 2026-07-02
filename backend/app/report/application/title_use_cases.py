@@ -4,14 +4,16 @@ from loguru import logger
 from pydantic import BaseModel
 
 from app.bonus_point.infrastructure.repository import BonusPointRepository
+from app.report.application.participation_use_cases import (
+    GetParticipationAnalysisUseCase,
+)
 from app.shared.application.response import UserInfoResponse
 from app.user.domain.monthly_stats import MonthlyUserStats
 from app.user.infrastructure.monthly_stats_repository import MonthlyUserStatsRepository
 from app.user.infrastructure.repository import UserRepository
 from app.utils.datetime import get_current_utc7_time
-from app.violation.infrastructure.repository import ViolationRepository
 from app.violation.domain.entity import ViolationType
-from app.report.application.participation_use_cases import GetParticipationAnalysisUseCase
+from app.violation.infrastructure.repository import ViolationRepository
 
 
 class TitleReportItem(BaseModel):
@@ -109,7 +111,7 @@ class AssignMonthlyTitlesUseCase:
                 violations = self.violation_repo.get_by_month(
                     user.id, target_month, target_year
                 )
-                
+
                 late_count = sum(1 for v in violations if v.type == ViolationType.LATE)
                 absent_count = sum(1 for v in violations if v.type == ViolationType.ABSENT)
                 violation_count = late_count + absent_count
@@ -118,7 +120,7 @@ class AssignMonthlyTitlesUseCase:
                 analysis = self.analysis_uc.execute(user.id, target_month, target_year)
                 total_hours = analysis.total_hours
                 attendance_bonus = int(total_hours) # Cứ 60 phút hoạt động liên tục được 1 điểm
-                
+
                 stats = MonthlyUserStats(
                     user_id=user.id,
                     month=target_month,

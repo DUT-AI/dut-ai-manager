@@ -71,7 +71,7 @@ def get_current_user(
             id=0,
             name=f"System: {matched_key.name}",
             email=f"system+{matched_key.id}@dutai.site",
-            role_id=role.id,
+            role_ids=[role.id] if role.id else [],
         )
 
         full_role = RoleRepository(session).get_role_with_permissions(
@@ -83,7 +83,7 @@ def get_current_user(
                 if rp.permission:
                     perms.add(rp.permission.name)
             system_user.permissions = perms
-            system_user.role_name = full_role.name
+            system_user.role_names = [full_role.name] if full_role.name else []
 
         set_current_user_id(0)
 
@@ -141,7 +141,7 @@ def hasPermission(permission: str):
 
 def hasTeamLeaderAccess(target_user_id_param: str = "user_id"):
     async def dependency(request: Request, current_user: CurrentUser):
-        if current_user.role_name != RoleType.LEADER.value:
+        if RoleType.LEADER.value not in current_user.role_names:
             return  # Admin/other roles bypass
 
         # Try to get from query params first, then from body
@@ -163,7 +163,7 @@ def hasTeamLeaderAccess(target_user_id_param: str = "user_id"):
 
 def onlyEditOrDeleteYourself(target_user_id_param: str = "user_id"):
     async def dependency(request: Request, current_user: CurrentUser):
-        if current_user.role_name != RoleType.LEADER.value:
+        if RoleType.LEADER.value not in current_user.role_names:
             return  # Admin/other roles bypass
 
         # Try to get from query params first, then from body
