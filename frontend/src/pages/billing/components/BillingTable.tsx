@@ -47,6 +47,13 @@ const BillingTable = ({
       }
     },
     {
+      title: 'Nhóm',
+      key: 'team',
+      render: (_: any, record: Invoice) => (
+        <Tag color="blue">{record.team?.team_name || 'N/A'}</Tag>
+      ),
+    },
+    {
       title: 'Số tiền',
       dataIndex: 'amount',
       key: 'amount',

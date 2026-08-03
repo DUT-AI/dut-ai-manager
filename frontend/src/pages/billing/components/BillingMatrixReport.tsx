@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react';
-import { Form, Select, DatePicker, Button, Space, Table, Typography, Tag } from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
+import { Form, Select, DatePicker, Button, Space, Table, Typography, Tag, Row, Col, Card, Statistic } from 'antd';
+import { SearchOutlined, ImportOutlined, ExportOutlined, WalletOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
-import { useMatrixReport } from '@/hooks/useBilling';
+import { useMatrixReport, useAllInvoices } from '@/hooks/useBilling';
+import { useExpenses } from '@/hooks/useExpense';
 import { useUsers, useTeams } from '@/hooks';
 import { InvoiceItemType } from '@/types/billing.types';
+import { ExpenseStatus } from '@/types/expense.types';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -33,11 +35,44 @@ const BillingMatrixReport = () => {
     end_month: number;
     end_year: number;
     user_ids?: number[];
+    team_id?: number;
   } | null>(null);
 
   const { data: users = [] } = useUsers();
   const { data: teams = [] } = useTeams();
   const { data: invoices = [], isFetching } = useMatrixReport(queryParams!, !!queryParams);
+
+  // General Summary Data (Incoming & Outgoing)
+  const { data: allIncomingInvoices = [] } = useAllInvoices({
+    team_id: queryParams?.team_id,
+  });
+  const { data: allOutgoingInvoices = [] } = useExpenses({
+    team_id: queryParams?.team_id,
+  });
+
+  // Hóa đơn nhập vào (Thu - Quỹ & Phạt)
+  const fundAndFineInvoices = useMemo(() => {
+    return allIncomingInvoices.filter((inv) => {
+      if (!inv.items || inv.items.length === 0) return true;
+      return inv.items.some(
+        (item) => item.item_type === 'FUND' || item.item_type === 'VIOLATION'
+      );
+    });
+  }, [allIncomingInvoices]);
+
+  const incomingTotal = useMemo(() => fundAndFineInvoices.reduce((acc, curr) => acc + curr.amount, 0), [fundAndFineInvoices]);
+  const incomingPaid = useMemo(() => fundAndFineInvoices.filter(inv => inv.status === 'PAID').reduce((acc, curr) => acc + curr.amount, 0), [fundAndFineInvoices]);
+  const incomingUnpaid = useMemo(() => fundAndFineInvoices.filter(inv => inv.status === 'PENDING').reduce((acc, curr) => acc + curr.amount, 0), [fundAndFineInvoices]);
+
+  // Hóa đơn xuất ra (Chi)
+  const outgoingTotal = useMemo(() => allOutgoingInvoices.reduce((acc, curr) => acc + curr.amount, 0), [allOutgoingInvoices]);
+  const outgoingPaid = useMemo(() => allOutgoingInvoices.filter(exp => exp.status === ExpenseStatus.PAID).reduce((acc, curr) => acc + curr.amount, 0), [allOutgoingInvoices]);
+  const outgoingUnpaid = useMemo(() => allOutgoingInvoices.filter(exp => exp.status === ExpenseStatus.UNPAID).reduce((acc, curr) => acc + curr.amount, 0), [allOutgoingInvoices]);
+
+  // Số dư đối ứng (Thu - Chi)
+  const balanceTotal = incomingTotal - outgoingTotal;
+  const balancePaid = incomingPaid - outgoingPaid;
+  const balanceUnpaid = incomingUnpaid - outgoingUnpaid;
 
   const selectedTeamId = Form.useWatch('team_id', form);
   
@@ -67,6 +102,7 @@ const BillingMatrixReport = () => {
       end_month: end.month() + 1,
       end_year: end.year(),
       user_ids: user_ids.length > 0 ? user_ids : undefined,
+      team_id: values.team_id || undefined,
     });
   };
 
@@ -201,6 +237,119 @@ const BillingMatrixReport = () => {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* 9 KPI Stat Cards Matrix */}
+      <div className="bg-white p-4 rounded-xl border border-gray-100 flex flex-col gap-4">
+        {/* Nhóm 1: Hóa đơn nhập vào (Thu) */}
+        <div>
+          <div className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <ImportOutlined /> Hóa đơn nhập vào (Thu vào Quỹ & Phạt)
+          </div>
+          <Row gutter={[12, 12]}>
+            <Col xs={24} sm={8}>
+              <Card size="small" className="shadow-xs border-emerald-100 bg-emerald-50/20">
+                <Statistic
+                  title="Tổng tiền nhập vào"
+                  value={incomingTotal}
+                  formatter={(val) => `${Number(val).toLocaleString()} VNĐ`}
+                  styles={{ content: { color: '#047857', fontSize: '18px', fontWeight: 600 } }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Card size="small" className="shadow-xs border-emerald-100 bg-emerald-50/40">
+                <Statistic
+                  title="Đã thu vào (Đã thanh toán)"
+                  value={incomingPaid}
+                  formatter={(val) => `${Number(val).toLocaleString()} VNĐ`}
+                  styles={{ content: { color: '#059669', fontSize: '18px', fontWeight: 600 } }}
+                  prefix={<CheckCircleOutlined className="text-emerald-500 mr-1.5" />}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Card size="small" className="shadow-xs border-emerald-100 bg-amber-50/30">
+                <Statistic
+                  title="Còn nợ nhập vào (Chưa thu)"
+                  value={incomingUnpaid}
+                  formatter={(val) => `${Number(val).toLocaleString()} VNĐ`}
+                  styles={{ content: { color: '#d97706', fontSize: '18px', fontWeight: 600 } }}
+                  prefix={<ClockCircleOutlined className="text-amber-500 mr-1.5" />}
+                />
+              </Card>
+            </Col>
+          </Row>
+        </div>
+
+        {/* Nhóm 2: Hóa đơn xuất ra (Chi) */}
+        <div>
+          <div className="text-xs font-bold text-rose-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <ExportOutlined /> Hóa đơn xuất ra (Chi phí hệ thống)
+          </div>
+          <Row gutter={[12, 12]}>
+            <Col xs={24} sm={8}>
+              <Card size="small" className="shadow-xs border-rose-100 bg-rose-50/20">
+                <Statistic
+                  title="Tổng tiền xuất ra"
+                  value={outgoingTotal}
+                  formatter={(val) => `${Number(val).toLocaleString()} VNĐ`}
+                  styles={{ content: { color: '#be123c', fontSize: '18px', fontWeight: 600 } }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Card size="small" className="shadow-xs border-rose-100 bg-rose-50/40">
+                <Statistic
+                  title="Đã chi xuất ra (Đã trả)"
+                  value={outgoingPaid}
+                  formatter={(val) => `${Number(val).toLocaleString()} VNĐ`}
+                  styles={{ content: { color: '#e11d48', fontSize: '18px', fontWeight: 600 } }}
+                  prefix={<CheckCircleOutlined className="text-rose-500 mr-1.5" />}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Card size="small" className="shadow-xs border-rose-100 bg-amber-50/30">
+                <Statistic
+                  title="Còn nợ xuất ra (Chưa chi)"
+                  value={outgoingUnpaid}
+                  formatter={(val) => `${Number(val).toLocaleString()} VNĐ`}
+                  styles={{ content: { color: '#d97706', fontSize: '18px', fontWeight: 600 } }}
+                  prefix={<ClockCircleOutlined className="text-amber-500 mr-1.5" />}
+                />
+              </Card>
+            </Col>
+          </Row>
+        </div>
+
+        {/* Nhóm 3: Số dư đối ứng (Thu - Chi) */}
+        <div>
+          <div className="text-xs font-bold text-indigo-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <WalletOutlined /> Số dư đối ứng (Thu - Chi)
+          </div>
+          <Row gutter={[12, 12]}>
+            <Col xs={24} sm={12}>
+              <Card size="small" className="shadow-xs border-indigo-100 bg-indigo-50/20">
+                <Statistic
+                  title="Tổng số dư (Tổng Thu - Tổng Chi)"
+                  value={balanceTotal}
+                  formatter={(val) => `${Number(val).toLocaleString()} VNĐ`}
+                  styles={{ content: { color: balanceTotal >= 0 ? '#4338ca' : '#dc2626', fontSize: '18px', fontWeight: 700 } }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Card size="small" className="shadow-xs border-indigo-100 bg-indigo-50/40">
+                <Statistic
+                  title="Số dư thực tế (Đã thu - Đã chi)"
+                  value={balancePaid}
+                  formatter={(val) => `${Number(val).toLocaleString()} VNĐ`}
+                  styles={{ content: { color: balancePaid >= 0 ? '#4f46e5' : '#dc2626', fontSize: '18px', fontWeight: 700 } }}
+                />
+              </Card>
+            </Col>
+          </Row>
+        </div>
+      </div>
       <div className="bg-white p-4 rounded-xl border border-gray-100">
         <Form 
           form={form} 

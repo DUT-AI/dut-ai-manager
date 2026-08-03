@@ -44,6 +44,7 @@ async def create_invoice(
     """
     invoice = create_uc.execute(
         user_id=data.user_id,
+        team_id=data.team_id,
         items_data=[item.model_dump() for item in data.items],
         billing_period=data.billing_period,
         description=data.description,
@@ -127,6 +128,7 @@ async def get_all_invoices(
     get_uc: FromDishka[GetInvoicesUseCase],
     _: Annotated[CurrentUser, Depends(PermissionChecker(BillingPermission.READ))],
     user_id: int | None = Query(default=None),
+    team_id: int | None = Query(default=None),
     bill_status: InvoiceStatus | None = Query(default=None),
     billing_period: date | None = Query(default=None),
     skip: int = 0,
@@ -139,6 +141,7 @@ async def get_all_invoices(
         user_id=user_id,
         status=bill_status,
         billing_period=billing_period,
+        team_id=team_id,
         skip=skip,
         limit=limit,
     )

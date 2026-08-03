@@ -14,7 +14,7 @@ const billingService = {
   },
 
   getAllInvoices: async (
-    filters?: { user_id?: number; status?: string; billing_period?: string },
+    filters?: { user_id?: number; team_id?: number; status?: string; billing_period?: string },
     skip: number = 0,
     limit: number = 100
   ) => {
@@ -22,12 +22,14 @@ const billingService = {
       skip: number;
       limit: number;
       user_id?: number;
+      team_id?: number;
       bill_status?: string;
       billing_period?: string;
     } = { skip, limit };
 
     if (filters) {
       if (filters.user_id !== undefined) apiParams.user_id = filters.user_id;
+      if (filters.team_id !== undefined) apiParams.team_id = filters.team_id;
       if (filters.status !== undefined) apiParams.bill_status = filters.status;
       if (filters.billing_period !== undefined) apiParams.billing_period = filters.billing_period;
     }

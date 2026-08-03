@@ -15,6 +15,13 @@ class InvoiceItemBase(BaseModel):
     note: str | None = None
 
 
+class InvoiceTeamInfo(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    team_name: str
+
+
 class InvoiceItemCreate(InvoiceItemBase):
     pass
 
@@ -26,12 +33,14 @@ class InvoiceItemResponse(InvoiceItemBase):
 
 class InvoiceCreate(BaseModel):
     user_id: int
+    team_id: int = 6
     items: list[InvoiceItemCreate]
     billing_period: date
     description: str | None = None
 
 
 class InvoiceUpdate(BaseModel):
+    team_id: int | None = None
     items: list[InvoiceItemCreate]
     description: str | None = None
 
@@ -41,6 +50,7 @@ class InvoiceResponse(BaseModel):
 
     id: int
     user_id: int
+    team_id: int = 6
     amount: int
     status: InvoiceStatus
     description: str | None
@@ -51,12 +61,15 @@ class InvoiceResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     items: list[InvoiceItemResponse] = []
+    team: InvoiceTeamInfo | None = None
 
     # Virtual field
     qr_url: str = ""
 
     @classmethod
-    def from_domain(cls, invoice: DomainInvoice) -> "InvoiceResponse":
+    def from_domain(
+        cls, invoice: DomainInvoice, team: InvoiceTeamInfo | None = None
+    ) -> "InvoiceResponse":
         """Map domain Invoice to schema and generate QR URL."""
         # Ensure ID and timestamps exist
         if invoice.id is None:
@@ -74,9 +87,17 @@ class InvoiceResponse(BaseModel):
             for item in invoice.items
         ]
 
+        effective_team = team
+        if effective_team is None and getattr(invoice, "team_name", None):
+            effective_team = InvoiceTeamInfo(
+                id=getattr(invoice, "team_id", 6),
+                team_name=invoice.team_name,
+            )
+
         response = cls(
             id=invoice.id,
             user_id=invoice.user_id,
+            team_id=getattr(invoice, "team_id", 6),
             amount=invoice.amount,
             status=invoice.status,
             description=invoice.description,
@@ -87,6 +108,7 @@ class InvoiceResponse(BaseModel):
             created_at=invoice.created_at or datetime.now(),
             updated_at=invoice.updated_at or datetime.now(),
             items=items,
+            team=effective_team,
             qr_url=QRGenerator.get_url(invoice),
         )
         return response

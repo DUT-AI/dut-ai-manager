@@ -22,15 +22,13 @@ import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { permissionService } from '@/services/api/permission.service';
 import { bonusPointService } from '@/services/api/bonus-point.service';
-import { userService } from '@/services/api/user.service';
-import { homeworkService } from '@/services/api/homework.service';
+
 import type { DailySummaryResponse, PermissionRequestResponse, BonusPointResponse, ViolationResponse } from '@/types/activity.types';
-import type { Homework } from '@/types/homework.types';
-import type { MeetingResponse } from '@/types/meeting.types';
-import type { UserResponse } from '@/types/user.types';
 import { violationService } from '@/services/api/violation.service';
-import { activityService } from '@/services/api/activity.service';
 import { useMonthlyActivities, useDailyActivitySummary } from '@/hooks/useActivities';
+import { useUsers } from '@/hooks/useUsers';
+import { useHomeworks } from '@/hooks/useHomeworks';
+import { useMeetings } from '@/hooks/useMeetings';
 import {
     PermissionRequestSection,
     BonusPointSection,
@@ -281,10 +279,9 @@ const ActivityCalendarPage = () => {
     // React Query Hooks
     const { data: activeDates = [] } = useMonthlyActivities(selectedDate.month() + 1, selectedDate.year());
     const { data: dailyData, isLoading: loading, refetch: refreshData } = useDailyActivitySummary(selectedDate.format('YYYY-MM-DD'));
-
-    const [users, setUsers] = useState<UserResponse[]>([]);
-    const [homeworks, setHomeworks] = useState<Homework[]>([]);
-    const [allMeetings, setAllMeetings] = useState<MeetingResponse[]>([]);
+    const { data: users = [] } = useUsers();
+    const { data: homeworks = [] } = useHomeworks();
+    const { data: allMeetings = [] } = useMeetings();
 
     // Modal state via useReducer
     const [modalState, dispatch] = useReducer(activityModalReducer, activityModalInitialState);
@@ -300,43 +297,6 @@ const ActivityCalendarPage = () => {
         const latest = dailyData?.meetings.find(m => m.id === selectedMeeting.id);
         return latest || selectedMeeting;
     }, [dailyData, selectedMeeting]);
-
-    const fetchAllUsers = async () => {
-        try {
-            const res = await userService.getUsers();
-            if (res.is_success) {
-                setUsers(res.data || []);
-            }
-        } catch (error) {
-            message.error('Connection error while fetching users');
-        }
-    };
-
-    const fetchAllHomeworks = async () => {
-        try {
-            const data = await homeworkService.getAll();
-            setHomeworks(data || []);
-        } catch (error) {
-            console.error('Failed to fetch homeworks', error);
-        }
-    };
-
-    const fetchAllMeetings = async () => {
-        try {
-            const res = await meetingService.getMeetings();
-            if (res.is_success) {
-                setAllMeetings(res.data || []);
-            }
-        } catch (error) {
-            console.error('Failed to fetch meetings', error);
-        }
-    };
-
-    useEffect(() => {
-        fetchAllUsers();
-        fetchAllHomeworks();
-        fetchAllMeetings();
-    }, []);
 
     const dateCellRender = (value: Dayjs) => {
         const dateStr = value.format('YYYY-MM-DD');

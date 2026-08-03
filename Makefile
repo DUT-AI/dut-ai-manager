@@ -64,7 +64,7 @@ backend-test: ## Run backend tests
 	cd backend && uv run pytest
 
 backend-lint: ## Lint backend code
-	cd backend && uv run ruff check .
+	cd backend && uv run ruff check . --fix
 
 backend-format: ## Format backend code
 	cd backend && uv run ruff format .

@@ -27,6 +27,11 @@ export interface InvoiceItem {
 export interface Invoice {
   id: number;
   user_id: number;
+  team_id: number;
+  team?: {
+    id: number;
+    team_name: string;
+  };
   amount: number;
   status: InvoiceStatusType;
   description: string;
@@ -49,6 +54,7 @@ export interface InvoiceCreateItem {
 
 export interface InvoiceCreate {
   user_id: number;
+  team_id: number;
   items: InvoiceCreateItem[];
   billing_period: string;
   description?: string;

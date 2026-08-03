@@ -1,7 +1,6 @@
-import os
-import sys
 import random
 import string
+import sys
 from pathlib import Path
 
 # Add the 'backend' directory to sys.path so we can import 'app'
@@ -11,6 +10,7 @@ if str(root_dir) not in sys.path:
 
 from sqlalchemy import text
 from sqlmodel import Session
+
 from app.core.database import engine
 from app.utils.password import get_password_hash
 

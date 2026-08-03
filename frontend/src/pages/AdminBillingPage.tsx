@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Card, Button, Typography, Space, Form, message, Grid, Tabs, Select, DatePicker, Row, Col } from 'antd';
-import { PlusOutlined, AuditOutlined, CalendarOutlined, TableOutlined, BarChartOutlined } from '@ant-design/icons';
+import { Card, Button, Typography, Space, Form, message, Grid, Tabs, Select, DatePicker, Row, Col, Statistic } from 'antd';
+import { PlusOutlined, AuditOutlined, CalendarOutlined, TableOutlined, BarChartOutlined, DollarOutlined, ImportOutlined, ExportOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useAllInvoices, useCreateInvoice, useUpdateInvoice, useInvoiceDetail, useDeleteInvoice } from '@/hooks/useBilling';
 import { useUsers } from '@/hooks';
+import { useTeams } from '@/hooks/useTeams';
 import CreateMonthlyInvoiceModal from '@/components/billing/CreateMonthlyInvoiceModal';
 import type { InvoiceCreate, Invoice } from '@/types/billing.types';
 import { motion, type Variants } from 'motion/react';
@@ -14,6 +15,7 @@ import CreateInvoiceModal from './billing/components/CreateInvoiceModal';
 import UpdateInvoiceModal from './billing/components/UpdateInvoiceModal';
 import InvoiceDetailModal from './billing/components/InvoiceDetailModal';
 import BillingMatrixReport from './billing/components/BillingMatrixReport';
+import ExpenseManagementPage from './ExpenseManagementPage';
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
@@ -40,15 +42,18 @@ const itemVariants: Variants = {
 const AdminBillingPage = () => {
   const screens = useBreakpoint();
   const [filterUser, setFilterUser] = useState<number | undefined>(undefined);
+  const [filterTeam, setFilterTeam] = useState<number | undefined>(undefined);
   const [filterStatus, setFilterStatus] = useState<string | undefined>(undefined);
   const [filterPeriod, setFilterPeriod] = useState<dayjs.Dayjs | null>(null);
 
   const { data: invoices = [], isLoading } = useAllInvoices({
     user_id: filterUser,
+    team_id: filterTeam,
     status: filterStatus,
     billing_period: filterPeriod ? filterPeriod.startOf('month').format('YYYY-MM-DD') : undefined,
   });
   const { data: users = [] } = useUsers();
+  const { data: teams = [] } = useTeams();
   const createInvoice = useCreateInvoice();
   const updateInvoice = useUpdateInvoice();
   const deleteInvoice = useDeleteInvoice();
@@ -69,6 +74,7 @@ const AdminBillingPage = () => {
     try {
       const payload: InvoiceCreate = {
         user_id: values.user_id,
+        team_id: values.team_id,
         description: values.description,
         billing_period: values.billing_period ? values.billing_period.startOf('month').format('YYYY-MM-DD') : '',
         items: values.items.map((item: any) => ({
@@ -134,19 +140,72 @@ const AdminBillingPage = () => {
     setIsUpdateModalOpen(true);
   };
 
+  // Calculate Fund and Fine statistics
+  const fundAndFineInvoices = invoices.filter((inv) => {
+    if (!inv.items || inv.items.length === 0) return true;
+    return inv.items.some(
+      (item) => item.item_type === 'FUND' || item.item_type === 'VIOLATION'
+    );
+  });
+
+  const totalFundAndFineAmount = fundAndFineInvoices.reduce((acc, curr) => acc + curr.amount, 0);
+  const paidFundAndFineAmount = fundAndFineInvoices
+    .filter((inv) => inv.status === 'PAID')
+    .reduce((acc, curr) => acc + curr.amount, 0);
+  const unpaidFundAndFineAmount = fundAndFineInvoices
+    .filter((inv) => inv.status === 'PENDING')
+    .reduce((acc, curr) => acc + curr.amount, 0);
+
   const tabItems = [
     {
       key: '1',
       label: (
         <span className="flex items-center gap-2 px-2">
-          <TableOutlined />
-          Danh sách hóa đơn
+          <ImportOutlined />
+          Hóa đơn nhập vào (Thu)
         </span>
       ),
       children: (
         <div className="p-4">
+          {/* KPI Stat Cards (Quỹ & Phạt) */}
+          <Row gutter={[16, 16]} className="mb-4">
+            <Col xs={24} sm={8}>
+              <Card loading={isLoading} className="shadow-sm border-gray-100">
+                <Statistic
+                  title="Tổng số tiền quỹ (Quỹ & Phạt)"
+                  value={totalFundAndFineAmount}
+                  formatter={(val) => `${Number(val).toLocaleString()} VNĐ`}
+                  prefix={<DollarOutlined className="text-blue-500 mr-2" />}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Card loading={isLoading} className="shadow-sm border-gray-100">
+                <Statistic
+                  title="Đã nhập vào (Đã thanh toán)"
+                  value={paidFundAndFineAmount}
+                  formatter={(val) => `${Number(val).toLocaleString()} VNĐ`}
+                  styles={{ content: { color: '#52c41a' } }}
+                  prefix={<CheckCircleOutlined className="text-green-500 mr-2" />}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Card loading={isLoading} className="shadow-sm border-gray-100">
+                <Statistic
+                  title="Chưa thanh toán (Chờ nộp quỹ & phạt)"
+                  value={unpaidFundAndFineAmount}
+                  formatter={(val) => `${Number(val).toLocaleString()} VNĐ`}
+                  styles={{ content: { color: '#faad14' } }}
+                  prefix={<ClockCircleOutlined className="text-amber-500 mr-2" />}
+                />
+              </Card>
+            </Col>
+          </Row>
+
+          {/* Filters Bar */}
           <Row gutter={[16, 16]} align="middle" className="bg-gray-50/50 p-4 rounded-xl border border-gray-100 mb-4">
-            <Col xs={24} sm={8} md={8} lg={6}>
+            <Col xs={24} sm={12} md={6} lg={6}>
               <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Thành viên</div>
               <Select
                 showSearch
@@ -156,15 +215,33 @@ const AdminBillingPage = () => {
                 onChange={(value) => setFilterUser(value)}
                 optionFilterProp="children"
               >
-                {users.map(u => (
+                {users.map((u) => (
                   <Select.Option key={u.id} value={u.id}>
                     {u.name}
                   </Select.Option>
                 ))}
               </Select>
             </Col>
+
+            <Col xs={24} sm={12} md={6} lg={6}>
+              <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Nhóm</div>
+              <Select
+                showSearch
+                placeholder="Tất cả nhóm"
+                style={{ width: '100%' }}
+                allowClear
+                onChange={(value) => setFilterTeam(value)}
+                optionFilterProp="children"
+              >
+                {teams.map((t) => (
+                  <Select.Option key={t.id} value={t.id}>
+                    {t.team_name}
+                  </Select.Option>
+                ))}
+              </Select>
+            </Col>
             
-            <Col xs={24} sm={8} md={8} lg={6}>
+            <Col xs={24} sm={12} md={6} lg={6}>
               <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Trạng thái</div>
               <Select
                 placeholder="Tất cả trạng thái"
@@ -179,7 +256,7 @@ const AdminBillingPage = () => {
               </Select>
             </Col>
 
-            <Col xs={24} sm={8} md={8} lg={6}>
+            <Col xs={24} sm={12} md={6} lg={6}>
               <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Kỳ hóa đơn</div>
               <DatePicker
                 picker="month"
@@ -206,6 +283,20 @@ const AdminBillingPage = () => {
     },
     {
       key: '2',
+      label: (
+        <span className="flex items-center gap-2 px-2">
+          <ExportOutlined />
+          Hóa đơn xuất ra (Chi)
+        </span>
+      ),
+      children: (
+        <div className="p-4 bg-gray-50/30">
+          <ExpenseManagementPage />
+        </div>
+      ),
+    },
+    {
+      key: '3',
       label: (
         <span className="flex items-center gap-2 px-2">
           <BarChartOutlined />

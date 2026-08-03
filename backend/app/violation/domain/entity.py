@@ -74,4 +74,3 @@ class Violation(BaseEntity):
         if "vắng" in r:
             return ViolationType.ABSENT
         return ViolationType.OTHER
-

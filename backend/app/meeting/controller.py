@@ -181,8 +181,13 @@ async def check_in(
 ):
     """Thực hiện điểm danh (Check-in)"""
     client_time_val = (
-        occurred_at or check_in_at or checkin_at or check_in_time or
-        checkin_time or timestamp or client_time
+        occurred_at
+        or check_in_at
+        or checkin_at
+        or check_in_time
+        or checkin_time
+        or timestamp
+        or client_time
     )
     idem_key = client_event_id or event_id or idempotency_key
 
@@ -190,7 +195,7 @@ async def check_in(
         user_ids=user_ids,
         image=image,
         client_time=client_time_val,
-        client_event_id=idem_key
+        client_event_id=idem_key,
     )
     return ApiResponse.success(
         data=[ParticipantResponse.from_domain(p) for p in participants],
@@ -209,7 +214,7 @@ async def check_out(
     participants = await uc.execute(
         user_id=data.user_id,
         client_time=data.get_client_time(),
-        client_event_id=data.get_idempotency_key()
+        client_event_id=data.get_idempotency_key(),
     )
     return ApiResponse.success(
         data=[ParticipantResponse.from_domain(p) for p in participants],

@@ -2,6 +2,7 @@ import { Modal, Form, Select, Input, Divider, Space, InputNumber, Button, DatePi
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { InvoiceItemType } from '@/types/billing.types';
 import type { UserResponse } from '@/types/user.types';
+import { useTeams } from '@/hooks/useTeams';
 
 const { Option } = Select;
 
@@ -22,6 +23,8 @@ const CreateInvoiceModal = ({
   users,
   form
 }: CreateInvoiceModalProps) => {
+  const { data: teams = [], isLoading: isLoadingTeams } = useTeams();
+
   return (
     <Modal
       title="Tạo hóa đơn mới"
@@ -44,7 +47,7 @@ const CreateInvoiceModal = ({
       >
         <Form.Item 
           name="user_id" 
-          label="Chọn thành viên" 
+          label="Chọn thành viên (Bắt buộc)" 
           rules={[{ required: true, message: 'Vui lòng chọn thành viên' }]}
         >
           <Select 
@@ -54,6 +57,23 @@ const CreateInvoiceModal = ({
           >
             {users.map(u => (
               <Option key={u.id} value={u.id}>{u.name} ({u.email})</Option>
+            ))}
+          </Select>
+        </Form.Item>
+
+        <Form.Item 
+          name="team_id" 
+          label="Chọn Nhóm (Bắt buộc)" 
+          rules={[{ required: true, message: 'Vui lòng chọn nhóm' }]}
+        >
+          <Select 
+            showSearch 
+            placeholder="Chọn nhóm từ danh sách"
+            loading={isLoadingTeams}
+            optionFilterProp="children"
+          >
+            {teams.map(t => (
+              <Option key={t.id} value={t.id}>{t.team_name}</Option>
             ))}
           </Select>
         </Form.Item>

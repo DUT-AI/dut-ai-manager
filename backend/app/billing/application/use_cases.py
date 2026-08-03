@@ -28,6 +28,7 @@ class CreateInvoiceUseCase:
         user_id: int,
         items_data: list[dict],
         billing_period: date,
+        team_id: int = 6,
         description: str | None = None,
     ) -> Invoice:
         # 1. Calculate total amount and create items
@@ -62,6 +63,7 @@ class CreateInvoiceUseCase:
         # 3. Create Invoice entity
         invoice = Invoice(
             user_id=user_id,
+            team_id=team_id,
             amount=total_amount,
             status=InvoiceStatus.PENDING,
             description=description or f"Thanh toán các khoản thu - {reference_code}",
@@ -208,6 +210,7 @@ class GetInvoicesUseCase:
         user_id: int | None = None,
         status: str | None = None,
         billing_period: date | None = None,
+        team_id: int | None = None,
         skip: int = 0,
         limit: int = 100,
     ) -> list[Invoice]:
@@ -215,6 +218,7 @@ class GetInvoicesUseCase:
             user_id=user_id,
             status=status,
             billing_period=billing_period,
+            team_id=team_id,
             skip=skip,
             limit=limit,
         )
@@ -360,6 +364,7 @@ class CreateMonthlyInvoicesUseCase:
 
                 invoice = Invoice(
                     user_id=uid,
+                    team_id=team_id,
                     amount=total_amount,
                     status=InvoiceStatus.PENDING,
                     description=description,

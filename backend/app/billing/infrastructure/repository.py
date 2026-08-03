@@ -44,24 +44,30 @@ class InvoiceRepository(BaseRepository[InvoiceModel, Invoice]):
         user_id: int | None = None,
         status: str | None = None,
         billing_period: date | None = None,
+        team_id: int | None = None,
         skip: int = 0,
         limit: int = 100,
     ) -> list[Invoice]:
-        """Get all active invoices with items and optional filters."""
+        """Get all active invoices with items, user, team and optional filters."""
         statement = (
-            select(InvoiceModel)
-            .where(InvoiceModel.is_deleted == False)  # noqa: E712
+            select(InvoiceModel).where(InvoiceModel.is_deleted == False)  # noqa: E712
         )
 
         if user_id is not None:
             statement = statement.where(InvoiceModel.user_id == user_id)
+        if team_id is not None:
+            statement = statement.where(InvoiceModel.team_id == team_id)
         if status is not None:
             statement = statement.where(InvoiceModel.status == status)
         if billing_period is not None:
             statement = statement.where(InvoiceModel.billing_period == billing_period)
 
         statement = (
-            statement.options(joinedload(InvoiceModel.items))
+            statement.options(
+                joinedload(InvoiceModel.items),
+                joinedload(InvoiceModel.user_rel),
+                joinedload(InvoiceModel.team_rel),
+            )
             .order_by(desc(InvoiceModel.created_at))
             .offset(skip)
             .limit(limit)
@@ -85,7 +91,9 @@ class InvoiceRepository(BaseRepository[InvoiceModel, Invoice]):
         if user_ids:
             statement = statement.where(InvoiceModel.user_id.in_(user_ids))
 
-        statement = statement.order_by(InvoiceModel.user_id, InvoiceModel.billing_period)
+        statement = statement.order_by(
+            InvoiceModel.user_id, InvoiceModel.billing_period
+        )
         return [m.to_entity() for m in self.session.scalars(statement).unique().all()]
 
     def save_invoice(self, invoice: Invoice) -> Invoice:

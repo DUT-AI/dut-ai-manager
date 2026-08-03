@@ -76,7 +76,9 @@ class MeetingParticipant(SQLAlchemyTimestampMixin, Base):
         String(50), default=ParticipantStatus.NOT_JOINED
     )
     link_image: Mapped[str | None] = mapped_column(String(500), default=None)
-    client_event_id: Mapped[str | None] = mapped_column(String(255), default=None, index=True)
+    client_event_id: Mapped[str | None] = mapped_column(
+        String(255), default=None, index=True
+    )
 
     meeting: Mapped[Meeting] = relationship(back_populates="participants")
     user: Mapped[UserModel] = relationship(

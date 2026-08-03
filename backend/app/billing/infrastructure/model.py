@@ -18,6 +18,7 @@ from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
 from app.utils.datetime import get_current_utc7_time
 
 if TYPE_CHECKING:
+    from app.team.infrastructure.model import TeamModel
     from app.user.infrastructure.model import UserModel
 
 
@@ -28,6 +29,7 @@ class InvoiceModel(SQLAlchemyTimestampMixin, Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    team_id: Mapped[int] = mapped_column(ForeignKey("teams.id"), index=True, default=6)
     amount: Mapped[int] = mapped_column(Integer, default=0)
     status: Mapped[str] = mapped_column(
         String(50), default=InvoiceStatus.PENDING, index=True
@@ -48,12 +50,17 @@ class InvoiceModel(SQLAlchemyTimestampMixin, Base):
     user_rel: Mapped["UserModel | None"] = relationship(
         foreign_keys=[user_id],
     )
+    team_rel: Mapped["TeamModel | None"] = relationship(
+        foreign_keys=[team_id],
+    )
 
     def to_entity(self) -> Invoice:
         """ORM Model → Domain Entity."""
         return Invoice(
             id=self.id,
             user_id=self.user_id,
+            team_id=self.team_id,
+            team_name=self.team_rel.team_name if self.team_rel else None,
             amount=self.amount,
             status=InvoiceStatus(self.status),
             description=self.description,
@@ -75,6 +82,7 @@ class InvoiceModel(SQLAlchemyTimestampMixin, Base):
         return cls(
             id=entity.id,
             user_id=entity.user_id,
+            team_id=entity.team_id,
             amount=entity.amount,
             status=entity.status,
             description=entity.description,

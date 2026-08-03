@@ -113,13 +113,17 @@ class AssignMonthlyTitlesUseCase:
                 )
 
                 late_count = sum(1 for v in violations if v.type == ViolationType.LATE)
-                absent_count = sum(1 for v in violations if v.type == ViolationType.ABSENT)
+                absent_count = sum(
+                    1 for v in violations if v.type == ViolationType.ABSENT
+                )
                 violation_count = late_count + absent_count
 
                 # Lấy số giờ hoạt động để tính điểm cộng
                 analysis = self.analysis_uc.execute(user.id, target_month, target_year)
                 total_hours = analysis.total_hours
-                attendance_bonus = int(total_hours) # Cứ 60 phút hoạt động liên tục được 1 điểm
+                attendance_bonus = int(
+                    total_hours
+                )  # Cứ 60 phút hoạt động liên tục được 1 điểm
 
                 stats = MonthlyUserStats(
                     user_id=user.id,

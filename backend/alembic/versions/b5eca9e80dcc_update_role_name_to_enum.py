@@ -6,18 +6,17 @@ Create Date: 2026-01-07 15:16:21.492506
 
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
+
+import sqlalchemy as sa
 
 from alembic import op
-import sqlalchemy as sa
-import sqlmodel
-
 
 # revision identifiers, used by Alembic.
 revision: str = "b5eca9e80dcc"
-down_revision: Union[str, Sequence[str], None] = "68039e7ba86e"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "68039e7ba86e"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 # Define the enum
 roletype_enum = sa.Enum("ADMIN", "LEADER", "TEAMMATE", name="roletype")

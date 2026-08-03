@@ -5,26 +5,9 @@ from sqlalchemy import engine_from_config, pool
 from alembic import context
 
 # Import all models to register them with SQLModel
-from app.auth.infrastructure.model import AccountModel
-from app.billing.infrastructure.model import InvoiceItemModel, InvoiceModel
-from app.bonus_point.infrastructure.model import BonusPointModel
-
 # Import settings for database URL
 from app.core.config import settings
-from app.homework.infrastructure.model import HomeworkModel, HomeworkSubmissionModel
-from app.meeting.infrastructure.model import Meeting, MeetingParticipant
-from app.permission_request.infrastructure.model import PermissionRequest
-from app.rbac.infrastructure.model import (
-    PermissionModel,
-    RoleApiKeyModel,
-    RoleModel,
-    RolePermissionModel,
-)
 from app.shared.infrastructure.base_model import Base
-from app.team.infrastructure.model import TeamMemberModel, TeamModel
-from app.user.infrastructure.model import UserModel
-from app.user.infrastructure.monthly_stats_model import MonthlyUserStatsModel
-from app.violation.infrastructure.model import ViolationModel
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

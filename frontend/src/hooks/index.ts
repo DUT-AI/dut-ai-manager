@@ -30,3 +30,6 @@ export * from './useApiKeys';
 
 // Billing
 export * from './useBilling';
+
+// Expenses
+export * from './useExpense';

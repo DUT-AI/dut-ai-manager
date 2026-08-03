@@ -250,7 +250,7 @@ class CheckInUseCase:
         user_ids: list[int],
         image: UploadFile,
         client_time: str | None = None,
-        client_event_id: str | None = None
+        client_event_id: str | None = None,
     ) -> tuple[list[MeetingParticipant], str]:
         now = get_current_utc7_time()
 
@@ -305,8 +305,13 @@ class CheckInUseCase:
                     continue
 
                 if participant.status == ParticipantStatus.JOINED:
-                    if client_event_id and participant.client_event_id == client_event_id:
-                        messages.append(f"Yêu cầu trùng lặp (client_event_id), đã bỏ qua cho '{meeting.title}'")
+                    if (
+                        client_event_id
+                        and participant.client_event_id == client_event_id
+                    ):
+                        messages.append(
+                            f"Yêu cầu trùng lặp (client_event_id), đã bỏ qua cho '{meeting.title}'"
+                        )
                         continue
                     messages.append(
                         f"Người dùng {participant.user.name if participant.user else user_id} đã điểm danh cho '{meeting.title}'"
@@ -431,14 +436,16 @@ class CheckOutUseCase:
         self,
         user_id: int,
         client_time: str | None = None,
-        client_event_id: str | None = None
+        client_event_id: str | None = None,
     ) -> list[MeetingParticipant]:
         now = get_current_utc7_time()
 
         check_out_dt = now
         if client_time:
             try:
-                check_out_dt = datetime.fromisoformat(client_time.replace("Z", "+00:00"))
+                check_out_dt = datetime.fromisoformat(
+                    client_time.replace("Z", "+00:00")
+                )
             except ValueError:
                 raise BadRequestException("Invalid occurred_at")
 
@@ -454,7 +461,11 @@ class CheckOutUseCase:
         updated_participants = []
         for participant in participations:
             # Check idempotency first
-            if participant.status == ParticipantStatus.COMPLETED and client_event_id and participant.client_event_id == client_event_id:
+            if (
+                participant.status == ParticipantStatus.COMPLETED
+                and client_event_id
+                and participant.client_event_id == client_event_id
+            ):
                 # Already processed this event
                 continue
 
@@ -465,7 +476,10 @@ class CheckOutUseCase:
             # Validation: check_out_at must be after check_in_at
             # Because datetime could be timezone-aware or naive, we should compare safely
             # Here assuming both are same timezone representation
-            if participant.check_in_at and check_out_dt.timestamp() < participant.check_in_at.timestamp():
+            if (
+                participant.check_in_at
+                and check_out_dt.timestamp() < participant.check_in_at.timestamp()
+            ):
                 raise BadRequestException("check_out_at must be after check_in_at")
 
             meeting_id = participant.meeting_id

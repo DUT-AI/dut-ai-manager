@@ -36,6 +36,8 @@ class Invoice(BaseEntity):
     """Domain entity representing a billing invoice."""
 
     user_id: int
+    team_id: int = 6
+    team_name: str | None = None
     amount: int = 0
     status: InvoiceStatus = InvoiceStatus.PENDING
     description: str | None = ""

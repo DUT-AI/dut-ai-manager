@@ -133,7 +133,9 @@ async def get_user_current_title(
     return ApiResponse.success(data=title)
 
 
-@router.get("/users/{user_id}/participation", response_model=ApiResponse[ParticipationStats])
+@router.get(
+    "/users/{user_id}/participation", response_model=ApiResponse[ParticipationStats]
+)
 @inject
 async def get_participation_analysis(
     user_id: int,
@@ -146,7 +148,9 @@ async def get_participation_analysis(
     return ApiResponse.success(data=uc.execute(user_id, month, year))
 
 
-@router.get("/participation/leaderboard", response_model=ApiResponse[list[ParticipationStats]])
+@router.get(
+    "/participation/leaderboard", response_model=ApiResponse[list[ParticipationStats]]
+)
 @inject
 async def get_participation_leaderboard(
     uc: FromDishka[GetParticipationLeaderboardUseCase],

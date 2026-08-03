@@ -31,8 +31,12 @@ class CalculateCurrentCapacityUseCase:
 
         # MeetingRepository now has capacity methods directly
         n_current = self.meeting_repo.get_present_participants_count(now)
-        n_incoming = self.meeting_repo.get_upcoming_participants_count(now, incoming_end)
-        n_outgoing = self.meeting_repo.get_departing_participants_count(now, outgoing_end)
+        n_incoming = self.meeting_repo.get_upcoming_participants_count(
+            now, incoming_end
+        )
+        n_outgoing = self.meeting_repo.get_departing_participants_count(
+            now, outgoing_end
+        )
 
         monitor = CapacityMonitor.calculate(
             n_current=n_current,

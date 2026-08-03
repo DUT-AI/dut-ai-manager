@@ -29,10 +29,18 @@ class MonthlyUserStats(BaseEntity):
 
     def calculate_title(self) -> UserTitle:
         """Tính toán danh hiệu dựa trên thống kê"""
-        if self.total_activity_hours == 0 and self.late_count == 0 and self.absent_count == 0 and self.total_bonus_points == 0 and self.violation_count == 0:
+        if (
+            self.total_activity_hours == 0
+            and self.late_count == 0
+            and self.absent_count == 0
+            and self.total_bonus_points == 0
+            and self.violation_count == 0
+        ):
             return UserTitle.INACTIVE
 
-        total_score = self.total_bonus_points - (2 * self.late_count + 5 * self.absent_count)
+        total_score = self.total_bonus_points - (
+            2 * self.late_count + 5 * self.absent_count
+        )
 
         if self.violation_count >= 3:
             return UserTitle.POOR

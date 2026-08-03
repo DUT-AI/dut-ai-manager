@@ -17,6 +17,7 @@ from app.core.config import settings
 from app.core.events import bootstrap_events
 from app.core.logging_config import setup_logging
 from app.core.scheduler import shutdown_scheduler, start_scheduler
+from app.expense.providers import ExpenseModuleProvider
 from app.homework.providers import HomeworkModuleProvider
 from app.meeting.providers import MeetingModuleProvider
 from app.middleware.auth import set_user_context
@@ -98,6 +99,7 @@ def create_app():
         TeamModuleProvider(),
         BillingModuleProvider(),
         ZaloModuleProvider(),
+        ExpenseModuleProvider(),
     )
     setup_dishka(container, _app)
 

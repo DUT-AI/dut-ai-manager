@@ -92,3 +92,10 @@ class BillingPermission(str, Enum):
     UPDATE = "billing:update"
     DELETE = "billing:delete"
     MY_INVOICES = "billing:my_invoices"
+
+
+class ExpensePermission(str, Enum):
+    CREATE = "expense:create"
+    READ = "expense:read"
+    UPDATE = "expense:update"
+    DELETE = "expense:delete"

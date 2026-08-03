@@ -8,6 +8,7 @@ from app.core.permissions import (
     AccountPermission,
     BillingPermission,
     BonusPointPermission,
+    ExpensePermission,
     HomeworkPermission,
     HomeworkSubmissionPermission,
     MeetingPermission,
@@ -28,8 +29,6 @@ from app.rbac.infrastructure.model import (
 from app.user.domain.entity import UserStatus
 from app.user.infrastructure.model import UserModel
 from app.utils.password import hash_password
-
-# Import other models to register them in SQLModel registry for relationships
 
 
 def seed_roles():
@@ -136,6 +135,7 @@ def seed_permissions():
         MeetingPermission,
         AccountPermission,
         BillingPermission,
+        ExpensePermission,
     ]
 
     with Session(engine) as session:

@@ -49,8 +49,14 @@ class GetActivityTrendUseCase:
         curr_m = month
         curr_y = year
         for _ in range(6):
-            meetings.extend(self.meeting_repo.get_all_with_participants(month=curr_m, year=curr_y))
-            violations.extend(self.violation_repo.get_by_month(user_id=None, month=curr_m, year=curr_y))
+            meetings.extend(
+                self.meeting_repo.get_all_with_participants(month=curr_m, year=curr_y)
+            )
+            violations.extend(
+                self.violation_repo.get_by_month(
+                    user_id=None, month=curr_m, year=curr_y
+                )
+            )
 
             curr_m -= 1
             if curr_m == 0:
@@ -62,18 +68,21 @@ class GetActivityTrendUseCase:
         for i in range(WEEKS_COUNT):
             current_start = current_end - timedelta(days=6)
 
-            label = current_start.strftime('%d/%m')
+            label = current_start.strftime("%d/%m")
 
             # Calculate violations
             week_v = [
-                v for v in violations
-                if v.date and current_start <= v.date.date() <= current_end
+                v
+                for v in violations
+                if v.date
+                and current_start <= v.date.date() <= current_end
                 and v.type in (ViolationType.LATE, ViolationType.ABSENT)
             ]
 
             # Calculate attendance hours
             week_meetings = [
-                m for m in meetings
+                m
+                for m in meetings
                 if m.start_time and current_start <= m.start_time.date() <= current_end
             ]
             total_hours = 0.0
@@ -81,7 +90,9 @@ class GetActivityTrendUseCase:
                 if m.participants:
                     for p in m.participants:
                         if p.check_in_at and p.check_out_at:
-                            total_hours += (p.check_out_at - p.check_in_at).total_seconds() / 3600.0
+                            total_hours += (
+                                p.check_out_at - p.check_in_at
+                            ).total_seconds() / 3600.0
 
             items.append(
                 ActivityTrendItem(
@@ -101,9 +112,13 @@ class GetActivityTrendUseCase:
         for m in range(1, month + 1):
             label = f"Tháng {m}"
 
-            violations = self.violation_repo.get_by_month(user_id=None, month=m, year=year)
+            violations = self.violation_repo.get_by_month(
+                user_id=None, month=m, year=year
+            )
             v_count = sum(
-                1 for v in violations if v.type in (ViolationType.LATE, ViolationType.ABSENT)
+                1
+                for v in violations
+                if v.type in (ViolationType.LATE, ViolationType.ABSENT)
             )
 
             meetings = self.meeting_repo.get_all_with_participants(month=m, year=year)
@@ -112,7 +127,9 @@ class GetActivityTrendUseCase:
                 if mtg.participants:
                     for p in mtg.participants:
                         if p.check_in_at and p.check_out_at:
-                            total_hours += (p.check_out_at - p.check_in_at).total_seconds() / 3600.0
+                            total_hours += (
+                                p.check_out_at - p.check_in_at
+                            ).total_seconds() / 3600.0
 
             items.append(
                 ActivityTrendItem(
