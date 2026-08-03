@@ -136,11 +136,11 @@ const TeamManagementPage = () => {
     const updateTeam = useUpdateTeam();
     const deleteTeam = useDeleteTeam();
 
-    const handleCreateOrUpdate = async (values: any) => {
+    const handleCreateOrUpdate = async (values: Record<string, unknown>) => {
         try {
             const payload: TeamCreate = {
-                team_name: values.team_name,
-                member_ids: values.member_ids
+                team_name: String(values.team_name || ''),
+                member_ids: values.member_ids as number[] | undefined
             };
 
             if (editingItem) {
@@ -152,8 +152,9 @@ const TeamManagementPage = () => {
             }
             setIsModalOpen(false);
             form.resetFields();
-        } catch (error: any) {
-            message.error(error?.response?.data?.message || 'Thao tác thất bại');
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string } } };
+            message.error(err?.response?.data?.message || 'Thao tác thất bại');
         }
     };
 
@@ -161,8 +162,9 @@ const TeamManagementPage = () => {
         try {
             await deleteTeam.mutateAsync(id);
             message.success('Xóa nhóm thành công');
-        } catch (error: any) {
-            message.error(error?.response?.data?.message || 'Xóa thất bại');
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string } } };
+            message.error(err?.response?.data?.message || 'Xóa thất bại');
         }
     };
 
@@ -183,7 +185,7 @@ const TeamManagementPage = () => {
         {
             title: 'Thành viên',
             key: 'members',
-            render: (_: any, record: TeamResponse) => (
+            render: (_: unknown, record: TeamResponse) => (
                 <Space direction="vertical" size={4} className="max-w-[300px]">
                     <Avatar.Group max={{ count: 5, style: { color: '#f56a00', backgroundColor: '#fde3cf' } }} size="small">
                         {record.members.map(m => (
@@ -205,7 +207,7 @@ const TeamManagementPage = () => {
         {
             title: 'Thao tác',
             key: 'actions',
-            render: (_: any, record: TeamResponse) => (
+            render: (_: unknown, record: TeamResponse) => (
                 <Space>
                     <Button
                         icon={<EditOutlined />}

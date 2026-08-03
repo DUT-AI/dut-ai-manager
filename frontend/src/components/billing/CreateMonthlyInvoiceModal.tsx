@@ -16,8 +16,6 @@ import {
 } from 'antd';
 import { 
   HistoryOutlined, 
-  TeamOutlined, 
-  UserOutlined, 
   PlusOutlined, 
   DeleteOutlined,
   EyeOutlined,

@@ -7,6 +7,7 @@ import { message, Spin, ConfigProvider, theme, Modal, Table, Tag, Button } from 
 import { MeetingModal } from '@/components/meeting';
 import { useNavigate } from 'react-router-dom';
 import type { UserResponse } from '@/types/user.types';
+import type { MeetingResponse, ParticipantResponse } from '@/types/meeting.types';
 import dayjs from 'dayjs';
 
 // Activity Registration - Added Check-in/Out Column and Expiry Logic
@@ -14,8 +15,8 @@ const RobotActivityPage = () => {
     const navigate = useNavigate();
     const [selectedBlock, setSelectedBlock] = useState<'morning' | 'afternoon' | 'evening'>('afternoon');
     const [selectedDay, setSelectedDay] = useState(dayjs().date());
-    const [meetings, setMeetings] = useState<any[]>([]);
-    const [myShifts, setMyShifts] = useState<any[]>([]);
+    const [meetings, setMeetings] = useState<MeetingResponse[]>([]);
+    const [myShifts, setMyShifts] = useState<MeetingResponse[]>([]);
     const [users, setUsers] = useState<UserResponse[]>([]);
     const [loading, setLoading] = useState(false);
     const [registeringId, setRegisteringId] = useState<number | null>(null);
@@ -54,7 +55,7 @@ const RobotActivityPage = () => {
             if (res.is_success) {
                 setMeetings(res.data || []);
             }
-        } catch (error) {
+        } catch {
             message.error('Failed to load activities');
         } finally {
             setLoading(false);
@@ -67,13 +68,13 @@ const RobotActivityPage = () => {
             const end = dayjs().add(14, 'day').format('YYYY-MM-DD');
             const res = await meetingService.getMeetingsByDateRange(start, end);
             if (res.is_success) {
-                const userMeetings = (res.data || []).filter((m: any) => 
-                    m.participants?.some((p: any) => p.user_id === userId)
+                const userMeetings = (res.data || []).filter((m: MeetingResponse) => 
+                    m.participants?.some((p: ParticipantResponse) => p.user_id === userId)
                 );
                 setMyShifts(userMeetings);
             }
-        } catch (error) {
-            console.error('Failed to fetch user shifts', error);
+        } catch {
+            console.error('Failed to fetch user shifts');
         }
     };
 
@@ -109,13 +110,13 @@ const RobotActivityPage = () => {
         fetchData();
     }, []);
 
-    const handleRegister = async (meeting: any) => {
+    const handleRegister = async (meeting: MeetingResponse) => {
         if (!currentUser) {
             message.error('Please login to register');
             return;
         }
 
-        const isRegistered = meeting.participants?.some((p: any) => p.user_id === currentUser.id);
+        const isRegistered = meeting.participants?.some((p: ParticipantResponse) => p.user_id === currentUser.id);
         if (isRegistered) {
             message.warning('You are already registered for this activity');
             return;
@@ -126,7 +127,7 @@ const RobotActivityPage = () => {
             const detailRes = await meetingService.getMeetingById(meeting.id);
             if (!detailRes.is_success) throw new Error('Failed to fetch meeting details');
             
-            const currentParticipantIds = detailRes.data.participants?.map((p: any) => p.user_id) || [];
+            const currentParticipantIds = detailRes.data.participants?.map((p: ParticipantResponse) => p.user_id) || [];
             const updatedUserIds = [...new Set([...currentParticipantIds, currentUser.id])];
             
             const updateRes = await meetingService.updateMeeting(meeting.id, {
@@ -139,16 +140,16 @@ const RobotActivityPage = () => {
                 if (activeDay) fetchMeetings(activeDay.fullDate);
                 fetchMyShifts(currentUser.id);
             }
-        } catch (error) {
+        } catch {
             message.error('Registration failed. Please try again.');
         } finally {
             setRegisteringId(null);
         }
     };
 
-    const handleCreateMeetingSubmit = async (values: any) => {
+    const handleCreateMeetingSubmit = async (values: Record<string, unknown>) => {
         try {
-            const res = await meetingService.createMeeting(values);
+            const res = await meetingService.createMeeting(values as any);
             if (res.is_success) {
                 message.success('Activity created successfully!');
                 setIsCreateModalOpen(false);
@@ -156,7 +157,7 @@ const RobotActivityPage = () => {
                 if (activeDay) fetchMeetings(activeDay.fullDate);
                 if (currentUser) fetchMyShifts(currentUser.id);
             }
-        } catch (error) {
+        } catch {
             message.error('Failed to create activity');
         }
     };
@@ -246,7 +247,7 @@ const RobotActivityPage = () => {
                         <AnimatePresence mode="popLayout">
                             {filteredMeetings.length > 0 ? (
                                 filteredMeetings.map((event, idx) => {
-                                    const isRegistered = event.participants?.some((p: any) => p.user_id === currentUser?.id);
+                                    const isRegistered = event.participants?.some((p: ParticipantResponse) => p.user_id === currentUser?.id);
                                     const isOver = dayjs(event.end_time).isBefore(now);
                                     
                                     return (
@@ -396,7 +397,7 @@ const RobotActivityPage = () => {
                             title="ACTIVITY" 
                             dataIndex="title" 
                             key="title"
-                            render={(text, record: any) => (
+                            render={(text, record: MeetingResponse) => (
                                 <div>
                                     <div className="text-white font-medium">{text}</div>
                                     <div className="text-[10px] text-[#c2c6d6]">{dayjs(record.start_time).format('DD/MM/YYYY')}</div>
@@ -406,7 +407,7 @@ const RobotActivityPage = () => {
                         <Table.Column 
                             title="TIME" 
                             key="time"
-                            render={(_, record: any) => (
+                            render={(_, record: MeetingResponse) => (
                                 <Tag color="blue" className="bg-[#adc6ff]/10 border-[#adc6ff]/30 text-[#adc6ff]">
                                     {dayjs(record.start_time).format('HH:mm')} - {dayjs(record.end_time).format('HH:mm')}
                                 </Tag>
@@ -415,7 +416,7 @@ const RobotActivityPage = () => {
                         <Table.Column 
                             title="CHECK-IN/OUT" 
                             key="action"
-                            render={(_, record: any) => {
+                            render={(_, record: MeetingResponse) => {
                                 const start = dayjs(record.start_time);
                                 const end = dayjs(record.end_time);
                                 const isOver = now.isAfter(end);

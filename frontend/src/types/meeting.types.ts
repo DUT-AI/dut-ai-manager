@@ -1,45 +1,54 @@
+import { z } from 'zod';
+
 export const ParticipantStatus = {
-    NOT_JOINED: "NOT_JOINED",
-    JOINED: "JOINED",
-    COMPLETED: "COMPLETED"
+  NOT_JOINED: 'NOT_JOINED',
+  JOINED: 'JOINED',
+  COMPLETED: 'COMPLETED',
 } as const;
+
 export type ParticipantStatus = typeof ParticipantStatus[keyof typeof ParticipantStatus];
+export const participantStatusSchema = z.enum(['NOT_JOINED', 'JOINED', 'COMPLETED']);
 
+export const participantResponseSchema = z.object({
+  id: z.number(),
+  meeting_id: z.number(),
+  user_id: z.number(),
+  user_name: z.string().optional(),
+  user_avatar_url: z.string().nullable().optional(),
+  check_in_at: z.string().nullable().optional(),
+  check_out_at: z.string().nullable().optional(),
+  status: participantStatusSchema,
+  link_image: z.string().nullable().optional(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+export type ParticipantResponse = z.infer<typeof participantResponseSchema>;
 
-export interface MeetingCreate {
-    title: string;
-    content?: string;
-    start_time: string; // ISO string
-    end_time: string;   // ISO string
-    require_check_in?: boolean;
-    team_ids?: number[];
-    user_ids?: number[];
-}
+export const meetingResponseSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  content: z.string().optional(),
+  start_time: z.string(),
+  end_time: z.string(),
+  require_check_in: z.boolean(),
+  participants: z.array(participantResponseSchema).default([]),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+export type MeetingResponse = z.infer<typeof meetingResponseSchema>;
 
-export interface MeetingUpdate extends Partial<MeetingCreate> {}
+export const meetingCreateSchema = z.object({
+  title: z.string().min(1, 'Vui lòng nhập tiêu đề cuộc họp'),
+  content: z.string().optional(),
+  start_time: z.string().min(1, 'Vui lòng chọn thời gian bắt đầu'),
+  end_time: z.string().min(1, 'Vui lòng chọn thời gian kết thúc'),
+  require_check_in: z.boolean().optional(),
+  team_ids: z.array(z.number()).optional(),
+  user_ids: z.array(z.number()).optional(),
+});
+export type MeetingCreate = z.infer<typeof meetingCreateSchema>;
+export type CreateMeetingFormValues = MeetingCreate;
 
-export interface ParticipantResponse {
-    id: number;
-    meeting_id: number;
-    user_id: number;
-    user_name?: string;
-    user_avatar_url?: string;
-    check_in_at?: string;
-    check_out_at?: string;
-    status: ParticipantStatus;
-    link_image?: string;
-    created_at: string;
-    updated_at: string;
-}
-
-export interface MeetingResponse {
-    id: number;
-    title: string;
-    content?: string;
-    start_time: string;
-    end_time: string;
-    require_check_in: boolean;
-    participants: ParticipantResponse[];
-    created_at: string;
-    updated_at: string;
-}
+export const meetingUpdateSchema = meetingCreateSchema.partial();
+export type MeetingUpdate = z.infer<typeof meetingUpdateSchema>;
+export type UpdateMeetingFormValues = MeetingUpdate;

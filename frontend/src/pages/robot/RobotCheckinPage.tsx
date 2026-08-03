@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { message } from 'antd';
 
@@ -9,7 +9,7 @@ const RobotCheckinPage = () => {
     const navigate = useNavigate();
     const [showLiveFeed, setShowLiveFeed] = useState(false);
     const [isIdentified, setIsIdentified] = useState(false);
-    const [identifiedUser, setIdentifiedUser] = useState<any>(null);
+    const [identifiedUser, setIdentifiedUser] = useState<Record<string, unknown> | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     
     const isAccompanistMode = location.state?.mode === 'accompanist';

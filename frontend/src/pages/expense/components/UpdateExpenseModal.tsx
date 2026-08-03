@@ -52,7 +52,7 @@ export const UpdateExpenseModal: React.FC<UpdateExpenseModalProps> = ({ open, ex
         },
       });
       onClose();
-    } catch (error) {
+    } catch {
       // Form validation error
     }
   };

@@ -57,7 +57,7 @@ const InvoiceDetailModal = ({
           <Descriptions column={2} bordered size="small" className="mb-6">
             <Descriptions.Item label="Thành viên" span={2}>
               <Space>
-                <Avatar src={user?.avatar_url || ''} size="small" />
+                <Avatar src={user?.avatar_url || undefined} size="small" />
                 <Text strong>{user?.name || `User ID: ${detail.user_id}`}</Text>
               </Space>
             </Descriptions.Item>
@@ -66,7 +66,7 @@ const InvoiceDetailModal = ({
               <Tag color={detail.status === InvoiceStatus.PAID ? 'green' : 'orange'}>{detail.status}</Tag>
             </Descriptions.Item>
             <Descriptions.Item label="Mã tham chiếu" span={2}><Text strong>{detail.reference_code}</Text></Descriptions.Item>
-            <Descriptions.Item label="Mã giao dịch" span={2}>{detail.transaction_id || 'Chưa có'}</Descriptions.Item>
+            <Descriptions.Item label="Mã giao dịch" span={2}>{detail.reference_code || 'Chưa có'}</Descriptions.Item>
             <Descriptions.Item label="Tổng tiền" span={2}>
               <Title level={4} className="mb-0! text-indigo-600">{detail.amount.toLocaleString()} VNĐ</Title>
             </Descriptions.Item>

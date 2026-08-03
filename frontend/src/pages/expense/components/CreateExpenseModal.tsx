@@ -43,7 +43,7 @@ export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({ open, on
         payment_date: values.status === ExpenseStatus.PAID ? values.expense_date.format('YYYY-MM-DD') : null,
       });
       onClose();
-    } catch (error) {
+    } catch {
       // Form validation error
     }
   };

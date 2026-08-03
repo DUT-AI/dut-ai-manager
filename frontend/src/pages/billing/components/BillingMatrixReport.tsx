@@ -72,7 +72,6 @@ const BillingMatrixReport = () => {
   // Số dư đối ứng (Thu - Chi)
   const balanceTotal = incomingTotal - outgoingTotal;
   const balancePaid = incomingPaid - outgoingPaid;
-  const balanceUnpaid = incomingUnpaid - outgoingUnpaid;
 
   const selectedTeamId = Form.useWatch('team_id', form);
   
@@ -84,10 +83,24 @@ const BillingMatrixReport = () => {
     return users.filter(u => memberIds.includes(u.id));
   }, [users, teams, selectedTeamId]);
 
-  const onFinish = (values: any) => {
+interface MatrixInvoiceItem {
+  id: number;
+  reference_code: string;
+  status: string;
+  amount: number;
+  items: string[];
+}
+
+interface FilterFormValues {
+  dateRange?: [Dayjs, Dayjs];
+  user_ids?: number[];
+  team_id?: number;
+}
+
+  const onFinish = (values: FilterFormValues) => {
     if (!values.dateRange || values.dateRange.length !== 2) return;
     
-    const [start, end] = values.dateRange as [Dayjs, Dayjs];
+    const [start, end] = values.dateRange;
     
     let user_ids = values.user_ids || [];
     
@@ -121,7 +134,7 @@ const BillingMatrixReport = () => {
         title: monthStr,
         dataIndex: monthKey,
         key: monthKey,
-        render: (invoicesData: any[]) => {
+        render: (invoicesData: MatrixInvoiceItem[]) => {
           if (!invoicesData || invoicesData.length === 0) return <Text type="secondary">-</Text>;
           
           return (
@@ -165,7 +178,7 @@ const BillingMatrixReport = () => {
     if (!invoices.length || !queryParams) return [];
     
     // Map of userId -> monthKey -> invoices
-    const userMatrix: Record<number, Record<string, any[]>> = {};
+    const userMatrix: Record<number, Record<string, MatrixInvoiceItem[]>> = {};
     
     // Track which users actually have invoices to display them
     const activeUserIds = new Set<number>();
@@ -189,7 +202,7 @@ const BillingMatrixReport = () => {
         reference_code: invoice.reference_code,
         status: invoice.status,
         amount: invoice.amount,
-        items: invoice.items.map((i: any) => i.item_type)
+        items: invoice.items.map(i => i.item_type)
       });
     });
 
@@ -203,7 +216,7 @@ const BillingMatrixReport = () => {
     }
 
     return displayUsers.map(user => {
-      const rowData: any = {
+      const rowData: Record<string, unknown> = {
         key: user.id,
         user: user,
       };
@@ -225,7 +238,7 @@ const BillingMatrixReport = () => {
       key: 'user',
       fixed: 'left' as const,
       width: 200,
-      render: (user: any) => (
+      render: (user: UserResponse) => (
         <div className="flex flex-col">
           <Text strong>{user?.name}</Text>
           <Text type="secondary" className="text-xs">{user?.email}</Text>

@@ -42,7 +42,7 @@ export const userService = {
   importUsers: async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await axiosInstance.post<ApiResponse<any>>('/users/import', formData, {
+    const response = await axiosInstance.post<ApiResponse<Record<string, unknown>>>('/users/import', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

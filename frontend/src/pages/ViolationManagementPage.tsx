@@ -4,7 +4,7 @@ import { PlusOutlined, WarningOutlined } from '@ant-design/icons';
 import { useViolations, useCreateViolation, useUpdateViolation, useDeleteViolation, useUsers } from '@/hooks';
 import { useAuth } from '@/context/AuthContext';
 import { ViolationPermission } from '@/types/rbac.types';
-import type { ViolationResponse, ViolationCreate } from '@/types/activity.types';
+import type { ViolationResponse, ViolationCreate } from '@/types';
 import dayjs from 'dayjs';
 import { motion, type Variants } from 'motion/react';
 
@@ -68,28 +68,30 @@ const ViolationManagementPage = () => {
     const canUpdate = hasPermission(ViolationPermission.UPDATE);
     const canDelete = hasPermission(ViolationPermission.DELETE);
 
-    const handleCreateOrUpdate = async (values: any) => {
+    const handleCreateOrUpdate = async (values: Record<string, unknown>) => {
         try {
+            const dateStr = (values.date as { toISOString?: () => string })?.toISOString?.() || String(values.date);
             if (editingItem) {
                 const updateData = {
-                    reason: values.reason,
-                    date: values.date.toISOString(),
+                    reason: values.reason as string,
+                    date: dateStr,
                 };
                 await updateViolation.mutateAsync({ id: editingItem.id, data: updateData });
                 message.success('Cập nhật vi phạm thành công');
             } else {
                 const formattedValues: ViolationCreate = {
-                    user_ids: values.user_ids,
-                    reason: values.reason,
-                    date: values.date.toISOString(),
+                    user_ids: values.user_ids as number[],
+                    reason: values.reason as string,
+                    date: dateStr,
                 };
                 await createViolation.mutateAsync(formattedValues);
                 message.success('Ghi nhận vi phạm thành công');
             }
             setIsModalOpen(false);
             form.resetFields();
-        } catch (error: any) {
-            message.error(error?.response?.data?.message || 'Thao tác thất bại');
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string } } };
+            message.error(err?.response?.data?.message || 'Thao tác thất bại');
         }
     };
 
@@ -98,8 +100,9 @@ const ViolationManagementPage = () => {
             await deleteViolation.mutateAsync(id);
             message.success('Xóa vi phạm thành công');
             setIsDetailOpen(false);
-        } catch (error: any) {
-            message.error(error?.response?.data?.message || 'Xóa thất bại');
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string } } };
+            message.error(err?.response?.data?.message || 'Xóa thất bại');
         }
     };
 

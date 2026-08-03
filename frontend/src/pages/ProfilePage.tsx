@@ -215,7 +215,7 @@ const ProfilePage = () => {
     }
 
     return (
-        <motion.div 
+        <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"
@@ -325,11 +325,11 @@ const ProfilePage = () => {
                                                             <SafetyCertificateOutlined className="text-indigo-500" />
                                                             <Text>Vai trò hiện tại</Text>
                                                         </Space>
-                                                         <div className="flex flex-wrap gap-1 justify-end">
-                                                             {user.role_names?.map((rn) => (
-                                                                 <Tag key={rn} color="purple" className="m-0">{rn}</Tag>
-                                                             ))}
-                                                         </div>
+                                                        <div className="flex flex-wrap gap-1 justify-end">
+                                                            {user.role_names?.map((rn) => (
+                                                                <Tag key={rn} color="purple" className="m-0">{rn}</Tag>
+                                                            ))}
+                                                        </div>
                                                     </div>
                                                 </Space>
                                             </div>
@@ -478,11 +478,11 @@ const ProfilePage = () => {
                     <Descriptions column={1} bordered size="small">
                         <Descriptions.Item label="Loại">{selectedPermission.category}</Descriptions.Item>
                         <Descriptions.Item label="Nội dung">{selectedPermission.note}</Descriptions.Item>
-                        <Descriptions.Item label="Thời gian">
-                            {selectedPermission.start_time} - {selectedPermission.end_time}
+                        <Descriptions.Item label="Thời gian bắt đầu">
+                            {selectedPermission.start_time || '--'}
                         </Descriptions.Item>
                         <Descriptions.Item label="Ngày xin phép">
-                            {dayjs(selectedPermission.date).format('DD/MM/YYYY')}
+                            {dayjs(selectedPermission.created_at).format('DD/MM/YYYY')}
                         </Descriptions.Item>
                         <Descriptions.Item label="Người tạo">
                             {selectedPermission.creator?.name || selectedPermission.owner?.name || 'N/A'}
@@ -493,7 +493,7 @@ const ProfilePage = () => {
                     </Descriptions>
                 )}
             </Modal>
-            
+
             <Modal
                 title={<><Avatar src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Icon_of_Zalo.svg/120px-Icon_of_Zalo.svg.png" size="small" className="mr-2" /> Liên kết Zalo Bot (Miễn phí)</>}
                 open={botModalVisible}

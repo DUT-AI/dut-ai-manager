@@ -239,19 +239,20 @@ const UserManagementPage = () => {
     const canUpdate = hasPermission(UserPermission.UPDATE);
     const canDelete = hasPermission(UserPermission.DELETE);
 
-    const handleCreateOrUpdate = async (values: any) => {
+    const handleCreateOrUpdate = async (values: Record<string, unknown>) => {
         try {
             if (editingUser) {
-                await updateUser.mutateAsync({ id: editingUser.id, data: values });
+                await updateUser.mutateAsync({ id: editingUser.id, data: values as any });
                 message.success('User updated successfully');
             } else {
-                await createUser.mutateAsync(values);
+                await createUser.mutateAsync(values as any);
                 message.success('User created successfully');
             }
             dispatch({ type: 'CLOSE_USER_MODAL' });
             form.resetFields();
-        } catch (error: any) {
-            message.error(error?.response?.data?.message || 'Operation failed');
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string } } };
+            message.error(err?.response?.data?.message || 'Operation failed');
         }
     };
 
@@ -259,7 +260,7 @@ const UserManagementPage = () => {
         try {
             await deleteUser.mutateAsync(id);
             message.success('User deleted successfully');
-        } catch (error) {
+        } catch {
             message.error('Delete failed');
         }
     };
@@ -269,7 +270,7 @@ const UserManagementPage = () => {
             title: 'Thành viên',
             key: 'user',
             fixed: 'left' as const,
-            render: (_: any, record: UserResponse) => (
+            render: (_: unknown, record: UserResponse) => (
                 <Space>
                     <Avatar
                         src={record.avatar_url}
@@ -291,7 +292,7 @@ const UserManagementPage = () => {
         {
             title: 'Liên hệ',
             key: 'contact',
-            render: (_: any, record: UserResponse) => (
+            render: (_: unknown, record: UserResponse) => (
                 <div className="flex flex-col gap-0.5">
                     <div className="flex items-center text-xs">
                         <MailOutlined className="mr-2 text-gray-400 text-[10px]" />
@@ -338,7 +339,7 @@ const UserManagementPage = () => {
             key: 'actions',
             fixed: 'right' as const,
             width: 150,
-            render: (_: any, record: UserResponse) => (
+            render: (_: unknown, record: UserResponse) => (
                 <Space>
                     <Button
                         icon={<UserOutlined />}
@@ -590,7 +591,7 @@ const UserManagementPage = () => {
 const ImportUserModal = ({ open, onCancel }: { open: boolean; onCancel: () => void }) => {
     const importUsers = useImportUsers();
     const [file, setFile] = useState<File | null>(null);
-    const [result, setResult] = useState<any | null>(null);
+    const [result, setResult] = useState<Record<string, unknown> | null>(null);
 
     const handleImport = async () => {
         if (!file) return;
@@ -598,8 +599,9 @@ const ImportUserModal = ({ open, onCancel }: { open: boolean; onCancel: () => vo
             const res = await importUsers.mutateAsync(file);
             setResult(res.data);
             message.success('Import process completed');
-        } catch (error: any) {
-            message.error(error?.response?.data?.message || 'Import failed');
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string } } };
+            message.error(err?.response?.data?.message || 'Import failed');
         }
     };
 
@@ -650,7 +652,7 @@ const ImportUserModal = ({ open, onCancel }: { open: boolean; onCancel: () => vo
                             setFile(file);
                             return false;
                         }}
-                        fileList={file ? [file as any] : []}
+                        fileList={file ? [{ uid: '-1', name: file.name, status: 'done' }] : []}
                         onRemove={() => setFile(null)}
                         accept=".xlsx, .xls, .csv"
                         maxCount={1}

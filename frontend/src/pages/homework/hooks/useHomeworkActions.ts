@@ -85,7 +85,7 @@ export const useHomeworkActions = (activeTab: string) => {
         dispatch({ type: 'OPEN_FORM', payload: homework });
         try {
             const submissions = await homeworkService.getSubmissions(homework.id);
-            dispatch({ type: 'SET_ASSIGNEES', payload: submissions?.map((s: any) => s.owner_id) || [] });
+            dispatch({ type: 'SET_ASSIGNEES', payload: submissions?.map((s: HomeworkSubmission) => s.owner_id) || [] });
         } catch {
             dispatch({ type: 'SET_ASSIGNEES', payload: [] });
         }
@@ -95,8 +95,9 @@ export const useHomeworkActions = (activeTab: string) => {
         try {
             await deleteHomeworkMutation.mutateAsync(id);
             message.success('Xóa bài tập thành công');
-        } catch (error: any) {
-            message.error(error?.response?.data?.message || 'Xóa bài tập thất bại');
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string } } };
+            message.error(err?.response?.data?.message || 'Xóa bài tập thất bại');
         }
     };
 

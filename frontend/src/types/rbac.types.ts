@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 export const RolePermission = {
   CREATE: 'role:create',
   READ: 'role:read',
@@ -75,42 +77,39 @@ export const BillingPermission = {
   DELETE: 'billing:delete',
 } as const;
 
+export const permissionResponseSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  description: z.string().nullable().optional(),
+  resource: z.string(),
+  action: z.string(),
+});
+export type PermissionResponse = z.infer<typeof permissionResponseSchema>;
 
-export interface PermissionResponse {
-  id: number;
-  name: string;
-  description: string | null;
-  resource: string;
-  action: string;
-}
+export const roleResponseSchema = z.object({
+  id: z.number(),
+  name: z.enum(['admin', 'leader', 'teammate']).or(z.string()),
+  description: z.string().nullable().optional(),
+  permissions: z.array(permissionResponseSchema).default([]),
+});
+export type RoleResponse = z.infer<typeof roleResponseSchema>;
 
-export interface RoleResponse {
-  id: number;
-  name: 'admin' | 'leader' | 'teammate';
-  description: string | null;
-  permissions: PermissionResponse[];
-}
+export const roleCreateSchema = z.object({
+  name: z.string().min(1, 'Vui lòng nhập tên vai trò'),
+  description: z.string().optional(),
+});
+export type RoleCreate = z.infer<typeof roleCreateSchema>;
 
-export interface RoleCreate {
-  name: string;
-  description?: string;
-}
+export const roleUpdateSchema = roleCreateSchema.partial();
+export type RoleUpdate = z.infer<typeof roleUpdateSchema>;
 
-export interface RoleUpdate {
-  name?: string;
-  description?: string;
-}
+export const permissionCreateSchema = z.object({
+  name: z.string().min(1, 'Vui lòng nhập tên quyền'),
+  description: z.string().optional(),
+  resource: z.string().min(1, 'Vui lòng nhập resource'),
+  action: z.string().min(1, 'Vui lòng nhập action'),
+});
+export type PermissionCreate = z.infer<typeof permissionCreateSchema>;
 
-export interface PermissionCreate {
-  name: string;
-  description?: string;
-  resource: string;
-  action: string;
-}
-
-export interface PermissionUpdate {
-  name?: string;
-  description?: string;
-  resource?: string;
-  action?: string;
-}
+export const permissionUpdateSchema = permissionCreateSchema.partial();
+export type PermissionUpdate = z.infer<typeof permissionUpdateSchema>;

@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Card, Button, Typography, Space, Form, message, Grid, Tabs, Select, DatePicker, Row, Col, Statistic } from 'antd';
-import { PlusOutlined, AuditOutlined, CalendarOutlined, TableOutlined, BarChartOutlined, DollarOutlined, ImportOutlined, ExportOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { PlusOutlined, AuditOutlined, CalendarOutlined, BarChartOutlined, DollarOutlined, ImportOutlined, ExportOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useAllInvoices, useCreateInvoice, useUpdateInvoice, useInvoiceDetail, useDeleteInvoice } from '@/hooks/useBilling';
 import { useUsers } from '@/hooks';
 import { useTeams } from '@/hooks/useTeams';
 import CreateMonthlyInvoiceModal from '@/components/billing/CreateMonthlyInvoiceModal';
-import type { InvoiceCreate, Invoice } from '@/types/billing.types';
+import type { CreateInvoiceFormValues, Invoice } from '@/types';
 import { motion, type Variants } from 'motion/react';
 
 // Sub-components
@@ -46,14 +46,17 @@ const AdminBillingPage = () => {
   const [filterStatus, setFilterStatus] = useState<string | undefined>(undefined);
   const [filterPeriod, setFilterPeriod] = useState<dayjs.Dayjs | null>(null);
 
-  const { data: invoices = [], isLoading } = useAllInvoices({
+  const { data: invoicesData, isLoading } = useAllInvoices({
     user_id: filterUser,
     team_id: filterTeam,
     status: filterStatus,
     billing_period: filterPeriod ? filterPeriod.startOf('month').format('YYYY-MM-DD') : undefined,
   });
-  const { data: users = [] } = useUsers();
-  const { data: teams = [] } = useTeams();
+  const invoices = invoicesData ?? [];
+  const { data: usersData } = useUsers();
+  const users = usersData ?? [];
+  const { data: teamsData } = useTeams();
+  const teams = teamsData ?? [];
   const createInvoice = useCreateInvoice();
   const updateInvoice = useUpdateInvoice();
   const deleteInvoice = useDeleteInvoice();
@@ -72,7 +75,7 @@ const AdminBillingPage = () => {
 
   const handleCreate = async (values: any) => {
     try {
-      const payload: InvoiceCreate = {
+      const payload: CreateInvoiceFormValues = {
         user_id: values.user_id,
         team_id: values.team_id,
         description: values.description,
@@ -89,52 +92,37 @@ const AdminBillingPage = () => {
       setIsCreateModalOpen(false);
       form.resetFields();
     } catch (error: any) {
-      message.error(error?.response?.data?.message || 'Có lỗi xảy ra khi tạo hóa đơn');
+      message.error(error?.response?.data?.message || 'Tạo hóa đơn thất bại');
     }
   };
 
   const handleUpdate = async (values: any) => {
     if (!selectedInvoiceId) return;
     try {
-      const payload = {
-        description: values.description,
-        items: values.items.map((item: any) => ({
-          item_type: item.item_type,
-          amount: item.amount,
-          note: item.note,
-          reference_id: item.reference_id,
-        }))
-      };
-      
-      await updateInvoice.mutateAsync({ id: selectedInvoiceId, data: payload });
+      await updateInvoice.mutateAsync({ id: selectedInvoiceId, data: values });
       message.success('Cập nhật hóa đơn thành công');
       setIsUpdateModalOpen(false);
-      setSelectedInvoiceId(null);
-      setSelectedInvoice(null);
       updateForm.resetFields();
     } catch (error: any) {
-      message.error(error?.response?.data?.message || 'Có lỗi xảy ra khi cập nhật hóa đơn');
+      message.error(error?.response?.data?.message || 'Cập nhật thất bại');
     }
   };
 
   const handleDelete = async (id: number) => {
-    setSelectedInvoiceId(id);
     try {
       await deleteInvoice.mutateAsync(id);
       message.success('Xóa hóa đơn thành công');
     } catch (error: any) {
-      message.error(error?.response?.data?.message || 'Không thể xóa hóa đơn');
-    } finally {
-      setSelectedInvoiceId(null);
+      message.error(error?.response?.data?.message || 'Xóa thất bại');
     }
   };
 
-  const handleViewDetail = (id: number) => {
+  const handleOpenDetail = (id: number) => {
     setSelectedInvoiceId(id);
     setIsDetailModalOpen(true);
   };
 
-  const handleEdit = (invoice: Invoice) => {
+  const handleOpenEdit = (invoice: Invoice) => {
     setSelectedInvoiceId(invoice.id);
     setSelectedInvoice(invoice);
     setIsUpdateModalOpen(true);
@@ -148,13 +136,13 @@ const AdminBillingPage = () => {
     );
   });
 
-  const totalFundAndFineAmount = fundAndFineInvoices.reduce((acc, curr) => acc + curr.amount, 0);
+  const totalFundAndFineAmount = fundAndFineInvoices.reduce((acc, curr) => acc + (Number(curr.amount ?? curr.total_amount) || 0), 0);
   const paidFundAndFineAmount = fundAndFineInvoices
     .filter((inv) => inv.status === 'PAID')
-    .reduce((acc, curr) => acc + curr.amount, 0);
+    .reduce((acc, curr) => acc + (Number(curr.amount ?? curr.total_amount) || 0), 0);
   const unpaidFundAndFineAmount = fundAndFineInvoices
     .filter((inv) => inv.status === 'PENDING')
-    .reduce((acc, curr) => acc + curr.amount, 0);
+    .reduce((acc, curr) => acc + (Number(curr.amount ?? curr.total_amount) || 0), 0);
 
   const tabItems = [
     {
@@ -273,8 +261,8 @@ const AdminBillingPage = () => {
             invoices={invoices}
             isLoading={isLoading}
             users={users}
-            onViewDetail={handleViewDetail}
-            onEdit={handleEdit}
+            onViewDetail={handleOpenDetail}
+            onEdit={handleOpenEdit}
             onDelete={handleDelete}
             deletingId={deleteInvoice.isPending ? selectedInvoiceId : null}
           />

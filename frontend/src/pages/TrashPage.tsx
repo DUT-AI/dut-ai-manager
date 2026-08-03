@@ -33,7 +33,7 @@ const itemVariants: Variants = {
     }
 };
 
-const UserDisplay = ({ record, label }: { record: any, label?: string }) => {
+const UserDisplay = ({ record, label }: { record: Record<string, unknown> & { user_name?: string; user?: { name?: string; avatar_url?: string }; owner?: { name?: string; avatar_url?: string }; creator?: { name?: string; avatar_url?: string } }, label?: string }) => {
     if (!record) return null;
     const name = record.user_name || record.user?.name || record.owner?.name || record.creator?.name || '--';
     const avatar = record.owner?.avatar_url || record.user?.avatar_url || record.creator?.avatar_url;
@@ -61,7 +61,7 @@ const UserDisplay = ({ record, label }: { record: any, label?: string }) => {
     );
 };
 
-const TrashMobileList = ({ dataSource, loading, columns, onRestore }: { dataSource: any[], loading: boolean, columns: string[], onRestore: (id: number) => void }) => (
+const TrashMobileList = ({ dataSource, loading, columns, onRestore }: { dataSource: Record<string, unknown>[], loading: boolean, columns: string[], onRestore: (id: number) => void }) => (
     <div className="mt-4 px-3">
         <List
             dataSource={dataSource}
@@ -178,8 +178,9 @@ export const TrashPage: React.FC = () => {
             await homeworkService.restore(id);
             message.success('Khôi phục bài tập thành công');
             refetchHomeworks();
-        } catch (error: any) {
-            message.error(error?.response?.data?.message || 'Khôi phục thất bại');
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string } } };
+            message.error(err?.response?.data?.message || 'Khôi phục thất bại');
         }
     };
 
@@ -188,8 +189,9 @@ export const TrashPage: React.FC = () => {
             await bonusPointService.restoreBonusPoint(id);
             message.success('Khôi phục điểm cộng thành công');
             refetchBonusPoints();
-        } catch (error: any) {
-            message.error(error?.response?.data?.message || 'Khôi phục thất bại');
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string } } };
+            message.error(err?.response?.data?.message || 'Khôi phục thất bại');
         }
     };
 
@@ -198,8 +200,9 @@ export const TrashPage: React.FC = () => {
             await violationService.restoreViolation(id);
             message.success('Khôi phục vi phạm thành công');
             refetchViolations();
-        } catch (error: any) {
-            message.error(error?.response?.data?.message || 'Khôi phục thất bại');
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string } } };
+            message.error(err?.response?.data?.message || 'Khôi phục thất bại');
         }
     };
 
@@ -208,8 +211,9 @@ export const TrashPage: React.FC = () => {
             await permissionService.restorePermission(id);
             message.success('Khôi phục đơn phép thành công');
             refetchPermissions();
-        } catch (error: any) {
-            message.error(error?.response?.data?.message || 'Khôi phục thất bại');
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string } } };
+            message.error(err?.response?.data?.message || 'Khôi phục thất bại');
         }
     };
 
@@ -228,70 +232,71 @@ export const TrashPage: React.FC = () => {
         },
     ];
 
-    const bonusColumns: ColumnsType<any> = [
+    const bonusColumns: ColumnsType<Record<string, unknown>> = [
         {
             title: 'Người nhận',
             key: 'user_name',
-            render: (_, record) => <UserDisplay record={record} />
+            render: (_, record) => <UserDisplay record={record as any} />
         },
         { title: 'Điểm', dataIndex: 'points', key: 'points', render: (val) => <Text type="success">+{val}</Text> },
         { title: 'Lý do', dataIndex: 'reason', key: 'reason' },
         { title: 'Ngày', dataIndex: 'date', key: 'date', render: (date) => dayjs(date).format('DD/MM/YYYY') },
         {
             title: 'Hành động', key: 'action', width: 120,
-            render: (record: any) => (
-                <Popconfirm title="Khôi phục?" onConfirm={() => handleRestoreBonusPoint(record.id)}>
+            render: (record) => (
+                <Popconfirm title="Khôi phục?" onConfirm={() => handleRestoreBonusPoint(record.id as number)}>
                     <Button icon={<UndoOutlined />} type="primary" ghost size="small">Khôi phục</Button>
                 </Popconfirm>
             ),
         },
     ];
 
-    const violationColumns: ColumnsType<any> = [
+    const violationColumns: ColumnsType<Record<string, unknown>> = [
         {
             title: 'Người vi phạm',
             key: 'user_name',
             render: (_, record) => {
-                return <UserDisplay record={record} />;
+                return <UserDisplay record={record as any} />;
             }
         },
         { title: 'Lý do', dataIndex: 'reason', key: 'reason' },
         { title: 'Ngày', dataIndex: 'date', key: 'date', render: (date) => dayjs(date).format('DD/MM/YYYY') },
         {
             title: 'Hành động', key: 'action', width: 120,
-            render: (record: any) => (
-                <Popconfirm title="Khôi phục?" onConfirm={() => handleRestoreViolation(record.id)}>
+            render: (record) => (
+                <Popconfirm title="Khôi phục?" onConfirm={() => handleRestoreViolation(record.id as number)}>
                     <Button icon={<UndoOutlined />} type="primary" ghost size="small">Khôi phục</Button>
                 </Popconfirm>
             ),
         },
     ];
 
-    const permissionColumns: ColumnsType<any> = [
+    const permissionColumns: ColumnsType<Record<string, unknown>> = [
         {
             title: 'Người gửi',
             key: 'user_name',
-            render: (_, record) => <UserDisplay record={record} />
+            render: (_, record) => <UserDisplay record={record as any} />
         },
         { title: 'Loại', dataIndex: 'category', key: 'category', render: (val) => <Tag color="blue">{val}</Tag> },
         { title: 'Lý do/Ghi chú', dataIndex: 'note', key: 'note' },
         {
             title: 'Mục tiêu',
             key: 'target',
-            render: (record: any) => {
-                if (record.category === 'POSTPONE' && record.homework) {
-                    return <Text strong className="text-indigo-600">{record.homework.title}</Text>;
+            render: (record) => {
+                const rec = record as { category?: string; homework?: { title?: string }; meeting?: { title?: string } };
+                if (rec.category === 'POSTPONE' && rec.homework) {
+                    return <Text strong className="text-indigo-600">{rec.homework.title}</Text>;
                 }
-                if ((record.category === 'ABSENCE' || record.category === 'LATE') && record.meeting) {
-                    return <Text strong className="text-purple-600">{record.meeting.title}</Text>;
+                if ((rec.category === 'ABSENCE' || rec.category === 'LATE') && rec.meeting) {
+                    return <Text strong className="text-purple-600">{rec.meeting.title}</Text>;
                 }
                 return <Text type="secondary">--</Text>;
             },
         },
         {
             title: 'Hành động', key: 'action', width: 120,
-            render: (record: any) => (
-                <Popconfirm title="Khôi phục?" onConfirm={() => handleRestorePermission(record.id)}>
+            render: (record) => (
+                <Popconfirm title="Khôi phục?" onConfirm={() => handleRestorePermission(record.id as number)}>
                     <Button icon={<UndoOutlined />} type="primary" ghost size="small">Khôi phục</Button>
                 </Popconfirm>
             ),

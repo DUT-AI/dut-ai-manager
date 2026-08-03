@@ -4,6 +4,7 @@ import { LockOutlined, SettingOutlined, SafetyCertificateOutlined, UserOutlined,
 import { authService } from '@/services/api/auth.service';
 import { userService } from '@/services/api/user.service';
 import { useAuth } from '@/context/AuthContext';
+import type { UserResponse } from '@/types/user.types';
 import { motion, type Variants } from 'motion/react';
 
 const { Content, Sider } = Layout;
@@ -32,7 +33,7 @@ const itemVariants: Variants = {
 
 interface PasswordContentProps {
     loading: boolean;
-    onFinish: (values: any) => void;
+    onFinish: (values: Record<string, unknown>) => void;
     form: ReturnType<typeof Form.useForm>[0];
 }
 
@@ -94,11 +95,11 @@ const PasswordContent: React.FC<PasswordContentProps> = ({ loading, onFinish, fo
 );
 
 interface GeneralContentProps {
-    user: any;
+    user: UserResponse | null;
     loading: boolean;
     uploading: boolean;
-    onFinish: (values: any) => void;
-    onAvatarUpload: (info: any) => void;
+    onFinish: (values: Record<string, unknown>) => void;
+    onAvatarUpload: (info: { file: { status?: string; originFileObj?: File } }) => void;
     form: ReturnType<typeof Form.useForm>[0];
 }
 
@@ -130,8 +131,8 @@ const GeneralContent: React.FC<GeneralContentProps> = ({ user, loading, uploadin
                         }
                         return isJpgOrPng && isLt2M;
                     }}
-                    customRequest={({ onSuccess }: any) => {
-                        setTimeout(() => onSuccess("ok"), 0);
+                    customRequest={({ onSuccess }) => {
+                        setTimeout(() => onSuccess?.("ok"), 0);
                     }}
                     onChange={onAvatarUpload}
                 >
@@ -153,7 +154,7 @@ const GeneralContent: React.FC<GeneralContentProps> = ({ user, loading, uploadin
 
             {/* Use key to reinitialize form when user data changes after refresh */}
             <Form
-                key={`${user?.discord_id ?? 'nd'}-${user?.check_in_card_code_configured ? 'card-y' : 'card-n'}`}
+                key={`${user?.discord_id ?? 'nd'}-${user?.check_in_card_code ? 'card-y' : 'card-n'}`}
                 form={form}
                 layout="vertical"
                 onFinish={onFinish}
@@ -226,28 +227,29 @@ export const SettingsPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
 
-    const onChangePassword = async (values: any) => {
+    const onChangePassword = async (values: Record<string, unknown>) => {
         setLoading(true);
         try {
             await authService.changePassword({
-                old_password: values.old_password,
-                new_password: values.new_password,
-                confirm_password: values.confirm_password,
+                old_password: String(values.old_password || ''),
+                new_password: String(values.new_password || ''),
+                confirm_password: String(values.confirm_password || ''),
             });
             message.success('Đổi mật khẩu thành công');
             passwordForm.resetFields();
-        } catch (error: any) {
-            console.error(error);
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string } } };
+            message.error(err?.response?.data?.message || 'Đổi mật khẩu thất bại');
         } finally {
             setLoading(false);
         }
     };
 
-    const onUpdateSettings = async (values: any) => {
+    const onUpdateSettings = async (values: Record<string, unknown>) => {
         setLoading(true);
         try {
             const payload: import('@/types/user.types').UserSettingsUpdate = {
-                discord_id: values.discord_id,
+                discord_id: values.discord_id as string | undefined,
             };
             const card = typeof values.check_in_card_code === 'string' ? values.check_in_card_code.trim() : '';
             if (card) {
@@ -257,14 +259,15 @@ export const SettingsPage: React.FC = () => {
             message.success('Cập nhật thông tin thành công');
             await refreshUser();
             generalForm.setFieldsValue({ check_in_card_code: '' });
-        } catch (error: any) {
-            console.error(error);
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string } } };
+            message.error(err?.response?.data?.message || 'Cập nhật thất bại');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleAvatarUpload = async (info: any) => {
+    const handleAvatarUpload = async (info: { file: { status?: string; originFileObj?: File } }) => {
         if (info.file.status === 'uploading') {
             setUploading(true);
             return;
@@ -272,10 +275,12 @@ export const SettingsPage: React.FC = () => {
         if (info.file.status === 'done' || info.file.originFileObj) {
             try {
                 setUploading(true);
-                await userService.updateAvatar(info.file.originFileObj);
+                if (info.file.originFileObj) {
+                    await userService.updateAvatar(info.file.originFileObj);
+                }
                 message.success('Cập nhật ảnh đại diện thành công');
                 await refreshUser();
-            } catch (error) {
+            } catch {
                 message.error('Lỗi khi upload ảnh');
             } finally {
                 setUploading(false);
@@ -342,7 +347,7 @@ export const SettingsPage: React.FC = () => {
                     </div>
                 )}
                 <Content className="p-4 md:p-8 overflow-y-auto bg-gray-50 flex justify-center items-start">
-                    <motion.div 
+                    <motion.div
                         variants={containerVariants}
                         initial="hidden"
                         animate="visible"

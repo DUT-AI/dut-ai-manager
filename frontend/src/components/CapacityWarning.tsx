@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Alert, Tag, Modal, Button, Typography } from 'antd';
+import { Alert, Modal, Button, Typography } from 'antd';
 import { UserOutlined, WarningOutlined, SafetyOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { useCapacity } from '@/context/CapacityContext';
 
@@ -18,10 +18,10 @@ export const CapacityWarning = () => {
     // Only show popup when status CHANGES to warning/overload
     // (avoid popup every 15 min if status unchanged)
     if (currentStatus === 'warning' && prevStatus.current !== 'warning') {
-      setWarningModalVisible(true);
+      setTimeout(() => setWarningModalVisible(true), 0);
     }
     if (currentStatus === 'overload' && prevStatus.current !== 'overload') {
-      setOverloadModalVisible(true);
+      setTimeout(() => setOverloadModalVisible(true), 0);
     }
     prevStatus.current = currentStatus;
   }, [capacity]);

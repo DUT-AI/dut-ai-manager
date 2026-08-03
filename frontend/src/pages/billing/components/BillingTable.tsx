@@ -1,8 +1,7 @@
 import { Table, Space, Avatar, Typography, Tag, Button, Popconfirm } from 'antd';
 import { UserOutlined, EyeOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { InvoiceStatus } from '@/types/billing.types';
-import type { Invoice, InvoiceStatusType } from '@/types/billing.types';
+import { type Invoice, InvoiceStatus } from '@/types';
 import type { UserResponse } from '@/types/user.types';
 
 const { Text } = Typography;
@@ -29,18 +28,17 @@ const BillingTable = ({
   const columns = [
     {
       title: 'Mã hóa đơn',
-      dataIndex: 'reference_code',
       key: 'reference_code',
-      render: (code: string) => <Text strong>{code}</Text>,
+      render: (_: unknown, record: Invoice) => <Text strong>{record.reference_code || record.invoice_code || 'N/A'}</Text>,
     },
     {
       title: 'Thành viên',
       key: 'user',
-      render: (_: any, record: Invoice) => {
+      render: (_: unknown, record: Invoice) => {
         const user = users.find(u => u.id === record.user_id);
         return (
           <Space>
-            <Avatar src={user?.avatar_url || ''} icon={<UserOutlined />} size="small" />
+            <Avatar src={user?.avatar_url || undefined} icon={<UserOutlined />} size="small" />
             <Text>{user?.name || `User ID: ${record.user_id}`}</Text>
           </Space>
         );
@@ -49,21 +47,20 @@ const BillingTable = ({
     {
       title: 'Nhóm',
       key: 'team',
-      render: (_: any, record: Invoice) => (
-        <Tag color="blue">{record.team?.team_name || 'N/A'}</Tag>
+      render: (_: unknown, record: Invoice) => (
+        <Tag color="blue">{record.team?.team_name || record.team_name || 'N/A'}</Tag>
       ),
     },
     {
       title: 'Số tiền',
-      dataIndex: 'amount',
       key: 'amount',
-      render: (amount: number) => <Text strong>{amount.toLocaleString()} VNĐ</Text>,
+      render: (_: unknown, record: Invoice) => <Text strong>{(Number(record.amount ?? record.total_amount) || 0).toLocaleString()} VNĐ</Text>,
     },
     {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
-      render: (status: InvoiceStatusType) => {
+      render: (status: InvoiceStatus) => {
         const colors: Record<string, string> = {
           [InvoiceStatus.PENDING]: 'orange',
           [InvoiceStatus.PAID]: 'green',
@@ -82,18 +79,18 @@ const BillingTable = ({
     {
       title: 'Thao tác',
       key: 'action',
-      render: (_: any, record: Invoice) => (
+      render: (_: unknown, record: Invoice) => (
         <Space>
-          <Button 
-            icon={<EyeOutlined />} 
+          <Button
+            icon={<EyeOutlined />}
             size="small"
             onClick={() => onViewDetail(record.id)}
           >
             Chi tiết
           </Button>
           {record.status !== InvoiceStatus.PAID && (
-            <Button 
-              icon={<EditOutlined />} 
+            <Button
+              icon={<EditOutlined />}
               size="small"
               onClick={() => onEdit && onEdit(record)}
             />
@@ -107,10 +104,10 @@ const BillingTable = ({
             cancelText="Hủy"
             okButtonProps={{ danger: true }}
           >
-            <Button 
-              icon={<DeleteOutlined />} 
-              size="small" 
-              danger 
+            <Button
+              icon={<DeleteOutlined />}
+              size="small"
+              danger
               disabled={record.status === InvoiceStatus.PAID}
               loading={deletingId === record.id}
             />

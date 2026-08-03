@@ -1,67 +1,66 @@
-import type { BonusPointResponse, PermissionRequestResponse, ViolationResponse } from "./activity.types";
-import type { Homework } from "./homework.types";
-import type { MeetingResponse } from "./meeting.types";
+import { z } from 'zod';
+import { bonusPointResponseSchema, permissionRequestResponseSchema, userRefSchema } from './activity.types';
+import { violationResponseSchema } from './violation.types';
+import { homeworkSchema } from './homework.types';
+import { meetingResponseSchema } from './meeting.types';
+import { userResponseSchema } from './user.types';
 
-export interface DashboardOverviewResponse {
-    permission_requests: PermissionRequestResponse[];
-    bonus_points: BonusPointResponse[];
-    violations: ViolationResponse[];
-    unsubmitted_homeworks: Homework[];
-    meetings: MeetingResponse[];
-}
+export const dashboardOverviewResponseSchema = z.object({
+  permission_requests: z.array(permissionRequestResponseSchema).default([]),
+  bonus_points: z.array(bonusPointResponseSchema).default([]),
+  violations: z.array(violationResponseSchema).default([]),
+  unsubmitted_homeworks: z.array(homeworkSchema).default([]),
+  meetings: z.array(meetingResponseSchema).default([]),
+});
+export type DashboardOverviewResponse = z.infer<typeof dashboardOverviewResponseSchema>;
 
-export interface ReportItem {
-    rank: number;
-    user: any; // Using any for now or UserResponse if imported, usually simplified object
-    total_points: number;
-    total_violations: number;
-    details_count: number;
-}
+export const reportItemSchema = z.object({
+  rank: z.number(),
+  user: userResponseSchema,
+  total_points: z.number(),
+  total_violations: z.number(),
+  details_count: z.number(),
+});
+export type ReportItem = z.infer<typeof reportItemSchema>;
 
-export interface ReportResponse {
-    items: ReportItem[];
-    month: number | null;
-    year: number | null;
-}
+export const reportResponseSchema = z.object({
+  items: z.array(reportItemSchema).default([]),
+  month: z.number().nullable().optional(),
+  year: z.number().nullable().optional(),
+});
+export type ReportResponse = z.infer<typeof reportResponseSchema>;
 
-export interface TitleReportItem {
-    user: {
-        id: number;
-        name: string;
-        email: string;
-        avatar_url?: string;
-    };
-    title: string | null;
-    total_points: number;
-    violation_count: number;
-    hours: number;
-}
+export const titleReportItemSchema = z.object({
+  user: userRefSchema,
+  title: z.string().nullable().optional(),
+  total_points: z.number(),
+  violation_count: z.number(),
+  hours: z.number(),
+});
+export type TitleReportItem = z.infer<typeof titleReportItemSchema>;
 
-export interface ParticipationStats {
-    user_id: number;
-    user: {
-        id: number;
-        name: string;
-        email: string;
-        avatar_url?: string;
-    } | null;
-    total_points: number;
-    total_bonus_points: number;
-    violation_count: number;
-    month: number;
-    year: number;
-    total_sessions: number;
-    total_hours: number;
-    weekly_frequency: number;
-    current_streak: number;
-    longest_streak: number;
-    on_time_rate: number;
-    late_count: number;
-    absent_count: number;
-}
+export const participationStatsSchema = z.object({
+  user_id: z.number(),
+  user: userRefSchema.nullable().optional(),
+  total_points: z.number(),
+  total_bonus_points: z.number(),
+  violation_count: z.number(),
+  month: z.number(),
+  year: z.number(),
+  total_sessions: z.number(),
+  total_hours: z.number(),
+  weekly_frequency: z.number(),
+  current_streak: z.number(),
+  longest_streak: z.number(),
+  on_time_rate: z.number(),
+  late_count: z.number(),
+  absent_count: z.number(),
+});
+export type ParticipationStats = z.infer<typeof participationStatsSchema>;
 
-export interface ActivityTrendItem {
-    label: string;
-    total_bonus_points: number;
-    violation_count: number;
-}
+export const activityTrendItemSchema = z.object({
+  label: z.string(),
+  total_bonus_points: z.number(),
+  violation_count: z.number(),
+});
+export type ActivityTrendItem = z.infer<typeof activityTrendItemSchema>;

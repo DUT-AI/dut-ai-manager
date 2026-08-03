@@ -1,18 +1,19 @@
-import { Modal, Form, Select, Input, Divider, Space, InputNumber, Button } from 'antd';
+import { Modal, Form, Select, Input, Divider, Space, InputNumber, Button, type FormInstance } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { InvoiceItemType } from '@/types/billing.types';
 import type { Invoice } from '@/types/billing.types';
 import { useEffect } from 'react';
+import type { UpdateInvoiceFormValues } from '@/types/billing.types';
 
 const { Option } = Select;
 
 interface UpdateInvoiceModalProps {
   isOpen: boolean;
   onCancel: () => void;
-  onFinish: (values: any) => void;
+  onFinish: (values: UpdateInvoiceFormValues) => void;
   loading: boolean;
   invoice: Invoice | null;
-  form: any;
+  form: FormInstance;
 }
 
 const UpdateInvoiceModal = ({
@@ -100,7 +101,7 @@ const UpdateInvoiceModal = ({
                     <InputNumber 
                       min={0} 
                       formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                      parser={value => (value?.replace(/\$\s?|(,*)/g, '') || 0) as any}
+                      parser={value => Number(value?.replace(/\$\s?|(,*)/g, '') || 0)}
                       placeholder="Số tiền" 
                       style={{ width: 150 }} 
                     />

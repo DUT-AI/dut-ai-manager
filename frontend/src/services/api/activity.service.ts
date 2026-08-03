@@ -13,7 +13,7 @@ export const activityService = {
   },
 
   async getActivityStats() {
-    const response = await axiosInstance.get<ApiResponse<any>>(`/${this.subPath}/stats`);
+    const response = await axiosInstance.get<ApiResponse<Record<string, unknown>>>(`/${this.subPath}/stats`);
     return response.data;
   },
 

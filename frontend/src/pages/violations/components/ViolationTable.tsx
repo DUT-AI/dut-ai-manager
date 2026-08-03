@@ -28,7 +28,7 @@ const ViolationTable = ({
         {
             title: 'Thành viên',
             key: 'user',
-            render: (_: any, record: ViolationResponse) => (
+            render: (_: unknown, record: ViolationResponse) => (
                 <Space>
                     <Avatar
                         src={record.owner?.avatar_url}
@@ -65,7 +65,7 @@ const ViolationTable = ({
             title: 'Thao tác',
             key: 'actions',
             width: 120,
-            render: (_: any, record: ViolationResponse) => (
+            render: (_: unknown, record: ViolationResponse) => (
                 <Space onClick={(e) => e.stopPropagation()}>
                     <Button
                         icon={<EditOutlined />}

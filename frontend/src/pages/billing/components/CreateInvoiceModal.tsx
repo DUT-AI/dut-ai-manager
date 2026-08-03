@@ -1,18 +1,19 @@
-import { Modal, Form, Select, Input, Divider, Space, InputNumber, Button, DatePicker } from 'antd';
+import { Modal, Form, Select, Input, Divider, Space, InputNumber, Button, DatePicker, type FormInstance } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { InvoiceItemType } from '@/types/billing.types';
 import type { UserResponse } from '@/types/user.types';
 import { useTeams } from '@/hooks/useTeams';
+import type { CreateInvoiceFormValues } from '@/types/billing.types';
 
 const { Option } = Select;
 
 interface CreateInvoiceModalProps {
   isOpen: boolean;
   onCancel: () => void;
-  onFinish: (values: any) => void;
+  onFinish: (values: CreateInvoiceFormValues) => void;
   loading: boolean;
   users: UserResponse[];
-  form: any;
+  form: FormInstance;
 }
 
 const CreateInvoiceModal = ({
@@ -72,7 +73,7 @@ const CreateInvoiceModal = ({
             loading={isLoadingTeams}
             optionFilterProp="children"
           >
-            {teams.map(t => (
+            {(teams || []).map(t => (
               <Option key={t.id} value={t.id}>{t.team_name}</Option>
             ))}
           </Select>
@@ -127,7 +128,7 @@ const CreateInvoiceModal = ({
                     <InputNumber 
                       min={0} 
                       formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                      parser={value => (value?.replace(/\$\s?|(,*)/g, '') || 0) as any}
+                      parser={value => Number(value?.replace(/\$\s?|(,*)/g, '') || 0)}
                       placeholder="Số tiền" 
                       style={{ width: 150 }} 
                     />

@@ -1,4 +1,4 @@
-import { Modal, Form, Select, DatePicker, Input } from 'antd';
+import { Modal, Form, Select, DatePicker, Input, type FormInstance } from 'antd';
 import type { ViolationResponse } from '@/types/activity.types';
 import type { UserResponse } from '@/types/user.types';
 
@@ -8,11 +8,11 @@ const { TextArea } = Input;
 interface ViolationFormModalProps {
     isOpen: boolean;
     onCancel: () => void;
-    onFinish: (values: any) => void;
+    onFinish: (values: Record<string, unknown>) => void;
     editingItem: ViolationResponse | null;
     loading: boolean;
     users: UserResponse[];
-    form: any;
+    form: FormInstance;
     isMobile?: boolean;
 }
 

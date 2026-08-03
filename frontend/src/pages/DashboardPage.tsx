@@ -19,7 +19,6 @@ import { TrashPage } from '@/pages/TrashPage';
 import MeetingCalendarPage from './MeetingCalendarPage';
 import InvoicesPage from './InvoicesPage';
 import AdminBillingPage from './AdminBillingPage';
-import ExpenseManagementPage from './ExpenseManagementPage';
 import { useState } from 'react';
 
 import {
@@ -37,7 +36,6 @@ import {
     VideoCameraOutlined,
     CreditCardOutlined,
     AuditOutlined,
-    DollarOutlined,
 } from '@ant-design/icons';
 import HeaderLayout from '@/components/MainLayout/Header';
 const { Content, Sider } = Layout;

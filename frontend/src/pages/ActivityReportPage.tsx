@@ -25,7 +25,7 @@ import dayjs from 'dayjs';
 import { reportService } from '@/services/api/report.service';
 import type { TitleReportItem, ParticipationStats, ActivityTrendItem } from '@/types/report.types';
 import { useDebounce } from '@/hooks/useDebounce';
-import { motion, AnimatePresence, type Variants } from 'motion/react';
+import { motion, type Variants } from 'motion/react';
 import { TitleBadge } from '@/components/UserTitleBadge';
 
 const { Title, Text } = Typography;

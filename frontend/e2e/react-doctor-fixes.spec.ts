@@ -1,9 +1,6 @@
 import { test, expect } from '@playwright/test';
 import {
-    mockAuthenticatedUser,
     mockUnauthenticated,
-    mockLoginSuccess,
-    mockEmptyList,
     mockAllApiCallsEmpty,
     MOCK_USER,
 } from './helpers';

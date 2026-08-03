@@ -5,7 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import type { HomeworkSubmission, ScoreDetail } from '@/types/homework.types';
 import { homeworkService } from '@/services/api/homework.service';
 
-const { Text, Title, Paragraph } = Typography;
+const { Title } = Typography;
 
 interface Props {
     open: boolean;
@@ -17,7 +17,7 @@ export const FeedbackModal = ({ open, submission, onClose }: Props) => {
     // If feedback is still null, we poll the list every 5 seconds
     const { data: submissions } = useQuery({
         queryKey: ['homework-submissions', submission?.homework_id],
-        queryFn: () => homeworkService.getSubmissions(submission?.homework_id!),
+        queryFn: () => homeworkService.getSubmissions(submission?.homework_id ?? 0),
         enabled: open && !!submission && submission.feedback == null,
         refetchInterval: (query) => {
              // Stop polling if we finally got it
