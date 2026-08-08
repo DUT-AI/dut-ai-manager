@@ -4,7 +4,6 @@ Bonus Point API Controller.
 Handles HTTP routes and mapping requests to Use Cases.
 """
 
-from app.core.deps import CurrentUser
 from datetime import date
 from typing import Annotated
 
@@ -29,7 +28,7 @@ from app.bonus_point.deps import (
     get_restore_bonus_point_uc,
     get_update_bonus_point_uc,
 )
-from app.core.deps import hasPermission, hasTeamLeaderAccess
+from app.core.deps import CurrentUser, hasPermission, hasTeamLeaderAccess
 from app.core.permissions import BonusPointPermission
 from app.shared.application.response import ApiResponse
 

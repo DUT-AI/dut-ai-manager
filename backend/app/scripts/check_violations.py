@@ -2,7 +2,6 @@ import asyncio
 
 from sqlalchemy import select
 
-from app.core.database import get_db
 from app.violation.infrastructure.model import ViolationModel
 
 

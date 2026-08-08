@@ -98,7 +98,11 @@ class GetViolationsUseCase:
             year = datetime.now().year
 
         return self.repo.get_by_month(
-            month=month, year=year, user_id=user_id, start_date=start_date, end_date=end_date
+            month=month,
+            year=year,
+            user_id=user_id,
+            start_date=start_date,
+            end_date=end_date,
         )
 
     def get_by_id(self, item_id: int) -> Violation:

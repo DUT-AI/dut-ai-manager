@@ -3,6 +3,12 @@ from dishka import AsyncContainer
 from app.auth.account_notification_handler import AccountNotificationHandler
 from app.auth.application.user_event_handler import UserAccountHandler
 from app.auth.domain.events import AccountCreated, ForgotPasswordRequested
+from app.bonus_point.domain.events import (
+    BonusPointCreated,
+    BonusPointDeleted,
+    BonusPointUpdated,
+)
+from app.bonus_point.notification_handler import BonusPointNotificationHandler
 from app.homework.application.event_handlers import (
     HomeworkGradedNotificationHandler,
     HomeworkNotificationHandler,
@@ -27,12 +33,6 @@ from app.permission_request.application.event_handlers import (
 from app.permission_request.domain.events import PermissionRequestCreated
 from app.shared.domain.event_bus import EventBus
 from app.user.domain.events import UserCreated
-from app.bonus_point.domain.events import (
-    BonusPointCreated,
-    BonusPointDeleted,
-    BonusPointUpdated,
-)
-from app.bonus_point.notification_handler import BonusPointNotificationHandler
 from app.violation.application.event_handlers import AutomatedViolationHandler
 from app.violation.domain.events import ViolationCreated
 from app.violation.notification_handler import ViolationNotificationHandler

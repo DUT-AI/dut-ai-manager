@@ -92,7 +92,13 @@ async def get_bonus_point_report(
     keyword: str = Query(None, description="Search keyword"),
 ):
     """Lấy báo cáo tổng hợp điểm cộng (xếp hạng)"""
-    report = uc.execute(month=month, year=year, start_date=start_date, end_date=end_date, keyword=keyword)
+    report = uc.execute(
+        month=month,
+        year=year,
+        start_date=start_date,
+        end_date=end_date,
+        keyword=keyword,
+    )
     return ApiResponse.success(data=report)
 
 
@@ -108,7 +114,13 @@ async def get_violation_report(
     keyword: str = Query(None, description="Search keyword"),
 ):
     """Lấy báo cáo tổng hợp vi phạm (xếp hạng)"""
-    report = uc.execute(month=month, year=year, start_date=start_date, end_date=end_date, keyword=keyword)
+    report = uc.execute(
+        month=month,
+        year=year,
+        start_date=start_date,
+        end_date=end_date,
+        keyword=keyword,
+    )
     return ApiResponse.success(data=report)
 
 

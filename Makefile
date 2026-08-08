@@ -88,13 +88,6 @@ frontend-lint: ## Lint frontend code
 # ==================== All ====================
 install: backend-install frontend-install ## Install all dependencies
 
-dev: ## Run all development servers (requires tmux or run in separate terminals)
-	@echo "Run these commands in separate terminals:"
-	@echo "  make backend-dev"
-	@echo "  make frontend-dev"
-
-clean: docker-clean ## Clean all docker resources
-	@echo "Cleaned!"
 
 backend-quality: ## Run quality checks for backend
 	cd backend && make quality

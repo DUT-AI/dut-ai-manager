@@ -47,7 +47,13 @@ async def get_violations(
     deleted: bool = False,
 ):
     if user_id or month or year or start_date or end_date:
-        result = uc.get_by_month(user_id=user_id, month=month, year=year, start_date=start_date, end_date=end_date)
+        result = uc.get_by_month(
+            user_id=user_id,
+            month=month,
+            year=year,
+            start_date=start_date,
+            end_date=end_date,
+        )
     else:
         result = uc.get_all(skip=skip, limit=limit, deleted=deleted)
     return ApiResponse.success(data=result)

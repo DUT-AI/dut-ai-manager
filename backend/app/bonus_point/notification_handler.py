@@ -32,9 +32,7 @@ class BonusPointNotificationHandler(EventHandler):
     ) -> None:
         """Thông báo cho người dùng trên Discord và Zalo."""
         try:
-            logger.info(
-                f"Handling {type(event).__name__} for user_id={event.user_id}"
-            )
+            logger.info(f"Handling {type(event).__name__} for user_id={event.user_id}")
 
             asyncio.create_task(self._send_notifications_task(event))
 
@@ -87,15 +85,27 @@ class BonusPointNotificationHandler(EventHandler):
                         pass
 
                 is_created = isinstance(event, BonusPointCreated)
-                title = "🏆 THÔNG BÁO CỘNG ĐIỂM" if is_created else "📝 THÔNG BÁO CẬP NHẬT ĐIỂM CỘNG"
-                actor = event.creator_name if is_created else getattr(event, "updater_name", "Hệ thống")
+                title = (
+                    "🏆 THÔNG BÁO CỘNG ĐIỂM"
+                    if is_created
+                    else "📝 THÔNG BÁO CẬP NHẬT ĐIỂM CỘNG"
+                )
+                actor = (
+                    event.creator_name
+                    if is_created
+                    else getattr(event, "updater_name", "Hệ thống")
+                )
 
                 embed = {
                     "title": title,
                     "description": f"Chúc mừng **{event.user_name or user.name}**, bạn vừa được cộng điểm thành tích!",
                     "color": 0x2ECC71,  # Green
                     "fields": [
-                        {"name": "🌟 Số điểm", "value": f"+{event.points} điểm", "inline": True},
+                        {
+                            "name": "🌟 Số điểm",
+                            "value": f"+{event.points} điểm",
+                            "inline": True,
+                        },
                         {"name": "📅 Ngày", "value": display_date, "inline": True},
                         {"name": "📝 Lý do", "value": event.reason, "inline": False},
                         {
@@ -104,7 +114,9 @@ class BonusPointNotificationHandler(EventHandler):
                             "inline": False,
                         },
                     ],
-                    "footer": {"text": "DUT AI Manager • Hệ thống khen thưởng & nhắc nhở"},
+                    "footer": {
+                        "text": "DUT AI Manager • Hệ thống khen thưởng & nhắc nhở"
+                    },
                 }
 
                 zalo_text = (
