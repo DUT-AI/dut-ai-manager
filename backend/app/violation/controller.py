@@ -5,6 +5,7 @@ Only handles HTTP concerns: parse request, call use case, return response.
 NO business logic here.
 """
 
+from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -39,12 +40,14 @@ async def get_violations(
     user_id: int | None = None,
     month: int | None = None,
     year: int | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
     skip: int = 0,
     limit: int = 100,
     deleted: bool = False,
 ):
-    if user_id or month or year:
-        result = uc.get_by_month(user_id=user_id, month=month, year=year)
+    if user_id or month or year or start_date or end_date:
+        result = uc.get_by_month(user_id=user_id, month=month, year=year, start_date=start_date, end_date=end_date)
     else:
         result = uc.get_all(skip=skip, limit=limit, deleted=deleted)
     return ApiResponse.success(data=result)

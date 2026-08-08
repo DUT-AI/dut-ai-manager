@@ -186,9 +186,13 @@ class GetBonusPointReportUseCase:
         self,
         month: int | None = None,
         year: int | None = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
         keyword: str | None = None,
     ) -> ReportResponse:
-        records = self.bonus_point_repo.get_by_month(month=month, year=year)[:2000]
+        records = self.bonus_point_repo.get_by_month(
+            month=month, year=year, start_date=start_date, end_date=end_date
+        )[:2000]
 
         user_stats: dict = {}
         for record in records:
@@ -246,9 +250,13 @@ class GetViolationReportUseCase:
         self,
         month: int | None = None,
         year: int | None = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
         keyword: str | None = None,
     ) -> ReportResponse:
-        records = self.violation_repo.get_by_month(month=month, year=year)[:2000]
+        records = self.violation_repo.get_by_month(
+            month=month, year=year, start_date=start_date, end_date=end_date
+        )[:2000]
 
         user_stats: dict = {}
         for record in records:

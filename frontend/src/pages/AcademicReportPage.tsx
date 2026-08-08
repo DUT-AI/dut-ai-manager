@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
     Card,
     Tabs,
@@ -17,17 +17,21 @@ import {
     TrophyOutlined,
     WarningOutlined,
     UserOutlined,
-    BarChartOutlined
+    BarChartOutlined,
+    EyeOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { reportService } from '@/services/api/report.service';
-import type { ReportItem, ReportResponse } from '@/types/report.types';
+import type { ReportItem } from '@/types/report.types';
+import type { UserResponse } from '@/types/user.types';
 import type { ColumnsType } from 'antd/es/table';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useAcademicReport } from '@/hooks/useAcademicReport';
+import { UserRecordDetailModal } from './components/UserRecordDetailModal';
 import { motion, type Variants } from 'motion/react';
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
+const { RangePicker } = DatePicker;
 
 const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -58,10 +62,11 @@ const RankBadge = ({ rank }: { rank: number }) => {
 interface MobileListViewProps {
     data: ReportItem[];
     loading: boolean;
-    activeTab: string;
+    activeTab: 'bonus' | 'violation';
+    onSelectUser: (item: ReportItem) => void;
 }
 
-const MobileListView = ({ data, loading, activeTab }: MobileListViewProps) => (
+const MobileListView = ({ data, loading, activeTab, onSelectUser }: MobileListViewProps) => (
     <div className="mt-4 px-3">
         <List
             dataSource={data}
@@ -70,12 +75,14 @@ const MobileListView = ({ data, loading, activeTab }: MobileListViewProps) => (
             renderItem={(item) => (
                 <List.Item className="px-2 !border-0">
                     <Card
-                        className="w-full shadow-sm border-gray-100 overflow-hidden"
+                        hoverable
+                        onClick={() => onSelectUser(item)}
+                        className="w-full shadow-sm border-gray-100 overflow-hidden cursor-pointer transition-shadow hover:shadow-md"
                         styles={{ body: { padding: '16px' } }}
                     >
                         <div className="flex items-center justify-between mb-4">
                             <RankBadge rank={item.rank} />
-                            <Tag className="m-0">{item.details_count} records</Tag>
+                            <Tag className="m-0 cursor-pointer">{item.details_count} records <EyeOutlined className="ml-1" /></Tag>
                         </div>
                         <div className="flex items-center gap-3 mb-5">
                             <Avatar size={48} src={item.user?.avatar_url} icon={<UserOutlined />} className="shrink-0" />
@@ -101,54 +108,58 @@ interface DesktopTableViewProps {
     columns: ColumnsType<ReportItem>;
     data: ReportItem[];
     loading: boolean;
+    onSelectUser: (item: ReportItem) => void;
 }
 
-const DesktopTableView = ({ columns, data, loading }: DesktopTableViewProps) => (
+const DesktopTableView = ({ columns, data, loading, onSelectUser }: DesktopTableViewProps) => (
     <Table
         columns={columns}
         dataSource={data}
         rowKey={(record) => record.user?.id || Math.random()}
         loading={loading}
         pagination={{ pageSize: 10 }}
-        className="p-4"
+        className="p-4 cursor-pointer"
+        onRow={(record) => ({
+            onClick: () => onSelectUser(record),
+            className: "hover:bg-indigo-50/40 transition-colors"
+        })}
     />
 );
 
 const AcademicReportPage = () => {
     const [activeTab, setActiveTab] = useState<'bonus' | 'violation'>('bonus');
-    const [loading, setLoading] = useState(false);
-    const [data, setData] = useState<ReportItem[]>([]);
 
     // Filters
-    const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(null);
+    const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
     const [searchText, setSearchText] = useState('');
     const debouncedSearchText = useDebounce(searchText, 500);
 
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            const month = selectedDate ? selectedDate.month() + 1 : undefined;
-            const year = selectedDate ? selectedDate.year() : undefined;
+    // Detail Modal State
+    const [selectedUser, setSelectedUser] = useState<UserResponse | null>(null);
+    const [selectedUserTotal, setSelectedUserTotal] = useState<number>(0);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
-            let response: ReportResponse;
-            if (activeTab === 'bonus') {
-                response = await reportService.getBonusPointReport(month, year, debouncedSearchText);
-            } else {
-                response = await reportService.getViolationReport(month, year, debouncedSearchText);
-            }
-            setData(response.items || []);
-        } catch (error) {
-            console.error("Failed to fetch report data", error);
-        } finally {
-            setLoading(false);
-        }
+    const startDateStr = dateRange?.[0] ? dateRange[0].format('YYYY-MM-DD') : undefined;
+    const endDateStr = dateRange?.[1] ? dateRange[1].format('YYYY-MM-DD') : undefined;
+
+    // Use query hook
+    const { data: reportData, isLoading } = useAcademicReport({
+        type: activeTab,
+        startDate: startDateStr,
+        endDate: endDateStr,
+        keyword: debouncedSearchText,
+    });
+
+    const data = reportData?.items || [];
+
+    const handleSelectUser = (item: ReportItem) => {
+        if (!item.user) return;
+        setSelectedUser(item.user);
+        setSelectedUserTotal(activeTab === 'bonus' ? (item.total_points || 0) : (item.total_violations || 0));
+        setIsModalOpen(true);
     };
 
-    useEffect(() => {
-        fetchData();
-    }, [activeTab, selectedDate, debouncedSearchText]);
-
-    const columns = [
+    const columns: ColumnsType<ReportItem> = [
         {
             title: 'Rank',
             dataIndex: 'rank',
@@ -169,7 +180,7 @@ const AcademicReportPage = () => {
                 <Space>
                     <Avatar src={user?.avatar_url} icon={<UserOutlined />} />
                     <div className="flex flex-col">
-                        <Text strong>{user?.name || 'Unknown'}</Text>
+                        <Text strong className="hover:text-indigo-600">{user?.name || 'Unknown'}</Text>
                         <Text type="secondary" className="text-xs">{user?.email}</Text>
                     </div>
                 </Space>
@@ -194,7 +205,14 @@ const AcademicReportPage = () => {
             title: 'Record Count',
             dataIndex: 'details_count',
             key: 'count',
-            render: (count: number) => <Tag>{count} records</Tag>
+            render: (count: number) => (
+                <Tag color="blue" className="cursor-pointer">
+                    <Space size="small">
+                        <span>{count} records</span>
+                        <EyeOutlined />
+                    </Space>
+                </Tag>
+            )
         }
     ];
 
@@ -218,13 +236,13 @@ const AcademicReportPage = () => {
                     </div>
                 </Space>
                 <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                    <DatePicker
-                        picker="month"
+                    <RangePicker
                         allowClear
-                        value={selectedDate}
-                        onChange={(date) => setSelectedDate(date)}
-                        className="w-full sm:w-40"
-                        placeholder="All Time"
+                        value={dateRange}
+                        onChange={(dates) => setDateRange(dates as any)}
+                        format="DD/MM/YYYY"
+                        placeholder={['Từ ngày', 'Đến ngày']}
+                        className="w-full sm:w-64"
                     />
                     <Input
                         prefix={<SearchOutlined className="text-gray-400" />}
@@ -253,7 +271,11 @@ const AcademicReportPage = () => {
                                         <span>Bonus Points</span>
                                     </Space>
                                 ),
-                                children: screens.md ? <DesktopTableView columns={columns} data={data} loading={loading} /> : <MobileListView data={data} loading={loading} activeTab={activeTab} />
+                                children: screens.md ? (
+                                    <DesktopTableView columns={columns} data={data} loading={isLoading} onSelectUser={handleSelectUser} />
+                                ) : (
+                                    <MobileListView data={data} loading={isLoading} activeTab={activeTab} onSelectUser={handleSelectUser} />
+                                )
                             },
                             {
                                 key: 'violation',
@@ -263,12 +285,28 @@ const AcademicReportPage = () => {
                                         <span>Violations</span>
                                     </Space>
                                 ),
-                                children: screens.md ? <DesktopTableView columns={columns} data={data} loading={loading} /> : <MobileListView data={data} loading={loading} activeTab={activeTab} />
+                                children: screens.md ? (
+                                    <DesktopTableView columns={columns} data={data} loading={isLoading} onSelectUser={handleSelectUser} />
+                                ) : (
+                                    <MobileListView data={data} loading={isLoading} activeTab={activeTab} onSelectUser={handleSelectUser} />
+                                )
                             }
                         ]}
                     />
                 </Card>
             </motion.div>
+
+            {/* Modal xem chi tiết các record của user */}
+            <UserRecordDetailModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                user={selectedUser}
+                type={activeTab}
+                totalValue={selectedUserTotal}
+                startDate={startDateStr}
+                endDate={endDateStr}
+                isMobile={!screens.md}
+            />
         </motion.div>
     );
 };

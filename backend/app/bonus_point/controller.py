@@ -4,6 +4,8 @@ Bonus Point API Controller.
 Handles HTTP routes and mapping requests to Use Cases.
 """
 
+from app.core.deps import CurrentUser
+from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -44,13 +46,22 @@ async def get_bonus_points(
     user_id: int | None = None,
     month: int | None = None,
     year: int | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
     skip: int = 0,
     limit: int = 100,
     deleted: bool = False,
 ):
     """Retrieve bonus points based on filters."""
     result = uc.execute(
-        user_id=user_id, month=month, year=year, skip=skip, limit=limit, deleted=deleted
+        user_id=user_id,
+        month=month,
+        year=year,
+        start_date=start_date,
+        end_date=end_date,
+        skip=skip,
+        limit=limit,
+        deleted=deleted,
     )
     return ApiResponse.success(data=result)
 
@@ -66,9 +77,10 @@ async def get_bonus_points(
 async def create_bonus_point(
     data: BonusPointCreate,
     uc: Annotated[CreateBonusPointsUseCase, Depends(get_create_bonus_points_uc)],
+    current_user: CurrentUser,
 ):
     """Create new bonus point items."""
-    result = uc.execute(data)
+    result = await uc.execute(data, current_user_name=current_user.name)
     return ApiResponse.success(data=result)
 
 
@@ -84,9 +96,10 @@ async def update_bonus_point(
     item_id: int,
     data: BonusPointUpdate,
     uc: Annotated[UpdateBonusPointUseCase, Depends(get_update_bonus_point_uc)],
+    current_user: CurrentUser,
 ):
     """Update a bonus point item."""
-    result = uc.execute(item_id, data)
+    result = await uc.execute(item_id, data, current_user_name=current_user.name)
     if not result:
         raise HTTPException(status_code=404, detail="Item not found")
     return ApiResponse.success(data=result)
@@ -102,7 +115,7 @@ async def delete_bonus_point(
     uc: Annotated[DeleteBonusPointUseCase, Depends(get_delete_bonus_point_uc)],
 ):
     """Delete a bonus point item."""
-    result = uc.execute(item_id)
+    result = await uc.execute(item_id)
     return ApiResponse.success(data=result)
 
 

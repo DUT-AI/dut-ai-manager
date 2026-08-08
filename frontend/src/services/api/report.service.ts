@@ -24,16 +24,16 @@ export const reportService = {
       return response.data.data;
   },
 
-  getBonusPointReport: async (month?: number, year?: number, keyword?: string): Promise<ReportResponse> => {
+  getBonusPointReport: async (month?: number, year?: number, keyword?: string, startDate?: string, endDate?: string): Promise<ReportResponse> => {
     const response = await axiosInstance.get<ApiResponse<ReportResponse>>('/reports/bonus-points', {
-        params: { month, year, keyword }
+        params: { month, year, keyword, start_date: startDate, end_date: endDate }
     });
     return response.data.data as ReportResponse;
   },
 
-  getViolationReport: async (month?: number, year?: number, keyword?: string): Promise<ReportResponse> => {
+  getViolationReport: async (month?: number, year?: number, keyword?: string, startDate?: string, endDate?: string): Promise<ReportResponse> => {
     const response = await axiosInstance.get<ApiResponse<ReportResponse>>('/reports/violations', {
-        params: { month, year, keyword }
+        params: { month, year, keyword, start_date: startDate, end_date: endDate }
     });
     return response.data.data as ReportResponse;
   },

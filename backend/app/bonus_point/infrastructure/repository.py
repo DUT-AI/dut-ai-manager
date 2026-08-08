@@ -86,13 +86,29 @@ class BonusPointRepository(BaseRepository[BonusPointModel, BonusPoint]):
         return self.get_all(query_support=qs)
 
     def get_by_month(
-        self, month: int | None = None, year: int | None = None
+        self,
+        month: int | None = None,
+        year: int | None = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
     ) -> list[BonusPoint]:
-        """Get bonus points for a specific month/year."""
+        """Get bonus points for a specific month/year or date range."""
         from app.shared.application.query_support_utils import build_query_support
         from app.shared.domain.query_support import FilterCriterion, FilterOperator
 
         filters = []
+        if start_date:
+            filters.append(
+                FilterCriterion(
+                    field="date", operator=FilterOperator.GTE, value=start_date
+                )
+            )
+        if end_date:
+            filters.append(
+                FilterCriterion(
+                    field="date", operator=FilterOperator.LTE, value=end_date
+                )
+            )
         if month:
             filters.append(
                 FilterCriterion(

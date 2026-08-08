@@ -3,9 +3,9 @@ import type { ApiResponse } from '@/types/api.types';
 import type { ViolationResponse } from '@/types/activity.types';
 
 export const violationService = {
-  getViolations: async (skip = 0, limit = 100, userId?: number, month?: number, year?: number, deleted?: boolean) => {
+  getViolations: async (skip = 0, limit = 100, userId?: number, month?: number, year?: number, deleted?: boolean, startDate?: string, endDate?: string) => {
     const response = await axiosInstance.get<ApiResponse<ViolationResponse[]>>('/violations', {
-      params: { skip, limit, user_id: userId, month, year, deleted },
+      params: { skip, limit, user_id: userId, month, year, deleted, start_date: startDate, end_date: endDate },
     });
     return response.data.data;
   },

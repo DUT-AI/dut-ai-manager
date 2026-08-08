@@ -9,9 +9,9 @@ import type {
 export const bonusPointService = {
   subPath: 'bonus-points',
 
-  async getBonusPoints(userId?: number, month?: number, year?: number, deleted?: boolean) {
+  async getBonusPoints(userId?: number, month?: number, year?: number, deleted?: boolean, startDate?: string, endDate?: string) {
     const response = await axiosInstance.get<ApiResponse<BonusPointResponse[]>>(`/${this.subPath}`, {
-        params: { user_id: userId, month, year, deleted }
+        params: { user_id: userId, month, year, deleted, start_date: startDate, end_date: endDate }
     });
     return response.data.data;
   },

@@ -27,6 +27,12 @@ from app.permission_request.application.event_handlers import (
 from app.permission_request.domain.events import PermissionRequestCreated
 from app.shared.domain.event_bus import EventBus
 from app.user.domain.events import UserCreated
+from app.bonus_point.domain.events import (
+    BonusPointCreated,
+    BonusPointDeleted,
+    BonusPointUpdated,
+)
+from app.bonus_point.notification_handler import BonusPointNotificationHandler
 from app.violation.application.event_handlers import AutomatedViolationHandler
 from app.violation.domain.events import ViolationCreated
 from app.violation.notification_handler import ViolationNotificationHandler
@@ -44,6 +50,11 @@ async def bootstrap_events(container: AsyncContainer):
     EventBus.subscribe(UserCreated, UserAccountHandler)
     EventBus.subscribe(AccountCreated, AccountNotificationHandler)
     EventBus.subscribe(ForgotPasswordRequested, AccountNotificationHandler)
+
+    # Bonus Point Module
+    EventBus.subscribe(BonusPointCreated, BonusPointNotificationHandler)
+    EventBus.subscribe(BonusPointUpdated, BonusPointNotificationHandler)
+    EventBus.subscribe(BonusPointDeleted, BonusPointNotificationHandler)
 
     # Violation Module
     EventBus.subscribe(PermissionRequestCreated, PermissionViolationHandler)

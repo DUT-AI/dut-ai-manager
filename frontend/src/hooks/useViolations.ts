@@ -4,7 +4,7 @@ import { violationService } from '@/services/api/violation.service';
 // Query Keys
 const violationKeys = {
   all: ['violations'] as const,
-  list: (filters: { userId?: number; month?: number; year?: number }) => 
+  list: (filters: { userId?: number; month?: number; year?: number; startDate?: string; endDate?: string }) => 
     ['violations', filters] as const,
 };
 
@@ -13,6 +13,8 @@ export const useViolations = (filters: {
   userId?: number; 
   month?: number; 
   year?: number;
+  startDate?: string;
+  endDate?: string;
   enabled?: boolean;
 } = {}) => {
   const { enabled = true, ...rest } = filters;
@@ -23,7 +25,10 @@ export const useViolations = (filters: {
         0, 100, 
         rest.userId, 
         rest.month, 
-        rest.year
+        rest.year,
+        undefined,
+        rest.startDate,
+        rest.endDate
       );
       return response ?? [];
     },

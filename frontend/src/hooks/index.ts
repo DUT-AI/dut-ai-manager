@@ -33,3 +33,6 @@ export * from './useBilling';
 
 // Expenses
 export * from './useExpense';
+
+// Academic Reports
+export * from './useAcademicReport';

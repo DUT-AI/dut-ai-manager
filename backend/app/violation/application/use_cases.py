@@ -5,7 +5,7 @@ Each use case represents one business operation.
 Use cases orchestrate: repository + domain logic + events.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 
 from fastapi import HTTPException
 from loguru import logger
@@ -86,14 +86,20 @@ class GetViolationsUseCase:
         return self.repo.get_all(skip=skip, limit=limit, deleted=deleted)
 
     def get_by_month(
-        self, month: int | None, year: int | None, user_id: int | None = None
+        self,
+        month: int | None = None,
+        year: int | None = None,
+        user_id: int | None = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
     ) -> list[Violation]:
-        if not month:
+        if not month and not year and not start_date and not end_date:
             month = datetime.now().month
-        if not year:
             year = datetime.now().year
 
-        return self.repo.get_by_month(month=month, year=year, user_id=user_id)
+        return self.repo.get_by_month(
+            month=month, year=year, user_id=user_id, start_date=start_date, end_date=end_date
+        )
 
     def get_by_id(self, item_id: int) -> Violation:
         item = self.repo.get_by_id(item_id)

@@ -59,12 +59,18 @@ class ViolationRepository(BaseRepository[ViolationModel, Violation]):
         month: int | None = None,
         year: int | None = None,
         user_id: int | None = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
     ) -> list[Violation]:
-        """Get violations filtered by month/year/user."""
+        """Get violations filtered by month/year/user/date range."""
         statement = select(ViolationModel).where(ViolationModel.is_deleted == False)  # noqa: E712
 
         if user_id:
             statement = statement.where(ViolationModel.user_id == user_id)
+        if start_date is not None:
+            statement = statement.where(ViolationModel.date >= start_date)
+        if end_date is not None:
+            statement = statement.where(ViolationModel.date <= end_date)
         if month is not None:
             statement = statement.where(extract("month", ViolationModel.date) == month)
         if year is not None:
