@@ -53,7 +53,7 @@ class RoleUseCases:
         return self.role_repo.save(role)
 
     def delete_role(self, role_id: int) -> bool:
-        return self.role_repo.delete_by_id(role_id)
+        return self.role_repo.hard_delete_by_id(role_id)
 
     # --- Permission Operations ---
     def get_all_permissions(self) -> list[Permission]:
@@ -85,7 +85,7 @@ class RoleUseCases:
         return self.permission_repo.save(perm)
 
     def delete_permission(self, perm_id: int) -> bool:
-        return self.permission_repo.delete_by_id(perm_id)
+        return self.permission_repo.hard_delete_by_id(perm_id)
 
     # --- Role-Permission Linking ---
     def add_permission_to_role(self, role_id: int, perm_id: int) -> tuple[bool, str]:
@@ -172,7 +172,7 @@ class RoleApiKeyUseCases:
             return False, "API Key not found"
 
         assert key.id is not None
-        self.api_key_repo.delete_by_id(key.id)
+        self.api_key_repo.hard_delete_by_id(key.id)
         return True, "API Key revoked successfully"
 
     def verify_api_key(self, raw_key: str) -> tuple[Role | None, RoleApiKey | None]:

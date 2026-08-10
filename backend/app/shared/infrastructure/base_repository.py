@@ -113,6 +113,16 @@ class BaseRepository(Generic[TModel, TEntity]):
             self.session.delete(model)
             self.session.flush()
 
+    def hard_delete_by_id(self, id: int) -> bool:
+        """Permanently delete a model by ID."""
+        model = self.session.get(self.model, id)
+        if not model:
+            return False
+
+        self.session.delete(model)
+        self.session.flush()
+        return True
+
     def restore(self, entity: TEntity) -> TEntity:
         """Restore a soft-deleted model."""
         if not hasattr(self.model, "is_deleted") or not entity.id:
