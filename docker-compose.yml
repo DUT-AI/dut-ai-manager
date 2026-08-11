@@ -1,14 +1,4 @@
-# DUT-AI-Manager - Docker Compose
-# ================================================
-# Databases:
-#   - dut_ai_manager_prod (user: dut_ai_admin)
-#   - dut_ai_manager_dev  (user: dut_ai_dev)
-# ================================================
-
 services:
-  # ================================================
-  # PostgreSQL Database (Production + Development)
-  # ================================================
   postgres:
     image: postgres:16-alpine
     container_name: dut-ai-postgres
@@ -17,7 +7,7 @@ services:
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - ./data/postgres:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB}"]
@@ -27,9 +17,6 @@ services:
     networks:
       - dut-ai-network
 
-  # ================================================
-  # Backend - FastAPI
-  # ================================================
   backend:
     build:
       context: ./backend
@@ -57,12 +44,7 @@ services:
       start_period: 40s
     networks:
       - dut-ai-network
-      - dut-ai-shared
-      - excercise_net
 
-  # ================================================
-  # Frontend - React + Vite (Nginx)
-  # ================================================
   frontend:
     build:
       context: ./frontend
@@ -88,9 +70,7 @@ services:
 networks:
   dut-ai-network:
     driver: bridge
-  dut-ai-shared:
-    external: true
-    name: dut-ai-shared
-  excercise_net:
-    external: true
-    name: excercise-checker_internal
+
+volumes:
+  postgres_data:
+    driver: local

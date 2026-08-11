@@ -1,5 +1,7 @@
 .PHONY: help install dev build start stop restart logs clean backend-quality backend-test
 
+export PATH := $(HOME)/.local/bin:$(PATH)
+
 # Colors
 GREEN := \033[0;32m
 NC := \033[0m
