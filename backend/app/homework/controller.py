@@ -143,7 +143,7 @@ async def get_homework(
 async def update_homework(
     homework_id: int,
     use_cases: FromDishka[HomeworkUseCases],
-    title: str = Form(...),
+    title: str | None = Form(None),
     description: str | None = Form(None),
     deadline: str | None = Form(None),
     assignee_ids: list[int] | None = Form(None),

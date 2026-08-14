@@ -20,7 +20,7 @@ class HomeworkCreate(HomeworkBase):
 
 
 class HomeworkUpdate(BaseModel):
-    title: str
+    title: str | None = None
     description: str | None = None
     deadline: datetime | None = None
     file_url: str | None = None

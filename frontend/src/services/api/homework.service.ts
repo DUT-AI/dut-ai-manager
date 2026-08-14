@@ -59,14 +59,15 @@ export const homeworkService = {
     
     async update(id: number, data: HomeworkUpdate & { file?: File }) {
         const formData = new FormData();
-        // Title is mandatory now
+        if (data.title) formData.append('title', data.title);
+        if (data.description) formData.append('description', data.description);
         if (data.deadline) formData.append('deadline', typeof data.deadline === 'string' ? data.deadline : (data.deadline as { toISOString: () => string }).toISOString());
         
         if (data.assignee_ids) {
-            data.assignee_ids.forEach(id => formData.append('assignee_ids', id.toString()));
+            data.assignee_ids.forEach((id: number) => formData.append('assignee_ids', id.toString()));
         }
         if (data.team_ids) {
-            data.team_ids.forEach(id => formData.append('team_ids', id.toString()));
+            data.team_ids.forEach((id: number) => formData.append('team_ids', id.toString()));
         }
         if (data.file) {
             formData.append('file', data.file);

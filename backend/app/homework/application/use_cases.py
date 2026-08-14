@@ -229,7 +229,7 @@ class HomeworkUseCases:
             return None
 
         if file:
-            homework.file_url = await self._handle_file(file, data.title)
+            homework.file_url = await self._handle_file(file, data.title or homework.title)
 
         update_data = data.model_dump(
             exclude_unset=False, exclude={"assignee_ids", "team_ids", "file_url"}
