@@ -10,6 +10,13 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class ZaloPhoneLoginRequest(BaseModel):
+    """Zalo Mini App Phone Login schema"""
+
+    phone_token: str
+    zalo_access_token: str | None = None
+
+
 class TokenResponse(BaseModel):
     """Token response schema"""
 

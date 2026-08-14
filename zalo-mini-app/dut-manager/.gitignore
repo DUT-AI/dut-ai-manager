@@ -1,0 +1,9 @@
+node_modules/
+www/
+.env
+.DS_Store
+*.log
+.vscode/
+.claude/
+
+.env.*

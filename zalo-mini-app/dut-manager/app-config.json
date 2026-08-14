@@ -1,0 +1,18 @@
+{
+  "app": {
+    "title": "DUT Manager",
+    "headerColor": "#ffffff",
+    "textColor": "black",
+    "statusBar": "normal"
+  },
+  "listCSS": [
+    "assets/index-Cup-rPyg.css"
+  ],
+  "listSyncJS": [
+    "assets/index.DRdALehb.module.js"
+  ],
+  "listAsyncJS": [],
+  "pages": [
+    "pages/index/index"
+  ]
+}

@@ -13,9 +13,11 @@ from app.auth.application.dtos import (
     RefreshTokenRequest,
     TokenResponse,
     UserReponseMe,
+    ZaloPhoneLoginRequest,
 )
 from app.auth.application.use_cases import (
     AuthenticateUseCase,
+    AuthenticateZaloPhoneUseCase,
     ChangePasswordUseCase,
     ForgotPasswordUseCase,
     RefreshTokenUseCase,
@@ -58,8 +60,44 @@ async def login(
     token_data = TokenResponse(access_token=access_token, refresh_token=rf_token)
 
     return ApiResponse.success(
-        data=token_data,
-        message="Login successful",
+        data=token_data, message="Đăng nhập thành công"
+    )
+
+
+@router.post("/zalo-phone-login", response_model=ApiResponse[TokenResponse])
+@inject
+async def zalo_phone_login(
+    request: ZaloPhoneLoginRequest,
+    response: Response,
+    uc: FromDishka[AuthenticateZaloPhoneUseCase],
+):
+    """Authenticate user via Zalo Mini App phone token and return tokens."""
+    user, access_token, rf_token = uc.execute(
+        request.phone_token, request.zalo_access_token
+    )
+
+    # Set cookies
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=rf_token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=7 * 24 * 60 * 60,
+    )
+
+    token_data = TokenResponse(access_token=access_token, refresh_token=rf_token)
+
+    return ApiResponse.success(
+        data=token_data, message="Đăng nhập Zalo thành công"
     )
 
 

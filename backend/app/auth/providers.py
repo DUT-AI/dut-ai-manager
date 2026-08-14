@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.auth.account_notification_handler import AccountNotificationHandler
 from app.auth.application.use_cases import (
     AuthenticateUseCase,
+    AuthenticateZaloPhoneUseCase,
     ChangePasswordUseCase,
     CreateAccountUseCase,
     ForgotPasswordUseCase,
@@ -38,6 +39,12 @@ class AuthModuleProvider(Provider):
         self, account_repo: AccountRepository, user_repo: UserRepository
     ) -> AuthenticateUseCase:
         return AuthenticateUseCase(account_repo, user_repo)
+
+    @provide
+    def authenticate_zalo_phone_uc(
+        self, account_repo: AccountRepository, user_repo: UserRepository
+    ) -> AuthenticateZaloPhoneUseCase:
+        return AuthenticateZaloPhoneUseCase(account_repo, user_repo)
 
     @provide
     def refresh_token_uc(
