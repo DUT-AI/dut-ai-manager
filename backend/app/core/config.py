@@ -46,9 +46,11 @@ class Settings(BaseSettings):
     DISCORD_BOT_TOKEN: str = ""
     DISCORD_PERMISSION_ROOM_ID: str = ""
 
-    # Zalo Bot Configuration
+    # Zalo Bot & Mini App Configuration
     ZALO_APP_ID: str = ""
     ZALO_APP_SECRET: str = ""
+    ZALO_OPEN_API_KEY: str = ""
+    ZALO_WEBHOOK_SECRET: str = ""
     ZALO_OA_ACCESS_TOKEN: str = ""
     ZALO_OA_REFRESH_TOKEN: str = ""
     ZALO_BOT_TOKEN: str = ""

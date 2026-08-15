@@ -10,6 +10,7 @@ from app.zalo.application.use_cases import (
     GenerateBotBindCodeUseCase,
     GetZaloLoginUrlUseCase,
     HandleBotWebhookUseCase,
+    HandleMiniAppWebhookUseCase,
     SendZaloNotificationUseCase,
 )
 from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
@@ -49,6 +50,12 @@ def get_handle_bot_webhook_uc(
 ) -> HandleBotWebhookUseCase:
     user_repo = UserRepository(session)
     return HandleBotWebhookUseCase(bot_client, user_repo)
+
+
+def get_handle_miniapp_webhook_uc(
+    bot_client: Annotated[ZaloBotClient, Depends(get_zalo_bot_client)],
+) -> HandleMiniAppWebhookUseCase:
+    return HandleMiniAppWebhookUseCase(bot_client)
 
 
 def get_send_notification_uc(

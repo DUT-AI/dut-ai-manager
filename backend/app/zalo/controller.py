@@ -9,11 +9,13 @@ from app.zalo.application.use_cases import (
     GenerateBotBindCodeUseCase,
     GetZaloLoginUrlUseCase,
     HandleBotWebhookUseCase,
+    HandleMiniAppWebhookUseCase,
 )
 from app.zalo.deps import (
     get_bind_account_uc,
     get_generate_bot_code_uc,
     get_handle_bot_webhook_uc,
+    get_handle_miniapp_webhook_uc,
     get_login_url_uc,
 )
 from app.zalo.schemas import ZaloBindCodeResponse, ZaloBindRequest, ZaloLoginUrlResponse
@@ -75,4 +77,33 @@ async def zalo_bot_webhook(
     """Xử lý webhook từ Zalo Bot Platform."""
     body = await request.json()
     result = await uc.execute(body)
+    return result
+
+
+@router.get("/webhook")
+@router.get("/miniapp/webhook")
+async def zalo_miniapp_webhook_health():
+    """Endpoint xác thực webhook URL từ Zalo Platform (GET check)."""
+    return {"error": 0, "message": "Zalo Mini App Webhook is active"}
+
+
+@router.post("/webhook")
+@router.post("/miniapp/webhook")
+async def zalo_miniapp_webhook(
+    request: Request,
+    uc: Annotated[HandleMiniAppWebhookUseCase, Depends(get_handle_miniapp_webhook_uc)],
+):
+    """
+    Xử lý Webhook từ Zalo Mini App Open APIs Platform.
+    Tự động xác thực chữ ký X-ZEvent-Signature và xử lý các sự kiện:
+    - versions.review.done: Xét duyệt phiên bản hoàn tất
+    - user_follow_oa, user_unfollow_oa, user_submit_info, v.v.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+
+    headers = dict(request.headers)
+    result = await uc.execute(headers=headers, body=body)
     return result

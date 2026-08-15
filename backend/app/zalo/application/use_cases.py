@@ -188,3 +188,89 @@ class SendZaloNotificationUseCase:
 
         if zalo_id:
             await self.zalo_client.send_oa_message(zalo_id, text)
+
+
+class HandleMiniAppWebhookUseCase:
+    """Xử lý webhook từ Zalo Mini App Open APIs Platform."""
+
+    def __init__(
+        self,
+        bot_client: ZaloBotClient | None = None,
+        event_bus: type[EventBus] = EventBus,
+    ):
+        self.bot_client = bot_client
+        self.event_bus = event_bus
+
+    def verify_signature(self, data: dict[str, Any], signature: str | None) -> bool:
+        """
+        Xác thực chữ ký X-ZEvent-Signature từ Zalo Platform:
+        1. Lấy danh sách keys và sắp xếp theo alphabet (A-Z).
+        2. Nối giá trị của các fields theo thứ tự đó.
+        3. Tính sha256(content + API_KEY / APP_SECRET).
+        4. So sánh với header X-ZEvent-Signature.
+        """
+        if not signature:
+            return True
+
+        secret = (
+            settings.ZALO_WEBHOOK_SECRET
+            or settings.ZALO_OPEN_API_KEY
+            or settings.ZALO_APP_SECRET
+        )
+        if not secret:
+            logger.warning(
+                "[Zalo Webhook] Chưa cấu hình ZALO_APP_SECRET / ZALO_WEBHOOK_SECRET, bỏ qua kiểm tra chữ ký"
+            )
+            return True
+
+        try:
+            sorted_keys = sorted(data.keys())
+            content = "".join(str(data[k]) for k in sorted_keys if data[k] is not None)
+            expected_signature = hashlib.sha256(
+                (content + secret).encode("utf-8")
+            ).hexdigest()
+
+            is_valid = signature.strip().lower() == expected_signature.lower()
+            if not is_valid:
+                logger.warning(
+                    f"[Zalo Webhook] Chữ ký không khớp. Nhận: {signature}, Mong đợi: {expected_signature}"
+                )
+            return is_valid
+        except Exception as e:
+            logger.error(f"[Zalo Webhook] Lỗi khi verify chữ ký: {e}")
+            return False
+
+    async def execute(
+        self, headers: dict[str, str], body: dict[str, Any]
+    ) -> dict[str, Any]:
+        logger.info(f"🚀 [Zalo Mini App Webhook] Nhận payload: {body}")
+
+        signature = headers.get("x-zevent-signature") or headers.get(
+            "X-ZEvent-Signature"
+        )
+        if signature and not self.verify_signature(body, signature):
+            logger.warning("[Zalo Mini App Webhook] Signature verification failed")
+            return {"error": -1, "message": "Invalid signature"}
+
+        event_name = body.get("event") or body.get("event_name", "unknown")
+        app_id = body.get("appId") or body.get("app_id", settings.ZALO_APP_ID)
+
+        # Xử lý các sự kiện phổ biến
+        if event_name == "versions.review.done":
+            version_id = body.get("versionId")
+            status = body.get("status")
+            desc = body.get("description", "")
+            logger.info(
+                f"📢 [Zalo Mini App Review] Phiên bản {version_id} (App {app_id}) đã hoàn tất xét duyệt: status={status}, desc={desc}"
+            )
+        elif event_name in ["user_follow_oa", "user_unfollow_oa", "user_submit_info"]:
+            logger.info(f"📢 [Zalo Mini App Event] Sự kiện người dùng: {event_name}")
+
+        return {
+            "error": 0,
+            "message": "Success",
+            "data": {
+                "event": event_name,
+                "appId": app_id,
+            },
+        }

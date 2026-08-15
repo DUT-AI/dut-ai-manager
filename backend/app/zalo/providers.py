@@ -6,6 +6,7 @@ from app.zalo.application.use_cases import (
     GenerateBotBindCodeUseCase,
     GetZaloLoginUrlUseCase,
     HandleBotWebhookUseCase,
+    HandleMiniAppWebhookUseCase,
     SendZaloNotificationUseCase,
 )
 from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
@@ -44,6 +45,12 @@ class ZaloModuleProvider(Provider):
         self, bot_client: ZaloBotClient, repo: UserRepository
     ) -> HandleBotWebhookUseCase:
         return HandleBotWebhookUseCase(bot_client, repo)
+
+    @provide
+    def get_handle_miniapp_webhook_uc(
+        self, bot_client: ZaloBotClient
+    ) -> HandleMiniAppWebhookUseCase:
+        return HandleMiniAppWebhookUseCase(bot_client)
 
     @provide
     def get_send_notification_uc(
