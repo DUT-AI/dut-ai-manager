@@ -5,12 +5,8 @@
     "textColor": "black",
     "statusBar": "normal"
   },
-  "listCSS": [
-    "assets/index-Cup-rPyg.css"
-  ],
-  "listSyncJS": [
-    "assets/index.DRdALehb.module.js"
-  ],
+  "listCSS": [],
+  "listSyncJS": [],
   "listAsyncJS": [],
   "pages": [
     "pages/index/index"

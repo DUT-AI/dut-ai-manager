@@ -1,26 +1,45 @@
-import React, { useState } from 'react';
-import { Page, Input, Button, Icon, useSnackbar } from 'zmp-ui';
+import React, { useState, useEffect } from 'react';
+import { Page, Input, Button, Icon, Spinner, Box, useSnackbar } from 'zmp-ui';
 import { getPhoneNumber } from 'zmp-sdk/apis';
 import Header from '@/components/Header';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { PATHS } from '@/constants/paths';
+import { getSavedCredentials, setSavedCredentials } from '@/utils/storage';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { login, loginWithZaloPhone } = useAuth();
+  const { login, loginWithZaloPhone, isAuthenticated, loading: authLoading } = useAuth();
   const { openSnackbar } = useSnackbar();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [loadingEmail, setLoadingEmail] = useState(false);
   const [loadingZalo, setLoadingZalo] = useState(false);
 
-  // 1. Đăng nhập bằng Số điện thoại Zalo (1-Touch)
+  // 1. Tự động lấy tài khoản/mật khẩu đã lưu từ trước
+  useEffect(() => {
+    const saved = getSavedCredentials();
+    if (saved) {
+      if (saved.email) setEmail(saved.email);
+      if (saved.password) setPassword(saved.password);
+      if (typeof saved.rememberMe === 'boolean') setRememberMe(saved.rememberMe);
+    }
+  }, []);
+
+  // 2. Tự động chuyển hướng về trang chủ nếu đã có Access Token hợp lệ (Auto-login)
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      navigate(PATHS.HOME, { replace: true });
+    }
+  }, [isAuthenticated, authLoading, navigate]);
+
+  // 3. Đăng nhập bằng Số điện thoại Zalo (1-Touch)
   const handleZaloPhoneLogin = async () => {
     setLoadingZalo(true);
     try {
-      // 1. Gọi ZMP SDK xin cấp quyền và lấy phone token
+      // Gọi ZMP SDK xin cấp quyền và lấy phone token
       const phoneRes = await getPhoneNumber();
       const phoneToken =
         (phoneRes as any)?.token ||
@@ -61,7 +80,7 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  // 2. Đăng nhập bằng Email & Mật khẩu
+  // 4. Đăng nhập bằng Email & Mật khẩu
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -72,21 +91,47 @@ const LoginPage: React.FC = () => {
     setLoadingEmail(true);
     try {
       const response = await login({ email, password });
-      if (response.is_success) {
+      if (response && response.is_success) {
+        // Lưu lại tài khoản & mật khẩu nếu tích chọn Ghi nhớ
+        if (rememberMe) {
+          setSavedCredentials({ email, password, rememberMe: true });
+        } else {
+          setSavedCredentials(null);
+        }
+
         openSnackbar({ text: 'Đăng nhập thành công!', type: 'success' });
         navigate(PATHS.HOME, { replace: true });
       } else {
-        openSnackbar({ text: response.message || 'Đăng nhập thất bại', type: 'error' });
+        openSnackbar({
+          text: response?.message || 'Email hoặc mật khẩu không chính xác',
+          type: 'error',
+          duration: 3000,
+        });
       }
     } catch (error: any) {
+      console.error('[LoginPage] Error logging in:', error);
+      const errMsg =
+        error?.response?.data?.message ||
+        error?.message ||
+        'Có lỗi xảy ra khi kết nối máy chủ';
       openSnackbar({
-        text: error?.message || 'Có lỗi xảy ra khi kết nối máy chủ',
+        text: `Lỗi: ${errMsg}`,
         type: 'error',
+        duration: 3500,
       });
     } finally {
       setLoadingEmail(false);
     }
   };
+
+  if (authLoading) {
+    return (
+      <Box className="flex flex-col items-center justify-center min-h-screen bg-surface gap-3">
+        <Spinner visible logo="" />
+        <span className="text-xs text-gray-500">Đang tự động xác thực phiên đăng nhập...</span>
+      </Box>
+    );
+  }
 
   return (
     <Page className="bg-surface flex flex-col min-h-screen">
@@ -150,6 +195,19 @@ const LoginPage: React.FC = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 className="rounded-xl"
               />
+            </div>
+
+            {/* Checkbox Ghi nhớ tài khoản */}
+            <div className="flex items-center justify-between pt-1">
+              <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-600 font-medium">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded text-blue-600 border-gray-300 focus:ring-blue-500"
+                />
+                <span>Ghi nhớ tài khoản & mật khẩu</span>
+              </label>
             </div>
 
             <Button

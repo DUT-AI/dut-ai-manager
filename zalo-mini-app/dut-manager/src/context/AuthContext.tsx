@@ -51,13 +51,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return null;
       }
     } catch (error) {
-      console.warn('[AuthContext] Failed to fetch current user profile:', error);
-      // Nếu có lỗi xác thực, dọn dẹp storage
-      const cached = getUserData<UserResponse>();
-      if (!cached) {
-        setUser(null);
-        clearAllAuthData();
-      }
+      console.warn('[AuthContext] Failed to fetch current user profile (token invalid or expired):', error);
+      setUser(null);
+      clearAllAuthData();
       return null;
     }
   }, []);
@@ -76,10 +72,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       const response = await authService.login(data);
-      if (response.is_success && response.data) {
+      if (response && response.is_success && response.data) {
         const { access_token, refresh_token } = response.data;
         setTokens(access_token, refresh_token);
-        await fetchUser();
+        const userProfile = await fetchUser();
+        if (!userProfile) {
+          return {
+            is_success: false,
+            status_code: 401,
+            message: 'Đăng nhập thất bại: Token không hợp lệ hoặc máy chủ backend chưa cấu hình SECRET_KEY cố định.',
+            data: null as any,
+          };
+        }
       }
       return response;
     } finally {
@@ -91,10 +95,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       const response = await authService.loginWithZaloPhone({ phone_token: phoneToken });
-      if (response.is_success && response.data) {
+      if (response && response.is_success && response.data) {
         const { access_token, refresh_token } = response.data;
         setTokens(access_token, refresh_token);
-        await fetchUser();
+        const userProfile = await fetchUser();
+        if (!userProfile) {
+          return {
+            is_success: false,
+            status_code: 401,
+            message: 'Đăng nhập Zalo thất bại: Token không hợp lệ hoặc máy chủ backend chưa cấu hình SECRET_KEY cố định.',
+            data: null as any,
+          };
+        }
       }
       return response;
     } finally {

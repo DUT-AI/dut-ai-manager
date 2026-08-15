@@ -1,79 +1,53 @@
-import { nativeStorage } from 'zmp-sdk';
-
 const STORAGE_KEYS = {
   ACCESS_TOKEN: 'dut_access_token',
   REFRESH_TOKEN: 'dut_refresh_token',
   USER_DATA: 'dut_user_data',
+  SAVED_CREDENTIALS: 'dut_saved_credentials',
 } as const;
 
+export interface SavedCredentials {
+  email?: string;
+  password?: string;
+  rememberMe?: boolean;
+}
+
 /**
- * An toàn đọc dữ liệu từ nativeStorage của ZMP SDK với fallback.
+ * An toàn đọc dữ liệu đồng bộ từ Storage.
  */
 export const getItem = (key: string): string | null => {
   try {
-    if (typeof nativeStorage !== 'undefined' && typeof nativeStorage.getItem === 'function') {
-      const value = nativeStorage.getItem(key);
-      if (value !== undefined && value !== null) {
-        return typeof value === 'string' ? value : JSON.stringify(value);
-      }
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return window.localStorage.getItem(key);
     }
   } catch (error) {
-    console.warn(`[ZMP Storage] Failed to get item for key: ${key}`, error);
+    console.warn(`[Storage] Failed to get item for key: ${key}`, error);
   }
-
-  // Fallback to localStorage if in browser environment
-  try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      return localStorage.getItem(key);
-    }
-  } catch {
-    // Ignore fallback errors
-  }
-
   return null;
 };
 
 /**
- * An toàn lưu dữ liệu vào nativeStorage của ZMP SDK.
+ * An toàn lưu dữ liệu vào Storage.
  */
 export const setItem = (key: string, value: string): void => {
   try {
-    if (typeof nativeStorage !== 'undefined' && typeof nativeStorage.setItem === 'function') {
-      nativeStorage.setItem(key, value);
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.setItem(key, value);
     }
   } catch (error) {
-    console.warn(`[ZMP Storage] Failed to set item for key: ${key}`, error);
-  }
-
-  // Fallback to localStorage
-  try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      localStorage.setItem(key, value);
-    }
-  } catch {
-    // Ignore fallback errors
+    console.warn(`[Storage] Failed to set item for key: ${key}`, error);
   }
 };
 
 /**
- * An toàn xóa dữ liệu trong nativeStorage của ZMP SDK.
+ * An toàn xóa dữ liệu trong Storage.
  */
 export const removeItem = (key: string): void => {
   try {
-    if (typeof nativeStorage !== 'undefined' && typeof nativeStorage.removeItem === 'function') {
-      nativeStorage.removeItem(key);
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.removeItem(key);
     }
   } catch (error) {
-    console.warn(`[ZMP Storage] Failed to remove item for key: ${key}`, error);
-  }
-
-  // Fallback to localStorage
-  try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      localStorage.removeItem(key);
-    }
-  } catch {
-    // Ignore fallback errors
+    console.warn(`[Storage] Failed to remove item for key: ${key}`, error);
   }
 };
 
@@ -121,6 +95,24 @@ export const setUserData = (user: unknown): void => {
     setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
   } else {
     removeItem(STORAGE_KEYS.USER_DATA);
+  }
+};
+
+export const getSavedCredentials = (): SavedCredentials | null => {
+  const data = getItem(STORAGE_KEYS.SAVED_CREDENTIALS);
+  if (!data) return null;
+  try {
+    return JSON.parse(data) as SavedCredentials;
+  } catch {
+    return null;
+  }
+};
+
+export const setSavedCredentials = (credentials: SavedCredentials | null): void => {
+  if (credentials) {
+    setItem(STORAGE_KEYS.SAVED_CREDENTIALS, JSON.stringify(credentials));
+  } else {
+    removeItem(STORAGE_KEYS.SAVED_CREDENTIALS);
   }
 };
 

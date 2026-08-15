@@ -15,7 +15,7 @@ const Header: React.FC<HeaderProps> = (props) => {
         <div className="flex items-center gap-1 h-12 px-3">
           <img src={logoImg} alt="" className="w-7 h-7 rounded-[26px] object-cover shrink-0" />
           <span className="font-semibold text-title-lg text-primary whitespace-nowrap">
-            Trường Đại học Khoa học
+            Hệ thống quản lý sinh hoạt DUT AI
           </span>
         </div>
       ) : (
