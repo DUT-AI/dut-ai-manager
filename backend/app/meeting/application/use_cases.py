@@ -267,7 +267,7 @@ class CheckInUseCase:
         timestamp = now.strftime("%Y%m%d_%H%M%S")
         filename = f"meetings/checkin_bulk_{timestamp}_{image.filename}"
 
-        image_url = self.minio_service.upload_file(
+        image_url = await self.minio_service.upload_file(
             file_data=file_content,
             filename=filename,
             content_type=image.content_type or "image/jpeg",

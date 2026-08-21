@@ -144,7 +144,7 @@ class HomeworkUseCases:
         timestamp = now_utc7.strftime("%y%m%d_%H%M%S")
         filename = f"{self.minio_service.HOMEWORK_PREFIX}/{title}/{file.filename.split('.')[0]}_{timestamp}"
 
-        file_url = self.minio_service.upload_file(
+        file_url = await self.minio_service.upload_file(
             content, filename, file.content_type or "application/octet-stream"
         )
         return file_url
@@ -383,7 +383,7 @@ class HomeworkUseCases:
             f"homework-submissions/{homework_title}/{user_name}_{safe_filename}"
         )
 
-        file_url = self.minio_service.upload_file(
+        file_url = await self.minio_service.upload_file(
             file_data=file_content,
             filename=object_name,
             content_type=file.content_type or "application/octet-stream",

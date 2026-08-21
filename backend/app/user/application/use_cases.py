@@ -345,7 +345,7 @@ class UpdateAvatarUseCase:
         )
         filename = f"avatars/{user_id}_{timestamp}.{ext}"
 
-        avatar_url = self.minio.upload_file(
+        avatar_url = await self.minio.upload_file(
             file_data=file_content,
             filename=filename,
             content_type=file.content_type or "image/jpeg",

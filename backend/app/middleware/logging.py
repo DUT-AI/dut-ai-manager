@@ -17,20 +17,24 @@ async def logging_middleware(request: Request, call_next):
     path = request.url.path
     query = request.url.query
 
-    # Try to get body
+    # Try to get body (skip multipart/form-data to prevent buffering large files in memory)
     body = ""
+    content_type = request.headers.get("content-type", "").lower()
     if method in ["POST", "PUT", "PATCH"]:
-        try:
-            body_bytes = await request.body()
-            if body_bytes:
-                body = body_bytes.decode("utf-8")
+        if "multipart/form-data" in content_type:
+            body = "<Multipart/File Upload Stream>"
+        else:
+            try:
+                body_bytes = await request.body()
+                if body_bytes:
+                    body = body_bytes.decode("utf-8")
 
-                async def receive():
-                    return {"type": "http.request", "body": body_bytes}
+                    async def receive():
+                        return {"type": "http.request", "body": body_bytes}
 
-                request._receive = receive
-        except Exception:  # pylint: disable=broad-exception-caught
-            body = "<Could not read body>"
+                    request._receive = receive
+            except Exception:  # pylint: disable=broad-exception-caught
+                body = "<Could not read body>"
 
     logger.info(
         f"Request: {method} {path}{'?' + query if query else ''} | User: {user_id} | Body: {body[:500]}..."
