@@ -61,7 +61,7 @@ class GetParticipationAnalysisUseCase:
 
         # Tổng giờ
         total_hours = sum(
-            (p.check_out_at - p.check_in_at).total_seconds() / 3600
+            max(0.0, (p.check_out_at - p.check_in_at).total_seconds()) / 3600
             for p in participants
             if p.check_in_at and p.check_out_at
         )

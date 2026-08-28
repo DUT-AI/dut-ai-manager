@@ -204,7 +204,7 @@ class CalculateActivityPointsUseCase:
         count = 0
         for p in participants:
             if p.check_in_at and p.check_out_at:
-                duration = (p.check_out_at - p.check_in_at).total_seconds()
+                duration = max(0.0, (p.check_out_at - p.check_in_at).total_seconds())
                 hours = duration / 3600
                 points = int(round(hours))
 

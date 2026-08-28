@@ -8,7 +8,8 @@ NO business logic here.
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from dishka.integrations.fastapi import FromDishka, inject
+from fastapi import APIRouter, HTTPException
 
 from app.core.deps import hasPermission
 from app.core.permissions import ViolationPermission
@@ -21,22 +22,16 @@ from app.violation.application.use_cases import (
     RestoreViolationUseCase,
     UpdateViolationUseCase,
 )
-from app.violation.deps import (
-    get_create_violation_uc,
-    get_delete_violation_uc,
-    get_restore_violation_uc,
-    get_update_violation_uc,
-    get_violations_uc,
-)
 from app.violation.schemas import ViolationCreate, ViolationResponse, ViolationUpdate
 
 router = APIRouter(prefix="/violations", tags=["violations"])
 
 
 @router.get("", response_model=ApiResponse[list[ViolationResponse]])
+@inject
 async def get_violations(
+    uc: FromDishka[GetViolationsUseCase],
     _: Annotated[UserEntity, hasPermission(ViolationPermission.READ)],
-    uc: Annotated[GetViolationsUseCase, Depends(get_violations_uc)],
     user_id: int | None = None,
     month: int | None = None,
     year: int | None = None,
@@ -60,10 +55,11 @@ async def get_violations(
 
 
 @router.post("", response_model=ApiResponse[list[ViolationResponse]])
+@inject
 async def create_violation(
     data: ViolationCreate,
+    uc: FromDishka[CreateViolationUseCase],
     _: Annotated[UserEntity, hasPermission(ViolationPermission.CREATE)],
-    uc: Annotated[CreateViolationUseCase, Depends(get_create_violation_uc)],
 ):
     result = await uc.execute(
         user_ids=data.user_ids,
@@ -74,31 +70,34 @@ async def create_violation(
 
 
 @router.put("/{item_id}", response_model=ApiResponse[ViolationResponse])
+@inject
 async def update_violation(
     item_id: int,
     data: ViolationUpdate,
+    uc: FromDishka[UpdateViolationUseCase],
     _: Annotated[UserEntity, hasPermission(ViolationPermission.UPDATE)],
-    uc: Annotated[UpdateViolationUseCase, Depends(get_update_violation_uc)],
 ):
     result = uc.execute(item_id=item_id, reason=data.reason, date=data.date)
     return ApiResponse.success(data=result)
 
 
 @router.delete("/{item_id}", response_model=ApiResponse[bool])
+@inject
 async def delete_violation(
     item_id: int,
+    uc: FromDishka[DeleteViolationUseCase],
     _: Annotated[UserEntity, hasPermission(ViolationPermission.DELETE)],
-    uc: Annotated[DeleteViolationUseCase, Depends(get_delete_violation_uc)],
 ):
     result = uc.execute(item_id)
     return ApiResponse.success(data=result)
 
 
 @router.put("/{item_id}/restore", response_model=ApiResponse[ViolationResponse])
+@inject
 async def restore_violation(
     item_id: int,
+    uc: FromDishka[RestoreViolationUseCase],
     _: Annotated[UserEntity, hasPermission(ViolationPermission.DELETE)],
-    uc: Annotated[RestoreViolationUseCase, Depends(get_restore_violation_uc)],
 ):
     result = uc.execute(item_id)
     if not result:

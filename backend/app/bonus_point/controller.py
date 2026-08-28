@@ -5,9 +5,9 @@ Handles HTTP routes and mapping requests to Use Cases.
 """
 
 from datetime import date
-from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from dishka.integrations.fastapi import FromDishka, inject
+from fastapi import APIRouter, HTTPException
 
 from app.bonus_point.application.dtos import (
     BonusPointCreate,
@@ -21,13 +21,6 @@ from app.bonus_point.application.use_cases import (
     RestoreBonusPointUseCase,
     UpdateBonusPointUseCase,
 )
-from app.bonus_point.deps import (
-    get_bonus_points_uc,
-    get_create_bonus_points_uc,
-    get_delete_bonus_point_uc,
-    get_restore_bonus_point_uc,
-    get_update_bonus_point_uc,
-)
 from app.core.deps import CurrentUser, hasPermission, hasTeamLeaderAccess
 from app.core.permissions import BonusPointPermission
 from app.shared.application.response import ApiResponse
@@ -40,8 +33,9 @@ router = APIRouter(prefix="/bonus-points", tags=["bonus-points"])
     response_model=ApiResponse[list[BonusPointResponse]],
     dependencies=[hasPermission(BonusPointPermission.READ)],
 )
+@inject
 async def get_bonus_points(
-    uc: Annotated[GetBonusPointsUseCase, Depends(get_bonus_points_uc)],
+    uc: FromDishka[GetBonusPointsUseCase],
     user_id: int | None = None,
     month: int | None = None,
     year: int | None = None,
@@ -73,9 +67,10 @@ async def get_bonus_points(
         hasTeamLeaderAccess("user_ids"),
     ],
 )
+@inject
 async def create_bonus_point(
     data: BonusPointCreate,
-    uc: Annotated[CreateBonusPointsUseCase, Depends(get_create_bonus_points_uc)],
+    uc: FromDishka[CreateBonusPointsUseCase],
     current_user: CurrentUser,
 ):
     """Create new bonus point items."""
@@ -91,10 +86,11 @@ async def create_bonus_point(
         hasTeamLeaderAccess("user_id"),
     ],
 )
+@inject
 async def update_bonus_point(
     item_id: int,
     data: BonusPointUpdate,
-    uc: Annotated[UpdateBonusPointUseCase, Depends(get_update_bonus_point_uc)],
+    uc: FromDishka[UpdateBonusPointUseCase],
     current_user: CurrentUser,
 ):
     """Update a bonus point item."""
@@ -109,9 +105,10 @@ async def update_bonus_point(
     response_model=ApiResponse[bool],
     dependencies=[hasPermission(BonusPointPermission.DELETE)],
 )
+@inject
 async def delete_bonus_point(
     item_id: int,
-    uc: Annotated[DeleteBonusPointUseCase, Depends(get_delete_bonus_point_uc)],
+    uc: FromDishka[DeleteBonusPointUseCase],
 ):
     """Delete a bonus point item."""
     result = await uc.execute(item_id)
@@ -123,9 +120,10 @@ async def delete_bonus_point(
     response_model=ApiResponse[BonusPointResponse],
     dependencies=[hasPermission(BonusPointPermission.DELETE)],
 )
+@inject
 async def restore_bonus_point(
     item_id: int,
-    uc: Annotated[RestoreBonusPointUseCase, Depends(get_restore_bonus_point_uc)],
+    uc: FromDishka[RestoreBonusPointUseCase],
 ):
     """Restore a deleted bonus point item."""
     result = uc.execute(item_id)

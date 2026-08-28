@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import cast
 
 from fastapi import UploadFile, status
@@ -28,6 +28,18 @@ from app.shared.infrastructure.minio_service import MinioService
 from app.team.infrastructure.repository import TeamRepository
 from app.user.infrastructure.repository import UserRepository
 from app.utils.datetime import get_current_utc7_time
+
+
+def _parse_client_time_to_utc7_naive(client_time: str) -> datetime:
+    """Chuyển client_time (ISO string) thành datetime naive múi giờ UTC+7."""
+    try:
+        dt = datetime.fromisoformat(client_time.replace("Z", "+00:00"))
+        if dt.tzinfo is not None:
+            utc7_tz = timezone(timedelta(hours=7))
+            dt = dt.astimezone(utc7_tz).replace(tzinfo=None)
+        return dt
+    except ValueError as err:
+        raise BadRequestException("Invalid occurred_at") from err
 
 
 class CheckMeetingAttendanceUseCase:
@@ -256,11 +268,7 @@ class CheckInUseCase:
 
         check_in_dt = now
         if client_time:
-            try:
-                # Python 3.11+ supports 'Z' suffix natively, but replacing to be safe
-                check_in_dt = datetime.fromisoformat(client_time.replace("Z", "+00:00"))
-            except ValueError:
-                raise BadRequestException("Invalid occurred_at")
+            check_in_dt = _parse_client_time_to_utc7_naive(client_time)
 
         # 1. Upload image (Reuse for all meetings in this call)
         file_content = await image.read()
@@ -442,12 +450,7 @@ class CheckOutUseCase:
 
         check_out_dt = now
         if client_time:
-            try:
-                check_out_dt = datetime.fromisoformat(
-                    client_time.replace("Z", "+00:00")
-                )
-            except ValueError:
-                raise BadRequestException("Invalid occurred_at")
+            check_out_dt = _parse_client_time_to_utc7_naive(client_time)
 
         half_hour = timedelta(minutes=30)
         window_start = now - half_hour

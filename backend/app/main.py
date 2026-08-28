@@ -23,6 +23,7 @@ from app.meeting.providers import MeetingModuleProvider
 from app.middleware.auth import set_user_context
 from app.middleware.logging import logging_middleware
 from app.permission_request.providers import PermissionRequestModuleProvider
+from app.rbac.providers import RbacModuleProvider
 from app.report.providers import ReportModuleProvider
 from app.shared.application.response import BadRequestException
 from app.shared.infrastructure.request_context import (
@@ -90,6 +91,7 @@ def create_app():
         InfrastructureProvider(),
         AuthModuleProvider(),
         UserModuleProvider(),
+        RbacModuleProvider(),
         ViolationModuleProvider(),
         PermissionRequestModuleProvider(),
         ReportModuleProvider(),
