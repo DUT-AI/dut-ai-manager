@@ -8,7 +8,6 @@ This is achieved using file-based locking - only the first worker to acquire
 the lock will run the scheduler.
 """
 
-import fcntl
 import os
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -23,51 +22,13 @@ from app.jobs.monthly_title_job import assign_monthly_titles
 
 # Global scheduler instance
 scheduler: AsyncIOScheduler | None = None
-# Lock file handle (keep it open to maintain the lock)
-_lock_file = None
-
-
-def _acquire_scheduler_lock() -> bool:
-    """Try to acquire an exclusive lock for running the scheduler.
-
-    Returns True if this process should run the scheduler, False otherwise.
-    """
-    global _lock_file
-
-    lock_path = "/tmp/dut_ai_scheduler.lock"
-
-    try:
-        _lock_file = open(lock_path, "w")
-        # Try to acquire exclusive lock (non-blocking)
-        fcntl.flock(_lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-        # Write PID to lock file for debugging
-        _lock_file.write(str(os.getpid()))
-        _lock_file.flush()
-        return True
-    except OSError:
-        # Another process has the lock
-        if _lock_file:
-            _lock_file.close()
-            _lock_file = None
-        return False
 
 
 def start_scheduler(dishka_container: AsyncContainer) -> None:
-    """Start the background scheduler with all registered jobs.
-
-    Uses file locking to ensure only ONE worker runs the scheduler,
-    even across multiple Gunicorn/Uvicorn workers.
-    """
+    """Start the background scheduler with all registered jobs."""
     global scheduler
 
-    # Try to acquire the scheduler lock
-    if not _acquire_scheduler_lock():
-        logger.info(
-            f"📅 Scheduler skipped for worker {os.getpid()} (another worker has the lock)"
-        )
-        return
-
-    logger.info(f"📅 Worker {os.getpid()} acquired scheduler lock")
+    logger.info("📅 Starting background scheduler...")
 
     scheduler = AsyncIOScheduler(timezone="Asia/Ho_Chi_Minh")
 
