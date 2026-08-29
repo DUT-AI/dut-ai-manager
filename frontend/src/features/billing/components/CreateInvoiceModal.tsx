@@ -1,71 +1,98 @@
-import { Modal, Form, Select, Input, Divider, Space, InputNumber, Button, type FormInstance } from 'antd';
+import { Modal, Form, Select, Input, Divider, Space, InputNumber, Button, DatePicker, type FormInstance } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import { InvoiceItemType } from '@/types/billing.types';
-import type { Invoice } from '@/types/billing.types';
-import { useEffect } from 'react';
-import type { UpdateInvoiceFormValues } from '@/types/billing.types';
+import { InvoiceItemType } from '@/features/billing/types/billing.types';
+import type { UserResponse } from '@/types/user.types';
+import { useTeams } from '@/hooks/useTeams';
+import type { CreateInvoiceFormValues } from '@/features/billing/types/billing.types';
 
 const { Option } = Select;
 
-interface UpdateInvoiceModalProps {
+interface CreateInvoiceModalProps {
   isOpen: boolean;
   onCancel: () => void;
-  onFinish: (values: UpdateInvoiceFormValues) => void;
+  onFinish: (values: CreateInvoiceFormValues) => void;
   loading: boolean;
-  invoice: Invoice | null;
+  users: UserResponse[];
   form: FormInstance;
 }
 
-const UpdateInvoiceModal = ({
+const CreateInvoiceModal = ({
   isOpen,
   onCancel,
   onFinish,
   loading,
-  invoice,
+  users,
   form
-}: UpdateInvoiceModalProps) => {
-
-  useEffect(() => {
-    if (isOpen && invoice) {
-      form.setFieldsValue({
-        description: invoice.description,
-        items: invoice.items.map(item => ({
-          item_type: item.item_type,
-          note: item.note,
-          amount: item.amount,
-          reference_id: item.reference_id,
-        })),
-      });
-    } else {
-      form.resetFields();
-    }
-  }, [isOpen, invoice, form]);
+}: CreateInvoiceModalProps) => {
+  const { data: teams = [], isLoading: isLoadingTeams } = useTeams();
 
   return (
     <Modal
-      title={`Sửa hóa đơn #${invoice?.reference_code}`}
+      title="Tạo hóa đơn mới"
       open={isOpen}
       onCancel={onCancel}
       onOk={() => form.submit()}
       confirmLoading={loading}
       width={700}
-      okText="Lưu thay đổi"
+      okText="Tạo hóa đơn"
       cancelText="Hủy"
       centered
       destroyOnClose
     >
-      <Form 
-        form={form} 
-        layout="vertical" 
+      <Form
+        form={form}
+        layout="vertical"
         onFinish={onFinish}
+        initialValues={{ items: [{ item_type: InvoiceItemType.VIOLATION, amount: 20000 }] }}
         className="mt-4"
       >
+        <Form.Item
+          name="user_id"
+          label="Chọn thành viên (Bắt buộc)"
+          rules={[{ required: true, message: 'Vui lòng chọn thành viên' }]}
+        >
+          <Select
+            showSearch
+            placeholder="Tìm kiếm theo tên hoặc email"
+            optionFilterProp="children"
+          >
+            {users.map(u => (
+              <Option key={u.id} value={u.id}>{u.name} ({u.email})</Option>
+            ))}
+          </Select>
+        </Form.Item>
+
+        <Form.Item
+          name="team_id"
+          label="Chọn Nhóm (Bắt buộc)"
+          rules={[{ required: true, message: 'Vui lòng chọn nhóm' }]}
+        >
+          <Select
+            showSearch
+            placeholder="Chọn nhóm từ danh sách"
+            loading={isLoadingTeams}
+            optionFilterProp="children"
+          >
+            {(teams || []).map(t => (
+              <Option key={t.id} value={t.id}>{t.team_name}</Option>
+            ))}
+          </Select>
+        </Form.Item>
+
+        <Form.Item
+          name="billing_period"
+          label="Kỳ hóa đơn (Tháng/Năm)"
+          rules={[{ required: true, message: 'Vui lòng chọn kỳ hóa đơn' }]}
+        >
+          <DatePicker picker="month" format="MM/YYYY" placeholder="Chọn tháng/năm" style={{ width: '100%' }} />
+        </Form.Item>
+
         <Form.Item name="description" label="Ghi chú tổng quát">
           <Input placeholder="Ví dụ: Phí sinh hoạt và vi phạm tháng 3" />
         </Form.Item>
 
         <Divider>Danh sách hạng mục</Divider>
-        
+
         <Form.List name="items">
           {(fields, { add, remove }) => (
             <>
@@ -84,7 +111,7 @@ const UpdateInvoiceModal = ({
                       <Option value={InvoiceItemType.OTHER}>Khác</Option>
                     </Select>
                   </Form.Item>
-                  
+
                   <Form.Item
                     {...restField}
                     name={[name, 'note']}
@@ -98,26 +125,26 @@ const UpdateInvoiceModal = ({
                     name={[name, 'amount']}
                     rules={[{ required: true, message: 'Nhập số tiền' }]}
                   >
-                    <InputNumber 
-                      min={0} 
+                    <InputNumber<number>
+                      min={0}
                       formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                       parser={value => Number(value?.replace(/\$\s?|(,*)/g, '') || 0)}
-                      placeholder="Số tiền" 
-                      style={{ width: 150 }} 
+                      placeholder="Số tiền"
+                      style={{ width: 150 }}
                     />
                   </Form.Item>
 
-                  <Button 
-                    type="text" 
-                    danger 
-                    icon={<DeleteOutlined />} 
-                    onClick={() => remove(name)} 
+                  <Button
+                    type="text"
+                    danger
+                    icon={<DeleteOutlined />}
+                    onClick={() => remove(name)}
                     disabled={fields.length === 1}
                   />
                 </Space>
               ))}
               <Form.Item>
-                <Button type="dashed" onClick={() => add({ item_type: InvoiceItemType.OTHER, amount: 0 })} block icon={<PlusOutlined />}>
+                <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
                   Thêm hạng mục
                 </Button>
               </Form.Item>
@@ -129,4 +156,4 @@ const UpdateInvoiceModal = ({
   );
 };
 
-export default UpdateInvoiceModal;
+export default CreateInvoiceModal;

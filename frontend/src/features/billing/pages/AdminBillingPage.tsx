@@ -2,41 +2,41 @@ import { useState } from 'react';
 import { Card, Button, Typography, Space, Form, message, Grid, Tabs, Select, DatePicker, Row, Col, Statistic } from 'antd';
 import { PlusOutlined, AuditOutlined, CalendarOutlined, BarChartOutlined, DollarOutlined, ImportOutlined, ExportOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { useAllInvoices, useCreateInvoice, useUpdateInvoice, useInvoiceDetail, useDeleteInvoice } from '@/hooks/useBilling';
+import { useAllInvoices, useCreateInvoice, useUpdateInvoice, useInvoiceDetail, useDeleteInvoice } from '@/features/billing/hooks/useBilling';
 import { useUsers } from '@/hooks';
 import { useTeams } from '@/hooks/useTeams';
-import CreateMonthlyInvoiceModal from '@/components/billing/CreateMonthlyInvoiceModal';
+import CreateMonthlyInvoiceModal from '@/features/billing/components/CreateMonthlyInvoiceModal';
 import type { CreateInvoiceFormValues, Invoice } from '@/types';
 import { motion, type Variants } from 'motion/react';
 
 // Sub-components
-import BillingTable from './billing/components/BillingTable';
-import CreateInvoiceModal from './billing/components/CreateInvoiceModal';
-import UpdateInvoiceModal from './billing/components/UpdateInvoiceModal';
-import InvoiceDetailModal from './billing/components/InvoiceDetailModal';
-import BillingMatrixReport from './billing/components/BillingMatrixReport';
-import ExpenseManagementPage from './ExpenseManagementPage';
+import BillingTable from '../components/BillingTable';
+import CreateInvoiceModal from '../components/CreateInvoiceModal';
+import UpdateInvoiceModal from '../components/UpdateInvoiceModal';
+import InvoiceDetailModal from '../components/InvoiceDetailModal';
+import BillingMatrixReport from '../components/BillingMatrixReport';
+import ExpenseManagementPage from '../../../pages/ExpenseManagementPage';
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
 
 const containerVariants: Variants = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: {
-            staggerChildren: 0.1
-        }
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
     }
+  }
 };
 
 const itemVariants: Variants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-        opacity: 1,
-        y: 0,
-        transition: { duration: 0.4, ease: "easeOut" }
-    }
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4, ease: "easeOut" }
+  }
 };
 
 const AdminBillingPage = () => {
@@ -60,14 +60,14 @@ const AdminBillingPage = () => {
   const createInvoice = useCreateInvoice();
   const updateInvoice = useUpdateInvoice();
   const deleteInvoice = useDeleteInvoice();
-  
+
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [isMonthlyModalOpen, setIsMonthlyModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  
+
   const [form] = Form.useForm();
   const [updateForm] = Form.useForm();
 
@@ -86,7 +86,7 @@ const AdminBillingPage = () => {
           note: item.note
         }))
       };
-      
+
       await createInvoice.mutateAsync(payload);
       message.success('Tạo hóa đơn thành công');
       setIsCreateModalOpen(false);
@@ -228,7 +228,7 @@ const AdminBillingPage = () => {
                 ))}
               </Select>
             </Col>
-            
+
             <Col xs={24} sm={12} md={6} lg={6}>
               <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Trạng thái</div>
               <Select
@@ -300,55 +300,55 @@ const AdminBillingPage = () => {
   ];
 
   return (
-    <motion.div 
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="p-4 md:p-6 bg-[#f8fafc] min-h-full"
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="p-4 md:p-6 bg-[#f8fafc] min-h-full"
     >
       <motion.div variants={itemVariants}>
-        <Card 
-            className="shadow-sm border-gray-100 rounded-xl overflow-hidden"
-            styles={{
+        <Card
+          className="shadow-sm border-gray-100 rounded-xl overflow-hidden"
+          styles={{
             header: { padding: '20px 24px', borderBottom: '1px solid #f1f5f9' },
             body: { padding: '0' }
-            }}
-            title={
+          }}
+          title={
             <Space size={12}>
-                <div className="bg-indigo-50 p-2.5 rounded-xl text-indigo-600 shadow-sm">
+              <div className="bg-indigo-50 p-2.5 rounded-xl text-indigo-600 shadow-sm">
                 <AuditOutlined className="text-xl" />
-                </div>
-                <div className="flex flex-col">
+              </div>
+              <div className="flex flex-col">
                 <Title level={4} className="mb-0! leading-tight">Quản lý Hóa đơn</Title>
                 <Text type="secondary" className="text-xs font-medium opacity-70">Công cụ dành cho quản trị viên</Text>
-                </div>
+              </div>
             </Space>
-            }
-            extra={
+          }
+          extra={
             <Space size={12}>
-                <Button 
-                icon={<CalendarOutlined />} 
+              <Button
+                icon={<CalendarOutlined />}
                 onClick={() => setIsMonthlyModalOpen(true)}
                 className="h-10 px-6 font-semibold rounded-lg border-indigo-200 text-indigo-600 hover:text-indigo-700 hover:border-indigo-300 transition-all"
-                >
+              >
                 Tạo hóa đơn tháng
-                </Button>
-                <Button 
-                type="primary" 
-                icon={<PlusOutlined />} 
+              </Button>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
                 onClick={() => setIsCreateModalOpen(true)}
                 className="bg-indigo-600 border-none h-10 px-6 font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-all"
-                >
+              >
                 Tạo hóa đơn
-                </Button>
+              </Button>
             </Space>
-            }
+          }
         >
-            <Tabs 
-            items={tabItems} 
-            className="admin-billing-tabs" 
+          <Tabs
+            items={tabItems}
+            className="admin-billing-tabs"
             tabBarStyle={{ padding: '0 24px', marginBottom: 0, backgroundColor: '#fff' }}
-            />
+          />
         </Card>
       </motion.div>
 
@@ -386,10 +386,10 @@ const AdminBillingPage = () => {
         isMobile={!screens.md}
       />
 
-      <CreateMonthlyInvoiceModal 
+      <CreateMonthlyInvoiceModal
         open={isMonthlyModalOpen}
         onCancel={() => setIsMonthlyModalOpen(false)}
-        onSuccess={() => {}}
+        onSuccess={() => { }}
       />
     </motion.div>
   );

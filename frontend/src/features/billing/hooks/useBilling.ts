@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import billingService from '@/services/api/billing.service';
-import type { InvoiceCreate, MonthlyInvoiceCreate } from '@/types/billing.types';
+import billingService from '@/features/billing/service/billing.service';
+import type { InvoiceCreate, MonthlyInvoiceCreate } from '@/features/billing/types/billing.types';
 
 // Query Keys
 export const billingKeys = {
@@ -67,7 +67,7 @@ export const useMatrixReport = (
 // Mutations
 export const useCreateInvoice = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (data: InvoiceCreate) => billingService.createInvoice(data),
     onSuccess: () => {
@@ -78,9 +78,9 @@ export const useCreateInvoice = () => {
 
 export const useUpdateInvoice = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Omit<InvoiceCreate, 'user_id'> }) => 
+    mutationFn: ({ id, data }: { id: number; data: Omit<InvoiceCreate, 'user_id'> }) =>
       billingService.updateInvoice(id, data),
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: billingKeys.all });
@@ -91,7 +91,7 @@ export const useUpdateInvoice = () => {
 
 export const useCreateMonthlyInvoices = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (data: MonthlyInvoiceCreate) => billingService.createMonthlyInvoices(data),
     onSuccess: () => {
@@ -102,7 +102,7 @@ export const useCreateMonthlyInvoices = () => {
 
 export const useDeleteInvoice = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (id: number) => billingService.deleteInvoice(id),
     onSuccess: () => {

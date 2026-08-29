@@ -27,7 +27,7 @@ export * from './useDebounce';
 export * from './useApiKeys';
 
 // Billing
-export * from './useBilling';
+export * from '../features/billing/hooks/useBilling';
 
 // Expenses
 export * from './useExpense';

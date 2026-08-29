@@ -1,11 +1,11 @@
-import axiosInstance from "../axiosInstance";
-import type { 
-  Invoice, 
-  InvoiceCreate, 
-  MonthlyInvoiceCreate, 
-  MonthlyInvoicePreviewResponse 
-} from "../../types/billing.types";
-import type { ApiResponse } from "../../types/api.types";
+import axiosInstance from "../../../services/axiosInstance";
+import type {
+  Invoice,
+  InvoiceCreate,
+  MonthlyInvoiceCreate,
+  MonthlyInvoicePreviewResponse
+} from "../types/billing.types";
+import type { ApiResponse } from "../../../types/api.types";
 
 const billingService = {
   getMyInvoices: async () => {

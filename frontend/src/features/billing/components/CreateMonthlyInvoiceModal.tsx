@@ -14,18 +14,18 @@ import {
   Alert,
   Input
 } from 'antd';
-import { 
-  HistoryOutlined, 
-  PlusOutlined, 
+import {
+  HistoryOutlined,
+  PlusOutlined,
   DeleteOutlined,
   EyeOutlined,
   CheckCircleOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useUsers, useTeams } from '@/hooks';
-import { useCreateMonthlyInvoices } from '@/hooks/useBilling';
-import { InvoiceItemType } from '@/types/billing.types';
-import type { MonthlyInvoiceItemPreview } from '@/types/billing.types';
+import { useCreateMonthlyInvoices } from '@/features/billing/hooks/useBilling';
+import { InvoiceItemType } from '@/features/billing/types/billing.types';
+import type { MonthlyInvoiceItemPreview } from '@/features/billing/types/billing.types';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -41,7 +41,7 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
   const { data: users = [] } = useUsers();
   const { data: teams = [] } = useTeams();
   const createMonthly = useCreateMonthlyInvoices();
-  
+
   const [previewData, setPreviewData] = useState<MonthlyInvoiceItemPreview[]>([]);
   const [isPreviewing, setIsPreviewing] = useState(false);
 
@@ -49,7 +49,7 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
     try {
       const values = await form.validateFields();
       setIsPreviewing(true);
-      
+
       const payload = {
         month: values.billing_period.month() + 1,
         year: values.billing_period.year(),
@@ -76,7 +76,7 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
   const handleExecute = async () => {
     try {
       const values = await form.validateFields();
-      
+
       const payload = {
         month: values.billing_period.month() + 1,
         year: values.billing_period.year(),
@@ -145,17 +145,17 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
       width={900}
       footer={[
         <Button key="cancel" onClick={onCancel}>Hủy</Button>,
-        <Button 
-          key="preview" 
-          icon={<EyeOutlined />} 
+        <Button
+          key="preview"
+          icon={<EyeOutlined />}
           onClick={handlePreview}
           loading={isPreviewing}
         >
           Xem trước
         </Button>,
-        <Button 
-          key="submit" 
-          type="primary" 
+        <Button
+          key="submit"
+          type="primary"
           icon={<CheckCircleOutlined />}
           onClick={handleExecute}
           className="bg-indigo-600 border-none"
@@ -170,11 +170,11 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
       <Form
         form={form}
         layout="vertical"
-        initialValues={{ 
-          billing_period: dayjs(), 
-          violation_price: 20000, 
+        initialValues={{
+          billing_period: dayjs(),
+          violation_price: 20000,
           fund_amount: 50000,
-          extra_items: [] 
+          extra_items: []
         }}
         className="mt-4"
       >
@@ -191,8 +191,8 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
             name="team_id"
             label="Chọn Team (Tùy chọn)"
           >
-            <Select 
-              placeholder="Chọn team để áp dụng cho tất cả thành viên" 
+            <Select
+              placeholder="Chọn team để áp dụng cho tất cả thành viên"
               allowClear
             >
               {(teams ?? []).map(t => (
@@ -206,8 +206,8 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
           name="user_ids"
           label="Hoặc chọn thành viên cụ thể"
         >
-          <Select 
-            mode="multiple" 
+          <Select
+            mode="multiple"
             placeholder="Chọn 1 hoặc nhiều thành viên"
             allowClear
             showSearch
@@ -225,8 +225,8 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
             label="Đơn giá 1 vi phạm (VNĐ)"
             rules={[{ required: true }]}
           >
-            <InputNumber 
-              className="w-full" 
+            <InputNumber
+              className="w-full"
               formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
               parser={value => value?.replace(/\$\s?|(,*)/g, '') as any}
             />
@@ -237,15 +237,15 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
             label="Tiền quỹ tháng (VNĐ)"
             rules={[{ required: true }]}
           >
-            <InputNumber 
-              className="w-full" 
+            <InputNumber
+              className="w-full"
               formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
               parser={value => value?.replace(/\$\s?|(,*)/g, '') as any}
             />
           </Form.Item>
         </div>
 
-        <Divider orientation="left">Hạng mục bổ sung (Tùy chọn)</Divider>
+        <Divider titlePlacement="left">Hạng mục bổ sung (Tùy chọn)</Divider>
         <Form.List name="extra_items">
           {(fields, { add, remove }) => (
             <>
@@ -262,7 +262,7 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
                       <Option value={InvoiceItemType.OTHER}>Khác</Option>
                     </Select>
                   </Form.Item>
-                  
+
                   <Form.Item
                     {...restField}
                     name={[name, 'note']}
@@ -278,12 +278,12 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
                     rules={[{ required: true, message: 'Nhập tiền' }]}
                     style={{ marginBottom: 0 }}
                   >
-                    <InputNumber 
-                      min={0} 
+                    <InputNumber
+                      min={0}
                       formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                       parser={value => (value?.replace(/\$\s?|(,*)/g, '') || 0) as any}
-                      placeholder="Số tiền" 
-                      style={{ width: 150 }} 
+                      placeholder="Số tiền"
+                      style={{ width: 150 }}
                     />
                   </Form.Item>
 
@@ -299,20 +299,20 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
 
         {previewData.length > 0 && (
           <div className="mt-6">
-            <Divider orientation="left">Bản xem trước ({previewData.length} người dùng)</Divider>
-            <Table 
-              dataSource={previewData} 
-              columns={columns} 
-              rowKey="user_id" 
+            <Divider titlePlacement="left">Bản xem trước ({previewData.length} người dùng)</Divider>
+            <Table
+              dataSource={previewData}
+              columns={columns}
+              rowKey="user_id"
               pagination={{ pageSize: 5 }}
               size="small"
               className="border border-gray-100 rounded-lg overflow-hidden"
             />
-            <Alert 
-              message="Lưu ý: Chỉ những thành viên có số tiền > 0 mới được tạo hóa đơn." 
-              type="info" 
-              showIcon 
-              className="mt-3" 
+            <Alert
+              message="Lưu ý: Chỉ những thành viên có số tiền > 0 mới được tạo hóa đơn."
+              type="info"
+              showIcon
+              className="mt-3"
             />
           </div>
         )}

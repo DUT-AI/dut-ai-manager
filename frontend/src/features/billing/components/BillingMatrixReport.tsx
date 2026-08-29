@@ -2,11 +2,12 @@ import { useState, useMemo } from 'react';
 import { Form, Select, DatePicker, Button, Space, Table, Typography, Tag, Row, Col, Card, Statistic } from 'antd';
 import { SearchOutlined, ImportOutlined, ExportOutlined, WalletOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
-import { useMatrixReport, useAllInvoices } from '@/hooks/useBilling';
+import { useMatrixReport, useAllInvoices } from '@/features/billing/hooks/useBilling';
 import { useExpenses } from '@/hooks/useExpense';
 import { useUsers, useTeams } from '@/hooks';
-import { InvoiceItemType } from '@/types/billing.types';
+import { InvoiceItemType } from '@/features/billing/types/billing.types';
 import { ExpenseStatus } from '@/types/expense.types';
+import type { UserResponse } from '@/types/user.types';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -28,7 +29,7 @@ const ITEM_TYPE_LABELS: Record<string, string> = {
 
 const BillingMatrixReport = () => {
   const [form] = Form.useForm();
-  
+
   const [queryParams, setQueryParams] = useState<{
     start_month: number;
     start_year: number;
@@ -60,50 +61,50 @@ const BillingMatrixReport = () => {
     });
   }, [allIncomingInvoices]);
 
-  const incomingTotal = useMemo(() => fundAndFineInvoices.reduce((acc, curr) => acc + curr.amount, 0), [fundAndFineInvoices]);
-  const incomingPaid = useMemo(() => fundAndFineInvoices.filter(inv => inv.status === 'PAID').reduce((acc, curr) => acc + curr.amount, 0), [fundAndFineInvoices]);
-  const incomingUnpaid = useMemo(() => fundAndFineInvoices.filter(inv => inv.status === 'PENDING').reduce((acc, curr) => acc + curr.amount, 0), [fundAndFineInvoices]);
+  const incomingTotal = useMemo(() => fundAndFineInvoices.reduce((acc, curr) => acc + (curr.amount ?? curr.total_amount ?? 0), 0), [fundAndFineInvoices]);
+  const incomingPaid = useMemo(() => fundAndFineInvoices.filter(inv => inv.status === 'PAID').reduce((acc, curr) => acc + (curr.amount ?? curr.total_amount ?? 0), 0), [fundAndFineInvoices]);
+  const incomingUnpaid = useMemo(() => fundAndFineInvoices.filter(inv => inv.status === 'PENDING').reduce((acc, curr) => acc + (curr.amount ?? curr.total_amount ?? 0), 0), [fundAndFineInvoices]);
 
   // Hóa đơn xuất ra (Chi)
-  const outgoingTotal = useMemo(() => allOutgoingInvoices.reduce((acc, curr) => acc + curr.amount, 0), [allOutgoingInvoices]);
-  const outgoingPaid = useMemo(() => allOutgoingInvoices.filter(exp => exp.status === ExpenseStatus.PAID).reduce((acc, curr) => acc + curr.amount, 0), [allOutgoingInvoices]);
-  const outgoingUnpaid = useMemo(() => allOutgoingInvoices.filter(exp => exp.status === ExpenseStatus.UNPAID).reduce((acc, curr) => acc + curr.amount, 0), [allOutgoingInvoices]);
+  const outgoingTotal = useMemo(() => (allOutgoingInvoices ?? []).reduce((acc, curr) => acc + (curr.amount ?? 0), 0), [allOutgoingInvoices]);
+  const outgoingPaid = useMemo(() => (allOutgoingInvoices ?? []).filter(exp => exp.status === ExpenseStatus.PAID).reduce((acc, curr) => acc + (curr.amount ?? 0), 0), [allOutgoingInvoices]);
+  const outgoingUnpaid = useMemo(() => (allOutgoingInvoices ?? []).filter(exp => exp.status === ExpenseStatus.UNPAID).reduce((acc, curr) => acc + (curr.amount ?? 0), 0), [allOutgoingInvoices]);
 
   // Số dư đối ứng (Thu - Chi)
   const balanceTotal = incomingTotal - outgoingTotal;
   const balancePaid = incomingPaid - outgoingPaid;
 
   const selectedTeamId = Form.useWatch('team_id', form);
-  
+
   const filteredUsers = useMemo(() => {
     if (!selectedTeamId) return users;
-    const team = teams.find(t => t.id === selectedTeamId);
+    const team = (teams ?? []).find(t => t.id === selectedTeamId);
     if (!team) return users;
     const memberIds = team.members.map(m => m.user_id);
     return users.filter(u => memberIds.includes(u.id));
   }, [users, teams, selectedTeamId]);
 
-interface MatrixInvoiceItem {
-  id: number;
-  reference_code: string;
-  status: string;
-  amount: number;
-  items: string[];
-}
+  interface MatrixInvoiceItem {
+    id: number;
+    reference_code: string;
+    status: string;
+    amount: number;
+    items: string[];
+  }
 
-interface FilterFormValues {
-  dateRange?: [Dayjs, Dayjs];
-  user_ids?: number[];
-  team_id?: number;
-}
+  interface FilterFormValues {
+    dateRange?: [Dayjs, Dayjs];
+    user_ids?: number[];
+    team_id?: number;
+  }
 
   const onFinish = (values: FilterFormValues) => {
     if (!values.dateRange || values.dateRange.length !== 2) return;
-    
+
     const [start, end] = values.dateRange;
-    
+
     let user_ids = values.user_ids || [];
-    
+
     // If a team is selected but no specific users, we might want to pass all user_ids of that team
     if (values.team_id && (!values.user_ids || values.user_ids.length === 0)) {
       user_ids = filteredUsers.map(u => u.id);
@@ -122,11 +123,11 @@ interface FilterFormValues {
   // Generate dynamic columns based on selected date range
   const monthColumns = useMemo(() => {
     if (!queryParams) return [];
-    
+
     const cols = [];
     let current = dayjs().year(queryParams.start_year).month(queryParams.start_month - 1);
     const end = dayjs().year(queryParams.end_year).month(queryParams.end_month - 1);
-    
+
     while (current.isBefore(end) || current.isSame(end, 'month')) {
       const monthStr = current.format('MM/YYYY');
       const monthKey = current.format('YYYY-MM'); // used for data indexing
@@ -136,13 +137,13 @@ interface FilterFormValues {
         key: monthKey,
         render: (invoicesData: MatrixInvoiceItem[]) => {
           if (!invoicesData || invoicesData.length === 0) return <Text type="secondary">-</Text>;
-          
+
           return (
-            <div className="flex flex-col gap-2 min-w-[150px]">
+            <div className="flex flex-col gap-2 min-w-37.5">
               {invoicesData.map(inv => {
                 const uniqueTypes = Array.from(new Set(inv.items)) as string[];
                 const isPaid = inv.status === 'PAID';
-                
+
                 return (
                   <div key={inv.id} className={`p-2 rounded-md border shadow-sm ${isPaid ? 'bg-green-50/50 border-green-200' : 'bg-red-50/50 border-red-200'}`}>
                     <div className="flex justify-between items-center mb-1">
@@ -176,10 +177,10 @@ interface FilterFormValues {
   // Process data into matrix format
   const tableData = useMemo(() => {
     if (!invoices.length || !queryParams) return [];
-    
+
     // Map of userId -> monthKey -> invoices
     const userMatrix: Record<number, Record<string, MatrixInvoiceItem[]>> = {};
-    
+
     // Track which users actually have invoices to display them
     const activeUserIds = new Set<number>();
 
@@ -187,21 +188,21 @@ interface FilterFormValues {
       const dDate = dayjs(invoice.billing_period);
       const monthKey = dDate.format('YYYY-MM');
       const uid = invoice.user_id;
-      
+
       if (!userMatrix[uid]) {
         userMatrix[uid] = {};
       }
       if (!userMatrix[uid][monthKey]) {
         userMatrix[uid][monthKey] = [];
       }
-      
+
       activeUserIds.add(uid);
-      
+
       userMatrix[uid][monthKey].push({
         id: invoice.id,
-        reference_code: invoice.reference_code,
+        reference_code: invoice.reference_code ?? '',
         status: invoice.status,
-        amount: invoice.amount,
+        amount: invoice.amount ?? invoice.total_amount ?? 0,
         items: invoice.items.map(i => i.item_type)
       });
     });
@@ -220,12 +221,12 @@ interface FilterFormValues {
         key: user.id,
         user: user,
       };
-      
+
       const userMonths = userMatrix[user.id] || {};
       Object.keys(userMonths).forEach(mKey => {
         rowData[mKey] = userMonths[mKey];
       });
-      
+
       return rowData;
     });
 
@@ -364,33 +365,33 @@ interface FilterFormValues {
         </div>
       </div>
       <div className="bg-white p-4 rounded-xl border border-gray-100">
-        <Form 
-          form={form} 
-          layout="vertical" 
+        <Form
+          form={form}
+          layout="vertical"
           onFinish={onFinish}
           className="flex flex-wrap gap-x-4"
         >
-          <Form.Item 
-            name="team_id" 
-            label="Đội nhóm" 
-            className="mb-0 min-w-[200px] flex-1"
+          <Form.Item
+            name="team_id"
+            label="Đội nhóm"
+            className="mb-0 min-w-50 flex-1"
           >
             <Select placeholder="Tất cả nhóm" allowClear>
-              {teams.map(t => (
+              {(teams ?? []).map(t => (
                 <Option key={t.id} value={t.id}>{t.team_name}</Option>
               ))}
             </Select>
           </Form.Item>
-          
-          <Form.Item 
-            name="user_ids" 
-            label="Thành viên" 
-            className="mb-0 min-w-[250px] flex-1"
+
+          <Form.Item
+            name="user_ids"
+            label="Thành viên"
+            className="mb-0 min-w-62.5 flex-1"
           >
-            <Select 
-              mode="multiple" 
-              placeholder="Tất cả thành viên" 
-              allowClear 
+            <Select
+              mode="multiple"
+              placeholder="Tất cả thành viên"
+              allowClear
               maxTagCount="responsive"
             >
               {filteredUsers.map(u => (
@@ -398,18 +399,18 @@ interface FilterFormValues {
               ))}
             </Select>
           </Form.Item>
-          
-          <Form.Item 
-            name="dateRange" 
-            label="Kỳ hóa đơn (Khoảng thời gian)" 
+
+          <Form.Item
+            name="dateRange"
+            label="Kỳ hóa đơn (Khoảng thời gian)"
             rules={[{ required: true, message: 'Vui lòng chọn kỳ hóa đơn' }]}
-            className="mb-0 min-w-[250px]"
+            className="mb-0 min-w-62.5"
           >
             <RangePicker picker="month" format="MM/YYYY" className="w-full" placeholder={['Tháng bắt đầu', 'Tháng kết thúc']} />
           </Form.Item>
-          
+
           <div className="flex items-end mb-0">
-            <Button type="primary" htmlType="submit" icon={<SearchOutlined />} className="h-[32px]">
+            <Button type="primary" htmlType="submit" icon={<SearchOutlined />} className="h-8">
               Xem báo cáo
             </Button>
           </div>
@@ -418,9 +419,9 @@ interface FilterFormValues {
 
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         {queryParams ? (
-          <Table 
-            columns={columns} 
-            dataSource={tableData} 
+          <Table
+            columns={columns}
+            dataSource={tableData}
             loading={isFetching}
             scroll={{ x: 'max-content' }}
             pagination={false}

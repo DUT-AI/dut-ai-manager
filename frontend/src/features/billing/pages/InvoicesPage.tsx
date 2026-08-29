@@ -22,10 +22,10 @@ import {
   CloseCircleOutlined,
   WarningOutlined
 } from '@ant-design/icons';
-import { useMyInvoices, useInvoiceDetail } from '@/hooks/useBilling';
+import { useMyInvoices, useInvoiceDetail } from '@/features/billing/hooks/useBilling';
 import { useViolations } from '@/hooks';
-import { InvoiceStatus } from '@/types/billing.types';
-import type { InvoiceStatusType } from '@/types/billing.types';
+import { InvoiceStatus } from '@/features/billing/types/billing.types';
+import type { InvoiceStatusType } from '@/features/billing/types/billing.types';
 import dayjs from 'dayjs';
 import { motion, type Variants } from 'motion/react';
 
@@ -33,22 +33,22 @@ const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
 
 const containerVariants: Variants = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: {
-            staggerChildren: 0.1
-        }
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
     }
+  }
 };
 
 const itemVariants: Variants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-        opacity: 1,
-        y: 0,
-        transition: { duration: 0.4, ease: "easeOut" }
-    }
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4, ease: "easeOut" }
+  }
 };
 
 const StatusTag = ({ status }: { status: InvoiceStatusType }) => {
@@ -77,7 +77,7 @@ const InvoicesPage = () => {
     selectedInvoiceId && invoices?.find(i => i.id === selectedInvoiceId)?.status === InvoiceStatus.PENDING ? 5000 : undefined
   );
 
-  const match = detail?.description.match(/tháng\s+(\d{2})\/(\d{4})/i);
+  const match = detail?.description?.match(/tháng\s+(\d{2})\/(\d{4})/i);
   const month = match ? parseInt(match[1]) : (detail ? dayjs(detail.created_at).month() + 1 : undefined);
   const year = match ? parseInt(match[2]) : (detail ? dayjs(detail.created_at).year() : undefined);
 
@@ -132,10 +132,10 @@ const InvoicesPage = () => {
       title: 'Thao tác',
       key: 'action',
       render: (_: any, record: any) => (
-        <Button 
-          type="primary" 
-          ghost 
-          icon={<EyeOutlined />} 
+        <Button
+          type="primary"
+          ghost
+          icon={<EyeOutlined />}
           size="small"
           onClick={() => {
             setSelectedInvoiceId(record.id);
@@ -149,11 +149,11 @@ const InvoicesPage = () => {
   ];
 
   return (
-    <motion.div 
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="p-4 md:p-6 bg-[#f8fafc] min-h-full"
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="p-4 md:p-6 bg-[#f8fafc] min-h-full"
     >
       <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 px-3 md:px-0">
         <Space size="middle">
@@ -168,11 +168,11 @@ const InvoicesPage = () => {
       </motion.div>
 
       <motion.div variants={itemVariants}>
-        <Card 
-            className="shadow-sm border-gray-100 rounded-xl overflow-hidden"
-            styles={{ body: { padding: '0' } }}
+        <Card
+          className="shadow-sm border-gray-100 rounded-xl overflow-hidden"
+          styles={{ body: { padding: '0' } }}
         >
-            <Table
+          <Table
             dataSource={invoices}
             columns={columns}
             rowKey="id"
@@ -180,7 +180,7 @@ const InvoicesPage = () => {
             locale={{ emptyText: <Empty description="Bạn chưa có hóa đơn nào" /> }}
             pagination={{ pageSize: 10 }}
             scroll={{ x: 'max-content' }}
-            />
+          />
         </Card>
       </motion.div>
 
@@ -206,7 +206,7 @@ const InvoicesPage = () => {
             <Descriptions column={1} bordered size="small" className="mb-6">
               <Descriptions.Item label="Nội dung">{detail.description}</Descriptions.Item>
               <Descriptions.Item label="Số tiền">
-                <Title level={4} className="mb-0! text-blue-600">{detail.amount.toLocaleString()} VNĐ</Title>
+                <Title level={4} className="mb-0! text-blue-600">{(detail.amount ?? detail.total_amount ?? 0).toLocaleString()} VNĐ</Title>
               </Descriptions.Item>
               <Descriptions.Item label="Mã tham chiếu">
                 <Text copyable strong>{detail.reference_code}</Text>
@@ -244,17 +244,17 @@ const InvoicesPage = () => {
                   size="small"
                   rowKey="id"
                   columns={[
-                    { 
-                      title: 'Ngày vi phạm', 
-                      dataIndex: 'date', 
+                    {
+                      title: 'Ngày vi phạm',
+                      dataIndex: 'date',
                       key: 'date',
                       width: 140,
                       render: (d) => dayjs(d).format('DD/MM/YYYY')
                     },
-                    { 
-                      title: 'Lý do', 
-                      dataIndex: 'reason', 
-                      key: 'reason' 
+                    {
+                      title: 'Lý do',
+                      dataIndex: 'reason',
+                      key: 'reason'
                     },
                   ]}
                   className="border border-red-100 rounded-lg overflow-hidden bg-red-50/10"
@@ -266,10 +266,10 @@ const InvoicesPage = () => {
               <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 flex flex-col items-center">
                 <Space direction="vertical" align="center" size="middle" className="w-full">
                   <div className="bg-white p-3 rounded-xl shadow-md">
-                    <img 
-                      src={detail.qr_url} 
-                      alt="VietQR Payment" 
-                      className="w-full max-w-[280px] aspect-square object-contain"
+                    <img
+                      src={detail.qr_url}
+                      alt="VietQR Payment"
+                      className="w-full max-w-70 aspect-square object-contain"
                     />
                   </div>
                   <div className="text-center">
@@ -289,8 +289,8 @@ const InvoicesPage = () => {
                 <CheckCircleOutlined className="text-5xl text-green-500 mb-4" />
                 <Title level={4} className="text-green-700">Thanh toán hoàn tất</Title>
                 <Text>Mã giao dịch: <Text strong>{detail.transaction_id || 'N/A'}</Text></Text>
-                <Button 
-                  type="primary" 
+                <Button
+                  type="primary"
                   className="mt-6 bg-green-600 border-none h-10 px-8 rounded-lg"
                   onClick={() => setIsModalOpen(false)}
                 >

@@ -1,8 +1,8 @@
 import { Modal, Space, Descriptions, Avatar, Typography, Tag, Table, Spin } from 'antd';
 import { InfoCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { InvoiceStatus } from '@/types/billing.types';
-import type { Invoice } from '@/types/billing.types';
+import { InvoiceStatus } from '@/features/billing/types/billing.types';
+import type { Invoice } from '@/features/billing/types/billing.types';
 import type { UserResponse } from '@/types/user.types';
 import { useViolations } from '@/hooks';
 
@@ -25,7 +25,7 @@ const InvoiceDetailModal = ({
 }: InvoiceDetailModalProps) => {
   const user = users.find(u => u.id === detail?.user_id);
 
-  const match = detail?.description.match(/tháng\s+(\d{2})\/(\d{4})/i);
+  const match = detail?.description?.match(/tháng\s+(\d{2})\/(\d{4})/i);
   const month = match ? parseInt(match[1]) : (detail ? dayjs(detail.created_at).month() + 1 : undefined);
   const year = match ? parseInt(match[2]) : (detail ? dayjs(detail.created_at).year() : undefined);
 
@@ -68,7 +68,7 @@ const InvoiceDetailModal = ({
             <Descriptions.Item label="Mã tham chiếu" span={2}><Text strong>{detail.reference_code}</Text></Descriptions.Item>
             <Descriptions.Item label="Mã giao dịch" span={2}>{detail.reference_code || 'Chưa có'}</Descriptions.Item>
             <Descriptions.Item label="Tổng tiền" span={2}>
-              <Title level={4} className="mb-0! text-indigo-600">{detail.amount.toLocaleString()} VNĐ</Title>
+              <Title level={4} className="mb-0! text-indigo-600">{detail.amount?.toLocaleString()} VNĐ</Title>
             </Descriptions.Item>
           </Descriptions>
 
@@ -98,17 +98,17 @@ const InvoiceDetailModal = ({
                 size="small"
                 rowKey="id"
                 columns={[
-                  { 
-                    title: 'Ngày vi phạm', 
-                    dataIndex: 'date', 
+                  {
+                    title: 'Ngày vi phạm',
+                    dataIndex: 'date',
                     key: 'date',
                     width: 140,
                     render: (d) => dayjs(d).format('DD/MM/YYYY')
                   },
-                  { 
-                    title: 'Lý do', 
-                    dataIndex: 'reason', 
-                    key: 'reason' 
+                  {
+                    title: 'Lý do',
+                    dataIndex: 'reason',
+                    key: 'reason'
                   },
                 ]}
                 className="border border-red-100 rounded-lg overflow-hidden bg-red-50/10"

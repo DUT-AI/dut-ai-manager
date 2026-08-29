@@ -41,6 +41,7 @@ export const invoiceSchema = z.object({
   status: z.enum(['PENDING', 'PAID', 'CANCELLED', 'EXPIRED']),
   reference_code: z.string().optional(),
   invoice_code: z.string().optional(),
+  transaction_id: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   billing_period: z.string(),
   created_at: z.string(),
@@ -67,3 +68,42 @@ export const updateInvoiceSchema = z.object({
   items: z.array(invoiceItemSchema).optional(),
 });
 export type UpdateInvoiceFormValues = z.infer<typeof updateInvoiceSchema>;
+
+// Type Aliases & Legacy Types
+export type InvoiceStatusType = InvoiceStatus;
+export type InvoiceCreate = CreateInvoiceFormValues;
+
+// Monthly Invoice Types
+export interface MonthlyInvoiceExtraItem {
+  item_type: string;
+  amount: number;
+  note?: string;
+}
+
+export interface MonthlyInvoiceCreate {
+  month: number;
+  year: number;
+  team_id?: number;
+  user_ids?: number[];
+  violation_price?: number;
+  fund_amount?: number;
+  extra_items?: MonthlyInvoiceExtraItem[];
+  execute?: boolean;
+}
+
+export interface MonthlyInvoiceItemPreview {
+  user_id?: number;
+  user_name: string;
+  violation_count: number;
+  violation_amount: number;
+  fund_amount: number;
+  extra_items_amount?: number;
+  total_amount: number;
+  items?: InvoiceItem[];
+}
+
+export interface MonthlyInvoicePreviewResponse {
+  items: MonthlyInvoiceItemPreview[];
+  total_users?: number;
+  total_amount?: number;
+}

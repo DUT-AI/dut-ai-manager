@@ -2,7 +2,7 @@ export * from './api.types';
 export * from './auth.types';
 export * from './user.types';
 export * from './team.types';
-export * from './billing.types';
+export * from '../features/billing/types/billing.types';
 export * from './expense.types';
 export * from './meeting.types';
 export * from './violation.types';
