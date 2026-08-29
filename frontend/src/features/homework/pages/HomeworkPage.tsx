@@ -9,20 +9,20 @@ import { motion, type Variants } from 'motion/react';
 import type { ColumnsType } from 'antd/es/table';
 
 // Hooks & Types
-import { useHomeworkActions } from './homework/hooks/useHomeworkActions';
-import type { Homework } from '@/types/homework.types';
+import { useHomeworkActions } from '../hooks/useHomeworkActions';
+import type { Homework } from '@/features/homework/types/homework.types';
 import { HomeworkPermission } from '@/types/rbac.types';
 
 // Sub-components
-import { SubmissionStatusTag } from './homework/components/SubmissionStatusTag';
-import { DeadlineText } from './homework/components/DeadlineText';
-import { HomeworkMobileList } from './homework/components/HomeworkMobileList';
-import { 
-    HomeworkFormModal, 
-    SubmitHomeworkModal, 
-    SubmissionsDrawer, 
-    HomeworkReportTab 
-} from '@/components/homework';
+import {
+    SubmissionStatusTag,
+    DeadlineText,
+    HomeworkMobileList,
+    HomeworkFormModal,
+    SubmitHomeworkModal,
+    SubmissionsDrawer,
+    HomeworkReportTab
+} from '../components';
 
 const { Title, Text } = Typography;
 
@@ -40,32 +40,32 @@ const itemVariants: Variants = {
 export const HomeworkPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState('1');
     const screens = Grid.useBreakpoint();
-    
+
     // Core Logic Hook
-    const { 
-        state, 
+    const {
+        state,
         dispatch,
-        data, 
-        user, 
-        hasPermission, 
-        isAdminOrLeader, 
-        handlers 
+        data,
+        user,
+        hasPermission,
+        isAdminOrLeader,
+        handlers
     } = useHomeworkActions(activeTab);
 
-    const { 
-        isFormModalOpen, isSubmitModalOpen, isSubmissionsDrawerOpen, 
-        selectedHomework, editingHomework, currentAssignees, assigneesLoading 
+    const {
+        isFormModalOpen, isSubmitModalOpen, isSubmissionsDrawerOpen,
+        selectedHomework, editingHomework, currentAssignees, assigneesLoading
     } = state;
 
-    const { 
-        myHomeworks, allHomeworks, users, teams, 
-        myLoading, allLoading 
+    const {
+        myHomeworks, allHomeworks, users, teams,
+        myLoading, allLoading
     } = data;
 
-    const { 
-        handleOpenCreate, handleOpenEdit, handleDelete, 
-        handleOpenSubmit, handleViewSubmissions, 
-        handleFormSuccess, handleSubmitSuccess 
+    const {
+        handleOpenCreate, handleOpenEdit, handleDelete,
+        handleOpenSubmit, handleViewSubmissions,
+        handleFormSuccess, handleSubmitSuccess
     } = handlers;
 
     // Table Columns Definitions

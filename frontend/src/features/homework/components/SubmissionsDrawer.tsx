@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { Drawer, Table, Select, Tag, Space, Typography, message, Avatar } from 'antd';
 import { LinkOutlined, UserOutlined, EyeOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import type { Homework, HomeworkSubmission } from '@/types/homework.types';
-import { HomeworkStatus } from '@/types/homework.types';
-import { homeworkService } from '@/services/api/homework.service';
+import type { Homework, HomeworkSubmission } from '@/features/homework/types/homework.types';
+import { HomeworkStatus } from '@/features/homework/types/homework.types';
+import { homeworkService } from '@/features/homework/services/homework.service';
 import type { ColumnsType } from 'antd/es/table';
 import { FeedbackModal } from './FeedbackModal';
 
@@ -163,10 +163,10 @@ export const SubmissionsDrawer = ({ open, homework, onClose }: Props) => {
                 rowKey="id"
                 loading={loading}
             />
-            <FeedbackModal 
-                open={!!selectedSubmission} 
-                submission={selectedSubmission} 
-                onClose={() => setSelectedSubmission(null)} 
+            <FeedbackModal
+                open={!!selectedSubmission}
+                submission={selectedSubmission}
+                onClose={() => setSelectedSubmission(null)}
             />
         </Drawer>
     );

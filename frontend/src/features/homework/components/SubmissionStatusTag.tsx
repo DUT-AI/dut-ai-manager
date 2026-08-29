@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tag } from 'antd';
-import type { Homework } from '@/types/homework.types';
+import type { Homework } from '@/features/homework/types/homework.types';
 
 import { useAuth } from '@/context/AuthContext';
 
@@ -24,8 +24,8 @@ export const SubmissionStatusTag: React.FC<SubmissionStatusTagProps> = ({ record
     const config = statusConfig[status] || { color: 'default' };
 
     return (
-        <Tag 
-            color={config.color} 
+        <Tag
+            color={config.color}
             className="m-0 uppercase font-bold text-[10px] md:text-[11px] px-2 md:px-3 py-0.5 rounded-full text-center min-w-[70px] md:min-w-[80px]"
         >
             {status}

@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { Modal, Form, Input, DatePicker, Select, message, Divider, Upload, Button } from 'antd';
 import { TeamOutlined, UserOutlined, UploadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import type { Homework } from '@/types/homework.types';
+import type { Homework } from '@/features/homework/types/homework.types';
 import type { UserResponse } from '@/types/user.types';
 import type { TeamResponse } from '@/types/team.types';
-import { homeworkService } from '@/services/api/homework.service';
+import { homeworkService } from '@/features/homework/services/homework.service';
 
 const { TextArea } = Input;
 

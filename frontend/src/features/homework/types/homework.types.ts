@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { userRefSchema } from './activity.types';
+import { userRefSchema } from '../../../types/activity.types';
 
 export const HomeworkStatus = {
   NOT_SUBMITTED: 'NOT_SUBMITTED',
@@ -37,6 +37,8 @@ export const homeworkSubmissionSchema = z.object({
   is_pass: z.boolean().nullable().optional(),
   score: z.number().nullable().optional(),
   feedback: z.string().nullable().optional(),
+  is_plagiarized: z.boolean().optional(),
+  plagiarized_from_user_id: z.number().nullable().optional(),
   scores: z.array(scoreDetailSchema).optional(),
   submitted_at: z.string().optional(),
 });
@@ -89,3 +91,10 @@ export const homeworkCheckSchema = z.object({
   scores: z.array(scoreItemSchema).optional(),
 });
 export type HomeworkCheck = z.infer<typeof homeworkCheckSchema>;
+
+export const homeworkReportResponseSchema = z.object({
+  user_id: z.number(),
+  owner: userRefSchema.nullable().optional(),
+  unsubmitted_count: z.number(),
+});
+export type HomeworkReportResponse = z.infer<typeof homeworkReportResponseSchema>;

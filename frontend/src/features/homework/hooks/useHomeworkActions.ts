@@ -1,15 +1,17 @@
 import { useReducer, useCallback } from 'react';
 import { message } from 'antd';
 import { useAuth } from '@/context/AuthContext';
-import { 
-    useMyHomeworks, 
-    useHomeworks, 
-    useDeleteHomework,
-    useUsers,
-    useTeams
-} from '@/hooks';
-import { homeworkService } from '@/services/api/homework.service';
-import type { Homework } from '@/types/homework.types';
+import type { HomeworkSubmission } from '../types/homework.types';
+import {
+    useMyHomeworks,
+    useHomeworks,
+    useDeleteHomework
+} from './useHomeworks';
+
+// Các hook dùng chung hệ thống vẫn lấy từ global hooks
+import { useUsers, useTeams } from '@/hooks';
+import { homeworkService } from '@/features/homework/services/homework.service';
+import type { Homework } from '@/features/homework/types/homework.types';
 
 type HomeworkModalState = {
     isFormModalOpen: boolean;
@@ -64,11 +66,11 @@ function homeworkModalReducer(state: HomeworkModalState, action: HomeworkModalAc
 export const useHomeworkActions = (activeTab: string) => {
     const { user, hasPermission, isAdminOrLeader } = useAuth();
     const [state, dispatch] = useReducer(homeworkModalReducer, initialState);
-    
+
     const { data: myData, isLoading: myLoading, refetch: refetchMyHomeworks } = useMyHomeworks();
     const { data: allData, isLoading: allLoading, refetch: refetchAllHomeworks } = useHomeworks();
     const { data: usersData = [] } = useUsers();
-    const { data: teamsData = [] } = useTeams();
+    const { data: teamsData } = useTeams();
     const deleteHomeworkMutation = useDeleteHomework();
 
     const refreshData = useCallback(() => {
@@ -121,7 +123,7 @@ export const useHomeworkActions = (activeTab: string) => {
             myHomeworks: myData || [],
             allHomeworks: allData || [],
             users: usersData,
-            teams: teamsData,
+            teams: teamsData ?? [],
             myLoading,
             allLoading
         },

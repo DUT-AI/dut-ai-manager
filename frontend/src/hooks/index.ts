@@ -7,8 +7,6 @@ export * from './useTeams';
 // RBAC (Roles & Permissions)
 export * from './useRbac';
 
-// Homeworks
-export * from './useHomeworks';
 
 // Violations
 export * from './useViolations';

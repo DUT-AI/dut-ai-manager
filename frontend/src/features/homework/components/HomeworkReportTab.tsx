@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Table, Typography, Drawer, Avatar, Tag, Space, List, Card, Grid } from 'antd';
 import { UserOutlined, EyeOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { useUnsubmittedReport, useUnsubmittedByUser } from '@/hooks/useHomeworks';
-import type { HomeworkReportResponse, Homework } from '@/types/homework.types';
+import { useUnsubmittedReport, useUnsubmittedByUser } from '@/features/homework/hooks/useHomeworks';
+import type { HomeworkReportResponse, Homework } from '@/features/homework/types/homework.types';
 import type { ColumnsType } from 'antd/es/table';
 
 const { Text, Title } = Typography;

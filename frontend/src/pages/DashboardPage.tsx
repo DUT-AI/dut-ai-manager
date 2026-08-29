@@ -1,43 +1,14 @@
-import AcademicReportPage from './AcademicReportPage';
-import ActivityReportPage from './ActivityReportPage';
-import RobotInterfacePage from './RobotInterfacePage';
-import type { MenuProps } from 'antd';
-import { Layout, Menu, Spin, Tag, Typography, Drawer, Grid } from 'antd';
-import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import ActivityCalendarPage from './ActivityCalendarPage';
-import HomePage from './HomePage';
-import ProfilePage from './ProfilePage';
-import RoleManagementPage from './RoleManagementPage';
-import UserManagementPage from './UserManagementPage';
-import ViolationManagementPage from './ViolationManagementPage';
-import PermissionManagementPage from './PermissionManagementPage';
-import TeamManagementPage from './TeamManagementPage';
-import { HomeworkPage } from './HomeworkPage';
-import { SettingsPage } from './SettingsPage';
-import { TrashPage } from '@/pages/TrashPage';
-import MeetingCalendarPage from './MeetingCalendarPage';
-import InvoicesPage from './InvoicesPage';
-import AdminBillingPage from './AdminBillingPage';
 import { useState } from 'react';
-
-import {
-    WarningOutlined,
-    FileTextOutlined,
-    UserOutlined,
-    DeleteOutlined,
-    TrophyOutlined,
-    DashboardOutlined,
-    SafetyCertificateOutlined,
-    TeamOutlined,
-    CalendarOutlined,
-    BookOutlined,
-    SettingOutlined,
-    VideoCameraOutlined,
-    CreditCardOutlined,
-    AuditOutlined,
-} from '@ant-design/icons';
+import { Layout, Menu, Spin, Tag, Typography, Drawer, Grid } from 'antd';
+import type { MenuProps } from 'antd';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 import HeaderLayout from '@/components/MainLayout/Header';
+
+// Import cấu hình mới tạo
+import { sidebarMenuConfig } from '@/config/menu';
+import { dashboardRoutesConfig } from '@/routes/dashboardRoutes';
+
 const { Content, Sider } = Layout;
 const { Text } = Typography;
 const { useBreakpoint } = Grid;
@@ -117,98 +88,15 @@ const DashboardPage = () => {
         }
     };
 
-    const sideMenuItems: MenuProps['items'] = [
-        {
-            key: 'profile',
-            icon: <DashboardOutlined />,
-            label: 'Tổng quan',
-            onClick: () => handleMenuClick('/dashboard'),
-        },
-        {
-            key: 'academic_reports',
-            icon: <TrophyOutlined />,
-            label: 'Báo cáo Học tập',
-            onClick: () => handleMenuClick('/dashboard/academic-reports'),
-        },
-        {
-            key: 'activity_reports',
-            icon: <AuditOutlined />,
-            label: 'Báo cáo Hoạt động',
-            onClick: () => handleMenuClick('/dashboard/activity-reports'),
-        },
-        {
-            key: 'rbac',
-            icon: <SafetyCertificateOutlined />,
-            label: 'Quản lý Quyền',
-            onClick: () => handleMenuClick('/dashboard/rbac'),
-        },
-        {
-            key: 'users',
-            icon: <UserOutlined />,
-            label: 'Quản lý Thành viên',
-            onClick: () => handleMenuClick('/dashboard/users'),
-        },
-        {
-            key: 'teams',
-            icon: <TeamOutlined />,
-            label: 'Quản lý Nhóm (Teams)',
-            onClick: () => handleMenuClick('/dashboard/teams'),
-        },
-        {
-            key: 'activities',
-            icon: <CalendarOutlined />,
-            label: 'Lịch Hoạt động',
-            onClick: () => handleMenuClick('/dashboard/activities'),
-        },
-        {
-            key: 'meetings',
-            icon: <VideoCameraOutlined />,
-            label: 'Lịch Meeting',
-            onClick: () => handleMenuClick('/dashboard/meetings'),
-        },
-        {
-            key: 'permissions',
-            icon: <FileTextOutlined />,
-            label: 'Quản lý Đơn phép',
-            onClick: () => handleMenuClick('/dashboard/permissions'),
-        },
-        {
-            key: 'violations',
-            icon: <WarningOutlined />,
-            label: 'Quản lý Vi phạm',
-            onClick: () => handleMenuClick('/dashboard/violations'),
-        },
-        {
-            key: 'homework',
-            icon: <BookOutlined />,
-            label: 'Bài tập về nhà',
-            onClick: () => handleMenuClick('/dashboard/homeworks'),
-        },
-        {
-            key: 'invoices',
-            icon: <CreditCardOutlined />,
-            label: 'Hóa đơn của tôi',
-            onClick: () => handleMenuClick('/dashboard/invoices'),
-        },
-        ...(hasPermission('billing:read') ? [{
-            key: 'admin_billing',
-            icon: <AuditOutlined />,
-            label: 'Quản lý Hóa đơn',
-            onClick: () => handleMenuClick('/dashboard/admin-billing'),
-        }] : []),
-        {
-            key: 'settings',
-            icon: <SettingOutlined />,
-            label: 'Cài đặt',
-            onClick: () => handleMenuClick('/dashboard/settings'),
-        },
-        {
-            key: 'trash',
-            icon: <DeleteOutlined />,
-            label: 'Thùng rác',
-            onClick: () => handleMenuClick('/dashboard/trash'),
-        },
-    ];
+    // Map cấu hình tĩnh thành định dạng menu của Antd dựa trên quyền hạn (hasPermission)
+    const sideMenuItems: MenuProps['items'] = sidebarMenuConfig
+        .filter(item => !item.permission || hasPermission(item.permission))
+        .map(item => ({
+            key: item.key,
+            icon: item.icon,
+            label: item.label,
+            onClick: () => handleMenuClick(item.path),
+        }));
 
     const isRobotPage = location.pathname.startsWith('/dashboard/robot');
 
@@ -221,10 +109,11 @@ const DashboardPage = () => {
     }
 
     if (isRobotPage) {
+        const robotRoute = dashboardRoutesConfig.find(r => r.path === 'robot/*');
         return (
             <div className="h-screen w-screen overflow-hidden">
                 <Routes>
-                    <Route path="robot/*" element={<RobotInterfacePage />} />
+                    <Route path="robot/*" element={robotRoute?.element ?? null} />
                 </Routes>
             </div>
         );
@@ -262,23 +151,21 @@ const DashboardPage = () => {
                 <Content className="p-0 bg-[#f8fafc] overflow-auto custom-scrollbar">
                     <div className="min-h-full relative">
                         <Routes>
-                            <Route index element={<HomePage />} />
-                            <Route path="academic-reports" element={<AcademicReportPage />} />
-                            <Route path="activity-reports" element={<ActivityReportPage />} />
-                            <Route path="robot/*" element={<RobotInterfacePage />} />
-                            <Route path="rbac" element={<RoleManagementPage />} />
-                            <Route path="users" element={<UserManagementPage />} />
-                            <Route path="activities" element={<ActivityCalendarPage />} />
-                            <Route path="permissions" element={<PermissionManagementPage />} />
-                            <Route path="violations" element={<ViolationManagementPage />} />
-                            <Route path="teams" element={<TeamManagementPage />} />
-                            <Route path="homeworks" element={<HomeworkPage />} />
-                            <Route path="meetings" element={<MeetingCalendarPage />} />
-                            <Route path="invoices" element={<InvoicesPage />} />
-                            <Route path="admin-billing" element={<AdminBillingPage />} />
-                            <Route path="settings" element={<SettingsPage />} />
-                            <Route path="trash" element={<TrashPage />} />
-                            <Route path="profile/:userId" element={<ProfilePage />} />
+                            {dashboardRoutesConfig.map((route, idx) => {
+                                // Kiểm tra quyền truy cập route
+                                if (route.permission && !hasPermission(route.permission)) {
+                                    return <Route key={idx} path={route.path} element={<Navigate to="/dashboard" replace />} />;
+                                }
+
+                                return (
+                                    <Route
+                                        key={idx}
+                                        index={route.index}
+                                        path={route.index ? undefined : route.path}
+                                        element={route.element}
+                                    />
+                                );
+                            })}
                             <Route path="*" element={<Navigate to="/dashboard" replace />} />
                         </Routes>
                     </div>

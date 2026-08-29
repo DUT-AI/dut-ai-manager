@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { bonusPointResponseSchema, permissionRequestResponseSchema, userRefSchema } from './activity.types';
 import { violationResponseSchema } from './violation.types';
-import { homeworkSchema } from './homework.types';
+import { homeworkSchema } from '../features/homework/types/homework.types';
 import { meetingResponseSchema } from './meeting.types';
 import { userResponseSchema } from './user.types';
 

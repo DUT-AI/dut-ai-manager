@@ -4,7 +4,6 @@ export * from './user.types';
 export * from './team.types';
 export * from './billing.types';
 export * from './expense.types';
-export * from './homework.types';
 export * from './meeting.types';
 export * from './violation.types';
 

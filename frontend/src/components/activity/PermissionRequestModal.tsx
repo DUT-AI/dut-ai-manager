@@ -2,7 +2,7 @@ import { Modal, Form, Select, TimePicker, Input } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import type { PermissionRequestResponse } from '@/types/activity.types';
-import type { Homework } from '@/types/homework.types';
+import type { Homework } from '@/features/homework/types/homework.types';
 import type { MeetingResponse } from '@/types/meeting.types';
 
 const { Option } = Select;
@@ -37,7 +37,7 @@ export const PermissionRequestModal = ({ open, editingItem, initialDate, homewor
             const timeStr = values.start_time.format('HH:mm:ss');
             finalStartTime = `${dateStr}T${timeStr}`;
         }
-        
+
         const formattedValues = {
             ...values,
             start_time: finalStartTime,

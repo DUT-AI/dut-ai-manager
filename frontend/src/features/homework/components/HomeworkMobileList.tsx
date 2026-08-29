@@ -1,7 +1,7 @@
 import React from 'react';
 import { List, Card, Button, Space, Popconfirm, Typography } from 'antd';
 import { UploadOutlined, EyeOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import type { Homework } from '@/types/homework.types';
+import type { Homework } from '@/features/homework/types/homework.types';
 import { HomeworkPermission } from '@/types/rbac.types';
 import { SubmissionStatusTag } from './SubmissionStatusTag';
 import { DeadlineText } from './DeadlineText';

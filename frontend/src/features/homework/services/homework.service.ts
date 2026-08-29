@@ -1,13 +1,13 @@
-import axiosInstance from '../axiosInstance';
+import axiosInstance from '@/services/axiosInstance';
 import type { ApiResponse } from '@/types/api.types';
-import { HomeworkStatus } from '@/types/homework.types';
-import type { 
-    Homework, 
-    HomeworkCreate, 
-    HomeworkSubmission, 
+import { HomeworkStatus } from '@/features/homework/types/homework.types';
+import type {
+    Homework,
+    HomeworkCreate,
+    HomeworkSubmission,
     HomeworkUpdate,
     HomeworkReportResponse
-} from '@/types/homework.types';
+} from '@/features/homework/types/homework.types';
 
 export const homeworkService = {
     baseUrl: 'homeworks',
@@ -15,15 +15,15 @@ export const homeworkService = {
 
     // Homeworks
     async getAll(skip = 0, limit = 100, deleted = false) {
-        const response = await axiosInstance.get<ApiResponse<Homework[]>>(`/${this.baseUrl}`, { 
-            params: { skip, limit, deleted } 
+        const response = await axiosInstance.get<ApiResponse<Homework[]>>(`/${this.baseUrl}`, {
+            params: { skip, limit, deleted }
         });
         return response.data.data;
     },
 
     async getMyHomeworks(skip = 0, limit = 100) {
-        const response = await axiosInstance.get<ApiResponse<Homework[]>>(`/${this.baseUrl}/me`, { 
-            params: { skip, limit } 
+        const response = await axiosInstance.get<ApiResponse<Homework[]>>(`/${this.baseUrl}/me`, {
+            params: { skip, limit }
         });
         return response.data.data;
     },
@@ -38,7 +38,7 @@ export const homeworkService = {
         formData.append('title', data.title);
         formData.append('description', data.description);
         formData.append('deadline', data.deadline);
-        
+
         if (data.assignee_ids) {
             data.assignee_ids.forEach(id => formData.append('assignee_ids', id.toString()));
         }
@@ -56,13 +56,13 @@ export const homeworkService = {
         });
         return response.data.data;
     },
-    
+
     async update(id: number, data: HomeworkUpdate & { file?: File }) {
         const formData = new FormData();
         if (data.title) formData.append('title', data.title);
         if (data.description) formData.append('description', data.description);
         if (data.deadline) formData.append('deadline', typeof data.deadline === 'string' ? data.deadline : (data.deadline as { toISOString: () => string }).toISOString());
-        
+
         if (data.assignee_ids) {
             data.assignee_ids.forEach((id: number) => formData.append('assignee_ids', id.toString()));
         }
@@ -135,8 +135,8 @@ export const homeworkService = {
     },
 
     async updateStatus(submissionId: number, status: HomeworkStatus) {
-        const response = await axiosInstance.put<ApiResponse<HomeworkSubmission>>(`/${this.submissionUrl}/${submissionId}/status`, null, { 
-            params: { status } 
+        const response = await axiosInstance.put<ApiResponse<HomeworkSubmission>>(`/${this.submissionUrl}/${submissionId}/status`, null, {
+            params: { status }
         });
         return response.data.data;
     }

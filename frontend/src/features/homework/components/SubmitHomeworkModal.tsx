@@ -3,9 +3,9 @@ import { Modal, Card, Statistic, Typography, message, Upload, Button } from 'ant
 import { FileZipOutlined, DownloadOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd';
 import dayjs from 'dayjs';
-import type { Homework, HomeworkSubmission } from '@/types/homework.types';
-import { HomeworkStatus } from '@/types/homework.types';
-import { homeworkService } from '@/services/api/homework.service';
+import type { Homework, HomeworkSubmission } from '@/features/homework/types/homework.types';
+import { HomeworkStatus } from '@/features/homework/types/homework.types';
+import { homeworkService } from '@/features/homework/services/homework.service';
 import { FeedbackModal } from './FeedbackModal';
 
 const { Text, Link } = Typography;
@@ -135,9 +135,9 @@ export const SubmitHomeworkModal = ({ open, homework, onSuccess, onCancel }: Pro
                                 title="Trạng thái hiện tại"
                                 value={
                                     mySubmission.status === HomeworkStatus.NOT_SUBMITTED ? 'Chưa nộp' :
-                                    mySubmission.status === HomeworkStatus.SUBMITTED ? 'Đã nộp' :
-                                    mySubmission.status === HomeworkStatus.LeaderChecked ? 'Leader Check' :
-                                    mySubmission.status === HomeworkStatus.FINISHED ? 'Hoàn thành' : mySubmission.status
+                                        mySubmission.status === HomeworkStatus.SUBMITTED ? 'Đã nộp' :
+                                            mySubmission.status === HomeworkStatus.LeaderChecked ? 'Leader Check' :
+                                                mySubmission.status === HomeworkStatus.FINISHED ? 'Hoàn thành' : mySubmission.status
                                 }
                                 valueStyle={{ fontSize: 16, color: '#1890ff' }}
                             />

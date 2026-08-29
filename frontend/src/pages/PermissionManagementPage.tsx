@@ -37,10 +37,10 @@ import {
     useCreatePermissionRequest,
     useUpdatePermissionRequest,
     useDeletePermissionRequest,
-    useHomeworks,
     useMeetings,
     useUsers
 } from '@/hooks';
+import { useHomeworks } from '@/features/homework/hooks/useHomeworks';
 import { useAuth } from '@/context/AuthContext';
 import { PermissionRequestPermission } from '@/types/rbac.types';
 import type { PermissionRequestResponse } from '@/types/activity.types';
@@ -178,7 +178,8 @@ const PermissionManagementPage = () => {
         category: filterCategory,
         userId: filterUserId
     });
-    const { data: homeworks = [] } = useHomeworks();
+    const { data: homeworksData } = useHomeworks();
+    const homeworks = homeworksData || [];
     const { data: meetings = [] } = useMeetings();
     const { data: usersData = [] } = useUsers();
     // Wrap users data as it might be an object with .data property depending on API

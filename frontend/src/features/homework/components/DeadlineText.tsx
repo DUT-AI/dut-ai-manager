@@ -1,7 +1,7 @@
 import React from 'react';
 import { Typography, Tag } from 'antd';
 import dayjs from 'dayjs';
-import type { Homework } from '@/types/homework.types';
+import type { Homework } from '@/features/homework/types/homework.types';
 
 const { Text } = Typography;
 
@@ -18,8 +18,8 @@ export const DeadlineText: React.FC<DeadlineTextProps> = ({ date, record, showOv
 
     return (
         <div className="flex items-center gap-2">
-            <Text 
-                type={isDanger ? 'danger' : 'secondary'} 
+            <Text
+                type={isDanger ? 'danger' : 'secondary'}
                 className={isDanger ? 'font-bold' : ''}
             >
                 {dayjs(date).format('DD/MM/YYYY HH:mm')}
