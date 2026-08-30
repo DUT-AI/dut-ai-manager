@@ -75,8 +75,9 @@ const AdminBillingPage = () => {
 
   const handleCreate = async (values: any) => {
     try {
+      const userIds: number[] = values.user_ids || (values.user_id ? [values.user_id] : []);
       const payload: CreateInvoiceFormValues = {
-        user_id: values.user_id,
+        user_ids: userIds,
         team_id: values.team_id,
         description: values.description,
         billing_period: values.billing_period ? values.billing_period.startOf('month').format('YYYY-MM-DD') : '',
@@ -88,7 +89,7 @@ const AdminBillingPage = () => {
       };
 
       await createInvoice.mutateAsync(payload);
-      message.success('Tạo hóa đơn thành công');
+      message.success(`Tạo thành công ${userIds.length} hóa đơn`);
       setIsCreateModalOpen(false);
       form.resetFields();
     } catch (error: any) {

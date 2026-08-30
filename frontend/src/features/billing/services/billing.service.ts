@@ -53,11 +53,11 @@ const billingService = {
   },
 
   createInvoice: async (data: InvoiceCreate) => {
-    const response = await axiosInstance.post<ApiResponse<Invoice>>("/billing/", data);
+    const response = await axiosInstance.post<ApiResponse<Invoice[]>>("/billing/", data);
     return response.data;
   },
 
-  updateInvoice: async (invoiceId: number, data: Omit<InvoiceCreate, 'user_id'>) => {
+  updateInvoice: async (invoiceId: number, data: Omit<InvoiceCreate, 'user_ids' | 'user_id'>) => {
     const response = await axiosInstance.put<ApiResponse<Invoice>>(`/billing/${invoiceId}`, data);
     return response.data;
   },

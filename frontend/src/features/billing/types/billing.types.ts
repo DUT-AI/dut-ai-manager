@@ -54,7 +54,8 @@ export type Invoice = z.infer<typeof invoiceSchema>;
 
 // Create Request Schema & Type
 export const createInvoiceSchema = z.object({
-  user_id: z.number().min(1, 'Vui lòng chọn người nhận hóa đơn'),
+  user_ids: z.array(z.number()).min(1, 'Vui lòng chọn ít nhất 1 thành viên'),
+  user_id: z.number().optional(),
   team_id: z.number().min(1, 'Vui lòng chọn nhóm'),
   billing_period: z.string().min(1, 'Vui lòng chọn kỳ hóa đơn'),
   description: z.string().optional().nullable(),

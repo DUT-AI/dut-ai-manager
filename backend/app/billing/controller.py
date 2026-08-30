@@ -30,7 +30,7 @@ router = APIRouter(prefix="/billing", tags=["Billing"])
 
 @router.post(
     "/",
-    response_model=ApiResponse[InvoiceResponse],
+    response_model=ApiResponse[list[InvoiceResponse]],
     status_code=status.HTTP_201_CREATED,
 )
 @inject
@@ -40,16 +40,19 @@ async def create_invoice(
     _: Annotated[CurrentUser, Depends(PermissionChecker(BillingPermission.CREATE))],
 ):
     """
-    Admin creates an invoice for a user.
+    Admin creates an invoice for one or multiple users.
     """
-    invoice = create_uc.execute(
+    invoices = create_uc.execute(
         user_id=data.user_id,
+        user_ids=data.user_ids,
         team_id=data.team_id,
         items_data=[item.model_dump() for item in data.items],
         billing_period=data.billing_period,
         description=data.description,
     )
-    return ApiResponse.created(data=InvoiceResponse.from_domain(invoice))
+    return ApiResponse.created(
+        data=[InvoiceResponse.from_domain(inv) for inv in invoices]
+    )
 
 
 @router.put(

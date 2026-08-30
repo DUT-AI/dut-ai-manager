@@ -47,14 +47,36 @@ const CreateInvoiceModal = ({
         className="mt-4"
       >
         <Form.Item
-          name="user_id"
-          label="Chọn thành viên (Bắt buộc)"
-          rules={[{ required: true, message: 'Vui lòng chọn thành viên' }]}
+          name="user_ids"
+          label={
+            <div className="flex justify-between items-center w-full">
+              <span>Chọn thành viên (Có thể chọn nhiều)</span>
+              <Button
+                type="link"
+                size="small"
+                className="p-0 text-xs text-blue-600"
+                onClick={() => {
+                  const current: number[] = form.getFieldValue('user_ids') || [];
+                  if (current.length === users.length) {
+                    form.setFieldsValue({ user_ids: [] });
+                  } else {
+                    form.setFieldsValue({ user_ids: users.map(u => u.id) });
+                  }
+                }}
+              >
+                Chọn tất cả / Bỏ chọn tất cả
+              </Button>
+            </div>
+          }
+          rules={[{ required: true, message: 'Vui lòng chọn ít nhất 1 thành viên' }]}
         >
           <Select
+            mode="multiple"
+            allowClear
             showSearch
-            placeholder="Tìm kiếm theo tên hoặc email"
+            placeholder="Tìm kiếm và chọn các thành viên"
             optionFilterProp="children"
+            style={{ width: '100%' }}
           >
             {users.map(u => (
               <Option key={u.id} value={u.id}>{u.name} ({u.email})</Option>

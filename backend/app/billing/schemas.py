@@ -32,7 +32,8 @@ class InvoiceItemResponse(InvoiceItemBase):
 
 
 class InvoiceCreate(BaseModel):
-    user_id: int
+    user_id: int | None = None
+    user_ids: list[int] = Field(default_factory=list)
     team_id: int = 6
     items: list[InvoiceItemCreate]
     billing_period: date
