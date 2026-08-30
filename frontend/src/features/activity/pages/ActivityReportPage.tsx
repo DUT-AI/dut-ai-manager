@@ -26,7 +26,7 @@ import { reportService } from '@/features/academic-report/services/report.servic
 import type { TitleReportItem, ParticipationStats, ActivityTrendItem } from '@/features/academic-report/types/report.types';
 import { useDebounce } from '@/hooks/useDebounce';
 import { motion, type Variants } from 'motion/react';
-import { TitleBadge } from '@/components/UserTitleBadge';
+import { TitleBadge } from '@/features/users/components/UserTitleBadge';
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;

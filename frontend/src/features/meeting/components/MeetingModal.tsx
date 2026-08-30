@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Modal, Form, Select, DatePicker, Input, message, Switch } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
-import type { UserResponse } from '@/types/user.types';
+import type { UserResponse } from '@/features/users/types/user.types';
 import { teamService } from '@/services/api/team.service';
 import type { TeamResponse } from '@/types/team.types';
 

@@ -17,7 +17,7 @@ import { ParticipantStatus } from '@/features/meeting/types/meeting.types';
 import { useMeetingsByWeek, useCreateMeeting, useUpdateMeeting, useDeleteMeeting } from '@/features/meeting/hooks/useMeetings';
 import { MeetingDetailDrawer } from '@/features/meeting/components/MeetingDetailDrawer';
 import { MeetingModal } from '@/features/meeting/components/MeetingModal';
-import { useUsers } from '@/hooks/useUsers';
+import { useUsers } from '@/features/users/hooks/useUsers';
 import { motion, type Variants } from 'motion/react';
 import { useCapacity } from '@/context/CapacityContext';
 

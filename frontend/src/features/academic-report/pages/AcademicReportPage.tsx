@@ -22,11 +22,11 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { ReportItem } from '@/features/academic-report/types/report.types';
-import type { UserResponse } from '@/types/user.types';
+import type { UserResponse } from '@/features/users/types/user.types';
 import type { ColumnsType } from 'antd/es/table';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useAcademicReport } from '@/features/academic-report/hooks/useAcademicReport';
-import { UserRecordDetailModal } from '../../../pages/components/UserRecordDetailModal';
+import { UserRecordDetailModal } from '../../users/components/UserRecordDetailModal';
 import { motion, type Variants } from 'motion/react';
 
 const { Title, Text } = Typography;

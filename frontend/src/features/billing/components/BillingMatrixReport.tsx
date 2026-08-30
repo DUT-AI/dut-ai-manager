@@ -7,7 +7,7 @@ import { useExpenses } from '@/features/expense/hooks/useExpense';
 import { useUsers, useTeams } from '@/hooks';
 import { InvoiceItemType } from '@/features/billing/types/billing.types';
 import { ExpenseStatus } from '@/features/expense/types/expense.types';
-import type { UserResponse } from '@/types/user.types';
+import type { UserResponse } from '@/features/users/types/user.types';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;

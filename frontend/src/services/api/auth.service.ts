@@ -1,7 +1,7 @@
 import axiosInstance from '../axiosInstance';
 import type { ApiResponse } from '@/types/api.types';
 import type { LoginRequest, TokenResponse, RegisterRequest, ChangePasswordRequest } from '@/types/auth.types';
-import type { UserResponse } from '@/types/user.types';
+import type { UserResponse } from '@/features/users/types/user.types';
 
 export const authService = {
   login: async (data: LoginRequest): Promise<ApiResponse<TokenResponse>> => {

@@ -27,7 +27,7 @@ import type { DailySummaryResponse, PermissionRequestResponse, BonusPointRespons
 import type { ViolationResponse } from '@/features/violations/types/violation.types';
 import { violationService } from '@/features/violations/services/violation.service';
 import { useMonthlyActivities, useDailyActivitySummary } from '@/features/activity/hooks/useActivities';
-import { useUsers } from '@/hooks/useUsers';
+import { useUsers } from '@/features/users/hooks/useUsers';
 import { useHomeworks } from '@/features/homework/hooks/useHomeworks';
 import { useMeetings } from '@/features/meeting/hooks/useMeetings';
 import {
@@ -37,7 +37,7 @@ import {
     PermissionRequestModal,
     BonusPointModal,
     ViolationModal
-} from '@/components/activity';
+} from '@/features/users/components';
 import {
     MeetingModal,
     MeetingSection,

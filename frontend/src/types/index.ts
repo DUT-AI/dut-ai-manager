@@ -1,6 +1,6 @@
 export * from './api.types';
 export * from './auth.types';
-export * from './user.types';
+export * from '../features/users/types/user.types';
 export * from './team.types';
 export * from '../features/billing/types/billing.types';
 export * from '../features/expense/types/expense.types';

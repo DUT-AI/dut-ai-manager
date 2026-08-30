@@ -1,7 +1,7 @@
 import { Select, DatePicker, Button } from 'antd';
 import { UserOutlined, CalendarOutlined } from '@ant-design/icons';
 import type { Dayjs } from 'dayjs';
-import type { UserResponse } from '@/types/user.types';
+import type { UserResponse } from '@/features/users/types/user.types';
 
 const { Option } = Select;
 
@@ -47,8 +47,8 @@ const ViolationFilter = ({
                 <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
                     <CalendarOutlined className="text-red-400" /> Lọc theo tháng/năm
                 </span>
-                <DatePicker 
-                    picker="month" 
+                <DatePicker
+                    picker="month"
                     className="w-full"
                     placeholder="Tất cả thời gian"
                     value={filterDate}
@@ -57,9 +57,9 @@ const ViolationFilter = ({
                 />
             </div>
             {(filterUserId || filterDate) && (
-                <Button 
-                    type="link" 
-                    danger 
+                <Button
+                    type="link"
+                    danger
                     className="md:self-end h-10 px-2"
                     onClick={() => {
                         setFilterUserId(undefined);

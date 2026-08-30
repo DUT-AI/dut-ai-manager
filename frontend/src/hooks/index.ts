@@ -1,5 +1,5 @@
 // Users
-export * from './useUsers';
+export * from '../features/users/hooks/useUsers';
 
 // Teams
 export * from './useTeams';

@@ -2,7 +2,7 @@ import { Modal, Space, Avatar, Typography, Tag, Table, Spin, Empty } from 'antd'
 import { TrophyOutlined, WarningOutlined, UserOutlined, CalendarOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { ColumnsType } from 'antd/es/table';
-import type { UserResponse } from '@/types/user.types';
+import type { UserResponse } from '@/features/users/types/user.types';
 import type { BonusPointResponse } from '@/features/activity/types/activity.types';
 import type { ViolationResponse } from '@/features/violations/types/violation.types';
 import { useBonusPoints, useViolations } from '@/hooks';

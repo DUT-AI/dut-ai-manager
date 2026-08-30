@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { meetingService } from '@/features/meeting/services/meeting.service';
-import { userService } from '@/services/api/user.service';
+import { userService } from '@/features/users/services/user.service';
 import { authService } from '@/services/api/auth.service';
 import { message, Spin, ConfigProvider, theme, Modal, Table, Tag, Button } from 'antd';
 import { MeetingModal } from '@/features/meeting/components';
 import { useNavigate } from 'react-router-dom';
-import type { UserResponse } from '@/types/user.types';
+import type { UserResponse } from '@/features/users/types/user.types';
 import type { MeetingResponse, ParticipantResponse } from '@/features/meeting/types/meeting.types';
 import dayjs from 'dayjs';
 

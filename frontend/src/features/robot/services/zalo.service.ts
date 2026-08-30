@@ -1,6 +1,6 @@
 import axiosInstance from '../../../services/axiosInstance';
 import type { ApiResponse } from '@/types/api.types';
-import type { UserResponse } from '@/types/user.types';
+import type { UserResponse } from '@/features/users/types/user.types';
 
 export const zaloService = {
   /**

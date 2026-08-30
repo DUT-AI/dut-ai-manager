@@ -1,7 +1,7 @@
 import { Modal, Form, Select, Input, Divider, Space, InputNumber, Button, DatePicker, type FormInstance } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { InvoiceItemType } from '@/features/billing/types/billing.types';
-import type { UserResponse } from '@/types/user.types';
+import type { UserResponse } from '@/features/users/types/user.types';
 import { useTeams } from '@/hooks/useTeams';
 import type { CreateInvoiceFormValues } from '@/features/billing/types/billing.types';
 

@@ -40,8 +40,8 @@ import {
 } from 'antd';
 import { motion, type Variants } from 'motion/react';
 import { useMemo, useReducer, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { UserPermission } from '../features/rbac/types/rbac.types';
+import { useAuth } from '../../../context/AuthContext';
+import { UserPermission } from '../../rbac/types/rbac.types';
 import { UserStatus, type UserResponse } from '../types/user.types';
 
 import { useNavigate } from 'react-router-dom';

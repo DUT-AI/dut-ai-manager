@@ -3,7 +3,7 @@ import { InfoCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { InvoiceStatus } from '@/features/billing/types/billing.types';
 import type { Invoice } from '@/features/billing/types/billing.types';
-import type { UserResponse } from '@/types/user.types';
+import type { UserResponse } from '@/features/users/types/user.types';
 import { useViolations } from '@/hooks';
 
 const { Title, Text } = Typography;

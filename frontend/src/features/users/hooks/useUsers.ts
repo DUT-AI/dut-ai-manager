@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { userService } from '@/services/api/user.service';
-import type { UserCreate, UserUpdate } from '@/types/user.types';
+import { userService } from '@/features/users/services/user.service';
+import type { UserCreate, UserUpdate } from '@/features/users/types/user.types';
 
 // Query Keys
 const userKeys = {
@@ -34,7 +34,7 @@ export const useUser = (id: number) => {
 // Mutations
 export const useCreateUser = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (data: UserCreate) => userService.createUser(data),
     onSuccess: () => {
@@ -45,9 +45,9 @@ export const useCreateUser = () => {
 
 export const useUpdateUser = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: UserUpdate }) => 
+    mutationFn: ({ id, data }: { id: number; data: UserUpdate }) =>
       userService.updateUser(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: userKeys.all });
@@ -57,7 +57,7 @@ export const useUpdateUser = () => {
 
 export const useDeleteUser = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (id: number) => userService.deleteUser(id),
     onSuccess: () => {
@@ -68,7 +68,7 @@ export const useDeleteUser = () => {
 
 export const useImportUsers = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (file: File) => userService.importUsers(file),
     onSuccess: () => {

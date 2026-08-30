@@ -3,7 +3,7 @@ import { bonusPointResponseSchema, permissionRequestResponseSchema, userRefSchem
 import { violationResponseSchema } from '../../violations/types/violation.types';
 import { homeworkSchema } from '../../homework/types/homework.types';
 import { meetingResponseSchema } from '../../meeting/types/meeting.types';
-import { userResponseSchema } from '../../../types/user.types';
+import { userResponseSchema } from '../../users/types/user.types';
 
 export const dashboardOverviewResponseSchema = z.object({
   permission_requests: z.array(permissionRequestResponseSchema).default([]),

@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { Layout, Menu, Typography, Form, Input, Button, Card, message, Avatar, Upload, Grid } from 'antd';
 import { LockOutlined, SettingOutlined, SafetyCertificateOutlined, UserOutlined, DiscordOutlined, UploadOutlined, IdcardOutlined } from '@ant-design/icons';
 import { authService } from '@/services/api/auth.service';
-import { userService } from '@/services/api/user.service';
+import { userService } from '@/features/users/services/user.service';
 import { useAuth } from '@/context/AuthContext';
-import type { UserResponse } from '@/types/user.types';
+import type { UserResponse } from '@/features/users/types/user.types';
 import { motion, type Variants } from 'motion/react';
 
 const { Content, Sider } = Layout;
@@ -248,7 +248,7 @@ export const SettingsPage: React.FC = () => {
     const onUpdateSettings = async (values: Record<string, unknown>) => {
         setLoading(true);
         try {
-            const payload: import('@/types/user.types').UserSettingsUpdate = {
+            const payload: import('@/features/users/types/user.types').UserSettingsUpdate = {
                 discord_id: values.discord_id as string | undefined,
             };
             const card = typeof values.check_in_card_code === 'string' ? values.check_in_card_code.trim() : '';

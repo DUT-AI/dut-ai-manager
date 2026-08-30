@@ -1,6 +1,6 @@
 import { Modal, Form, Select, DatePicker, Input, type FormInstance } from 'antd';
 import type { ViolationResponse } from '@/features/violations/types/violation.types';
-import type { UserResponse } from '@/types/user.types';
+import type { UserResponse } from '@/features/users/types/user.types';
 
 const { Option } = Select;
 const { TextArea } = Input;

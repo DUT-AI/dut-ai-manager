@@ -33,7 +33,7 @@ import type { Dayjs } from 'dayjs';
 import { useUsers, useViolations, useBonusPoints, usePermissionRequests } from '@/hooks';
 import { zaloService } from '@/features/robot/services/zalo.service';
 
-import type { BonusPointResponse, ViolationResponse, PermissionRequestResponse } from '../features/activity/types/activity.types';
+import type { BonusPointResponse, ViolationResponse, PermissionRequestResponse } from '../../activity/types/activity.types';
 import type { ColumnsType } from 'antd/es/table';
 import { motion, type Variants } from 'motion/react';
 import { UserStatus } from '../types/user.types';

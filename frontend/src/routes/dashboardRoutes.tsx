@@ -8,7 +8,7 @@ import AcademicReportPage from '@/features/academic-report/pages/AcademicReportP
 import ActivityReportPage from '@/features/activity/pages/ActivityReportPage';
 import RobotInterfacePage from '@/features/robot/pages/RobotInterfacePage';
 import RoleManagementPage from '@/features/rbac/pages/RoleManagementPage';
-import UserManagementPage from '@/pages/UserManagementPage';
+import UserManagementPage from '@/features/users/pages/UserManagementPage';
 import ActivityCalendarPage from '@/features/activity/pages/ActivityCalendarPage';
 import PermissionManagementPage from '@/features/rbac/pages/PermissionManagementPage';
 import ViolationManagementPage from '@/features/violations/pages/ViolationManagementPage';
@@ -19,7 +19,7 @@ import InvoicesPage from '@/features/billing/pages/InvoicesPage';
 import AdminBillingPage from '@/features/billing/pages/AdminBillingPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { TrashPage } from '@/pages/TrashPage';
-import ProfilePage from '@/pages/ProfilePage';
+import ProfilePage from '@/features/users/pages/ProfilePage';
 
 export interface RouteConfig {
     path: string;

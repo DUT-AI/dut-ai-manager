@@ -2,7 +2,7 @@ import { Table, Space, Avatar, Typography, Tag, Button, Popconfirm } from 'antd'
 import { UserOutlined, EyeOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { type Invoice, InvoiceStatus } from '@/types';
-import type { UserResponse } from '@/types/user.types';
+import type { UserResponse } from '@/features/users/types/user.types';
 
 const { Text } = Typography;
 

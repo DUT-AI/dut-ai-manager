@@ -1,6 +1,6 @@
-import axiosInstance from '../axiosInstance';
+import axiosInstance from '../../../services/axiosInstance';
 import type { ApiResponse } from '@/types/api.types';
-import type { UserResponse, UserCreate, UserUpdate, UserSettingsUpdate } from '@/types/user.types';
+import type { UserResponse, UserCreate, UserUpdate, UserSettingsUpdate } from '@/features/users/types/user.types';
 
 export const userService = {
   getUsers: async () => {
