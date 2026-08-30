@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import { Modal, Form, DatePicker, InputNumber, Input, Select, Radio } from 'antd';
 import dayjs from 'dayjs';
-import { useUsers } from '@/hooks';
-import { useTeams } from '@/features/teams/hooks/useTeams';
+import { useUsers } from '@/features/users';
+import { useTeams } from '@/features/teams';
 import { useCreateExpense } from '@/features/expense/hooks/useExpense';
 import { ExpenseStatus } from '@/features/expense/types/expense.types';
 

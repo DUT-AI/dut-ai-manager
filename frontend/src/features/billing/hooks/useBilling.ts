@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import billingService from '@/features/billing/service/billing.service';
+import billingService from '../services/billing.service';
 import type { InvoiceCreate, MonthlyInvoiceCreate } from '@/features/billing/types/billing.types';
 
 // Query Keys

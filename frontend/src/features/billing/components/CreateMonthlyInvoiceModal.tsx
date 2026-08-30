@@ -22,7 +22,8 @@ import {
   CheckCircleOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { useUsers, useTeams } from '@/hooks';
+import { useUsers } from '@/features/users';
+import { useTeams } from '@/features/teams';
 import { useCreateMonthlyInvoices } from '@/features/billing/hooks/useBilling';
 import { InvoiceItemType } from '@/features/billing/types/billing.types';
 import type { MonthlyInvoiceItemPreview } from '@/features/billing/types/billing.types';

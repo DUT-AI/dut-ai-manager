@@ -5,7 +5,8 @@ import type { ColumnsType } from 'antd/es/table';
 import type { UserResponse } from '@/features/users/types/user.types';
 import type { BonusPointResponse } from '@/features/activity/types/activity.types';
 import type { ViolationResponse } from '@/features/violations/types/violation.types';
-import { useBonusPoints, useViolations } from '@/hooks';
+import { useBonusPoints } from '@/features/activity';
+import { useViolations } from '@/features/violations';
 
 const { Text, Title } = Typography;
 

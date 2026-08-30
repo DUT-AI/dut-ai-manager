@@ -34,10 +34,10 @@ import {
     useDeleteRole,
     useAddPermissionToRole,
     useRemovePermissionFromRole
-} from '@/hooks';
+} from '../hooks/useRbac';
 import { RolePermission } from '@/features/rbac/types/rbac.types';
 import type { RoleResponse } from '@/features/rbac/types/rbac.types';
-import { useAuth } from '@/features/auth/context/AuthContext';
+import { useAuth } from '@/features/auth';
 import useToggle from '@/hooks/useToggle';
 import ApiKeyModal from '@/features/robot/components/ApiKeyModal';
 import { motion, type Variants } from 'motion/react';

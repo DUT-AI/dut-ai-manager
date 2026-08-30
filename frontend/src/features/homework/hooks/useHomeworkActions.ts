@@ -1,6 +1,6 @@
 import { useReducer, useCallback } from 'react';
 import { message } from 'antd';
-import { useAuth } from '@/features/auth/context/AuthContext';
+import { useAuth } from '@/features/auth';
 import type { HomeworkSubmission } from '../types/homework.types';
 import {
     useMyHomeworks,
@@ -8,8 +8,8 @@ import {
     useDeleteHomework
 } from './useHomeworks';
 
-// Các hook dùng chung hệ thống vẫn lấy từ global hooks
-import { useUsers, useTeams } from '@/hooks';
+import { useUsers } from '@/features/users';
+import { useTeams } from '@/features/teams';
 import { homeworkService } from '@/features/homework/services/homework.service';
 import type { Homework } from '@/features/homework/types/homework.types';
 

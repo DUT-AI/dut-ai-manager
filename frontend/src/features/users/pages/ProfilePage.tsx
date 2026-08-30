@@ -30,7 +30,10 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
-import { useUsers, useViolations, useBonusPoints, usePermissionRequests } from '@/hooks';
+import { useUsers } from '../hooks/useUsers';
+import { useViolations } from '@/features/violations';
+import { useBonusPoints } from '@/features/activity';
+import { usePermissionRequests } from '@/features/rbac';
 import { zaloService } from '@/features/robot/services/zalo.service';
 
 import type { BonusPointResponse, PermissionRequestResponse } from '@/features/activity/types/activity.types';

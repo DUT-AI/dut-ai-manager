@@ -4,7 +4,7 @@ import dayjs from 'dayjs';
 import { InvoiceStatus } from '@/features/billing/types/billing.types';
 import type { Invoice } from '@/features/billing/types/billing.types';
 import type { UserResponse } from '@/features/users/types/user.types';
-import { useViolations } from '@/hooks';
+import { useViolations } from '@/features/violations';
 
 const { Title, Text } = Typography;
 

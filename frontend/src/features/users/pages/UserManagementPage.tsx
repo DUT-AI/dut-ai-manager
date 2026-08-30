@@ -1,4 +1,5 @@
-import { useCreateUser, useDeleteUser, useImportUsers, useRoles, useUpdateUser, useUsers } from '@/hooks';
+import { useCreateUser, useDeleteUser, useImportUsers, useUpdateUser, useUsers } from '../hooks/useUsers';
+import { useRoles } from '@/features/rbac';
 import {
     CheckCircleOutlined,
     DeleteOutlined,

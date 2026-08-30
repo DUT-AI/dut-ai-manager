@@ -4,7 +4,8 @@ import { SearchOutlined, ImportOutlined, ExportOutlined, WalletOutlined, CheckCi
 import dayjs, { Dayjs } from 'dayjs';
 import { useMatrixReport, useAllInvoices } from '@/features/billing/hooks/useBilling';
 import { useExpenses } from '@/features/expense/hooks/useExpense';
-import { useUsers, useTeams } from '@/hooks';
+import { useUsers } from '@/features/users';
+import { useTeams } from '@/features/teams';
 import { InvoiceItemType } from '@/features/billing/types/billing.types';
 import { ExpenseStatus } from '@/features/expense/types/expense.types';
 import type { UserResponse } from '@/features/users/types/user.types';

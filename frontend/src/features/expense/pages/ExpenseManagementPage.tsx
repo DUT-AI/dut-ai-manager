@@ -24,8 +24,8 @@ import {
   DollarOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { useUsers } from '@/hooks';
-import { useTeams } from '@/features/teams/hooks/useTeams';
+import { useUsers } from '@/features/users';
+import { useTeams } from '@/features/teams';
 import {
   useExpenses,
   useExpenseSummary,

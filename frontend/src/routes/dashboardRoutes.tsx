@@ -4,22 +4,19 @@ và phân quyền).*/
 
 import React from 'react';
 import HomePage from '@/pages/HomePage';
-import AcademicReportPage from '@/features/academic-report/pages/AcademicReportPage';
-import ActivityReportPage from '@/features/activity/pages/ActivityReportPage';
-import RobotInterfacePage from '@/features/robot/pages/RobotInterfacePage';
-import RoleManagementPage from '@/features/rbac/pages/RoleManagementPage';
-import UserManagementPage from '@/features/users/pages/UserManagementPage';
-import ActivityCalendarPage from '@/features/activity/pages/ActivityCalendarPage';
-import PermissionManagementPage from '@/features/rbac/pages/PermissionManagementPage';
-import ViolationManagementPage from '@/features/violations/pages/ViolationManagementPage';
-import TeamManagementPage from '@/features/teams/pages/TeamManagementPage';
-import { HomeworkPage } from '@/features/homework';
-import MeetingCalendarPage from '@/features/meeting/pages/MeetingCalendarPage';
-import InvoicesPage from '@/features/billing/pages/InvoicesPage';
-import AdminBillingPage from '@/features/billing/pages/AdminBillingPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { TrashPage } from '@/pages/TrashPage';
-import ProfilePage from '@/features/users/pages/ProfilePage';
+
+import { AcademicReportPage } from '@/features/academic-report';
+import { ActivityCalendarPage, ActivityReportPage } from '@/features/activity';
+import { AdminBillingPage, InvoicesPage } from '@/features/billing';
+import { HomeworkPage } from '@/features/homework';
+import { MeetingCalendarPage } from '@/features/meeting';
+import { PermissionManagementPage, RoleManagementPage } from '@/features/rbac';
+import { RobotInterfacePage } from '@/features/robot';
+import { TeamManagementPage } from '@/features/teams';
+import { ProfilePage, UserManagementPage } from '@/features/users';
+import { ViolationManagementPage } from '@/features/violations';
 
 export interface RouteConfig {
     path: string;

@@ -23,7 +23,7 @@ import {
   WarningOutlined
 } from '@ant-design/icons';
 import { useMyInvoices, useInvoiceDetail } from '@/features/billing/hooks/useBilling';
-import { useViolations } from '@/hooks';
+import { useViolations } from '@/features/violations';
 import { InvoiceStatus } from '@/features/billing/types/billing.types';
 import type { InvoiceStatusType } from '@/features/billing/types/billing.types';
 import dayjs from 'dayjs';

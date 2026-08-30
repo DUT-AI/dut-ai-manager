@@ -36,12 +36,12 @@ import {
     usePermissionRequests,
     useCreatePermissionRequest,
     useUpdatePermissionRequest,
-    useDeletePermissionRequest,
-    useMeetings,
-    useUsers
-} from '@/hooks';
+    useDeletePermissionRequest
+} from '../hooks/usePermissionRequests';
+import { useMeetings } from '@/features/meeting';
+import { useUsers } from '@/features/users';
 import { useHomeworks } from '@/features/homework/hooks/useHomeworks';
-import { useAuth } from '@/features/auth/context/AuthContext';
+import { useAuth } from '@/features/auth';
 import { PermissionRequestPermission } from '@/features/rbac/types/rbac.types';
 import type { PermissionRequestResponse } from '@/features/activity/types/activity.types';
 import dayjs from 'dayjs';
