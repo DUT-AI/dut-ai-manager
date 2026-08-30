@@ -15,7 +15,7 @@ import CreateInvoiceModal from '../components/CreateInvoiceModal';
 import UpdateInvoiceModal from '../components/UpdateInvoiceModal';
 import InvoiceDetailModal from '../components/InvoiceDetailModal';
 import BillingMatrixReport from '../components/BillingMatrixReport';
-import ExpenseManagementPage from '../../../pages/ExpenseManagementPage';
+import ExpenseManagementPage from '../../expense/pages/ExpenseManagementPage';
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;

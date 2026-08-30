@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import expenseService from '../services/api/expense.service';
+import expenseService from '../services/expense.service';
 import type {
   CreateExpenseDto,
   UpdateExpenseDto,

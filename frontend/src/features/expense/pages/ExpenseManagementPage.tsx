@@ -31,12 +31,12 @@ import {
   useExpenseSummary,
   useUpdateExpenseStatus,
   useDeleteExpense,
-} from '@/hooks/useExpense';
-import { ExpenseStatus, type ExpenseInvoice, type ExpenseStatusType } from '@/types/expense.types';
-import { CreateExpenseModal } from './expense/components/CreateExpenseModal';
-import { UpdateExpenseModal } from './expense/components/UpdateExpenseModal';
+} from '@/features/expense/hooks/useExpense';
+import { ExpenseStatus, type ExpenseInvoice, type ExpenseStatusType } from '@/features/expense/types/expense.types';
+import { CreateExpenseModal } from '@/features/expense/components/CreateExpenseModal';
+import { UpdateExpenseModal } from '@/features/expense/components/UpdateExpenseModal';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 const ExpenseManagementPage: React.FC = () => {
   // Filters: Selected Spender, Team, Status, Month/Year
@@ -58,13 +58,14 @@ const ExpenseManagementPage: React.FC = () => {
   const [editingExpense, setEditingExpense] = useState<ExpenseInvoice | null>(null);
 
   // Queries & Mutations
-  const { data: expenses = [], isLoading: isLoadingExpenses } = useExpenses({
+  const { data: expensesData, isLoading: isLoadingExpenses } = useExpenses({
     month: selectedMonth,
     year: selectedYear,
     status: selectedStatus,
     spender_id: filterSpender,
     team_id: filterTeam,
   });
+  const expenses = expensesData || [];
 
   const { data: summary, isLoading: isLoadingSummary } = useExpenseSummary({
     month: selectedMonth,

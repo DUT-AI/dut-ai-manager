@@ -3,53 +3,44 @@ import { Modal, Form, DatePicker, InputNumber, Input, Select, Radio } from 'antd
 import dayjs from 'dayjs';
 import { useUsers } from '@/hooks';
 import { useTeams } from '@/hooks/useTeams';
-import { useUpdateExpense } from '@/hooks/useExpense';
-import { ExpenseStatus, type ExpenseInvoice } from '@/types/expense.types';
+import { useCreateExpense } from '@/features/expense/hooks/useExpense';
+import { ExpenseStatus } from '@/features/expense/types/expense.types';
 
-interface UpdateExpenseModalProps {
+interface CreateExpenseModalProps {
   open: boolean;
-  expense: ExpenseInvoice | null;
   onClose: () => void;
 }
 
-export const UpdateExpenseModal: React.FC<UpdateExpenseModalProps> = ({ open, expense, onClose }) => {
+export const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({ open, onClose }) => {
   const [form] = Form.useForm();
   const { data: usersData, isLoading: isLoadingUsers } = useUsers();
   const { data: teamsData, isLoading: isLoadingTeams } = useTeams();
   const users = usersData || [];
   const teams = teamsData || [];
-  const updateExpenseMutation = useUpdateExpense();
+  const createExpenseMutation = useCreateExpense();
 
   useEffect(() => {
-    if (open && expense) {
+    if (open) {
+      form.resetFields();
       form.setFieldsValue({
-        expense_date: dayjs(expense.expense_date),
-        amount: expense.amount,
-        description: expense.description,
-        spender_id: expense.spender_id,
-        team_id: expense.team_id,
-        status: expense.status,
-        note: expense.note,
+        expense_date: dayjs(),
+        status: ExpenseStatus.UNPAID,
       });
     }
-  }, [open, expense, form]);
+  }, [open, form]);
 
   const handleSubmit = async () => {
-    if (!expense) return;
     try {
       const values = await form.validateFields();
-      await updateExpenseMutation.mutateAsync({
-        id: expense.id,
-        data: {
-          expense_date: values.expense_date.format('YYYY-MM-DD'),
-          amount: values.amount,
-          description: values.description,
-          spender_id: values.spender_id,
-          team_id: values.team_id,
-          status: values.status,
-          note: values.note,
-          payment_date: values.status === ExpenseStatus.PAID ? values.expense_date.format('YYYY-MM-DD') : null,
-        },
+      await createExpenseMutation.mutateAsync({
+        expense_date: values.expense_date.format('YYYY-MM-DD'),
+        amount: values.amount,
+        description: values.description,
+        spender_id: values.spender_id,
+        team_id: values.team_id,
+        status: values.status,
+        note: values.note,
+        payment_date: values.status === ExpenseStatus.PAID ? values.expense_date.format('YYYY-MM-DD') : null,
       });
       onClose();
     } catch {
@@ -59,12 +50,12 @@ export const UpdateExpenseModal: React.FC<UpdateExpenseModalProps> = ({ open, ex
 
   return (
     <Modal
-      title="Cập nhật hóa đơn xuất ra"
+      title="Tạo hóa đơn xuất ra (Hóa đơn chi)"
       open={open}
       onCancel={onClose}
       onOk={handleSubmit}
-      confirmLoading={updateExpenseMutation.isPending}
-      okText="Lưu thay đổi"
+      confirmLoading={createExpenseMutation.isPending}
+      okText="Tạo hóa đơn"
       cancelText="Hủy"
       width={520}
       destroyOnClose

@@ -1,12 +1,12 @@
-import axiosInstance from "../axiosInstance";
+import axiosInstance from "../../../services/axiosInstance";
 import type {
   ExpenseInvoice,
   CreateExpenseDto,
   UpdateExpenseDto,
   ExpenseSummary,
   ExpenseStatusType,
-} from "../../types/expense.types";
-import type { ApiResponse } from "../../types/api.types";
+} from "../types/expense.types";
+import type { ApiResponse } from "../../../types/api.types";
 
 const expenseService = {
   getExpenses: async (params?: {

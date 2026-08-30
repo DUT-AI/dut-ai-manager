@@ -3,10 +3,10 @@ import { Form, Select, DatePicker, Button, Space, Table, Typography, Tag, Row, C
 import { SearchOutlined, ImportOutlined, ExportOutlined, WalletOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
 import { useMatrixReport, useAllInvoices } from '@/features/billing/hooks/useBilling';
-import { useExpenses } from '@/hooks/useExpense';
+import { useExpenses } from '@/features/expense/hooks/useExpense';
 import { useUsers, useTeams } from '@/hooks';
 import { InvoiceItemType } from '@/features/billing/types/billing.types';
-import { ExpenseStatus } from '@/types/expense.types';
+import { ExpenseStatus } from '@/features/expense/types/expense.types';
 import type { UserResponse } from '@/types/user.types';
 
 const { RangePicker } = DatePicker;

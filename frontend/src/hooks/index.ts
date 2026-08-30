@@ -30,7 +30,7 @@ export * from './useApiKeys';
 export * from '../features/billing/hooks/useBilling';
 
 // Expenses
-export * from './useExpense';
+export * from '../features/expense/hooks/useExpense';
 
 // Academic Reports
 export * from './useAcademicReport';
