@@ -21,11 +21,12 @@ import { Grid } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { permissionService } from '@/features/rbac/services/permission.service';
-import { bonusPointService } from '@/services/api/bonus-point.service';
+import { bonusPointService } from '@/features/activity/services/bonus-point.service';
 
-import type { DailySummaryResponse, PermissionRequestResponse, BonusPointResponse, ViolationResponse } from '@/types/activity.types';
+import type { DailySummaryResponse, PermissionRequestResponse, BonusPointResponse } from '@/features/activity/types/activity.types';
+import type { ViolationResponse } from '@/features/violations/types/violation.types';
 import { violationService } from '@/features/violations/services/violation.service';
-import { useMonthlyActivities, useDailyActivitySummary } from '@/hooks/useActivities';
+import { useMonthlyActivities, useDailyActivitySummary } from '@/features/activity/hooks/useActivities';
 import { useUsers } from '@/hooks/useUsers';
 import { useHomeworks } from '@/features/homework/hooks/useHomeworks';
 import { useMeetings } from '@/hooks/useMeetings';
@@ -73,7 +74,7 @@ const itemVariants: Variants = {
 };
 
 interface DailyDetailListProps {
-    dailyData: DailySummaryResponse | null;
+    dailyData?: DailySummaryResponse | null;
     onEditPermission: (item: PermissionRequestResponse) => void;
     onEditBonus: (item: BonusPointResponse) => void;
     onEditViolation: (item: ViolationResponse) => void;
@@ -91,7 +92,7 @@ const DailyDetailList = ({ dailyData, onEditPermission, onEditBonus, onEditViola
             onRefresh={onRefresh}
         />
 
-        <Divider className="!m-0 border-gray-100" />
+        <Divider className="m-0! border-gray-100" />
 
         <BonusPointSection
             data={dailyData?.bonus_points || []}
@@ -99,7 +100,7 @@ const DailyDetailList = ({ dailyData, onEditPermission, onEditBonus, onEditViola
             onRefresh={onRefresh}
         />
 
-        <Divider className="!m-0 border-gray-100" />
+        <Divider className="m-0! border-gray-100" />
 
         <ViolationSection
             data={dailyData?.violations || []}
@@ -107,7 +108,7 @@ const DailyDetailList = ({ dailyData, onEditPermission, onEditBonus, onEditViola
             onRefresh={onRefresh}
         />
 
-        <Divider className="!m-0 border-gray-100" />
+        <Divider className="m-0! border-gray-100" />
 
         <MeetingSection
             data={dailyData?.meetings || []}
@@ -294,7 +295,7 @@ const ActivityCalendarPage = () => {
     // Lấy dữ liệu mới nhất của meeting đang được chọn
     const currentMeeting = useMemo(() => {
         if (!selectedMeeting) return null;
-        const latest = dailyData?.meetings.find(m => m.id === selectedMeeting.id);
+        const latest = dailyData?.meetings?.find((m: any) => m.id === selectedMeeting.id);
         return latest || selectedMeeting;
     }, [dailyData, selectedMeeting]);
 
@@ -529,7 +530,7 @@ const ActivityCalendarPage = () => {
                     </div>
                 ) : (
                     <DailyDetailList
-                        dailyData={dailyData}
+                        dailyData={dailyData ?? null}
                         onEditPermission={openEditPermission}
                         onEditBonus={openEditBonus}
                         onEditViolation={openEditViolation}
@@ -563,8 +564,8 @@ const ActivityCalendarPage = () => {
                 open={isPermissionModalOpen}
                 editingItem={editingPermission}
                 initialDate={getInitialDate()}
-                homeworks={homeworks}
-                meetings={allMeetings}
+                homeworks={homeworks || []}
+                meetings={allMeetings || []}
                 onSubmit={handlePermissionSubmit}
                 onCancel={() => dispatch({ type: 'CLOSE_PERMISSION' })}
             />

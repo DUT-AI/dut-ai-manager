@@ -144,7 +144,7 @@ const TrendChart = () => {
             </div>
             <div
                 ref={scrollRef}
-                className={`h-[280px] w-full overflow-hidden ${isDragging ? 'cursor-grabbing' : 'cursor-grab'} select-none`}
+                className={`h-70 w-full overflow-hidden ${isDragging ? 'cursor-grabbing' : 'cursor-grab'} select-none`}
                 style={{ opacity: loading ? 0.5 : 1, transition: 'opacity 0.3s' }}
                 onMouseDown={handleMouseDown}
                 onMouseLeave={handleMouseLeave}

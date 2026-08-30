@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { userRefSchema } from '../../../types/activity.types';
+import { userRefSchema } from '../../activity/types/activity.types';
 
 export const HomeworkStatus = {
   NOT_SUBMITTED: 'NOT_SUBMITTED',

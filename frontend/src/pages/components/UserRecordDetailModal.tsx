@@ -3,7 +3,7 @@ import { TrophyOutlined, WarningOutlined, UserOutlined, CalendarOutlined } from 
 import dayjs from 'dayjs';
 import type { ColumnsType } from 'antd/es/table';
 import type { UserResponse } from '@/types/user.types';
-import type { BonusPointResponse } from '@/types/activity.types';
+import type { BonusPointResponse } from '@/features/activity/types/activity.types';
 import type { ViolationResponse } from '@/features/violations/types/violation.types';
 import { useBonusPoints, useViolations } from '@/hooks';
 

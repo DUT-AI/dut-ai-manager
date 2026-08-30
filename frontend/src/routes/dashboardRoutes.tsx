@@ -5,11 +5,11 @@ và phân quyền).*/
 import React from 'react';
 import HomePage from '@/pages/HomePage';
 import AcademicReportPage from '@/features/academic-report/pages/AcademicReportPage';
-import ActivityReportPage from '@/pages/ActivityReportPage';
+import ActivityReportPage from '@/features/activity/pages/ActivityReportPage';
 import RobotInterfacePage from '@/features/robot/pages/RobotInterfacePage';
 import RoleManagementPage from '@/features/rbac/pages/RoleManagementPage';
 import UserManagementPage from '@/pages/UserManagementPage';
-import ActivityCalendarPage from '@/pages/ActivityCalendarPage';
+import ActivityCalendarPage from '@/features/activity/pages/ActivityCalendarPage';
 import PermissionManagementPage from '@/features/rbac/pages/PermissionManagementPage';
 import ViolationManagementPage from '@/features/violations/pages/ViolationManagementPage';
 import TeamManagementPage from '@/pages/TeamManagementPage';

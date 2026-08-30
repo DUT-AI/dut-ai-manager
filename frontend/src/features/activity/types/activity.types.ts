@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const userRefSchema = z.object({
   id: z.number(),
   name: z.string(),
+  email: z.string().nullable().optional(),
   avatar_url: z.string().nullable().optional(),
 });
 export type UserRef = z.infer<typeof userRefSchema>;
@@ -76,3 +77,10 @@ export const calendarEventSchema = z.object({
   details: z.record(z.string(), z.unknown()).optional(),
 });
 export type CalendarEvent = z.infer<typeof calendarEventSchema>;
+
+export interface DailySummaryResponse {
+  permission_requests?: PermissionRequestResponse[];
+  bonus_points?: BonusPointResponse[];
+  violations?: any[];
+  meetings?: any[];
+}

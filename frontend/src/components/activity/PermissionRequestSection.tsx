@@ -20,7 +20,7 @@ import {
     DeleteOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import type { PermissionRequestResponse } from '@/types/activity.types';
+import type { PermissionRequestResponse } from '@/features/activity/types/activity.types';
 import { permissionService } from '@/features/rbac/services/permission.service';
 
 const { Text } = Typography;

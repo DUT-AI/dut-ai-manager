@@ -5,7 +5,7 @@ import { UndoOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useQuery } from '@tanstack/react-query';
 import { homeworkService } from '@/features/homework/services/homework.service';
-import { bonusPointService } from '@/services/api/bonus-point.service';
+import { bonusPointService } from '@/features/activity/services/bonus-point.service';
 import { violationService } from '@/features/violations/services/violation.service';
 import { permissionService } from '@/features/rbac/services/permission.service';
 import type { Homework } from '@/features/homework/types/homework.types';

@@ -12,7 +12,7 @@ export * from '../features/rbac/hooks/useRbac';
 export * from '../features/violations/hooks/useViolations';
 
 // Bonus Points
-export * from './useBonusPoints';
+export * from '../features/activity/hooks/useBonusPoints';
 
 // Permission Requests
 export * from '../features/rbac/hooks/usePermissionRequests';

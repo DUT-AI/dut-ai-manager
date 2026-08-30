@@ -1,10 +1,10 @@
-import axiosInstance from '../axiosInstance';
+import axiosInstance from '../../../services/axiosInstance';
 import type { ApiResponse } from '@/types/api.types';
 import type {
   BonusPointCreate,
   BonusPointUpdate,
   BonusPointResponse,
-} from '@/types/activity.types';
+} from '@/features/activity/types/activity.types';
 
 export const bonusPointService = {
   subPath: 'bonus-points',

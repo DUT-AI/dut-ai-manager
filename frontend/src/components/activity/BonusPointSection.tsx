@@ -19,8 +19,8 @@ import {
     DeleteOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import type { BonusPointResponse } from '@/types/activity.types';
-import { bonusPointService } from '@/services/api/bonus-point.service';
+import type { BonusPointResponse } from '@/features/activity/types/activity.types';
+import { bonusPointService } from '@/features/activity/services/bonus-point.service';
 
 const { Text } = Typography;
 

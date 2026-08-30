@@ -23,7 +23,7 @@ export {
   type BonusPointResponse,
   type PermissionRequestResponse,
   type CalendarEvent,
-} from './activity.types';
+} from '../features/activity/types/activity.types';
 
 export * from '../features/rbac/types/rbac.types';
 export * from '../features/academic-report/types/report.types';

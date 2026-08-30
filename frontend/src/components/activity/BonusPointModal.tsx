@@ -1,7 +1,7 @@
 import { Modal, Form, Select, DatePicker, InputNumber, Input } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
-import type { BonusPointResponse } from '@/types/activity.types';
+import type { BonusPointResponse } from '@/features/activity/types/activity.types';
 import type { UserResponse } from '@/types/user.types';
 
 const { Option } = Select;

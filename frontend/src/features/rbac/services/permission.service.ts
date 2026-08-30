@@ -4,7 +4,7 @@ import type {
   PermissionCreate,
   PermissionUpdate,
   PermissionRequestResponse,
-} from '@/types/activity.types';
+} from '@/features/activity/types/activity.types';
 
 export const permissionService = {
   subPath: 'permissions',

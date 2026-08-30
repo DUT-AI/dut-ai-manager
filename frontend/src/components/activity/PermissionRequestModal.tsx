@@ -1,7 +1,7 @@
 import { Modal, Form, Select, TimePicker, Input } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
-import type { PermissionRequestResponse } from '@/types/activity.types';
+import type { PermissionRequestResponse } from '@/features/activity/types/activity.types';
 import type { Homework } from '@/features/homework/types/homework.types';
 import type { MeetingResponse } from '@/types/meeting.types';
 

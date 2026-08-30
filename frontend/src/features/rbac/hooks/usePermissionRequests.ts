@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { permissionService } from '@/features/rbac/services/permission.service';
-import type { PermissionCreate, PermissionUpdate } from '@/types/activity.types';
+import type { PermissionCreate, PermissionUpdate } from '@/features/activity/types/activity.types';
 
 // Query Keys
 const permissionRequestKeys = {

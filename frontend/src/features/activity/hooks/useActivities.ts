@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { activityService } from '@/services/api/activity.service';
+import { activityService } from '@/features/activity/services/activity.service';
 
 export const activityKeys = {
   all: ['activities'] as const,
