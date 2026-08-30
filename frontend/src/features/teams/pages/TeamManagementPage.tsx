@@ -24,7 +24,7 @@ import {
     UserOutlined
 } from '@ant-design/icons';
 import { useTeams, useCreateTeam, useUpdateTeam, useDeleteTeam, useUsers } from '@/hooks';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/features/auth/context/AuthContext';
 import type { TeamResponse, TeamCreate } from '@/features/teams/types/team.types';
 import dayjs from 'dayjs';
 import { motion, type Variants } from 'motion/react';

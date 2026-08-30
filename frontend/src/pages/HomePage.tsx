@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../features/auth/context/AuthContext";
 import { reportService } from "../features/academic-report/services/report.service";
 import { Card, Col, DatePicker, Empty, List, Row, Spin, Tag, Typography, Space } from "antd";
 import dayjs from "dayjs";

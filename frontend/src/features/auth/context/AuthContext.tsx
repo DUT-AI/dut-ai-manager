@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authService } from '../services/api/auth.service';
-import type { UserResponse } from '../features/users/types/user.types';
+import { authService } from '../services/auth.service';
+import type { UserResponse } from '../../users/types/user.types';
 
 interface AuthContextType {
     user: UserResponse | null;
@@ -57,7 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!user) return false;
         const roles = user.role_names?.map(r => r.toLowerCase()) || [];
         if (roles.includes('admin')) return true;
-        return user.permissions?.includes(permission) || false;
+        return user.permission_names?.includes(permission) || false;
     };
 
     const isAdminOrLeader = (): boolean => {

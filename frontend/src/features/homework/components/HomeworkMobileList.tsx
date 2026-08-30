@@ -6,7 +6,7 @@ import { HomeworkPermission } from '@/features/rbac/types/rbac.types';
 import { SubmissionStatusTag } from './SubmissionStatusTag';
 import { DeadlineText } from './DeadlineText';
 
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/features/auth/context/AuthContext';
 
 const { Text } = Typography;
 

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Layout, Menu, Spin, Tag, Typography, Drawer, Grid } from 'antd';
 import type { MenuProps } from 'antd';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/features/auth/context/AuthContext';
 import HeaderLayout from '@/components/MainLayout/Header';
 
 // Import cấu hình mới tạo

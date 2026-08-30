@@ -2,7 +2,7 @@ import React from 'react';
 import { Tag } from 'antd';
 import type { Homework } from '@/features/homework/types/homework.types';
 
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/features/auth/context/AuthContext';
 
 interface SubmissionStatusTagProps {
     record: Homework;

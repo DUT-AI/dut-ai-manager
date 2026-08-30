@@ -1,6 +1,6 @@
 import { useReducer, useCallback } from 'react';
 import { message } from 'antd';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/features/auth/context/AuthContext';
 import type { HomeworkSubmission } from '../types/homework.types';
 import {
     useMyHomeworks,

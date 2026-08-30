@@ -37,7 +37,7 @@ import {
 } from '@/hooks';
 import { RolePermission } from '@/features/rbac/types/rbac.types';
 import type { RoleResponse } from '@/features/rbac/types/rbac.types';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/features/auth/context/AuthContext';
 import useToggle from '@/hooks/useToggle';
 import ApiKeyModal from '@/features/robot/components/ApiKeyModal';
 import { motion, type Variants } from 'motion/react';

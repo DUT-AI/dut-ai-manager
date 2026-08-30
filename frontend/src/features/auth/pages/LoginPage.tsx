@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Form, Input, Button, Card, Typography, message, Flex, Modal } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
-import { authService } from '../services/api/auth.service';
+import { authService } from '../services/auth.service';
 import { useAuth } from '../context/AuthContext';
 import type { LoginRequest } from '../types/auth.types';
 import logo from '../assets/logo.jpg';

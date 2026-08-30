@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Layout, Menu, Typography, Form, Input, Button, Card, message, Avatar, Upload, Grid } from 'antd';
 import { LockOutlined, SettingOutlined, SafetyCertificateOutlined, UserOutlined, DiscordOutlined, UploadOutlined, IdcardOutlined } from '@ant-design/icons';
-import { authService } from '@/services/api/auth.service';
+import { authService } from '@/features/auth/services/auth.service';
 import { userService } from '@/features/users/services/user.service';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/features/auth/context/AuthContext';
 import type { UserResponse } from '@/features/users/types/user.types';
 import { motion, type Variants } from 'motion/react';
 

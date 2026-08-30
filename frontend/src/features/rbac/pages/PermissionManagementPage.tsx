@@ -41,7 +41,7 @@ import {
     useUsers
 } from '@/hooks';
 import { useHomeworks } from '@/features/homework/hooks/useHomeworks';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/features/auth/context/AuthContext';
 import { PermissionRequestPermission } from '@/features/rbac/types/rbac.types';
 import type { PermissionRequestResponse } from '@/features/activity/types/activity.types';
 import dayjs from 'dayjs';

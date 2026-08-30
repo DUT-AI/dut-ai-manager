@@ -1,5 +1,5 @@
 export * from './api.types';
-export * from './auth.types';
+export * from '../features/auth/types/auth.types';
 export * from '../features/users/types/user.types';
 export * from '../features/teams/types/team.types';
 export * from '../features/billing/types/billing.types';

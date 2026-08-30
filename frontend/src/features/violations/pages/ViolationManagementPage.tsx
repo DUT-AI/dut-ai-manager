@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button, Card, Space, Form, message, Typography, Grid } from 'antd';
 import { PlusOutlined, WarningOutlined } from '@ant-design/icons';
 import { useViolations, useCreateViolation, useUpdateViolation, useDeleteViolation, useUsers } from '@/hooks';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/features/auth/context/AuthContext';
 import { ViolationPermission } from '@/features/rbac/types/rbac.types';
 import type { ViolationResponse, ViolationCreate } from '@/types';
 import dayjs from 'dayjs';

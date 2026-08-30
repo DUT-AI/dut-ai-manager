@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { meetingService } from '@/features/meeting/services/meeting.service';
 import { userService } from '@/features/users/services/user.service';
-import { authService } from '@/services/api/auth.service';
+import { authService } from '@/features/auth/services/auth.service';
 import { message, Spin, ConfigProvider, theme, Modal, Table, Tag, Button } from 'antd';
 import { MeetingModal } from '@/features/meeting/components';
 import { useNavigate } from 'react-router-dom';

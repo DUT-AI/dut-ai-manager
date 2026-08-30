@@ -45,7 +45,7 @@ import {
 } from '@/features/meeting/components';
 import { meetingService } from '@/features/meeting/services/meeting.service';
 import useToggle from '@/hooks/useToggle';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/features/auth/context/AuthContext';
 import { useCapacity } from '@/context/CapacityContext';
 import { CapacityWarning } from '@/components/CapacityWarning';
 import { Agentation } from 'agentation';

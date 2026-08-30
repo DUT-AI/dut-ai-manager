@@ -1,6 +1,6 @@
-import axiosInstance from '../axiosInstance';
+import axiosInstance from '../../../services/axiosInstance';
 import type { ApiResponse } from '@/types/api.types';
-import type { LoginRequest, TokenResponse, RegisterRequest, ChangePasswordRequest } from '@/types/auth.types';
+import type { LoginRequest, TokenResponse, RegisterRequest, ChangePasswordRequest } from '@/features/auth/types/auth.types';
 import type { UserResponse } from '@/features/users/types/user.types';
 
 export const authService = {

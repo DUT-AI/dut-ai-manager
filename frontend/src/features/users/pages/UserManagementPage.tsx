@@ -40,7 +40,7 @@ import {
 } from 'antd';
 import { motion, type Variants } from 'motion/react';
 import { useMemo, useReducer, useState } from 'react';
-import { useAuth } from '../../../context/AuthContext';
+import { useAuth } from '../../auth/context/AuthContext';
 import { UserPermission } from '../../rbac/types/rbac.types';
 import { UserStatus, type UserResponse, type UserImportResult } from '../types/user.types';
 
