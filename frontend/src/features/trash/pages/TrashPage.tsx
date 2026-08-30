@@ -75,28 +75,28 @@ const TrashMobileList = ({ dataSource, loading, columns, onRestore }: { dataSour
                         styles={{ body: { padding: '16px' } }}
                     >
                         <div className="flex flex-col gap-2 mb-4">
-                            {columns.includes('title') && <Text strong className="text-base">{record.title}</Text>}
+                            {columns.includes('title') && <Text strong className="text-base">{String(record.title)}</Text>}
                             {columns.includes('user_name') && (
                                 <div className="mb-2">
                                     <UserDisplay record={record} />
                                 </div>
                             )}
-                            {columns.includes('description') && <Text type="secondary" className="text-xs italic">{record.description}</Text>}
+                            {columns.includes('description') && <Text type="secondary" className="text-xs italic">{String(record.description)}</Text>}
                             {columns.includes('reason') && (
                                 <div className="bg-gray-50 p-2 rounded text-xs border border-gray-100 italic">
-                                    Lý do: {record.reason}
+                                    Lý do: {String(record.reason)}
                                 </div>
                             )}
-                            {columns.includes('points') && <div className="text-green-600 font-bold">Điểm: +{record.points}</div>}
-                            {columns.includes('category') && <div className="text-xs font-semibold px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full inline-block self-start uppercase">{record.category}</div>}
-                            {columns.includes('note') && <div className="text-xs text-gray-500 italic">Ghi chú: {record.note}</div>}
+                            {columns.includes('points') && <div className="text-green-600 font-bold">Điểm: +{String(record.points)}</div>}
+                            {columns.includes('category') && <div className="text-xs font-semibold px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full inline-block self-start uppercase">{String(record.category)}</div>}
+                            {columns.includes('note') && <div className="text-xs text-gray-500 italic">Ghi chú: {String(record.note)}</div>}
                         </div>
 
                         <div className="flex items-center justify-between pt-3 border-t border-gray-50">
                             <Text type="secondary" className="text-[10px]">
-                                Ngày: {dayjs(record.deadline || record.date).format('DD/MM/YYYY')}
+                                Ngày: {dayjs(String(record.deadline || record.date)).format('DD/MM/YYYY')}
                             </Text>
-                            <Popconfirm title="Khôi phục?" onConfirm={() => onRestore(record.id)}>
+                            <Popconfirm title="Khôi phục?" onConfirm={() => onRestore(Number(record.id))}>
                                 <Button icon={<UndoOutlined />} type="primary" ghost size="small" className="rounded-lg">
                                     Khôi phục
                                 </Button>
@@ -238,9 +238,9 @@ export const TrashPage: React.FC = () => {
             key: 'user_name',
             render: (_, record) => <UserDisplay record={record as any} />
         },
-        { title: 'Điểm', dataIndex: 'points', key: 'points', render: (val) => <Text type="success">+{val}</Text> },
+        { title: 'Điểm', dataIndex: 'points', key: 'points', render: (val) => <Text type="success">+{String(val)}</Text> },
         { title: 'Lý do', dataIndex: 'reason', key: 'reason' },
-        { title: 'Ngày', dataIndex: 'date', key: 'date', render: (date) => dayjs(date).format('DD/MM/YYYY') },
+        { title: 'Ngày', dataIndex: 'date', key: 'date', render: (date) => dayjs(String(date)).format('DD/MM/YYYY') },
         {
             title: 'Hành động', key: 'action', width: 120,
             render: (record) => (
@@ -260,7 +260,7 @@ export const TrashPage: React.FC = () => {
             }
         },
         { title: 'Lý do', dataIndex: 'reason', key: 'reason' },
-        { title: 'Ngày', dataIndex: 'date', key: 'date', render: (date) => dayjs(date).format('DD/MM/YYYY') },
+        { title: 'Ngày', dataIndex: 'date', key: 'date', render: (date) => dayjs(String(date)).format('DD/MM/YYYY') },
         {
             title: 'Hành động', key: 'action', width: 120,
             render: (record) => (
@@ -277,7 +277,7 @@ export const TrashPage: React.FC = () => {
             key: 'user_name',
             render: (_, record) => <UserDisplay record={record as any} />
         },
-        { title: 'Loại', dataIndex: 'category', key: 'category', render: (val) => <Tag color="blue">{val}</Tag> },
+        { title: 'Loại', dataIndex: 'category', key: 'category', render: (val) => <Tag color="blue">{String(val)}</Tag> },
         { title: 'Lý do/Ghi chú', dataIndex: 'note', key: 'note' },
         {
             title: 'Mục tiêu',

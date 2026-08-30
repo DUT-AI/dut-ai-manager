@@ -4,8 +4,8 @@ và phân quyền).*/
 
 import React from 'react';
 import HomePage from '@/pages/HomePage';
-import { SettingsPage } from '@/pages/SettingsPage';
-import { TrashPage } from '@/pages/TrashPage';
+import { SettingsPage } from '@/features/settings';
+import { TrashPage } from '@/features/trash';
 
 import { AcademicReportPage } from '@/features/academic-report';
 import { ActivityCalendarPage, ActivityReportPage } from '@/features/activity';

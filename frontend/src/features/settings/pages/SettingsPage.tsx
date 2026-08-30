@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Layout, Menu, Typography, Form, Input, Button, Card, message, Avatar, Upload, Grid } from 'antd';
+import { Layout, Menu, Typography, Form, Input, Button, Card, message, Avatar, Upload, Grid, type FormInstance } from 'antd';
 import { LockOutlined, SettingOutlined, SafetyCertificateOutlined, UserOutlined, DiscordOutlined, UploadOutlined, IdcardOutlined } from '@ant-design/icons';
 import { authService } from '@/features/auth/services/auth.service';
 import { userService } from '@/features/users/services/user.service';
-import { useAuth } from '@/features/auth/context/AuthContext';
+import { useAuth } from '@/features/auth';
 import type { UserResponse } from '@/features/users/types/user.types';
 import { motion, type Variants } from 'motion/react';
 
@@ -34,7 +34,7 @@ const itemVariants: Variants = {
 interface PasswordContentProps {
     loading: boolean;
     onFinish: (values: Record<string, unknown>) => void;
-    form: ReturnType<typeof Form.useForm>[0];
+    form: FormInstance;
 }
 
 const PasswordContent: React.FC<PasswordContentProps> = ({ loading, onFinish, form }) => (
@@ -100,7 +100,7 @@ interface GeneralContentProps {
     uploading: boolean;
     onFinish: (values: Record<string, unknown>) => void;
     onAvatarUpload: (info: { file: { status?: string; originFileObj?: File } }) => void;
-    form: ReturnType<typeof Form.useForm>[0];
+    form: FormInstance;
 }
 
 const GeneralContent: React.FC<GeneralContentProps> = ({ user, loading, uploading, onFinish, onAvatarUpload, form }) => (
@@ -142,7 +142,7 @@ const GeneralContent: React.FC<GeneralContentProps> = ({ user, loading, uploadin
                 </Upload>
 
                 <div className="mt-6 text-center">
-                    <Title level={5} className="!mb-0 text-lg">{user?.name}</Title>
+                    <Title level={5} className="mb-0! text-lg">{user?.name}</Title>
                     <Text type="secondary" className="text-sm">{user?.email}</Text>
                     <div className="mt-3">
                         <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 shadow-sm uppercase tracking-wider">
@@ -311,7 +311,7 @@ export const SettingsPage: React.FC = () => {
                         className="bg-white border-r border-gray-200 h-full overflow-y-auto shrink-0"
                     >
                         <div className="p-6 border-b border-gray-100">
-                            <Title level={4} className="!mb-1">Cài đặt</Title>
+                            <Title level={4} className="mb-1!">Cài đặt</Title>
                             <Text type="secondary" className="text-xs">Quản lý tài khoản của bạn</Text>
                         </div>
                         <Menu
@@ -328,7 +328,7 @@ export const SettingsPage: React.FC = () => {
                 ) : (
                     <div className="bg-white border-b border-gray-200 sticky top-0 z-10 p-4">
                         <div className="mb-4">
-                            <Title level={4} className="!mb-0">Cài đặt</Title>
+                            <Title level={4} className="mb-0!">Cài đặt</Title>
                             <Text type="secondary" className="text-xs">Quản lý tài khoản cá nhân</Text>
                         </div>
                         <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">

@@ -4,8 +4,8 @@ import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { authService } from '../services/auth.service';
 import { useAuth } from '../context/AuthContext';
 import type { LoginRequest } from '../types/auth.types';
-import logo from '../assets/logo.jpg';
-import background from '../assets/background.png';
+import logo from '@/assets/logo.jpg';
+import background from '@/assets/background.png';
 
 const { Title, Text } = Typography;
 

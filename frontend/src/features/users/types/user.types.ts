@@ -23,6 +23,7 @@ export const userResponseSchema = z.object({
   discord_id: z.string().nullable().optional(),
   zalo_id: z.string().nullable().optional(),
   check_in_card_code: z.string().nullable().optional(),
+  check_in_card_code_configured: z.boolean().optional(),
   avatar_url: z.string().nullable().optional(),
   role_names: z.array(z.string()).default([]),
   permission_names: z.array(z.string()).default([]),
