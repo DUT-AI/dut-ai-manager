@@ -1,0 +1,1 @@
+export { default as TeamManagementPage } from './pages/TeamManagementPage'

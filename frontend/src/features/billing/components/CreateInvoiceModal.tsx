@@ -2,7 +2,7 @@ import { Modal, Form, Select, Input, Divider, Space, InputNumber, Button, DatePi
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { InvoiceItemType } from '@/features/billing/types/billing.types';
 import type { UserResponse } from '@/features/users/types/user.types';
-import { useTeams } from '@/hooks/useTeams';
+import { useTeams } from '@/features/teams/hooks/useTeams';
 import type { CreateInvoiceFormValues } from '@/features/billing/types/billing.types';
 
 const { Option } = Select;

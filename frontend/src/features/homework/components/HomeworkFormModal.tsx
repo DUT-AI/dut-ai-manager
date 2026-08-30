@@ -4,7 +4,7 @@ import { TeamOutlined, UserOutlined, UploadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Homework } from '@/features/homework/types/homework.types';
 import type { UserResponse } from '@/features/users/types/user.types';
-import type { TeamResponse } from '@/types/team.types';
+import type { TeamResponse } from '@/features/teams/types/team.types';
 import { homeworkService } from '@/features/homework/services/homework.service';
 
 const { TextArea } = Input;

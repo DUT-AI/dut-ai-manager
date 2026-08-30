@@ -3,8 +3,8 @@ import { Modal, Form, Select, DatePicker, Input, message, Switch } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import type { UserResponse } from '@/features/users/types/user.types';
-import { teamService } from '@/services/api/team.service';
-import type { TeamResponse } from '@/types/team.types';
+import { teamService } from '@/features/teams/services/team.service';
+import type { TeamResponse } from '@/features/teams/types/team.types';
 
 const { Option } = Select;
 const { TextArea } = Input;

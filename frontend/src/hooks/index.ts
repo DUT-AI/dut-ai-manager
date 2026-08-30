@@ -2,7 +2,7 @@
 export * from '../features/users/hooks/useUsers';
 
 // Teams
-export * from './useTeams';
+export * from '../features/teams/hooks/useTeams';
 
 // RBAC (Roles & Permissions)
 export * from '../features/rbac/hooks/useRbac';

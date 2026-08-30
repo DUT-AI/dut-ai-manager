@@ -25,7 +25,7 @@ import {
 } from '@ant-design/icons';
 import { useTeams, useCreateTeam, useUpdateTeam, useDeleteTeam, useUsers } from '@/hooks';
 import { useAuth } from '@/context/AuthContext';
-import type { TeamResponse, TeamCreate } from '@/types/team.types';
+import type { TeamResponse, TeamCreate } from '@/features/teams/types/team.types';
 import dayjs from 'dayjs';
 import { motion, type Variants } from 'motion/react';
 
@@ -235,7 +235,7 @@ const TeamManagementPage = () => {
     ];
 
     return (
-        <motion.div 
+        <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"

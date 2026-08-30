@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Modal, Form, DatePicker, InputNumber, Input, Select, Radio } from 'antd';
 import dayjs from 'dayjs';
 import { useUsers } from '@/hooks';
-import { useTeams } from '@/hooks/useTeams';
+import { useTeams } from '@/features/teams/hooks/useTeams';
 import { useUpdateExpense } from '@/features/expense/hooks/useExpense';
 import { ExpenseStatus, type ExpenseInvoice } from '@/features/expense/types/expense.types';
 

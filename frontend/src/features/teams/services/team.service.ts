@@ -1,6 +1,6 @@
-import axiosInstance from '../axiosInstance';
+import axiosInstance from '../../../services/axiosInstance';
 import type { ApiResponse } from '@/types/api.types';
-import type { TeamResponse, TeamCreate, TeamUpdate } from '@/types/team.types';
+import type { TeamResponse, TeamCreate, TeamUpdate } from '@/features/teams/types/team.types';
 
 export const teamService = {
   subPath: 'teams',

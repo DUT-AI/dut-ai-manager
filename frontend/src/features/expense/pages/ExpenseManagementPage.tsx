@@ -25,7 +25,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useUsers } from '@/hooks';
-import { useTeams } from '@/hooks/useTeams';
+import { useTeams } from '@/features/teams/hooks/useTeams';
 import {
   useExpenses,
   useExpenseSummary,

@@ -4,7 +4,7 @@ import { PlusOutlined, AuditOutlined, CalendarOutlined, BarChartOutlined, Dollar
 import dayjs from 'dayjs';
 import { useAllInvoices, useCreateInvoice, useUpdateInvoice, useInvoiceDetail, useDeleteInvoice } from '@/features/billing/hooks/useBilling';
 import { useUsers } from '@/hooks';
-import { useTeams } from '@/hooks/useTeams';
+import { useTeams } from '@/features/teams/hooks/useTeams';
 import CreateMonthlyInvoiceModal from '@/features/billing/components/CreateMonthlyInvoiceModal';
 import type { CreateInvoiceFormValues, Invoice } from '@/types';
 import { motion, type Variants } from 'motion/react';

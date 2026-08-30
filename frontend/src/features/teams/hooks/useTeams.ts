@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { teamService } from '@/services/api/team.service';
-import type { TeamCreate, TeamUpdate } from '@/types/team.types';
+import { teamService } from '@/features/teams/services/team.service';
+import type { TeamCreate, TeamUpdate } from '@/features/teams/types/team.types';
 
 // Query Keys
 const teamKeys = {
@@ -34,7 +34,7 @@ export const useTeam = (id: number) => {
 // Mutations
 export const useCreateTeam = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (data: TeamCreate) => teamService.createTeam(data),
     onSuccess: () => {
@@ -45,9 +45,9 @@ export const useCreateTeam = () => {
 
 export const useUpdateTeam = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: TeamUpdate }) => 
+    mutationFn: ({ id, data }: { id: number; data: TeamUpdate }) =>
       teamService.updateTeam(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: teamKeys.all });
@@ -57,7 +57,7 @@ export const useUpdateTeam = () => {
 
 export const useDeleteTeam = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (id: number) => teamService.deleteTeam(id),
     onSuccess: () => {

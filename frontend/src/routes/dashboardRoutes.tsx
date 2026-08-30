@@ -12,7 +12,7 @@ import UserManagementPage from '@/features/users/pages/UserManagementPage';
 import ActivityCalendarPage from '@/features/activity/pages/ActivityCalendarPage';
 import PermissionManagementPage from '@/features/rbac/pages/PermissionManagementPage';
 import ViolationManagementPage from '@/features/violations/pages/ViolationManagementPage';
-import TeamManagementPage from '@/pages/TeamManagementPage';
+import TeamManagementPage from '@/features/teams/pages/TeamManagementPage';
 import { HomeworkPage } from '@/features/homework';
 import MeetingCalendarPage from '@/features/meeting/pages/MeetingCalendarPage';
 import InvoicesPage from '@/features/billing/pages/InvoicesPage';
