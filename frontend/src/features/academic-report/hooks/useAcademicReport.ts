@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { reportService } from '@/services/api/report.service';
+import { reportService } from '@/features/academic-report/services/report.service';
 
 export interface AcademicReportFilter {
   type: 'bonus' | 'violation';

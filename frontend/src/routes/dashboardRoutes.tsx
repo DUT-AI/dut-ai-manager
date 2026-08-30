@@ -4,7 +4,7 @@ và phân quyền).*/
 
 import React from 'react';
 import HomePage from '@/pages/HomePage';
-import AcademicReportPage from '@/pages/AcademicReportPage';
+import AcademicReportPage from '@/features/academic-report/pages/AcademicReportPage';
 import ActivityReportPage from '@/pages/ActivityReportPage';
 import RobotInterfacePage from '@/features/robot/pages/RobotInterfacePage';
 import RoleManagementPage from '@/features/rbac/pages/RoleManagementPage';

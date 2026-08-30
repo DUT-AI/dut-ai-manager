@@ -22,8 +22,8 @@ import {
     LineChartOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { reportService } from '@/services/api/report.service';
-import type { TitleReportItem, ParticipationStats, ActivityTrendItem } from '@/types/report.types';
+import { reportService } from '@/features/academic-report/services/report.service';
+import type { TitleReportItem, ParticipationStats, ActivityTrendItem } from '@/features/academic-report/types/report.types';
 import { useDebounce } from '@/hooks/useDebounce';
 import { motion, type Variants } from 'motion/react';
 import { TitleBadge } from '@/components/UserTitleBadge';
@@ -47,7 +47,7 @@ import {
 
 const CustomChartTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
-    
+
     const uniquePayload = payload.filter((entry: any, index: number, self: any[]) =>
         index === self.findIndex((e: any) => e.dataKey === entry.dataKey)
     );
@@ -126,7 +126,7 @@ const TrendChart = () => {
         if (!isDragging) return;
         setIsDragging(false);
         const walk = e.pageX - startX;
-        
+
         if (walk > 50 && offset < maxOffset) {
             setOffset(prev => Math.min(maxOffset, prev + SHIFT_STEP)); // Swipe Right -> Older
         } else if (walk < -50 && offset > 0) {
@@ -142,9 +142,9 @@ const TrendChart = () => {
                     <Text type="secondary" className="text-xs">Theo dõi biến động điểm cộng & vi phạm (Vuốt ngang để xem lịch sử 6 tháng)</Text>
                 </div>
             </div>
-            <div 
-                ref={scrollRef} 
-                className={`h-[280px] w-full overflow-hidden ${isDragging ? 'cursor-grabbing' : 'cursor-grab'} select-none`} 
+            <div
+                ref={scrollRef}
+                className={`h-[280px] w-full overflow-hidden ${isDragging ? 'cursor-grabbing' : 'cursor-grab'} select-none`}
                 style={{ opacity: loading ? 0.5 : 1, transition: 'opacity 0.3s' }}
                 onMouseDown={handleMouseDown}
                 onMouseLeave={handleMouseLeave}
@@ -341,11 +341,11 @@ const ActivityReportPage = () => {
         // 1. Điểm tổng (descending)
         const pointsDiff = (b.total_points || 0) - (a.total_points || 0);
         if (pointsDiff !== 0) return pointsDiff;
-        
+
         // 2. Giờ hoạt động (descending)
         const hoursDiff = (b.total_hours || 0) - (a.total_hours || 0);
         if (hoursDiff !== 0) return hoursDiff;
-        
+
         // 3. Alphabet thành viên (ascending)
         const nameA = a.user?.name || '';
         const nameB = b.user?.name || '';
@@ -436,9 +436,9 @@ const ActivityReportPage = () => {
                                                 { title: 'Buổi tham gia', key: 'sessions', render: (item: ParticipationStats) => item.total_sessions === 0 ? <Tag>Chưa sinh hoạt</Tag> : <Tag>{item.total_sessions} buổi</Tag> },
                                                 { title: 'Đúng giờ', key: 'ontime', render: (item: ParticipationStats) => item.total_sessions === 0 ? <Tag>Chưa sinh hoạt</Tag> : <Tag color={item.on_time_rate >= 0.8 ? "success" : "warning"}>{(item.on_time_rate * 100).toFixed(0)}%</Tag> },
                                                 { title: 'Điểm cộng', key: 'bonus', render: (item: ParticipationStats) => <Tag color="green">+{item.total_bonus_points ?? 0}</Tag> },
-                                                { 
-                                                    title: 'Vi phạm', 
-                                                    key: 'violations', 
+                                                {
+                                                    title: 'Vi phạm',
+                                                    key: 'violations',
                                                     render: (item: ParticipationStats) => {
                                                         const penalty = (item.late_count || 0) * 2 + (item.absent_count || 0) * 5;
                                                         return <Tag color="red">{penalty > 0 ? `-${penalty}` : 0}</Tag>;

@@ -1,9 +1,9 @@
 import { z } from 'zod';
-import { bonusPointResponseSchema, permissionRequestResponseSchema, userRefSchema } from './activity.types';
-import { violationResponseSchema } from '../features/violations/types/violation.types';
-import { homeworkSchema } from '../features/homework/types/homework.types';
-import { meetingResponseSchema } from './meeting.types';
-import { userResponseSchema } from './user.types';
+import { bonusPointResponseSchema, permissionRequestResponseSchema, userRefSchema } from '../../../types/activity.types';
+import { violationResponseSchema } from '../../violations/types/violation.types';
+import { homeworkSchema } from '../../homework/types/homework.types';
+import { meetingResponseSchema } from '../../../types/meeting.types';
+import { userResponseSchema } from '../../../types/user.types';
 
 export const dashboardOverviewResponseSchema = z.object({
   permission_requests: z.array(permissionRequestResponseSchema).default([]),

@@ -1,6 +1,6 @@
-import axiosInstance from "../axiosInstance";
-import type { ApiResponse } from "../../types/api.types";
-import type { DashboardOverviewResponse, ReportResponse, TitleReportItem, ParticipationStats, ActivityTrendItem } from "../../types/report.types";
+import axiosInstance from "../../../services/axiosInstance";
+import type { ApiResponse } from "../../../types/api.types";
+import type { DashboardOverviewResponse, ReportResponse, TitleReportItem, ParticipationStats, ActivityTrendItem } from "../types/report.types";
 
 export const reportService = {
   getDashboardOverview: async (month: number, year: number): Promise<DashboardOverviewResponse> => {

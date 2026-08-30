@@ -26,4 +26,4 @@ export {
 } from './activity.types';
 
 export * from '../features/rbac/types/rbac.types';
-export * from './report.types';
+export * from '../features/academic-report/types/report.types';

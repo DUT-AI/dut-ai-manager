@@ -21,12 +21,12 @@ import {
     EyeOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import type { ReportItem } from '@/types/report.types';
+import type { ReportItem } from '@/features/academic-report/types/report.types';
 import type { UserResponse } from '@/types/user.types';
 import type { ColumnsType } from 'antd/es/table';
 import { useDebounce } from '@/hooks/useDebounce';
-import { useAcademicReport } from '@/hooks/useAcademicReport';
-import { UserRecordDetailModal } from './components/UserRecordDetailModal';
+import { useAcademicReport } from '@/features/academic-report/hooks/useAcademicReport';
+import { UserRecordDetailModal } from '../../../pages/components/UserRecordDetailModal';
 import { motion, type Variants } from 'motion/react';
 
 const { Title, Text } = Typography;
@@ -219,7 +219,7 @@ const AcademicReportPage = () => {
     const screens = useBreakpoint();
 
     return (
-        <motion.div 
+        <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"

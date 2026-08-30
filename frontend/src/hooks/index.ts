@@ -33,4 +33,4 @@ export * from '../features/billing/hooks/useBilling';
 export * from '../features/expense/hooks/useExpense';
 
 // Academic Reports
-export * from './useAcademicReport';
+export * from '../features/academic-report/hooks/useAcademicReport';

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { reportService } from "../services/api/report.service";
+import { reportService } from "../features/academic-report/services/report.service";
 import { Card, Col, DatePicker, Empty, List, Row, Spin, Tag, Typography, Space } from "antd";
 import dayjs from "dayjs";
 import {
@@ -125,7 +125,7 @@ const HomePage = () => {
     ];
 
     return (
-        <motion.div 
+        <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"
@@ -139,9 +139,9 @@ const HomePage = () => {
                     <Text type="secondary">Tổng quan hoạt động của bạn trong tháng này</Text>
                 </div>
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                    <DatePicker 
-                        picker="month" 
-                        value={date} 
+                    <DatePicker
+                        picker="month"
+                        value={date}
                         onChange={(d) => d && setDate(d)}
                         format="MM/YYYY"
                         allowClear={false}
@@ -188,7 +188,7 @@ const HomePage = () => {
                                     <div>
                                         <Text type="secondary" className="text-xs uppercase font-bold tracking-wider">{stat.title}</Text>
                                         <div className="mt-1">
-                                            {isPartLoading ? <Spin size="small"/> : <Title level={2} className="!m-0 !text-gray-800">{stat.value}</Title>}
+                                            {isPartLoading ? <Spin size="small" /> : <Title level={2} className="!m-0 !text-gray-800">{stat.value}</Title>}
                                         </div>
                                     </div>
                                     <div className="p-3 bg-white/60 rounded-xl shadow-xs">
@@ -204,14 +204,14 @@ const HomePage = () => {
             <Row gutter={[24, 24]}>
                 <Col xs={24} lg={16}>
                     <motion.div variants={itemVariants}>
-                        <Card 
+                        <Card
                             title={
                                 <Space>
                                     <ClockCircleOutlined className="text-indigo-500" />
                                     <span>Bài tập chưa nộp</span>
                                 </Space>
                             }
-                            bordered={false} 
+                            bordered={false}
                             className="shadow-sm border-gray-100 rounded-xl overflow-hidden h-full"
                         >
                             {isLoading ? (
@@ -244,14 +244,14 @@ const HomePage = () => {
 
                 <Col xs={24} lg={8}>
                     <motion.div variants={itemVariants}>
-                        <Card 
+                        <Card
                             title={
                                 <Space>
                                     <TeamOutlined className="text-indigo-500" />
                                     <span>Team Members</span>
                                 </Space>
                             }
-                            bordered={false} 
+                            bordered={false}
                             className="shadow-sm border-gray-100 rounded-xl overflow-hidden h-full"
                         >
                             {isLoading ? (

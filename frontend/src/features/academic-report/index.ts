@@ -1,0 +1,1 @@
+export { default as AcademicReportPage } from './pages/AcademicReportPage';
