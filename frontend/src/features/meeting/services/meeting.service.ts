@@ -1,6 +1,6 @@
-import axiosInstance from '../axiosInstance';
+import axiosInstance from '../../../services/axiosInstance';
 import type { ApiResponse } from '@/types/api.types';
-import type { MeetingCreate, MeetingUpdate, MeetingResponse, ParticipantResponse } from '@/types/meeting.types';
+import type { MeetingCreate, MeetingUpdate, MeetingResponse, ParticipantResponse } from '@/features/meeting/types/meeting.types';
 
 export const meetingService = {
   subPath: 'meetings',

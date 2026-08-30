@@ -10,7 +10,7 @@ const { Option } = Select;
 const { TextArea } = Input;
 const { RangePicker } = DatePicker;
 
-import type { MeetingResponse } from '@/types/meeting.types';
+import type { MeetingResponse } from '@/features/meeting/types/meeting.types';
 
 interface Props {
     open: boolean;

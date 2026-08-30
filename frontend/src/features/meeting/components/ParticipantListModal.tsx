@@ -1,8 +1,8 @@
 import { Modal, Table, Avatar, Tag, Typography, Image } from 'antd';
 import { UserOutlined, CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import type { MeetingResponse, ParticipantResponse } from '@/types/meeting.types';
-import { ParticipantStatus } from '@/types/meeting.types';
+import type { MeetingResponse, ParticipantResponse } from '@/features/meeting/types/meeting.types';
+import { ParticipantStatus } from '@/features/meeting/types/meeting.types';
 
 const { Text } = Typography;
 
@@ -33,7 +33,7 @@ export const ParticipantListModal = ({ open, meeting, onCancel }: Props) => {
                 const isJoinedOrCompleted = status === ParticipantStatus.JOINED || status === ParticipantStatus.COMPLETED;
                 const isLateNotJoined = status === ParticipantStatus.NOT_JOINED && meeting && dayjs().isAfter(dayjs(meeting.start_time).add(5, 'minute'));
                 const isLateJoined = isJoinedOrCompleted && record.check_in_at && meeting && dayjs(record.check_in_at).isAfter(dayjs(meeting.start_time).add(5, 'minute'));
-                
+
                 let tagColor = 'default';
                 let tagIcon = <CloseCircleOutlined />;
                 let tagText = 'CHƯA THAM GIA';

@@ -3,7 +3,7 @@ import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import type { PermissionRequestResponse } from '@/features/activity/types/activity.types';
 import type { Homework } from '@/features/homework/types/homework.types';
-import type { MeetingResponse } from '@/types/meeting.types';
+import type { MeetingResponse } from '@/features/meeting/types/meeting.types';
 
 const { Option } = Select;
 const { TextArea } = Input;

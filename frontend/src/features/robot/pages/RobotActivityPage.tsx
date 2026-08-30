@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { meetingService } from '@/services/api/meeting.service';
+import { meetingService } from '@/features/meeting/services/meeting.service';
 import { userService } from '@/services/api/user.service';
 import { authService } from '@/services/api/auth.service';
 import { message, Spin, ConfigProvider, theme, Modal, Table, Tag, Button } from 'antd';
-import { MeetingModal } from '@/components/meeting';
+import { MeetingModal } from '@/features/meeting/components';
 import { useNavigate } from 'react-router-dom';
 import type { UserResponse } from '@/types/user.types';
-import type { MeetingResponse, ParticipantResponse } from '@/types/meeting.types';
+import type { MeetingResponse, ParticipantResponse } from '@/features/meeting/types/meeting.types';
 import dayjs from 'dayjs';
 
 // Activity Registration - Added Check-in/Out Column and Expiry Logic
@@ -195,8 +195,8 @@ const RobotActivityPage = () => {
                                 key={day.num}
                                 onClick={() => setSelectedDay(day.num)}
                                 className={`flex flex-col items-center justify-center w-20 h-24 rounded-xl border transition-all cursor-pointer relative ${day.isToday
-                                        ? 'border-[#4fdbc8] bg-[#4fdbc8]/10'
-                                        : 'border-[#424754]/20 hover:bg-[#363941]/30'
+                                    ? 'border-[#4fdbc8] bg-[#4fdbc8]/10'
+                                    : 'border-[#424754]/20 hover:bg-[#363941]/30'
                                     } ${day.dimmed ? 'opacity-50' : ''} ${selectedDay === day.num && !day.isToday ? 'border-[#adc6ff]/50 bg-[#adc6ff]/5' : ''}`}
                             >
                                 {day.isToday && (
@@ -218,8 +218,8 @@ const RobotActivityPage = () => {
                                 key={block.key}
                                 onClick={() => setSelectedBlock(block.key)}
                                 className={`flex-shrink-0 lg:w-full text-left p-4 rounded-xl flex items-center justify-between transition-all relative overflow-hidden ${selectedBlock === block.key
-                                        ? 'bg-white/[0.03] backdrop-blur-[12px] border border-[#4fdbc8]/50 bg-[#4fdbc8]/5 shadow-[0_0_15px_rgba(79,219,200,0.2)]'
-                                        : 'bg-[#363941] border border-[#424754]/30 hover:border-[#4fdbc8]/50 group'
+                                    ? 'bg-white/[0.03] backdrop-blur-[12px] border border-[#4fdbc8]/50 bg-[#4fdbc8]/5 shadow-[0_0_15px_rgba(79,219,200,0.2)]'
+                                    : 'bg-[#363941] border border-[#424754]/30 hover:border-[#4fdbc8]/50 group'
                                     }`}
                             >
                                 {selectedBlock === block.key && <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#4fdbc8]" />}
@@ -294,8 +294,8 @@ const RobotActivityPage = () => {
                                                         onClick={() => handleRegister(event)}
                                                         disabled={registeringId === event.id || isRegistered}
                                                         className={`w-full md:w-auto h-[44px] px-8 rounded-xl font-['JetBrains_Mono'] text-[12px] tracking-[0.1em] font-medium uppercase transition-all flex items-center justify-center gap-2 ${isRegistered
-                                                                ? 'bg-[#4fdbc8]/20 text-[#4fdbc8] border border-[#4fdbc8]/30 cursor-not-allowed opacity-80'
-                                                                : 'bg-[#adc6ff] text-[#002e6a] hover:bg-[#adc6ff]/80 shadow-[0_0_15px_rgba(173,198,255,0.3)] active:scale-95'
+                                                            ? 'bg-[#4fdbc8]/20 text-[#4fdbc8] border border-[#4fdbc8]/30 cursor-not-allowed opacity-80'
+                                                            : 'bg-[#adc6ff] text-[#002e6a] hover:bg-[#adc6ff]/80 shadow-[0_0_15px_rgba(173,198,255,0.3)] active:scale-95'
                                                             }`}
                                                     >
                                                         {registeringId === event.id ? (

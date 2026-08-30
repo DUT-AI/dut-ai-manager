@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { bonusPointResponseSchema, permissionRequestResponseSchema, userRefSchema } from '../../activity/types/activity.types';
 import { violationResponseSchema } from '../../violations/types/violation.types';
 import { homeworkSchema } from '../../homework/types/homework.types';
-import { meetingResponseSchema } from '../../../types/meeting.types';
+import { meetingResponseSchema } from '../../meeting/types/meeting.types';
 import { userResponseSchema } from '../../../types/user.types';
 
 export const dashboardOverviewResponseSchema = z.object({

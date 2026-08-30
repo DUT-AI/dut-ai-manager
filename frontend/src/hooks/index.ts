@@ -18,7 +18,7 @@ export * from '../features/activity/hooks/useBonusPoints';
 export * from '../features/rbac/hooks/usePermissionRequests';
 
 // Meetings
-export * from './useMeetings';
+export * from '../features/meeting/hooks/useMeetings';
 
 // Utils
 export * from './useDebounce';

@@ -9,9 +9,9 @@ import {
     SafetyCertificateOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import type { MeetingResponse, ParticipantResponse } from '@/types/meeting.types';
-import { ParticipantStatus } from '@/types/meeting.types';
-import { useMeetingEvents } from '@/hooks/useMeetingEvents';
+import type { MeetingResponse, ParticipantResponse } from '@/features/meeting/types/meeting.types';
+import { ParticipantStatus } from '@/features/meeting/types/meeting.types';
+import { useMeetingEvents } from '@/features/meeting/hooks/useMeetingEvents';
 
 const { Text, Title } = Typography;
 

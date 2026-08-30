@@ -1,7 +1,7 @@
 import { Typography, List, Card, Badge, Button, Empty } from 'antd';
 import { VideoCameraOutlined, UserOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import type { MeetingResponse } from '@/types/meeting.types';
+import { ParticipantStatus, type MeetingResponse } from '@/features/meeting/types/meeting.types';
 
 const { Text } = Typography;
 
@@ -32,7 +32,7 @@ export const MeetingSection = ({ data, onViewParticipants, onEdit, onDelete }: P
                                     <Text strong className="text-blue-600 block">{item.title}</Text>
                                     <Badge
                                         status="processing"
-                                        text={`${item.participants.filter(p => p.status === 'đã checkin').length}/${item.participants.length}`}
+                                        text={`${item.participants.filter(p => p.status === ParticipantStatus.JOINED || p.status === ParticipantStatus.COMPLETED).length}/${item.participants.length}`}
                                     />
                                 </div>
 

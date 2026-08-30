@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { meetingService } from '@/services/api/meeting.service';
-import type { MeetingCreate, MeetingUpdate } from '@/types/meeting.types';
+import { meetingService } from '@/features/meeting/services/meeting.service';
+import type { MeetingCreate, MeetingUpdate } from '@/features/meeting/types/meeting.types';
 
 // Query Keys
 const meetingKeys = {

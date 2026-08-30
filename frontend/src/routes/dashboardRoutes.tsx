@@ -14,7 +14,7 @@ import PermissionManagementPage from '@/features/rbac/pages/PermissionManagement
 import ViolationManagementPage from '@/features/violations/pages/ViolationManagementPage';
 import TeamManagementPage from '@/pages/TeamManagementPage';
 import { HomeworkPage } from '@/features/homework';
-import MeetingCalendarPage from '@/pages/MeetingCalendarPage';
+import MeetingCalendarPage from '@/features/meeting/pages/MeetingCalendarPage';
 import InvoicesPage from '@/features/billing/pages/InvoicesPage';
 import AdminBillingPage from '@/features/billing/pages/AdminBillingPage';
 import { SettingsPage } from '@/pages/SettingsPage';

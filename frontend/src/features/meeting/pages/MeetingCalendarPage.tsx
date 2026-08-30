@@ -12,11 +12,11 @@ import {
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
-import type { MeetingResponse } from '@/types/meeting.types';
-import { ParticipantStatus } from '@/types/meeting.types';
-import { useMeetingsByWeek, useCreateMeeting, useUpdateMeeting, useDeleteMeeting } from '@/hooks/useMeetings';
-import { MeetingDetailDrawer } from '@/components/meeting/MeetingDetailDrawer';
-import { MeetingModal } from '@/components/meeting/MeetingModal';
+import type { MeetingResponse } from '@/features/meeting/types/meeting.types';
+import { ParticipantStatus } from '@/features/meeting/types/meeting.types';
+import { useMeetingsByWeek, useCreateMeeting, useUpdateMeeting, useDeleteMeeting } from '@/features/meeting/hooks/useMeetings';
+import { MeetingDetailDrawer } from '@/features/meeting/components/MeetingDetailDrawer';
+import { MeetingModal } from '@/features/meeting/components/MeetingModal';
 import { useUsers } from '@/hooks/useUsers';
 import { motion, type Variants } from 'motion/react';
 import { useCapacity } from '@/context/CapacityContext';

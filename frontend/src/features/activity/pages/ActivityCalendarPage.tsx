@@ -29,7 +29,7 @@ import { violationService } from '@/features/violations/services/violation.servi
 import { useMonthlyActivities, useDailyActivitySummary } from '@/features/activity/hooks/useActivities';
 import { useUsers } from '@/hooks/useUsers';
 import { useHomeworks } from '@/features/homework/hooks/useHomeworks';
-import { useMeetings } from '@/hooks/useMeetings';
+import { useMeetings } from '@/features/meeting/hooks/useMeetings';
 import {
     PermissionRequestSection,
     BonusPointSection,
@@ -42,8 +42,8 @@ import {
     MeetingModal,
     MeetingSection,
     ParticipantListModal
-} from '@/components/meeting';
-import { meetingService } from '@/services/api/meeting.service';
+} from '@/features/meeting/components';
+import { meetingService } from '@/features/meeting/services/meeting.service';
 import useToggle from '@/hooks/useToggle';
 import { useAuth } from '@/context/AuthContext';
 import { useCapacity } from '@/context/CapacityContext';
