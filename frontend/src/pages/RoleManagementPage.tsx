@@ -39,7 +39,7 @@ import { RolePermission } from '@/types/rbac.types';
 import type { RoleResponse } from '@/types/rbac.types';
 import { useAuth } from '@/context/AuthContext';
 import useToggle from '@/hooks/useToggle';
-import ApiKeyModal from '@/components/Role/ApiKeyModal';
+import ApiKeyModal from '@/features/robot/components/ApiKeyModal';
 import { motion, type Variants } from 'motion/react';
 
 const { Title, Text } = Typography;
@@ -343,7 +343,7 @@ const RoleManagementPage = () => {
     const screens = Grid.useBreakpoint();
 
     return (
-        <motion.div 
+        <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"

@@ -1,10 +1,10 @@
-import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 
-import RobotHomePage from './robot/RobotHomePage';
-import RobotActivityPage from './robot/RobotActivityPage';
-import RobotCheckinPage from './robot/RobotCheckinPage';
-import RobotRegisterPage from './robot/RobotRegisterPage';
+import RobotHomePage from './RobotHomePage';
+import RobotActivityPage from './RobotActivityPage';
+import RobotCheckinPage from './RobotCheckinPage';
+import RobotRegisterPage from './RobotRegisterPage';
 
 // Shared top nav bar for the Robot Interface - Enhanced with Dynamic Battery & Network Status
 const RobotTopNav = () => {
@@ -12,7 +12,7 @@ const RobotTopNav = () => {
     const [batteryLevel, setBatteryLevel] = useState<number | null>(null);
     const [isCharging, setIsCharging] = useState(false);
     const [isOnline, setIsOnline] = useState(navigator.onLine);
-    
+
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -74,7 +74,7 @@ const RobotTopNav = () => {
     return (
         <header className="bg-[#10131a]/60 backdrop-blur-xl fixed top-0 w-full border-b border-[#424754]/10 shadow-[0_0_20px_rgba(79,219,200,0.1)] flex justify-between items-center h-20 px-6 z-50">
             <div className="flex items-center gap-4">
-                <button 
+                <button
                     onClick={handleBack}
                     className="hover:bg-[#4fdbc8]/10 transition-colors p-2 rounded-full active:scale-95 group mr-2"
                     title={isRobotHome ? "Back to Dashboard" : "Back to Robot Home"}
@@ -112,8 +112,6 @@ const RobotTopNav = () => {
 };
 
 const RobotInterfacePage = () => {
-    const location = useLocation();
-
     return (
         <div className="min-h-screen bg-[#0B1120] text-[#e1e2ec] font-['Inter'] antialiased overflow-x-hidden">
             {/* Google Fonts */}

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Spin, Result, Button, message } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
-import { zaloService } from '@/services/api/zalo.service';
+import { zaloService } from '@/features/robot/services/zalo.service';
 
 const ZaloCallback = () => {
     const location = useLocation();

@@ -13,7 +13,7 @@ import {
     message
 } from 'antd';
 import { DeleteOutlined, PlusOutlined, KeyOutlined } from '@ant-design/icons';
-import { useRoleApiKeys, useCreateApiKey, useRevokeApiKey } from '@/hooks/useApiKeys';
+import { useRoleApiKeys, useCreateApiKey, useRevokeApiKey } from '@/features/robot/hooks/useApiKeys';
 import type { RoleResponse } from '@/types/rbac.types';
 import dayjs from 'dayjs';
 

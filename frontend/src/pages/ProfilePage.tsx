@@ -31,7 +31,7 @@ import {
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { useUsers, useViolations, useBonusPoints, usePermissionRequests } from '@/hooks';
-import { zaloService } from '@/services/api/zalo.service';
+import { zaloService } from '@/features/robot/services/zalo.service';
 
 import type { BonusPointResponse, ViolationResponse, PermissionRequestResponse } from '../types/activity.types';
 import type { ColumnsType } from 'antd/es/table';

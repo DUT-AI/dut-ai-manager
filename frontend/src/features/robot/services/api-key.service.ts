@@ -1,4 +1,4 @@
-import axiosInstance from '../axiosInstance';
+import axiosInstance from '../../../services/axiosInstance';
 import type { ApiResponse } from '@/types/api.types';
 
 interface RoleApiKey {

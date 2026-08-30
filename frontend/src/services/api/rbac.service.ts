@@ -1,12 +1,12 @@
 import axiosInstance from '../axiosInstance';
 import type { ApiResponse } from '@/types/api.types';
-import type { 
-  RoleResponse, 
-  RoleCreate, 
-  RoleUpdate, 
-  PermissionResponse, 
-  PermissionCreate, 
-  PermissionUpdate 
+import type {
+  RoleResponse,
+  RoleCreate,
+  RoleUpdate,
+  PermissionResponse,
+  PermissionCreate,
+  PermissionUpdate
 } from '@/types/rbac.types';
 
 export const rbacService = {

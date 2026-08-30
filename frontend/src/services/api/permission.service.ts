@@ -1,6 +1,6 @@
 import axiosInstance from '../axiosInstance';
 import type { ApiResponse } from '@/types/api.types';
-import type { 
+import type {
   PermissionCreate,
   PermissionUpdate,
   PermissionRequestResponse,
@@ -11,7 +11,7 @@ export const permissionService = {
 
   async getPermissions(userId?: number, month?: number, year?: number, category?: string, deleted?: boolean) {
     const response = await axiosInstance.get<ApiResponse<PermissionRequestResponse[]>>(`/${this.subPath}`, {
-        params: { user_id: userId, month, year, category, deleted }
+      params: { user_id: userId, month, year, category, deleted }
     });
     return response.data.data;
   },
@@ -20,7 +20,7 @@ export const permissionService = {
     const response = await axiosInstance.post<ApiResponse<PermissionRequestResponse>>(`/${this.subPath}`, data);
     return response.data;
   },
-  
+
   async updatePermission(id: number, data: PermissionUpdate) {
     const response = await axiosInstance.put<ApiResponse<PermissionRequestResponse>>(`/${this.subPath}/${id}`, data);
     return response.data;

@@ -96,7 +96,7 @@ const RobotRegisterPage = () => {
                 <div className="lg:col-span-5 flex flex-col justify-center">
                     <div className="bg-[#191b23]/50 backdrop-blur-md rounded-xl p-4 border border-[#424754]/10">
                         <div className="grid grid-cols-3 gap-3">
-                            {[1,2,3,4,5,6,7,8,9].map(num => (
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
                                 <button
                                     key={num}
                                     onClick={() => handleKeyPress(String(num))}

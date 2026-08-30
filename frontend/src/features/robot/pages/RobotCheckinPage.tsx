@@ -3,15 +3,23 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { message } from 'antd';
 
+interface IdentifiedUser {
+    name: string;
+    status: string;
+    time: string;
+    isActive: boolean;
+    avatar: string;
+}
+
 // Check-in / Check-out - Added Return Home flow after successful check-in/out
 const RobotCheckinPage = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const [showLiveFeed, setShowLiveFeed] = useState(false);
     const [isIdentified, setIsIdentified] = useState(false);
-    const [identifiedUser, setIdentifiedUser] = useState<Record<string, unknown> | null>(null);
+    const [identifiedUser, setIdentifiedUser] = useState<IdentifiedUser | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
-    
+
     const isAccompanistMode = location.state?.mode === 'accompanist';
 
     const liveFeed = [
@@ -65,7 +73,7 @@ const RobotCheckinPage = () => {
                 {/* Header Context */}
                 <AnimatePresence>
                     {isAccompanistMode ? (
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, y: -20 }}
                             animate={{ opacity: 1, y: 0 }}
                             className="absolute top-8 left-10 z-20 flex items-center gap-4 bg-[#4fdbc8]/10 border border-[#4fdbc8]/30 px-6 py-3 rounded-2xl backdrop-blur-md"
@@ -77,7 +85,7 @@ const RobotCheckinPage = () => {
                             </div>
                         </motion.div>
                     ) : (
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, y: -20 }}
                             animate={{ opacity: 1, y: 0 }}
                             className="absolute top-8 left-10 z-20 flex items-center gap-4 bg-white/5 border border-white/10 px-6 py-3 rounded-2xl backdrop-blur-md"
@@ -93,13 +101,12 @@ const RobotCheckinPage = () => {
 
                 {/* Toggle Button for Live Feed */}
                 <div className="absolute top-8 right-8 z-20">
-                    <button 
+                    <button
                         onClick={() => setShowLiveFeed(!showLiveFeed)}
-                        className={`flex items-center gap-2 px-4 h-10 rounded-full border transition-all active:scale-95 ${
-                            showLiveFeed 
-                            ? 'bg-[#4fdbc8] text-[#003731] border-[#4fdbc8]' 
-                            : 'bg-[#191b23]/60 text-[#c2c6d6] border-[#424754]/40 hover:border-[#4fdbc8]/50'
-                        }`}
+                        className={`flex items-center gap-2 px-4 h-10 rounded-full border transition-all active:scale-95 ${showLiveFeed
+                                ? 'bg-[#4fdbc8] text-[#003731] border-[#4fdbc8]'
+                                : 'bg-[#191b23]/60 text-[#c2c6d6] border-[#424754]/40 hover:border-[#4fdbc8]/50'
+                            }`}
                     >
                         <span className="material-symbols-outlined text-[18px]">
                             {showLiveFeed ? 'visibility_off' : 'monitoring'}
@@ -116,9 +123,8 @@ const RobotCheckinPage = () => {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.5 }}
                     onClick={simulateIdentification}
-                    className={`relative w-[500px] h-[500px] md:w-[560px] md:h-[560px] flex flex-col items-center justify-center bg-[#191b23]/40 backdrop-blur-xl border rounded-xl mb-12 shadow-[0_0_40px_rgba(79,219,200,0.05)] cursor-pointer group ${
-                        isIdentified ? 'border-[#4fdbc8]' : 'border-[#4fdbc8]/20'
-                    }`}
+                    className={`relative w-[500px] h-[500px] md:w-[560px] md:h-[560px] flex flex-col items-center justify-center bg-[#191b23]/40 backdrop-blur-xl border rounded-xl mb-12 shadow-[0_0_40px_rgba(79,219,200,0.05)] cursor-pointer group ${isIdentified ? 'border-[#4fdbc8]' : 'border-[#4fdbc8]/20'
+                        }`}
                 >
                     {/* Corner brackets */}
                     <div className={`absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 rounded-tl-xl shadow-[0_0_25px_rgba(79,219,200,0.5)] m-[-2px] transition-colors ${isIdentified ? 'border-[#4fdbc8]' : 'border-[#4fdbc8]/50'}`} />
@@ -135,8 +141,8 @@ const RobotCheckinPage = () => {
 
                     {/* Face Icon / Identified User */}
                     <AnimatePresence mode="wait">
-                        {!isIdentified ? (
-                            <motion.div 
+                        {!isIdentified || !identifiedUser ? (
+                            <motion.div
                                 key="scanning"
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
@@ -148,15 +154,15 @@ const RobotCheckinPage = () => {
                                 <div className="mt-4 text-[10px] text-[#c2c6d6]/50 uppercase tracking-widest">(Click to simulate ID)</div>
                             </motion.div>
                         ) : (
-                            <motion.div 
+                            <motion.div
                                 key="identified"
                                 initial={{ opacity: 0, scale: 0.8 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 className="flex flex-col items-center justify-center text-[#4fdbc8]"
                             >
                                 <div className="relative mb-6">
-                                    <img 
-                                        src={identifiedUser.avatar} 
+                                    <img
+                                        src={identifiedUser.avatar}
                                         className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-[#4fdbc8] object-cover shadow-[0_0_30px_rgba(79,219,200,0.3)]"
                                         alt="Identified"
                                     />
@@ -191,11 +197,10 @@ const RobotCheckinPage = () => {
                                 whileHover={isIdentified ? { scale: 1.02 } : {}}
                                 whileTap={isIdentified ? { scale: 0.98 } : {}}
                                 onClick={() => isIdentified && handleAction('in')}
-                                className={`flex-1 h-20 rounded-xl font-['Space_Grotesk'] text-[20px] md:text-[24px] leading-[1.2] font-semibold flex items-center justify-center gap-3 transition-all ${
-                                    isIdentified 
-                                    ? 'bg-[#4fdbc8] text-[#003731] shadow-[0_0_25px_rgba(79,219,200,0.5)]' 
-                                    : 'bg-[#1d2027] border border-[#424754] text-[#e1e2ec] opacity-50 cursor-not-allowed'
-                                }`}
+                                className={`flex-1 h-20 rounded-xl font-['Space_Grotesk'] text-[20px] md:text-[24px] leading-[1.2] font-semibold flex items-center justify-center gap-3 transition-all ${isIdentified
+                                        ? 'bg-[#4fdbc8] text-[#003731] shadow-[0_0_25px_rgba(79,219,200,0.5)]'
+                                        : 'bg-[#1d2027] border border-[#424754] text-[#e1e2ec] opacity-50 cursor-not-allowed'
+                                    }`}
                             >
                                 {isProcessing ? (
                                     <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-current"></div>
@@ -210,11 +215,10 @@ const RobotCheckinPage = () => {
                                 whileHover={isIdentified ? { scale: 1.02 } : {}}
                                 whileTap={isIdentified ? { scale: 0.98 } : {}}
                                 onClick={() => isIdentified && handleAction('out')}
-                                className={`flex-1 h-20 rounded-xl font-['Space_Grotesk'] text-[20px] md:text-[24px] leading-[1.2] font-semibold flex items-center justify-center gap-3 transition-all ${
-                                    isIdentified
-                                    ? 'bg-[#1d2027] border border-[#424754] text-[#e1e2ec] hover:border-[#4fdbc8]/50 hover:bg-[#363941]/50 shadow-[0_0_25px_rgba(0,0,0,0.2)]'
-                                    : 'bg-[#1d2027] border border-[#424754] text-[#e1e2ec] opacity-50 cursor-not-allowed'
-                                }`}
+                                className={`flex-1 h-20 rounded-xl font-['Space_Grotesk'] text-[20px] md:text-[24px] leading-[1.2] font-semibold flex items-center justify-center gap-3 transition-all ${isIdentified
+                                        ? 'bg-[#1d2027] border border-[#424754] text-[#e1e2ec] hover:border-[#4fdbc8]/50 hover:bg-[#363941]/50 shadow-[0_0_25px_rgba(0,0,0,0.2)]'
+                                        : 'bg-[#1d2027] border border-[#424754] text-[#e1e2ec] opacity-50 cursor-not-allowed'
+                                    }`}
                             >
                                 {isProcessing ? (
                                     <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-current"></div>
@@ -231,7 +235,7 @@ const RobotCheckinPage = () => {
 
                 {/* Cancel/Back Button */}
                 <div className="mt-8">
-                    <button 
+                    <button
                         onClick={() => navigate('/dashboard/robot')}
                         className="text-[#c2c6d6] hover:text-[#e1e2ec] font-['JetBrains_Mono'] text-[12px] tracking-[0.1em] uppercase flex items-center gap-2 transition-colors"
                     >
@@ -244,7 +248,7 @@ const RobotCheckinPage = () => {
             {/* Live Feed Sidebar */}
             <AnimatePresence>
                 {showLiveFeed && (
-                    <motion.aside 
+                    <motion.aside
                         initial={{ x: 420, opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: 420, opacity: 0 }}
@@ -266,26 +270,23 @@ const RobotCheckinPage = () => {
                                     initial={{ opacity: 0, x: 20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: idx * 0.1 }}
-                                    className={`bg-[#1d2027] rounded-xl p-4 flex items-center gap-4 relative overflow-hidden flex-shrink-0 ${
-                                        person.isActive ? 'border border-[#4fdbc8]/20 shadow-[0_0_15px_rgba(79,219,200,0.2)]' : 'border border-[#424754]/20'
-                                    }`}
+                                    className={`bg-[#1d2027] rounded-xl p-4 flex items-center gap-4 relative overflow-hidden flex-shrink-0 ${person.isActive ? 'border border-[#4fdbc8]/20 shadow-[0_0_15px_rgba(79,219,200,0.2)]' : 'border border-[#424754]/20'
+                                        }`}
                                 >
                                     <div className={`absolute left-0 top-0 bottom-0 w-1 ${person.isActive ? 'bg-[#4fdbc8]' : 'bg-[#424754]'}`} />
                                     <img
                                         alt="Avatar"
-                                        className={`w-14 h-14 rounded-full border object-cover ${
-                                            person.isActive ? 'border-[#4fdbc8]/50' : 'border-[#424754]/50 opacity-70'
-                                        }`}
+                                        className={`w-14 h-14 rounded-full border object-cover ${person.isActive ? 'border-[#4fdbc8]/50' : 'border-[#424754]/50 opacity-70'
+                                            }`}
                                         src={person.avatar}
                                     />
                                     <div className="flex-1">
                                         <div className={`font-semibold ${person.isActive ? 'text-[#e1e2ec]' : 'text-[#c2c6d6]'}`}>{person.name}</div>
                                         <div className="flex items-center gap-2 mt-1">
-                                            <span className={`px-2 py-0.5 rounded-full font-['JetBrains_Mono'] text-[10px] ${
-                                                person.status === 'INBOUND'
+                                            <span className={`px-2 py-0.5 rounded-full font-['JetBrains_Mono'] text-[10px] ${person.status === 'INBOUND'
                                                     ? 'bg-[#4fdbc8]/10 border border-[#4fdbc8]/30 text-[#4fdbc8]'
                                                     : 'bg-[#363941] border border-[#424754]/30 text-[#c2c6d6]'
-                                            }`}>{person.status}</span>
+                                                }`}>{person.status}</span>
                                             <span className="font-['JetBrains_Mono'] text-[10px] text-[#8c909f]">{person.time}</span>
                                         </div>
                                     </div>

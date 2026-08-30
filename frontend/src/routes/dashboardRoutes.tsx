@@ -6,7 +6,7 @@ import React from 'react';
 import HomePage from '@/pages/HomePage';
 import AcademicReportPage from '@/pages/AcademicReportPage';
 import ActivityReportPage from '@/pages/ActivityReportPage';
-import RobotInterfacePage from '@/pages/RobotInterfacePage';
+import RobotInterfacePage from '@/features/robot/pages/RobotInterfacePage';
 import RoleManagementPage from '@/pages/RoleManagementPage';
 import UserManagementPage from '@/pages/UserManagementPage';
 import ActivityCalendarPage from '@/pages/ActivityCalendarPage';

@@ -24,7 +24,7 @@ export * from './useMeetings';
 export * from './useDebounce';
 
 // API Keys
-export * from './useApiKeys';
+export * from '../features/robot/hooks/useApiKeys';
 
 // Billing
 export * from '../features/billing/hooks/useBilling';

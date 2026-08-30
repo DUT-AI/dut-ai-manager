@@ -68,7 +68,7 @@ const RobotActivityPage = () => {
             const end = dayjs().add(14, 'day').format('YYYY-MM-DD');
             const res = await meetingService.getMeetingsByDateRange(start, end);
             if (res.is_success) {
-                const userMeetings = (res.data || []).filter((m: MeetingResponse) => 
+                const userMeetings = (res.data || []).filter((m: MeetingResponse) =>
                     m.participants?.some((p: ParticipantResponse) => p.user_id === userId)
                 );
                 setMyShifts(userMeetings);
@@ -84,11 +84,11 @@ const RobotActivityPage = () => {
                 userService.getUsers(),
                 authService.getMe()
             ]);
-            
+
             if (usersRes.status === 'fulfilled' && usersRes.value.is_success) {
                 setUsers(usersRes.value.data || []);
             }
-            
+
             if (profileRes.status === 'fulfilled' && profileRes.value.is_success) {
                 const user = profileRes.value.data;
                 setCurrentUser(user);
@@ -125,11 +125,11 @@ const RobotActivityPage = () => {
         setRegisteringId(meeting.id);
         try {
             const detailRes = await meetingService.getMeetingById(meeting.id);
-            if (!detailRes.is_success) throw new Error('Failed to fetch meeting details');
-            
+            if (!detailRes.is_success || !detailRes.data) throw new Error('Failed to fetch meeting details');
+
             const currentParticipantIds = detailRes.data.participants?.map((p: ParticipantResponse) => p.user_id) || [];
             const updatedUserIds = [...new Set([...currentParticipantIds, currentUser.id])];
-            
+
             const updateRes = await meetingService.updateMeeting(meeting.id, {
                 user_ids: updatedUserIds
             });
@@ -178,7 +178,7 @@ const RobotActivityPage = () => {
                         <h2 className="font-['Space_Grotesk'] text-[32px] md:text-[48px] leading-[1.1] tracking-[-0.02em] font-bold text-[#e1e2ec] mb-2 text-glow">Activity Registration</h2>
                         <p className="text-[#c2c6d6]">Sync with real-time operational shifts.</p>
                     </div>
-                    <button 
+                    <button
                         onClick={() => setIsCreateModalOpen(true)}
                         className="h-[48px] px-6 rounded-xl bg-[#4fdbc8]/10 border border-[#4fdbc8]/30 text-[#4fdbc8] font-['JetBrains_Mono'] text-[12px] tracking-[0.1em] font-bold uppercase hover:bg-[#4fdbc8]/20 transition-all active:scale-95 flex items-center gap-2 group shadow-[0_0_20px_rgba(79,219,200,0.1)]"
                     >
@@ -194,11 +194,10 @@ const RobotActivityPage = () => {
                             <button
                                 key={day.num}
                                 onClick={() => setSelectedDay(day.num)}
-                                className={`flex flex-col items-center justify-center w-20 h-24 rounded-xl border transition-all cursor-pointer relative ${
-                                    day.isToday
+                                className={`flex flex-col items-center justify-center w-20 h-24 rounded-xl border transition-all cursor-pointer relative ${day.isToday
                                         ? 'border-[#4fdbc8] bg-[#4fdbc8]/10'
                                         : 'border-[#424754]/20 hover:bg-[#363941]/30'
-                                } ${day.dimmed ? 'opacity-50' : ''} ${selectedDay === day.num && !day.isToday ? 'border-[#adc6ff]/50 bg-[#adc6ff]/5' : ''}`}
+                                    } ${day.dimmed ? 'opacity-50' : ''} ${selectedDay === day.num && !day.isToday ? 'border-[#adc6ff]/50 bg-[#adc6ff]/5' : ''}`}
                             >
                                 {day.isToday && (
                                     <div className="absolute -top-2 bg-[#4fdbc8] text-[#003731] px-2 py-0.5 rounded-full font-['JetBrains_Mono'] text-[8px] uppercase font-bold tracking-widest">Today</div>
@@ -218,11 +217,10 @@ const RobotActivityPage = () => {
                             <button
                                 key={block.key}
                                 onClick={() => setSelectedBlock(block.key)}
-                                className={`flex-shrink-0 lg:w-full text-left p-4 rounded-xl flex items-center justify-between transition-all relative overflow-hidden ${
-                                    selectedBlock === block.key
+                                className={`flex-shrink-0 lg:w-full text-left p-4 rounded-xl flex items-center justify-between transition-all relative overflow-hidden ${selectedBlock === block.key
                                         ? 'bg-white/[0.03] backdrop-blur-[12px] border border-[#4fdbc8]/50 bg-[#4fdbc8]/5 shadow-[0_0_15px_rgba(79,219,200,0.2)]'
                                         : 'bg-[#363941] border border-[#424754]/30 hover:border-[#4fdbc8]/50 group'
-                                }`}
+                                    }`}
                             >
                                 {selectedBlock === block.key && <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#4fdbc8]" />}
                                 <div className={selectedBlock === block.key ? 'pl-2' : ''}>
@@ -249,7 +247,7 @@ const RobotActivityPage = () => {
                                 filteredMeetings.map((event, idx) => {
                                     const isRegistered = event.participants?.some((p: ParticipantResponse) => p.user_id === currentUser?.id);
                                     const isOver = dayjs(event.end_time).isBefore(now);
-                                    
+
                                     return (
                                         <motion.div
                                             key={event.id}
@@ -260,7 +258,7 @@ const RobotActivityPage = () => {
                                             className={`bg-white/[0.03] backdrop-blur-[12px] border border-white/10 rounded-[24px] p-6 flex flex-col md:flex-row gap-6 items-start md:items-center relative overflow-hidden group ${isOver ? 'opacity-60' : ''}`}
                                         >
                                             <div className="absolute inset-0 bg-gradient-to-r from-[#4fdbc8]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                                            
+
                                             <div className={`w-16 h-16 rounded-xl border flex items-center justify-center flex-shrink-0 ${isOver ? 'bg-red-500/10 border-red-500/30' : 'bg-[#4d8eff]/20 border-[#4d8eff]/50'}`}>
                                                 <span className={`material-symbols-outlined text-3xl ${isOver ? 'text-red-400' : 'text-[#adc6ff]'}`}>
                                                     {isOver ? 'timer_off' : (event.require_check_in ? 'verified_user' : 'event')}
@@ -292,14 +290,13 @@ const RobotActivityPage = () => {
                                                         The meeting is over
                                                     </div>
                                                 ) : (
-                                                    <button 
+                                                    <button
                                                         onClick={() => handleRegister(event)}
                                                         disabled={registeringId === event.id || isRegistered}
-                                                        className={`w-full md:w-auto h-[44px] px-8 rounded-xl font-['JetBrains_Mono'] text-[12px] tracking-[0.1em] font-medium uppercase transition-all flex items-center justify-center gap-2 ${
-                                                            isRegistered 
+                                                        className={`w-full md:w-auto h-[44px] px-8 rounded-xl font-['JetBrains_Mono'] text-[12px] tracking-[0.1em] font-medium uppercase transition-all flex items-center justify-center gap-2 ${isRegistered
                                                                 ? 'bg-[#4fdbc8]/20 text-[#4fdbc8] border border-[#4fdbc8]/30 cursor-not-allowed opacity-80'
                                                                 : 'bg-[#adc6ff] text-[#002e6a] hover:bg-[#adc6ff]/80 shadow-[0_0_15px_rgba(173,198,255,0.3)] active:scale-95'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         {registeringId === event.id ? (
                                                             <Spin size="small" />
@@ -319,8 +316,8 @@ const RobotActivityPage = () => {
                                 })
                             ) : (
                                 !loading && (
-                                    <motion.div 
-                                        initial={{ opacity: 0 }} 
+                                    <motion.div
+                                        initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
                                         className="flex flex-col items-center justify-center py-20 text-[#424754]"
                                     >
@@ -386,16 +383,16 @@ const RobotActivityPage = () => {
                     width={900}
                     centered
                 >
-                    <Table 
-                        dataSource={myShifts} 
+                    <Table
+                        dataSource={myShifts}
                         rowKey="id"
                         pagination={false}
                         className="robot-table"
                         locale={{ emptyText: <span className="text-[#424754]">No upcoming shifts found.</span> }}
                     >
-                        <Table.Column 
-                            title="ACTIVITY" 
-                            dataIndex="title" 
+                        <Table.Column
+                            title="ACTIVITY"
+                            dataIndex="title"
                             key="title"
                             render={(text, record: MeetingResponse) => (
                                 <div>
@@ -404,8 +401,8 @@ const RobotActivityPage = () => {
                                 </div>
                             )}
                         />
-                        <Table.Column 
-                            title="TIME" 
+                        <Table.Column
+                            title="TIME"
                             key="time"
                             render={(_, record: MeetingResponse) => (
                                 <Tag color="blue" className="bg-[#adc6ff]/10 border-[#adc6ff]/30 text-[#adc6ff]">
@@ -413,8 +410,8 @@ const RobotActivityPage = () => {
                                 </Tag>
                             )}
                         />
-                        <Table.Column 
-                            title="CHECK-IN/OUT" 
+                        <Table.Column
+                            title="CHECK-IN/OUT"
                             key="action"
                             render={(_, record: MeetingResponse) => {
                                 const start = dayjs(record.start_time);
@@ -428,8 +425,8 @@ const RobotActivityPage = () => {
 
                                 if (isActive) {
                                     return (
-                                        <Button 
-                                            type="primary" 
+                                        <Button
+                                            type="primary"
                                             size="small"
                                             onClick={() => navigate('/dashboard/robot/checker')}
                                             className="bg-[#4fdbc8] text-black border-none hover:opacity-80 flex items-center gap-1 h-8 rounded-lg px-4"
@@ -443,8 +440,8 @@ const RobotActivityPage = () => {
                                 return <span className="text-[#c2c6d6]/40 text-[10px] uppercase font-bold tracking-widest">Awaiting Time</span>;
                             }}
                         />
-                        <Table.Column 
-                            title="STATUS" 
+                        <Table.Column
+                            title="STATUS"
                             key="status"
                             render={() => (
                                 <Tag color="success" className="bg-[#4fdbc8]/10 border-[#4fdbc8]/30 text-[#4fdbc8] font-bold text-[10px]">
@@ -458,7 +455,7 @@ const RobotActivityPage = () => {
 
             {/* FAB */}
             <div className="fixed bottom-10 right-10 z-[9999]">
-                <button 
+                <button
                     onClick={() => setIsMyShiftsModalOpen(true)}
                     className="flex items-center gap-3 bg-[#4fdbc8] text-[#003731] h-16 pl-8 pr-10 rounded-full shadow-[0_0_30px_rgba(79,219,200,0.5)] hover:shadow-[0_0_50px_rgba(79,219,200,0.7)] transition-all active:scale-95 group hover:-translate-y-1"
                 >

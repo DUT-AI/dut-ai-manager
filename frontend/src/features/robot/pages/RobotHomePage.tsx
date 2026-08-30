@@ -51,13 +51,13 @@ const RobotHomePage = () => {
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.2 + idx * 0.1, duration: 0.4 }}
-                        whileHover={{ 
+                        whileHover={{
                             boxShadow: '0 0 15px rgba(79, 219, 200, 0.2)',
                             borderColor: 'rgba(79, 219, 200, 0.5)'
                         }}
-                        whileTap={{ 
+                        whileTap={{
                             boxShadow: '0 0 25px rgba(79, 219, 200, 0.4)',
-                            scale: 0.98 
+                            scale: 0.98
                         }}
                         onClick={action.onClick}
                         className="bg-white/[0.03] backdrop-blur-[12px] border border-white/10 rounded-[24px] p-8 flex flex-col items-center justify-center gap-6 h-64 transition-all duration-300 group focus:outline-none"

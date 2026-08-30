@@ -1,6 +1,6 @@
 import axiosInstance from '../axiosInstance';
 import type { ApiResponse } from '@/types/api.types';
-import type { 
+import type {
   BonusPointCreate,
   BonusPointUpdate,
   BonusPointResponse,
@@ -11,7 +11,7 @@ export const bonusPointService = {
 
   async getBonusPoints(userId?: number, month?: number, year?: number, deleted?: boolean, startDate?: string, endDate?: string) {
     const response = await axiosInstance.get<ApiResponse<BonusPointResponse[]>>(`/${this.subPath}`, {
-        params: { user_id: userId, month, year, deleted, start_date: startDate, end_date: endDate }
+      params: { user_id: userId, month, year, deleted, start_date: startDate, end_date: endDate }
     });
     return response.data.data;
   },
