@@ -41,7 +41,7 @@ import {
 import { motion, type Variants } from 'motion/react';
 import { useMemo, useReducer, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { UserPermission } from '../types/rbac.types';
+import { UserPermission } from '../features/rbac/types/rbac.types';
 import { UserStatus, type UserResponse } from '../types/user.types';
 
 import { useNavigate } from 'react-router-dom';
@@ -540,9 +540,9 @@ const UserManagementPage = () => {
                             <Input prefix={<PhoneOutlined className="text-gray-400" />} placeholder="+84 123 456 789" />
                         </Form.Item>
                         <Form.Item name="role_ids" label="System Roles" rules={[{ required: true, message: 'Please select at least one role!' }]}>
-                            <Select 
-                                mode="multiple" 
-                                placeholder="Select roles" 
+                            <Select
+                                mode="multiple"
+                                placeholder="Select roles"
                                 style={{ width: '100%' }}
                                 optionFilterProp="label"
                                 showSearch

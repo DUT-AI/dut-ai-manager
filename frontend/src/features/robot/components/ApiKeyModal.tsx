@@ -14,7 +14,7 @@ import {
 } from 'antd';
 import { DeleteOutlined, PlusOutlined, KeyOutlined } from '@ant-design/icons';
 import { useRoleApiKeys, useCreateApiKey, useRevokeApiKey } from '@/features/robot/hooks/useApiKeys';
-import type { RoleResponse } from '@/types/rbac.types';
+import type { RoleResponse } from '@/features/rbac/types/rbac.types';
 import dayjs from 'dayjs';
 
 const { Text, Paragraph } = Typography;

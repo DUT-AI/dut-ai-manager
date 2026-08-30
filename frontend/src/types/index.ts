@@ -25,5 +25,5 @@ export {
   type CalendarEvent,
 } from './activity.types';
 
-export * from './rbac.types';
+export * from '../features/rbac/types/rbac.types';
 export * from './report.types';

@@ -11,7 +11,7 @@ import type { ColumnsType } from 'antd/es/table';
 // Hooks & Types
 import { useHomeworkActions } from '../hooks/useHomeworkActions';
 import type { Homework } from '@/features/homework/types/homework.types';
-import { HomeworkPermission } from '@/types/rbac.types';
+import { HomeworkPermission } from '@/features/rbac/types/rbac.types';
 
 // Sub-components
 import {

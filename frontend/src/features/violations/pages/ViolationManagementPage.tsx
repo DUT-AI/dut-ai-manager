@@ -3,7 +3,7 @@ import { Button, Card, Space, Form, message, Typography, Grid } from 'antd';
 import { PlusOutlined, WarningOutlined } from '@ant-design/icons';
 import { useViolations, useCreateViolation, useUpdateViolation, useDeleteViolation, useUsers } from '@/hooks';
 import { useAuth } from '@/context/AuthContext';
-import { ViolationPermission } from '@/types/rbac.types';
+import { ViolationPermission } from '@/features/rbac/types/rbac.types';
 import type { ViolationResponse, ViolationCreate } from '@/types';
 import dayjs from 'dayjs';
 import { motion, type Variants } from 'motion/react';

@@ -5,7 +5,7 @@ export * from './useUsers';
 export * from './useTeams';
 
 // RBAC (Roles & Permissions)
-export * from './useRbac';
+export * from '../features/rbac/hooks/useRbac';
 
 
 // Violations
@@ -15,7 +15,7 @@ export * from '../features/violations/hooks/useViolations';
 export * from './useBonusPoints';
 
 // Permission Requests
-export * from './usePermissionRequests';
+export * from '../features/rbac/hooks/usePermissionRequests';
 
 // Meetings
 export * from './useMeetings';

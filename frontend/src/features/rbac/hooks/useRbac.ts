@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { rbacService } from '@/services/api/rbac.service';
-import type { RoleCreate, RoleUpdate, PermissionCreate, PermissionUpdate } from '@/types/rbac.types';
+import { rbacService } from '@/features/rbac/services/rbac.service';
+import type { RoleCreate, RoleUpdate, PermissionCreate, PermissionUpdate } from '@/features/rbac/types/rbac.types';
 
 // Query Keys
 const rbacKeys = {
@@ -34,7 +34,7 @@ export const usePermissions = () => {
 // Role Mutations
 export const useCreateRole = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (data: RoleCreate) => rbacService.createRole(data),
     onSuccess: () => {
@@ -45,9 +45,9 @@ export const useCreateRole = () => {
 
 export const useUpdateRole = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: RoleUpdate }) => 
+    mutationFn: ({ id, data }: { id: number; data: RoleUpdate }) =>
       rbacService.updateRole(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: rbacKeys.roles });
@@ -57,7 +57,7 @@ export const useUpdateRole = () => {
 
 export const useDeleteRole = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (id: number) => rbacService.deleteRole(id),
     onSuccess: () => {
@@ -69,7 +69,7 @@ export const useDeleteRole = () => {
 // Permission Mutations
 export const useCreatePermission = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (data: PermissionCreate) => rbacService.createPermission(data),
     onSuccess: () => {
@@ -80,9 +80,9 @@ export const useCreatePermission = () => {
 
 export const useUpdatePermission = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: PermissionUpdate }) => 
+    mutationFn: ({ id, data }: { id: number; data: PermissionUpdate }) =>
       rbacService.updatePermission(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: rbacKeys.permissions });
@@ -92,7 +92,7 @@ export const useUpdatePermission = () => {
 
 export const useDeletePermission = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (id: number) => rbacService.deletePermission(id),
     onSuccess: () => {
@@ -104,9 +104,9 @@ export const useDeletePermission = () => {
 // Role-Permission Linking
 export const useAddPermissionToRole = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: ({ roleId, permId }: { roleId: number; permId: number }) => 
+    mutationFn: ({ roleId, permId }: { roleId: number; permId: number }) =>
       rbacService.addPermissionToRole(roleId, permId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: rbacKeys.roles });
@@ -116,9 +116,9 @@ export const useAddPermissionToRole = () => {
 
 export const useRemovePermissionFromRole = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: ({ roleId, permId }: { roleId: number; permId: number }) => 
+    mutationFn: ({ roleId, permId }: { roleId: number; permId: number }) =>
       rbacService.removePermissionFromRole(roleId, permId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: rbacKeys.roles });

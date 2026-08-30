@@ -42,7 +42,7 @@ import {
 } from '@/hooks';
 import { useHomeworks } from '@/features/homework/hooks/useHomeworks';
 import { useAuth } from '@/context/AuthContext';
-import { PermissionRequestPermission } from '@/types/rbac.types';
+import { PermissionRequestPermission } from '@/features/rbac/types/rbac.types';
 import type { PermissionRequestResponse } from '@/types/activity.types';
 import dayjs from 'dayjs';
 import { motion, type Variants } from 'motion/react';
@@ -338,7 +338,7 @@ const PermissionManagementPage = () => {
     ];
 
     return (
-        <motion.div 
+        <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"
@@ -421,8 +421,8 @@ const PermissionManagementPage = () => {
                             />
                         </Col>
                         <Col xs={24} sm={12} md={6}>
-                            <Button 
-                                className="w-full h-10 rounded-lg" 
+                            <Button
+                                className="w-full h-10 rounded-lg"
                                 ghost
                                 type="primary"
                                 onClick={() => {

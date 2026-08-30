@@ -35,8 +35,8 @@ import {
     useAddPermissionToRole,
     useRemovePermissionFromRole
 } from '@/hooks';
-import { RolePermission } from '@/types/rbac.types';
-import type { RoleResponse } from '@/types/rbac.types';
+import { RolePermission } from '@/features/rbac/types/rbac.types';
+import type { RoleResponse } from '@/features/rbac/types/rbac.types';
 import { useAuth } from '@/context/AuthContext';
 import useToggle from '@/hooks/useToggle';
 import ApiKeyModal from '@/features/robot/components/ApiKeyModal';

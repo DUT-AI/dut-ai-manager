@@ -20,7 +20,7 @@ import {
 import { Grid } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
-import { permissionService } from '@/services/api/permission.service';
+import { permissionService } from '@/features/rbac/services/permission.service';
 import { bonusPointService } from '@/services/api/bonus-point.service';
 
 import type { DailySummaryResponse, PermissionRequestResponse, BonusPointResponse, ViolationResponse } from '@/types/activity.types';
@@ -48,7 +48,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useCapacity } from '@/context/CapacityContext';
 import { CapacityWarning } from '@/components/CapacityWarning';
 import { Agentation } from 'agentation';
-import { BonusPointPermission, PermissionRequestPermission, ViolationPermission } from '@/types/rbac.types';
+import { BonusPointPermission, PermissionRequestPermission, ViolationPermission } from '@/features/rbac/types/rbac.types';
 import { motion, type Variants } from 'motion/react';
 
 const { Title, Text } = Typography;

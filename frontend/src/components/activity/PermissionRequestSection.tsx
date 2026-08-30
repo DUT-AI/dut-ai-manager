@@ -21,7 +21,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { PermissionRequestResponse } from '@/types/activity.types';
-import { permissionService } from '@/services/api/permission.service';
+import { permissionService } from '@/features/rbac/services/permission.service';
 
 const { Text } = Typography;
 
