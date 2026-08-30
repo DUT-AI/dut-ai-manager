@@ -1,17 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { violationService } from '@/services/api/violation.service';
+import { violationService } from '@/features/violations/services/violation.service';
 
 // Query Keys
 const violationKeys = {
   all: ['violations'] as const,
-  list: (filters: { userId?: number; month?: number; year?: number; startDate?: string; endDate?: string }) => 
+  list: (filters: { userId?: number; month?: number; year?: number; startDate?: string; endDate?: string }) =>
     ['violations', filters] as const,
 };
 
 // Queries
-export const useViolations = (filters: { 
-  userId?: number; 
-  month?: number; 
+export const useViolations = (filters: {
+  userId?: number;
+  month?: number;
   year?: number;
   startDate?: string;
   endDate?: string;
@@ -22,9 +22,9 @@ export const useViolations = (filters: {
     queryKey: violationKeys.list(rest),
     queryFn: async () => {
       const response = await violationService.getViolations(
-        0, 100, 
-        rest.userId, 
-        rest.month, 
+        0, 100,
+        rest.userId,
+        rest.month,
         rest.year,
         undefined,
         rest.startDate,
@@ -40,7 +40,7 @@ export const useViolations = (filters: {
 // Mutations
 export const useCreateViolation = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (data: any) => violationService.createViolation(data),
     onSuccess: () => {
@@ -51,9 +51,9 @@ export const useCreateViolation = () => {
 
 export const useUpdateViolation = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => 
+    mutationFn: ({ id, data }: { id: number; data: any }) =>
       violationService.updateViolation(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: violationKeys.all });
@@ -63,7 +63,7 @@ export const useUpdateViolation = () => {
 
 export const useDeleteViolation = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (id: number) => violationService.deleteViolation(id),
     onSuccess: () => {

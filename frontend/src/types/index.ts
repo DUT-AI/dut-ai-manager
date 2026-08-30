@@ -5,7 +5,7 @@ export * from './team.types';
 export * from '../features/billing/types/billing.types';
 export * from '../features/expense/types/expense.types';
 export * from './meeting.types';
-export * from './violation.types';
+export * from '../features/violations/types/violation.types';
 
 // Explicit re-exports from activity.types to avoid ambiguity with rbac.types
 export {

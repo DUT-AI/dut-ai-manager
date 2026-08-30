@@ -6,7 +6,7 @@ import dayjs from 'dayjs';
 import { useQuery } from '@tanstack/react-query';
 import { homeworkService } from '@/features/homework/services/homework.service';
 import { bonusPointService } from '@/services/api/bonus-point.service';
-import { violationService } from '@/services/api/violation.service';
+import { violationService } from '@/features/violations/services/violation.service';
 import { permissionService } from '@/services/api/permission.service';
 import type { Homework } from '@/features/homework/types/homework.types';
 import type { ColumnsType } from 'antd/es/table';

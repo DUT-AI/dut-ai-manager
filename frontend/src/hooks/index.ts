@@ -9,7 +9,7 @@ export * from './useRbac';
 
 
 // Violations
-export * from './useViolations';
+export * from '../features/violations/hooks/useViolations';
 
 // Bonus Points
 export * from './useBonusPoints';

@@ -1,6 +1,6 @@
-import axiosInstance from '../axiosInstance';
+import axiosInstance from '../../../services/axiosInstance';
 import type { ApiResponse } from '@/types/api.types';
-import type { ViolationResponse } from '@/types/activity.types';
+import type { ViolationResponse } from '@/features/violations/types/violation.types';
 
 export const violationService = {
   getViolations: async (skip = 0, limit = 100, userId?: number, month?: number, year?: number, deleted?: boolean, startDate?: string, endDate?: string) => {

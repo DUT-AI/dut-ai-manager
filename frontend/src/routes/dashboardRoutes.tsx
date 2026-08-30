@@ -11,7 +11,7 @@ import RoleManagementPage from '@/pages/RoleManagementPage';
 import UserManagementPage from '@/pages/UserManagementPage';
 import ActivityCalendarPage from '@/pages/ActivityCalendarPage';
 import PermissionManagementPage from '@/pages/PermissionManagementPage';
-import ViolationManagementPage from '@/pages/ViolationManagementPage';
+import ViolationManagementPage from '@/features/violations/pages/ViolationManagementPage';
 import TeamManagementPage from '@/pages/TeamManagementPage';
 import { HomeworkPage } from '@/features/homework';
 import MeetingCalendarPage from '@/pages/MeetingCalendarPage';

@@ -1,7 +1,7 @@
 import { Table, Space, Avatar, Typography, Button, Popconfirm } from 'antd';
 import { UserOutlined, CalendarOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import type { ViolationResponse } from '@/types/activity.types';
+import type { ViolationResponse } from '@/features/violations/types/violation.types';
 
 const { Title, Text } = Typography;
 

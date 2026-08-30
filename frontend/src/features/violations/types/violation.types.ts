@@ -14,7 +14,10 @@ export const violationResponseSchema = z.object({
   reason: z.string(),
   date: z.string(),
   created_at: z.string(),
+  updated_at: z.string().optional(),
   owner: violationOwnerSchema.nullable().optional(),
+  creator: violationOwnerSchema.nullable().optional(),
+  updater: violationOwnerSchema.nullable().optional(),
 });
 export type ViolationResponse = z.infer<typeof violationResponseSchema>;
 

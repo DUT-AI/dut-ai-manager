@@ -19,7 +19,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { ViolationResponse } from '@/types/activity.types';
-import { violationService } from '@/services/api/violation.service';
+import { violationService } from '@/features/violations/services/violation.service';
 
 const { Text } = Typography;
 

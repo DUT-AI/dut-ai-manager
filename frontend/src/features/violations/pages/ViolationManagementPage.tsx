@@ -9,11 +9,11 @@ import dayjs from 'dayjs';
 import { motion, type Variants } from 'motion/react';
 
 // Sub-components
-import ViolationFilter from './violations/components/ViolationFilter';
-import ViolationTable from './violations/components/ViolationTable';
-import ViolationMobileList from './violations/components/ViolationMobileList';
-import ViolationFormModal from './violations/components/ViolationFormModal';
-import ViolationDetailDrawer from './violations/components/ViolationDetailDrawer';
+import ViolationFilter from '../components/ViolationFilter';
+import ViolationTable from '../components/ViolationTable';
+import ViolationMobileList from '../components/ViolationMobileList';
+import ViolationFormModal from '../components/ViolationFormModal';
+import ViolationDetailDrawer from '../components/ViolationDetailDrawer';
 
 const { Title, Text } = Typography;
 
@@ -123,14 +123,14 @@ const ViolationManagementPage = () => {
     };
 
     return (
-        <motion.div 
+        <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"
             className="p-4 md:p-6"
         >
-            <Card 
-                className={!screens.md ? "bg-transparent shadow-none border-none" : "shadow-sm border-gray-100 rounded-xl overflow-hidden"} 
+            <Card
+                className={!screens.md ? "bg-transparent shadow-none border-none" : "shadow-sm border-gray-100 rounded-xl overflow-hidden"}
                 styles={{ body: { padding: !screens.md ? 0 : undefined } }}
             >
                 {/* Header */}

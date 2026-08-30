@@ -24,7 +24,7 @@ import { permissionService } from '@/services/api/permission.service';
 import { bonusPointService } from '@/services/api/bonus-point.service';
 
 import type { DailySummaryResponse, PermissionRequestResponse, BonusPointResponse, ViolationResponse } from '@/types/activity.types';
-import { violationService } from '@/services/api/violation.service';
+import { violationService } from '@/features/violations/services/violation.service';
 import { useMonthlyActivities, useDailyActivitySummary } from '@/hooks/useActivities';
 import { useUsers } from '@/hooks/useUsers';
 import { useHomeworks } from '@/features/homework/hooks/useHomeworks';

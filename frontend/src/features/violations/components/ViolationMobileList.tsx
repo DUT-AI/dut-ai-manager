@@ -1,7 +1,7 @@
 import { Card, Space, List, Avatar, Typography, Button, Popconfirm } from 'antd';
 import { CalendarOutlined, UserOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import type { ViolationResponse } from '@/types/activity.types';
+import type { ViolationResponse } from '@/features/violations/types/violation.types';
 
 const { Text } = Typography;
 
@@ -15,14 +15,14 @@ interface ViolationMobileListProps {
     onDelete: (id: number) => void;
 }
 
-const ViolationMobileList = ({ 
-    violations, 
-    isLoading, 
-    canUpdate, 
-    canDelete, 
-    onViewDetail, 
-    onEdit, 
-    onDelete 
+const ViolationMobileList = ({
+    violations,
+    isLoading,
+    canUpdate,
+    canDelete,
+    onViewDetail,
+    onEdit,
+    onDelete
 }: ViolationMobileListProps) => (
     <div className="mt-4 px-3">
         <List
@@ -60,10 +60,10 @@ const ViolationMobileList = ({
                             </div>
                         </div>
 
-                        <div 
-                            role="presentation" 
-                            className="flex justify-end items-center pt-3 border-t border-gray-50 bg-gray-50 -mx-4 -mb-4 px-4 py-3 gap-2" 
-                            onClick={(e) => e.stopPropagation()} 
+                        <div
+                            role="presentation"
+                            className="flex justify-end items-center pt-3 border-t border-gray-50 bg-gray-50 -mx-4 -mb-4 px-4 py-3 gap-2"
+                            onClick={(e) => e.stopPropagation()}
                             onKeyDown={(e) => e.stopPropagation()}
                         >
                             <Button
