@@ -89,7 +89,7 @@ export const PermissionRequestSection = ({ data, onEdit, onRefresh }: Props) => 
                             </div>
                             <Text className="block text-sm text-gray-700 line-clamp-2">{item.note}</Text>
                             <div className="mt-2 pt-2 border-t border-blue-100 flex justify-between items-center text-[10px] text-gray-400">
-                                <span>Tạo bởi: {item.creator_name || 'System'}</span>
+                                <span>Tạo bởi: {item.creator?.name || item.owner?.name || 'System'}</span>
                                 <span>{dayjs(item.created_at).format('DD/MM HH:mm')}</span>
                             </div>
                         </Card>
@@ -120,18 +120,18 @@ export const PermissionRequestSection = ({ data, onEdit, onRefresh }: Props) => 
                             </Descriptions.Item>
                         </Descriptions>
 
-                        <Divider style={{ textAlign: 'left' }} className="!mb-2">Nội dung / Lý do</Divider>
+                        <Divider style={{ textAlign: 'left' }} className="mb-2!">Nội dung / Lý do</Divider>
                         <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 text-gray-700 whitespace-pre-wrap">
                             {detailItem.note}
                         </div>
 
-                        <Divider style={{ textAlign: 'left' }} className="!mb-2">Thông tin hệ thống</Divider>
+                        <Divider style={{ textAlign: 'left' }} className="mb-2!">Thông tin hệ thống</Divider>
                         <Descriptions column={1} size="small" className="text-gray-500">
-                            <Descriptions.Item label="Tạo bởi">{detailItem.creator_name || 'N/A'}</Descriptions.Item>
+                            <Descriptions.Item label="Tạo bởi">{detailItem.creator?.name || detailItem.owner?.name || 'N/A'}</Descriptions.Item>
                             <Descriptions.Item label="Ngày tạo">{dayjs(detailItem.created_at).format('DD/MM/YYYY HH:mm:ss')}</Descriptions.Item>
                             {detailItem.updated_at !== detailItem.created_at && (
                                 <>
-                                    <Descriptions.Item label="Sửa bởi">{detailItem.updater_name || 'N/A'}</Descriptions.Item>
+                                    <Descriptions.Item label="Sửa bởi">{detailItem.updater?.name || 'N/A'}</Descriptions.Item>
                                     <Descriptions.Item label="Ngày sửa">{dayjs(detailItem.updated_at).format('DD/MM/YYYY HH:mm:ss')}</Descriptions.Item>
                                 </>
                             )}

@@ -1,7 +1,7 @@
 import { Modal, Form, Select, DatePicker, Input } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
-import type { ViolationResponse } from '@/features/activity/types/activity.types';
+import type { ViolationResponse } from '@/features/violations/types/violation.types';
 import type { UserResponse } from '@/features/users/types/user.types';
 
 const { Option } = Select;

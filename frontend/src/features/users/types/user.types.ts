@@ -21,6 +21,7 @@ export const userResponseSchema = z.object({
   phone_number: z.string().nullable().optional(),
   status: z.enum(['ACTIVE', 'INACTIVE']).or(z.string()),
   discord_id: z.string().nullable().optional(),
+  zalo_id: z.string().nullable().optional(),
   check_in_card_code: z.string().nullable().optional(),
   avatar_url: z.string().nullable().optional(),
   role_names: z.array(z.string()).default([]),
@@ -40,11 +41,13 @@ export const createUserSchema = z.object({
   discord_id: z.string().optional().nullable(),
   check_in_card_code: z.string().max(64).optional().nullable(),
 });
-export type CreateUserFormValues = z.infer<typeof createUserSchema>;
+export type UserCreate = z.infer<typeof createUserSchema>;
+export type CreateUserFormValues = UserCreate;
 
 // Update User Schema & Type
 export const updateUserSchema = createUserSchema.partial();
-export type UpdateUserFormValues = z.infer<typeof updateUserSchema>;
+export type UserUpdate = z.infer<typeof updateUserSchema>;
+export type UpdateUserFormValues = UserUpdate;
 
 // User Settings Update Schema & Type
 export const userSettingsUpdateSchema = z.object({
@@ -63,3 +66,10 @@ export const changePasswordSchema = z.object({
   path: ['confirm_password'],
 });
 export type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>;
+
+export interface UserImportResult {
+  total: number;
+  success_count: number;
+  error_count: number;
+  errors?: string[];
+}

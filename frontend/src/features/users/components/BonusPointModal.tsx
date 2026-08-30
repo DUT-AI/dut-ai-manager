@@ -20,7 +20,7 @@ export const BonusPointModal = ({ open, editingItem, initialDate, users, onSubmi
     const [form] = Form.useForm();
 
     const initialValues = editingItem ? {
-        user_id: editingItem.user_id,
+        user_id: editingItem.user_id ?? editingItem.owner?.id,
         points: editingItem.points,
         reason: editingItem.reason,
         date: dayjs(editingItem.date),

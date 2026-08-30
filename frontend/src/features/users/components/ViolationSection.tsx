@@ -18,7 +18,7 @@ import {
     DeleteOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import type { ViolationResponse } from '@/features/activity/types/activity.types';
+import type { ViolationResponse } from '@/features/violations/types/violation.types';
 import { violationService } from '@/features/violations/services/violation.service';
 
 const { Text } = Typography;

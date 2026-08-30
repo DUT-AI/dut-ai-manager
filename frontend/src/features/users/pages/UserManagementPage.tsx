@@ -42,7 +42,7 @@ import { motion, type Variants } from 'motion/react';
 import { useMemo, useReducer, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { UserPermission } from '../../rbac/types/rbac.types';
-import { UserStatus, type UserResponse } from '../types/user.types';
+import { UserStatus, type UserResponse, type UserImportResult } from '../types/user.types';
 
 import { useNavigate } from 'react-router-dom';
 
@@ -85,7 +85,7 @@ const MobileListView = ({ filteredUsers, isLoading, canUpdate, canDelete, onNavi
             loading={isLoading}
             split={false}
             renderItem={(record) => (
-                <List.Item className="px-2 !mb-4 !border-0" onClick={() => onNavigate(record.id)}>
+                <List.Item className="px-2 mb-4! border-0!" onClick={() => onNavigate(record.id)}>
                     <Card
                         className="w-full shadow-sm border-gray-100 overflow-hidden"
                         styles={{ body: { padding: '16px' } }}
@@ -313,12 +313,12 @@ const UserManagementPage = () => {
                 <div className="flex flex-wrap gap-1">
                     {roles && roles.length > 0 ? (
                         roles.map((r) => (
-                            <Tag key={r} color={r === 'admin' ? 'volcano' : r === 'leader' ? 'blue' : 'green'} className="uppercase font-bold min-w-[70px] text-center m-0">
+                            <Tag key={r} color={r === 'admin' ? 'volcano' : r === 'leader' ? 'blue' : 'green'} className="uppercase font-bold min-w-17.5 text-center m-0">
                                 {r}
                             </Tag>
                         ))
                     ) : (
-                        <Tag className="uppercase font-bold min-w-[70px] text-center m-0">NO ROLE</Tag>
+                        <Tag className="uppercase font-bold min-w-17.5 text-center m-0">NO ROLE</Tag>
                     )}
                 </div>
             ),
@@ -390,7 +390,7 @@ const UserManagementPage = () => {
                             <Button
                                 icon={<FileExcelOutlined />}
                                 onClick={() => dispatch({ type: 'OPEN_IMPORT_MODAL' })}
-                                className="flex-1 md:flex-none border-green-600 text-green-600 hover:!text-green-500 hover:!border-green-500"
+                                className="flex-1 md:flex-none border-green-600 text-green-600 hover:text-green-500 hover:border-green-500"
                             >
                                 Import
                             </Button>
@@ -591,7 +591,7 @@ const UserManagementPage = () => {
 const ImportUserModal = ({ open, onCancel }: { open: boolean; onCancel: () => void }) => {
     const importUsers = useImportUsers();
     const [file, setFile] = useState<File | null>(null);
-    const [result, setResult] = useState<Record<string, unknown> | null>(null);
+    const [result, setResult] = useState<UserImportResult | null>(null);
 
     const handleImport = async () => {
         if (!file) return;

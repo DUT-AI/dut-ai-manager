@@ -42,11 +42,15 @@ export type ViolationUpdate = Partial<ViolationCreate>;
 
 export const bonusPointResponseSchema = z.object({
   id: z.number(),
+  user_id: z.number().optional(),
   points: z.number(),
   reason: z.string(),
   date: z.string(),
   created_at: z.string(),
+  updated_at: z.string().optional(),
   owner: userRefSchema.nullable().optional(),
+  creator: userRefSchema.nullable().optional(),
+  updater: userRefSchema.nullable().optional(),
 });
 export type BonusPointResponse = z.infer<typeof bonusPointResponseSchema>;
 

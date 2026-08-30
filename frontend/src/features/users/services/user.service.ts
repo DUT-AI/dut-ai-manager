@@ -1,6 +1,6 @@
 import axiosInstance from '../../../services/axiosInstance';
 import type { ApiResponse } from '@/types/api.types';
-import type { UserResponse, UserCreate, UserUpdate, UserSettingsUpdate } from '@/features/users/types/user.types';
+import type { UserResponse, UserCreate, UserUpdate, UserSettingsUpdate, UserImportResult } from '@/features/users/types/user.types';
 
 export const userService = {
   getUsers: async () => {
@@ -42,7 +42,7 @@ export const userService = {
   importUsers: async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await axiosInstance.post<ApiResponse<Record<string, unknown>>>('/users/import', formData, {
+    const response = await axiosInstance.post<ApiResponse<UserImportResult>>('/users/import', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

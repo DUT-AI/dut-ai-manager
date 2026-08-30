@@ -33,7 +33,8 @@ import type { Dayjs } from 'dayjs';
 import { useUsers, useViolations, useBonusPoints, usePermissionRequests } from '@/hooks';
 import { zaloService } from '@/features/robot/services/zalo.service';
 
-import type { BonusPointResponse, ViolationResponse, PermissionRequestResponse } from '../../activity/types/activity.types';
+import type { BonusPointResponse, PermissionRequestResponse } from '@/features/activity/types/activity.types';
+import type { ViolationResponse } from '@/features/violations/types/violation.types';
 import type { ColumnsType } from 'antd/es/table';
 import { motion, type Variants } from 'motion/react';
 import { UserStatus } from '../types/user.types';
@@ -153,7 +154,7 @@ const ProfilePage = () => {
     const permissionColumns: ColumnsType<PermissionRequestResponse> = [
         { title: 'Loại', dataIndex: 'category', key: 'category', width: 120 },
         { title: 'Nội dung', dataIndex: 'note', key: 'note', ellipsis: true },
-        { title: 'Thời gian', key: 'time', width: 140, render: (_, r) => `${r.start_time} - ${r.end_time}` },
+        { title: 'Thời gian', key: 'time', width: 140, render: (_, r) => r.start_time || '--' },
         { title: 'Ngày', dataIndex: 'date', key: 'date', width: 120, render: d => dayjs(d).format('DD/MM/YYYY') }
     ];
 
@@ -247,7 +248,7 @@ const ProfilePage = () => {
                         <div className="pt-16 pb-4">
                             <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
                                 <div>
-                                    <Title level={2} className="!m-0">{user.name}</Title>
+                                    <Title level={2} className="m-0!">{user.name}</Title>
                                     <div className="flex flex-wrap gap-1 mt-2">
                                         {user.role_names?.map((rn) => (
                                             <Tag key={rn} color="blue" className="uppercase font-bold m-0">{rn}</Tag>

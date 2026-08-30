@@ -122,12 +122,12 @@ export const BonusPointSection = ({ data, onEdit, onRefresh }: Props) => {
                             </Descriptions.Item>
                         </Descriptions>
 
-                        <Divider style={{ textAlign: 'left' }} className="!mb-2">Lý do</Divider>
+                        <Divider style={{ textAlign: 'left' }} className="mb-2!">Lý do</Divider>
                         <div className="bg-green-50 p-4 rounded-lg border border-green-100 text-gray-700 whitespace-pre-wrap">
                             {detailItem.reason}
                         </div>
 
-                        <Divider style={{ textAlign: 'left' }} className="!mb-2">Thông tin hệ thống</Divider>
+                        <Divider style={{ textAlign: 'left' }} className="mb-2!">Thông tin hệ thống</Divider>
                         <Descriptions column={1} size="small" className="text-gray-500">
                             <Descriptions.Item label="Tạo bởi">{detailItem.owner?.name || 'N/A'}</Descriptions.Item>
                             <Descriptions.Item label="Ngày tạo">{dayjs(detailItem.created_at).format('DD/MM/YYYY HH:mm:ss')}</Descriptions.Item>
