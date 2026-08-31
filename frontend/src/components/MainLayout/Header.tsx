@@ -1,5 +1,5 @@
 import Logo from '@/assets/logo.jpg';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/features/auth/context/AuthContext';
 import {
     LogoutOutlined,
     UserOutlined,
@@ -81,23 +81,23 @@ const HeaderLayout = ({ showMenuButton, onMenuClick }: HeaderLayoutProps) => {
                 </Tooltip>
 
                 <Dropdown menu={{ items: menuItems }} placement="bottomRight" arrow>
-                <Space className="cursor-pointer hover:bg-white/5 px-2 py-1 md:px-3 md:py-1.5 rounded-xl transition-all border border-transparent hover:border-white/10 group relative z-10">
-                    <Avatar
-                        className="bg-linear-to-br from-[#6366f1] to-[#a855f7] text-white shadow-md border-2 border-white/10 group-hover:border-white/30 transition-all font-bold"
-                        size={{ xs: 32, sm: 32, md: 40, lg: 40, xl: 40, xxl: 40 }}
-                        src={user?.avatar_url}
-                    >
-                        {user?.name ? user.name.charAt(0).toUpperCase() : <UserOutlined />}
-                    </Avatar>
-                    <div className="hidden md:flex flex-col items-start leading-none ml-1">
-                        <Text className="font-semibold text-sm group-hover:text-white transition-colors" style={{ color: '#ffffff' }}>{user?.name}</Text>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
-                            <Text className="text-[10px] uppercase font-bold tracking-wider opacity-80" style={{ color: '#ffffff' }}>{user?.role_names?.join(', ')}</Text>
+                    <Space className="cursor-pointer hover:bg-white/5 px-2 py-1 md:px-3 md:py-1.5 rounded-xl transition-all border border-transparent hover:border-white/10 group relative z-10">
+                        <Avatar
+                            className="bg-linear-to-br from-[#6366f1] to-[#a855f7] text-white shadow-md border-2 border-white/10 group-hover:border-white/30 transition-all font-bold"
+                            size={{ xs: 32, sm: 32, md: 40, lg: 40, xl: 40, xxl: 40 }}
+                            src={user?.avatar_url}
+                        >
+                            {user?.name ? user.name.charAt(0).toUpperCase() : <UserOutlined />}
+                        </Avatar>
+                        <div className="hidden md:flex flex-col items-start leading-none ml-1">
+                            <Text className="font-semibold text-sm group-hover:text-white transition-colors" style={{ color: '#ffffff' }}>{user?.name}</Text>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
+                                <Text className="text-[10px] uppercase font-bold tracking-wider opacity-80" style={{ color: '#ffffff' }}>{user?.role_names?.join(', ')}</Text>
+                            </div>
                         </div>
-                    </div>
-                </Space>
-            </Dropdown>
+                    </Space>
+                </Dropdown>
             </div>
         </Header>)
 }

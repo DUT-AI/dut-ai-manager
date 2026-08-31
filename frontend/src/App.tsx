@@ -1,8 +1,6 @@
-import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { AuthProvider, useAuth, LoginPage, ZaloCallback } from '@/features/auth';
 import { CapacityProvider } from '@/context/CapacityContext';
 import DashboardPage from '@/pages/DashboardPage';
-import LoginPage from '@/pages/LoginPage';
-import ZaloCallback from '@/pages/Auth/ZaloCallback';
 import { queryClient } from '@/lib/queryClient';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';

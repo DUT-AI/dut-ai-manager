@@ -1,12 +1,11 @@
 export * from './api.types';
-export * from './auth.types';
-export * from './user.types';
-export * from './team.types';
-export * from './billing.types';
-export * from './expense.types';
-export * from './homework.types';
-export * from './meeting.types';
-export * from './violation.types';
+export * from '../features/auth/types/auth.types';
+export * from '../features/users/types/user.types';
+export * from '../features/teams/types/team.types';
+export * from '../features/billing/types/billing.types';
+export * from '../features/expense/types/expense.types';
+export * from '../features/meeting/types/meeting.types';
+export * from '../features/violations/types/violation.types';
 
 // Explicit re-exports from activity.types to avoid ambiguity with rbac.types
 export {
@@ -24,7 +23,7 @@ export {
   type BonusPointResponse,
   type PermissionRequestResponse,
   type CalendarEvent,
-} from './activity.types';
+} from '../features/activity/types/activity.types';
 
-export * from './rbac.types';
-export * from './report.types';
+export * from '../features/rbac/types/rbac.types';
+export * from '../features/academic-report/types/report.types';

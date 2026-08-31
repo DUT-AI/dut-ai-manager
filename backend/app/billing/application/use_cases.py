@@ -25,15 +25,21 @@ class CreateInvoiceUseCase:
 
     def execute(
         self,
-        user_id: int,
         items_data: list[dict],
         billing_period: date,
+        user_id: int | None = None,
+        user_ids: list[int] | None = None,
         team_id: int = 6,
         description: str | None = None,
-    ) -> Invoice:
-        # 1. Calculate total amount and create items
+    ) -> list[Invoice]:
+        # Determine target user IDs
+        target_uids = list(user_ids) if user_ids else ([user_id] if user_id is not None else [])
+        if not target_uids:
+            raise BadRequestException("Vui lòng chọn ít nhất 1 thành viên")
+
+        # 1. Calculate total amount and create template items
         total_amount = 0
-        invoice_items = []
+        template_items = []
 
         for item in items_data:
             item_type = InvoiceItemType(item["item_type"])
@@ -44,36 +50,47 @@ class CreateInvoiceUseCase:
                 amount = 20000
 
             total_amount += amount
-            invoice_items.append(
-                InvoiceItem(
-                    item_type=item_type,
-                    reference_id=item.get("reference_id"),
-                    amount=amount,
-                    note=item.get("note", ""),
-                )
+            template_items.append(
+                {
+                    "item_type": item_type,
+                    "reference_id": item.get("reference_id"),
+                    "amount": amount,
+                    "note": item.get("note", ""),
+                }
             )
 
         if total_amount <= 0:
             raise BadRequestException("Tổng số tiền hóa đơn phải lớn hơn 0")
 
-        # 2. Generate unique reference code
-        # Format: DUT[RANDOM_6_CHARS]
-        reference_code = self._generate_reference_code()
+        created_invoices = []
+        for uid in target_uids:
+            # Generate unique reference code
+            reference_code = self._generate_reference_code()
 
-        # 3. Create Invoice entity
-        invoice = Invoice(
-            user_id=user_id,
-            team_id=team_id,
-            amount=total_amount,
-            status=InvoiceStatus.PENDING,
-            description=description or f"Thanh toán các khoản thu - {reference_code}",
-            reference_code=reference_code,
-            billing_period=billing_period,
-            items=invoice_items,
-        )
+            invoice_items = [
+                InvoiceItem(
+                    item_type=it["item_type"],
+                    reference_id=it["reference_id"],
+                    amount=it["amount"],
+                    note=it["note"],
+                )
+                for it in template_items
+            ]
 
-        # 4. Save
-        return self.repo.save_invoice(invoice)
+            invoice = Invoice(
+                user_id=uid,
+                team_id=team_id,
+                amount=total_amount,
+                status=InvoiceStatus.PENDING,
+                description=description or f"Thanh toán các khoản thu - {reference_code}",
+                reference_code=reference_code,
+                billing_period=billing_period,
+                items=invoice_items,
+            )
+            saved = self.repo.save_invoice(invoice)
+            created_invoices.append(saved)
+
+        return created_invoices
 
     def _generate_reference_code(self, length: int = 6) -> str:
         """Gần mã tham chiếu duy nhất cho nội dung chuyển khoản."""

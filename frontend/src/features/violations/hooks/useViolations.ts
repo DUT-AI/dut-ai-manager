@@ -1,0 +1,73 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { violationService } from '@/features/violations/services/violation.service';
+
+// Query Keys
+const violationKeys = {
+  all: ['violations'] as const,
+  list: (filters: { userId?: number; month?: number; year?: number; startDate?: string; endDate?: string }) =>
+    ['violations', filters] as const,
+};
+
+// Queries
+export const useViolations = (filters: {
+  userId?: number;
+  month?: number;
+  year?: number;
+  startDate?: string;
+  endDate?: string;
+  enabled?: boolean;
+} = {}) => {
+  const { enabled = true, ...rest } = filters;
+  return useQuery({
+    queryKey: violationKeys.list(rest),
+    queryFn: async () => {
+      const response = await violationService.getViolations(
+        0, 100,
+        rest.userId,
+        rest.month,
+        rest.year,
+        undefined,
+        rest.startDate,
+        rest.endDate
+      );
+      return response ?? [];
+    },
+    staleTime: 60 * 1000, // 1 minute
+    enabled,
+  });
+};
+
+// Mutations
+export const useCreateViolation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: any) => violationService.createViolation(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: violationKeys.all });
+    },
+  });
+};
+
+export const useUpdateViolation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) =>
+      violationService.updateViolation(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: violationKeys.all });
+    },
+  });
+};
+
+export const useDeleteViolation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: number) => violationService.deleteViolation(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: violationKeys.all });
+    },
+  });
+};
