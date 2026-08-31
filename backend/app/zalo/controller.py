@@ -1,6 +1,7 @@
-from typing import Annotated, Any
+from typing import Any
 
-from fastapi import APIRouter, Depends, Request
+from dishka.integrations.fastapi import FromDishka, inject
+from fastapi import APIRouter, Request
 
 from app.core.deps import CurrentUser
 from app.shared.application.response import ApiResponse
@@ -11,22 +12,16 @@ from app.zalo.application.use_cases import (
     HandleBotWebhookUseCase,
     HandleMiniAppWebhookUseCase,
 )
-from app.zalo.deps import (
-    get_bind_account_uc,
-    get_generate_bot_code_uc,
-    get_handle_bot_webhook_uc,
-    get_handle_miniapp_webhook_uc,
-    get_login_url_uc,
-)
 from app.zalo.schemas import ZaloBindCodeResponse, ZaloBindRequest, ZaloLoginUrlResponse
 
 router = APIRouter(prefix="/zalo", tags=["Zalo"])
 
 
 @router.get("/login-url", response_model=ApiResponse[ZaloLoginUrlResponse])
+@inject
 async def get_zalo_login_url(
-    uc: Annotated[GetZaloLoginUrlUseCase, Depends(get_login_url_uc)],
-    _current_user: Annotated[CurrentUser, Depends()],
+    uc: FromDishka[GetZaloLoginUrlUseCase],
+    _current_user: CurrentUser,
 ):
     """
     Tạo Zalo Login URL sử dụng PKCE.
@@ -41,10 +36,11 @@ async def get_zalo_login_url(
 
 
 @router.post("/bind", response_model=ApiResponse[dict[str, Any]])
+@inject
 async def bind_zalo(
     data: ZaloBindRequest,
-    uc: Annotated[BindZaloAccountUseCase, Depends(get_bind_account_uc)],
-    current_user: Annotated[CurrentUser, Depends()],
+    uc: FromDishka[BindZaloAccountUseCase],
+    current_user: CurrentUser,
 ):
     """
     Liên kết tài khoản Zalo bằng oauth_code.
@@ -60,9 +56,10 @@ async def bind_zalo(
 
 
 @router.get("/bot/generate-bind-code", response_model=ApiResponse[ZaloBindCodeResponse])
+@inject
 async def generate_zalo_bot_bind_code(
-    uc: Annotated[GenerateBotBindCodeUseCase, Depends(get_generate_bot_code_uc)],
-    current_user: Annotated[CurrentUser, Depends()],
+    uc: FromDishka[GenerateBotBindCodeUseCase],
+    current_user: CurrentUser,
 ):
     """Tạo mã 6 ký tự để người dùng chat với bot để liên kết."""
     bind_code = uc.execute(current_user.id or 0)
@@ -70,9 +67,10 @@ async def generate_zalo_bot_bind_code(
 
 
 @router.post("/bot/webhook")
+@inject
 async def zalo_bot_webhook(
     request: Request,
-    uc: Annotated[HandleBotWebhookUseCase, Depends(get_handle_bot_webhook_uc)],
+    uc: FromDishka[HandleBotWebhookUseCase],
 ):
     """Xử lý webhook từ Zalo Bot Platform."""
     body = await request.json()
@@ -89,9 +87,10 @@ async def zalo_miniapp_webhook_health():
 
 @router.post("/webhook")
 @router.post("/miniapp/webhook")
+@inject
 async def zalo_miniapp_webhook(
     request: Request,
-    uc: Annotated[HandleMiniAppWebhookUseCase, Depends(get_handle_miniapp_webhook_uc)],
+    uc: FromDishka[HandleMiniAppWebhookUseCase],
 ):
     """
     Xử lý Webhook từ Zalo Mini App Open APIs Platform.

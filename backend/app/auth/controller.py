@@ -59,9 +59,7 @@ async def login(
 
     token_data = TokenResponse(access_token=access_token, refresh_token=rf_token)
 
-    return ApiResponse.success(
-        data=token_data, message="Đăng nhập thành công"
-    )
+    return ApiResponse.success(data=token_data, message="Đăng nhập thành công")
 
 
 @router.post("/zalo-phone-login", response_model=ApiResponse[TokenResponse])
@@ -96,9 +94,7 @@ async def zalo_phone_login(
 
     token_data = TokenResponse(access_token=access_token, refresh_token=rf_token)
 
-    return ApiResponse.success(
-        data=token_data, message="Đăng nhập Zalo thành công"
-    )
+    return ApiResponse.success(data=token_data, message="Đăng nhập Zalo thành công")
 
 
 @router.post("/refresh", response_model=ApiResponse)

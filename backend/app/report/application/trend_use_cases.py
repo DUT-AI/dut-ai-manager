@@ -91,8 +91,12 @@ class GetActivityTrendUseCase:
                     for p in m.participants:
                         if p.check_in_at and p.check_out_at:
                             total_hours += (
-                                p.check_out_at - p.check_in_at
-                            ).total_seconds() / 3600.0
+                                max(
+                                    0.0,
+                                    (p.check_out_at - p.check_in_at).total_seconds(),
+                                )
+                                / 3600.0
+                            )
 
             items.append(
                 ActivityTrendItem(
@@ -128,8 +132,12 @@ class GetActivityTrendUseCase:
                     for p in mtg.participants:
                         if p.check_in_at and p.check_out_at:
                             total_hours += (
-                                p.check_out_at - p.check_in_at
-                            ).total_seconds() / 3600.0
+                                max(
+                                    0.0,
+                                    (p.check_out_at - p.check_in_at).total_seconds(),
+                                )
+                                / 3600.0
+                            )
 
             items.append(
                 ActivityTrendItem(

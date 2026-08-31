@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+from dishka.integrations.fastapi import FromDishka, inject
+from fastapi import APIRouter, HTTPException
 
 from app.core.deps import hasPermission
 from app.core.permissions import TeamPermission
@@ -9,7 +10,6 @@ from app.team.application.dtos import (
     TeamUpdate,
 )
 from app.team.application.use_cases import TeamUseCases
-from app.team.deps import get_team_usecases
 
 router = APIRouter(prefix="/teams", tags=["teams"])
 
@@ -19,8 +19,9 @@ router = APIRouter(prefix="/teams", tags=["teams"])
     response_model=ApiResponse[list[TeamResponse]],
     dependencies=[hasPermission(TeamPermission.READ)],
 )
+@inject
 async def get_teams(
-    usecases: TeamUseCases = Depends(get_team_usecases),
+    usecases: FromDishka[TeamUseCases],
     skip: int = 0,
     limit: int = 100,
 ):
@@ -33,9 +34,10 @@ async def get_teams(
     response_model=ApiResponse[TeamResponse],
     dependencies=[hasPermission(TeamPermission.READ)],
 )
+@inject
 async def get_team(
     team_id: int,
-    usecases: TeamUseCases = Depends(get_team_usecases),
+    usecases: FromDishka[TeamUseCases],
 ):
     result = usecases.get_by_id(team_id)
     if not result:
@@ -48,9 +50,10 @@ async def get_team(
     response_model=ApiResponse[TeamResponse],
     dependencies=[hasPermission(TeamPermission.CREATE)],
 )
+@inject
 async def create_team(
     data: TeamCreate,
-    usecases: TeamUseCases = Depends(get_team_usecases),
+    usecases: FromDishka[TeamUseCases],
 ):
     result = usecases.create(data)
     return ApiResponse.success(data=result)
@@ -61,10 +64,11 @@ async def create_team(
     response_model=ApiResponse[TeamResponse],
     dependencies=[hasPermission(TeamPermission.UPDATE)],
 )
+@inject
 async def update_team(
     team_id: int,
     data: TeamUpdate,
-    usecases: TeamUseCases = Depends(get_team_usecases),
+    usecases: FromDishka[TeamUseCases],
 ):
     result = usecases.update(team_id, data)
     if not result:
@@ -77,9 +81,10 @@ async def update_team(
     response_model=ApiResponse[bool],
     dependencies=[hasPermission(TeamPermission.DELETE)],
 )
+@inject
 async def delete_team(
     team_id: int,
-    usecases: TeamUseCases = Depends(get_team_usecases),
+    usecases: FromDishka[TeamUseCases],
 ):
     result = usecases.delete(team_id)
     return ApiResponse.success(data=result)

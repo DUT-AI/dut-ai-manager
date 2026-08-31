@@ -5,7 +5,13 @@ from app.permission_request.infrastructure.repository import PermissionRequestRe
 from app.shared.infrastructure.discord_service import DiscordService
 from app.user.infrastructure.repository import UserRepository
 from app.violation.application.event_handlers import AutomatedViolationHandler
-from app.violation.application.use_cases import CreateViolationUseCase
+from app.violation.application.use_cases import (
+    CreateViolationUseCase,
+    DeleteViolationUseCase,
+    GetViolationsUseCase,
+    RestoreViolationUseCase,
+    UpdateViolationUseCase,
+)
 from app.violation.infrastructure.repository import ViolationRepository
 from app.violation.notification_handler import ViolationNotificationHandler
 from app.violation.permission_handler import PermissionViolationHandler
@@ -22,6 +28,24 @@ class ViolationModuleProvider(Provider):
     @provide
     def create_violation_uc(self, repo: ViolationRepository) -> CreateViolationUseCase:
         return CreateViolationUseCase(repo)
+
+    @provide
+    def get_violations_uc(self, repo: ViolationRepository) -> GetViolationsUseCase:
+        return GetViolationsUseCase(repo)
+
+    @provide
+    def update_violation_uc(self, repo: ViolationRepository) -> UpdateViolationUseCase:
+        return UpdateViolationUseCase(repo)
+
+    @provide
+    def delete_violation_uc(self, repo: ViolationRepository) -> DeleteViolationUseCase:
+        return DeleteViolationUseCase(repo)
+
+    @provide
+    def restore_violation_uc(
+        self, repo: ViolationRepository
+    ) -> RestoreViolationUseCase:
+        return RestoreViolationUseCase(repo)
 
     @provide
     def get_permission_handler(

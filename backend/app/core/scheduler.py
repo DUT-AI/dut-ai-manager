@@ -8,8 +8,6 @@ This is achieved using file-based locking - only the first worker to acquire
 the lock will run the scheduler.
 """
 
-import os
-
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from dishka import AsyncContainer
