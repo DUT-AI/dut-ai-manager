@@ -22,6 +22,7 @@ from app.homework.domain.value_objects import (
     HomeworkSubmitted,
 )
 from app.homework.infrastructure.external_api import HomeworkGradingService
+from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.homework.infrastructure.repository import (
     HomeworkRepository,
     HomeworkSubmissionRepository,
@@ -40,80 +41,179 @@ from app.utils.datetime import get_current_utc7_time
 
 
 class CheckOverdueHomeworkUseCase:
-    """Kiểm tra bài tập quá hạn và tạo vi phạm tự động"""
+    """Kiểm tra bài tập quá hạn và tạo vi phạm tự động dựa trên kết quả từ Quiz API."""
 
     def __init__(
         self,
+        homework_repo: HomeworkRepository,
         submission_repo: HomeworkSubmissionRepository,
         permission_repo: PermissionRequestRepository,
+        quiz_api: QuizApiClient,
     ):
+        self.homework_repo = homework_repo
         self.submission_repo = submission_repo
         self.permission_repo = permission_repo
+        self.quiz_api = quiz_api
 
-    async def execute(self, target_date: date | None = None):
+    async def execute(self, target_date: date | None = None) -> int:
         """
         Logic:
-        1. Lấy tất cả các bài nộp chưa nộp có deadline là hôm nay.
-        2. Với mỗi bài nộp:
-           - Kiểm tra xem user có đơn xin hoãn (POSTPONE) cho bài tập (homework_id) không.
-           - Nếu có đơn hoãn, kiểm tra xem hiện tại đã quá hạn của đơn chưa (`start_time`). Nếu quá hạn -> vi phạm.
-           - Nếu KHÔNG có đơn hoãn, kiểm tra xem hiện tại đã quá hạn deadline của bài tập chưa -> vi phạm.
+        1. Lấy tất cả các bài tập có deadline vào target_date.
+        2. Với mỗi bài tập:
+           - Nếu có game_slug: Gọi Quiz API lấy danh sách đã tham gia game (leaderboard).
+           - Nếu có homework_slug: Gọi Quiz API lấy danh sách đã nộp bài tập coding (completed-members).
+           - Duyệt qua từng thành viên được giao bài:
+             - Nếu có đơn xin hoãn (POSTPONE) chưa hết hạn -> bỏ qua.
+             - Nếu có game_slug và thành viên chưa làm game -> Tạo vi phạm (vé phạt game).
+             - Nếu có homework_slug và thành viên chưa làm bài coding -> Tạo vi phạm (vé phạt coding).
+             - Nếu không cấu hình slug và chưa nộp bài -> Tạo vi phạm chưa nộp.
         """
         now = get_current_utc7_time().replace(tzinfo=None)
         if target_date is None:
             target_date = now.date()
 
-        overdue_submissions = self.submission_repo.get_not_submitted_for_deadline_date(
-            target_date
-        )
-
-        if not overdue_submissions:
+        homeworks = self.homework_repo.get_by_deadline_date(target_date)
+        if not homeworks:
             return 0
 
-        # Tối ưu N+1: Lấy toàn bộ đơn xin hoãn theo user_id + homework_id
-        owner_ids = list({sub.owner_id for sub in overdue_submissions})
-        homework_ids = list(
-            {sub.homework_id for sub in overdue_submissions if sub.homework_id}
-        )
-
-        postpone_requests = self.permission_repo.get_postpone_requests_for_homeworks(
-            homework_ids=homework_ids, user_ids=owner_ids
-        )
-        postpone_map = {(r.user_id, r.homework_id): r for r in postpone_requests}
-
         created_count = 0
-        for sub in overdue_submissions:
-            user_id = sub.owner_id
-            homework = sub.homework
 
-            if not homework:
+        for homework in homeworks:
+            if not homework.id:
                 continue
 
-            # Kiểm tra xem hiện tại đã quá deadline gốc chưa
-            if now <= homework.deadline:
+            # Skip if deadline has not passed yet
+            hw_deadline = homework.deadline.replace(tzinfo=None) if homework.deadline.tzinfo is not None else homework.deadline
+            if now <= hw_deadline:
                 continue
 
-            req = postpone_map.get((user_id, homework.id))
 
-            if req:
-                if req.start_time and now <= req.start_time:
-                    continue
+            game_slug = (homework.game_slug or "").strip()
+            homework_slug = (homework.homework_slug or "").strip()
 
-                reason = "Không nộp bài tập quá thời gian xin hẹn"
-            else:
-                reason = "Không nộp bài tập và không phép"
+            completed_game_user_ids: set[int] = set()
+            completed_hw_user_ids: set[int] = set()
 
-            # Phát sự kiện phát hiện quá hạn bài tập
-            await EventBus.publish(
-                HomeworkOverdueDetected(
-                    user_id=user_id,
-                    homework_id=homework.id or 0,
-                    homework_title=homework.title,
-                    deadline_date=str(homework.deadline.date()),
-                    reason=reason,
+            if game_slug:
+                leaderboard = await self.quiz_api.get_game_leaderboard(game_slug)
+                for item in leaderboard:
+                    if isinstance(item, dict):
+                        # Yêu cầu học viên phải làm ĐỦ SỐ CÂU (answered_questions == total_questions) VÀ is_completed = True
+                        is_completed = item.get("is_completed", True)
+                        total_q = item.get("total_questions")
+                        answered_q = item.get("answered_questions")
+                        if total_q is not None and answered_q is not None:
+                            if answered_q < total_q:
+                                is_completed = False
+
+                        if not is_completed:
+                            continue
+
+                        uid = item.get("user_id")
+                        if uid is not None:
+                            try:
+                                completed_game_user_ids.add(int(uid))
+                            except (ValueError, TypeError):
+                                pass
+                    elif isinstance(item, (int, str)):
+                        try:
+                            completed_game_user_ids.add(int(item))
+                        except (ValueError, TypeError):
+                            pass
+
+            if homework_slug:
+                completed_members = await self.quiz_api.get_homework_completed_members(
+                    homework_slug
+                )
+                for item in completed_members:
+                    if isinstance(item, dict):
+                        uid = item.get("user_id")
+                        sub_count = item.get("submission_count", 1)
+                        if uid is not None and sub_count > 0:
+                            try:
+                                completed_hw_user_ids.add(int(uid))
+                            except (ValueError, TypeError):
+                                pass
+                    elif isinstance(item, (int, str)):
+                        try:
+                            completed_hw_user_ids.add(int(item))
+                        except (ValueError, TypeError):
+                            pass
+
+            assignee_ids = [sub.owner_id for sub in homework.submissions]
+            postpone_requests = (
+                self.permission_repo.get_postpone_requests_for_homeworks(
+                    homework_ids=[homework.id], user_ids=assignee_ids
                 )
             )
-            created_count += 1
+            postpone_map = {(r.user_id, r.homework_id): r for r in postpone_requests}
+
+            for sub in homework.submissions:
+                user_id = sub.owner_id
+                req = postpone_map.get((user_id, homework.id))
+
+                if req and req.start_time and now <= req.start_time:
+                    continue
+
+                is_postponed_expired = bool(req)
+
+                if game_slug:
+                    is_game_done = user_id in completed_game_user_ids
+                    if not is_game_done:
+                        reason = (
+                            f"Chưa làm game bài tập ({game_slug}) quá thời gian xin hẹn"
+                            if is_postponed_expired
+                            else f"Chưa làm game bài tập ({game_slug}) và không phép"
+                        )
+                        await EventBus.publish(
+                            HomeworkOverdueDetected(
+                                user_id=user_id,
+                                homework_id=homework.id,
+                                homework_title=homework.title,
+                                deadline_date=str(homework.deadline.date()),
+                                reason=reason,
+                            )
+                        )
+                        created_count += 1
+
+                if homework_slug:
+                    is_hw_done = user_id in completed_hw_user_ids
+                    if not is_hw_done:
+                        reason = (
+                            f"Chưa làm bài tập coding ({homework_slug}) quá thời gian xin hẹn"
+                            if is_postponed_expired
+                            else f"Chưa làm bài tập coding ({homework_slug}) và không phép"
+                        )
+                        await EventBus.publish(
+                            HomeworkOverdueDetected(
+                                user_id=user_id,
+                                homework_id=homework.id,
+                                homework_title=homework.title,
+                                deadline_date=str(homework.deadline.date()),
+                                reason=reason,
+                            )
+                        )
+                        created_count += 1
+
+
+
+                if not game_slug and not homework_slug:
+                    if sub.status == HomeworkStatus.NOT_SUBMITTED:
+                        reason = (
+                            "Không nộp bài tập quá thời gian xin hẹn"
+                            if is_postponed_expired
+                            else "Không nộp bài tập và không phép"
+                        )
+                        await EventBus.publish(
+                            HomeworkOverdueDetected(
+                                user_id=user_id,
+                                homework_id=homework.id,
+                                homework_title=homework.title,
+                                deadline_date=str(homework.deadline.date()),
+                                reason=reason,
+                            )
+                        )
+                        created_count += 1
 
         return created_count
 
@@ -189,8 +289,14 @@ class HomeworkUseCases:
             raise BadRequestException("Cần chọn người nhận hoặc team")
 
         homework_data = data.model_dump(
-            exclude={"assignee_ids", "team_ids", "file_url"}
+            exclude={"assignee_ids", "team_ids", "file_url", "slug"}
         )
+
+        if data.slug:
+            if not homework_data.get("homework_slug") and not homework_data.get(
+                "game_slug"
+            ):
+                homework_data["homework_slug"] = data.slug.strip()
 
         homework = HomeworkEntity(**homework_data, file_url=file_url)
         homework = self.homework_repo.create(homework)
@@ -234,13 +340,19 @@ class HomeworkUseCases:
             )
 
         update_data = data.model_dump(
-            exclude_unset=False, exclude={"assignee_ids", "team_ids", "file_url"}
+            exclude_unset=False, exclude={"assignee_ids", "team_ids", "file_url", "slug"}
         )
+
+        if data.slug:
+            if not update_data.get("homework_slug") and not update_data.get("game_slug"):
+                update_data["homework_slug"] = data.slug.strip()
+
         for key, value in update_data.items():
             if value is not None:
                 setattr(homework, key, value)
 
         homework = self.homework_repo.update(homework)
+
 
         if data.assignee_ids is not None or data.team_ids is not None:
             new_assignee_ids = self._collect_assignee_ids(

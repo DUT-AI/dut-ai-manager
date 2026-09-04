@@ -9,6 +9,7 @@ from app.homework.application.use_cases import (
     CheckOverdueHomeworkUseCase,
     HomeworkUseCases,
 )
+from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.homework.infrastructure.repository import (
     HomeworkRepository,
     HomeworkSubmissionRepository,
@@ -23,6 +24,10 @@ from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
 
 class HomeworkModuleProvider(Provider):
     scope = Scope.REQUEST
+
+    @provide
+    def get_quiz_api_client(self) -> QuizApiClient:
+        return QuizApiClient()
 
     @provide
     def get_homework_repo(self, session: Session) -> HomeworkRepository:
@@ -52,13 +57,18 @@ class HomeworkModuleProvider(Provider):
     @provide
     def get_check_overdue_use_case(
         self,
+        homework_repo: HomeworkRepository,
         submission_repo: HomeworkSubmissionRepository,
         permission_repo: PermissionRequestRepository,
+        quiz_api: QuizApiClient,
     ) -> CheckOverdueHomeworkUseCase:
         return CheckOverdueHomeworkUseCase(
+            homework_repo=homework_repo,
             submission_repo=submission_repo,
             permission_repo=permission_repo,
+            quiz_api=quiz_api,
         )
+
 
     @provide
     def get_notification_handler(

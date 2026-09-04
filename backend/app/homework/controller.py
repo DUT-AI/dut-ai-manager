@@ -68,12 +68,18 @@ async def create_homework(
     title: str = Form(...),
     description: str = Form(""),
     deadline: str = Form(...),
+    link: str | None = Form(None),
+    game_slug: str | None = Form(None),
+    homework_slug: str | None = Form(None),
+    slug: str | None = Form(None),
     assignee_ids: list[int] | None = Form(None),
     team_ids: list[int] | None = Form(None),
     file: UploadFile | None = File(None),
 ):
     try:
         deadline_dt = datetime.fromisoformat(deadline.replace("Z", "+00:00"))
+        if deadline_dt.timestamp() < datetime.now().timestamp():
+            raise HTTPException(status_code=400, detail="Hạn nộp không được ở trong quá khứ")
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid deadline format")
 
@@ -81,6 +87,10 @@ async def create_homework(
         title=title,
         description=description,
         deadline=deadline_dt,
+        link=link,
+        game_slug=game_slug,
+        homework_slug=homework_slug,
+        slug=slug,
         assignee_ids=assignee_ids,
         team_ids=team_ids,
     )
@@ -146,6 +156,10 @@ async def update_homework(
     title: str | None = Form(None),
     description: str | None = Form(None),
     deadline: str | None = Form(None),
+    link: str | None = Form(None),
+    game_slug: str | None = Form(None),
+    homework_slug: str | None = Form(None),
+    slug: str | None = Form(None),
     assignee_ids: list[int] | None = Form(None),
     team_ids: list[int] | None = Form(None),
     file: UploadFile | None = File(None),
@@ -154,6 +168,8 @@ async def update_homework(
     if deadline:
         try:
             deadline_dt = datetime.fromisoformat(deadline.replace("Z", "+00:00"))
+            if deadline_dt.timestamp() < datetime.now().timestamp():
+                raise HTTPException(status_code=400, detail="Hạn nộp không được ở trong quá khứ")
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid deadline format")
 
@@ -161,6 +177,10 @@ async def update_homework(
         title=title,
         description=description,
         deadline=deadline_dt,
+        link=link,
+        game_slug=game_slug,
+        homework_slug=homework_slug,
+        slug=slug,
         assignee_ids=assignee_ids,
         team_ids=team_ids,
     )
@@ -169,6 +189,7 @@ async def update_homework(
     if not result:
         raise HTTPException(status_code=404, detail="Homework not found")
     return ApiResponse.success(data=result)
+
 
 
 @router.delete(

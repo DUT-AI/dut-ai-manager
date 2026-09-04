@@ -14,6 +14,8 @@ if TYPE_CHECKING:
     from app.user.infrastructure.model import UserModel
 
 
+
+
 class HomeworkSubmissionModel(SQLAlchemyTimestampMixin, Base):
     """Homework submission model tracking user submissions"""
 
@@ -52,12 +54,12 @@ class HomeworkSubmissionModel(SQLAlchemyTimestampMixin, Base):
             owner_ref = UserRef(
                 id=self.owner.id,
                 name=self.owner.name,
+                email=self.owner.email,
                 avatar_url=self.owner.avatar_url,
             )
 
+
         homework_entity = None
-        if ins is not None and "homework" not in ins.unloaded and self.homework:
-            homework_entity = self.homework.to_entity()
 
         return HomeworkSubmissionEntity(
             id=self.id,
@@ -109,8 +111,11 @@ class HomeworkModel(SQLAlchemyTimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(255), index=True)
     deadline: Mapped[datetime] = mapped_column(index=True)
-    description: Mapped[str] = mapped_column(Text)
-    file_url: Mapped[str | None] = mapped_column(default=None)
+    description: Mapped[str] = mapped_column(Text, default="")
+    link: Mapped[str | None] = mapped_column(String(500), default=None, nullable=True)
+    file_url: Mapped[str | None] = mapped_column(default=None, nullable=True)
+    game_slug: Mapped[str | None] = mapped_column(String(255), default=None, nullable=True)
+    homework_slug: Mapped[str | None] = mapped_column(String(255), default=None, nullable=True)
 
     # Relationships
     submissions: Mapped[list["HomeworkSubmissionModel"]] = relationship(
@@ -132,8 +137,11 @@ class HomeworkModel(SQLAlchemyTimestampMixin, Base):
             id=self.id,
             title=self.title,
             deadline=self.deadline,
-            description=self.description,
+            description=self.description or "",
+            link=self.link,
             file_url=self.file_url,
+            game_slug=self.game_slug,
+            homework_slug=self.homework_slug,
             submissions=submissions_entities,
             created_at=self.created_at,
             updated_at=self.updated_at,
@@ -149,5 +157,9 @@ class HomeworkModel(SQLAlchemyTimestampMixin, Base):
             title=entity.title,
             deadline=entity.deadline,
             description=entity.description,
+            link=entity.link,
             file_url=entity.file_url,
+            game_slug=entity.game_slug,
+            homework_slug=entity.homework_slug,
         )
+

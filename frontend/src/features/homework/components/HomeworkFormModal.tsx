@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Modal, Form, Input, DatePicker, Select, message, Divider, Upload, Button } from 'antd';
-import { TeamOutlined, UserOutlined, UploadOutlined } from '@ant-design/icons';
+import { Modal, Form, Input, DatePicker, Select, message, Divider } from 'antd';
+import { TeamOutlined, UserOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Homework } from '@/features/homework/types/homework.types';
 import type { UserResponse } from '@/features/users/types/user.types';
 import type { TeamResponse } from '@/features/teams/types/team.types';
 import { homeworkService } from '@/features/homework/services/homework.service';
-
-const { TextArea } = Input;
 
 const EMPTY_ASSIGNEES: number[] = [];
 
@@ -43,17 +41,12 @@ export const HomeworkFormModal = ({
         }
     }, [currentAssignees, isEditing, form]);
 
-    const normFile = (e: any) => {
-        if (Array.isArray(e)) {
-            return e;
-        }
-        return e?.fileList;
-    };
-
     const initialValues = editingItem ? {
         title: editingItem.title,
-        description: editingItem.description,
         deadline: dayjs(editingItem.deadline),
+        link: editingItem.link,
+        homework_slug: editingItem.homework_slug,
+        game_slug: editingItem.game_slug,
         assignee_ids: currentAssignees,
     } : undefined;
 
@@ -62,8 +55,11 @@ export const HomeworkFormModal = ({
         try {
             const baseData = {
                 title: values.title,
-                description: values.description || '',
+                description: '',
                 deadline: values.deadline.format('YYYY-MM-DDTHH:mm:ss'),
+                link: values.link || '',
+                homework_slug: values.homework_slug || null,
+                game_slug: values.game_slug || null,
             };
 
             if (isEditing) {
@@ -71,7 +67,6 @@ export const HomeworkFormModal = ({
                     ...baseData,
                     assignee_ids: values.assignee_ids || [],
                     team_ids: values.team_ids || [],
-                    file: values.file?.[0]?.originFileObj
                 });
                 message.success('Cập nhật bài tập thành công');
             } else {
@@ -79,7 +74,6 @@ export const HomeworkFormModal = ({
                     ...baseData,
                     assignee_ids: values.assignee_ids || [],
                     team_ids: values.team_ids || [],
-                    file: values.file?.[0]?.originFileObj
                 });
                 message.success('Tạo bài tập thành công');
             }
@@ -106,14 +100,53 @@ export const HomeworkFormModal = ({
                     <Input placeholder="Nhập tiêu đề bài tập..." />
                 </Form.Item>
 
-                <Form.Item name="deadline" label="Hạn nộp" rules={[{ required: true, message: 'Vui lòng chọn hạn nộp' }]}>
+                <Form.Item 
+                    name="deadline" 
+                    label="Hạn nộp" 
+                    rules={[
+                        { required: true, message: 'Vui lòng chọn hạn nộp' },
+                        {
+                            validator: (_, value) => {
+                                if (value && value.isBefore(dayjs())) {
+                                    return Promise.reject(new Error('Hạn nộp không được ở trong quá khứ!'));
+                                }
+                                return Promise.resolve();
+                            }
+                        }
+                    ]}
+                >
                     <DatePicker
                         showTime
                         className="w-full"
                         format="DD/MM/YYYY HH:mm"
                         placeholder="Chọn ngày và giờ..."
+                        disabledDate={(current) => current && current.isBefore(dayjs().startOf('day'))}
                     />
                 </Form.Item>
+
+                <Form.Item
+                    name="link"
+                    label="Link bài tập"
+                    rules={[{ required: true, message: 'Vui lòng nhập link bài tập' }]}
+                >
+                    <Input placeholder="https://..." />
+                </Form.Item>
+
+                <Form.Item
+                    name="homework_slug"
+                    label="Slug của bài tập Coding (Tùy chọn)"
+                >
+                    <Input placeholder="Nhập slug bài tập coding..." />
+                </Form.Item>
+
+                <Form.Item
+                    name="game_slug"
+                    label="Slug của Game Quiz (Tùy chọn)"
+                >
+                    <Input placeholder="Nhập slug game..." />
+                </Form.Item>
+
+
 
                 <Divider className="!my-4">
                     {isEditing ? 'Chỉnh sửa người nộp bài' : 'Giao bài tập cho'}
@@ -162,38 +195,11 @@ export const HomeworkFormModal = ({
                     />
                 </Form.Item>
 
-                <div className="text-xs text-gray-400 mb-4">
+                <div className="text-xs text-gray-400 mb-2">
                     💡 {isEditing
                         ? 'Thêm người mới sẽ tự tạo bài nộp, xóa người cũ sẽ xóa bài nộp của họ'
                         : 'Có thể chọn cả team và thành viên cụ thể - hệ thống sẽ tự gộp lại'}
                 </div>
-
-                <Form.Item name="description" label="Mô tả / Đề bài">
-                    <TextArea rows={4} placeholder="Nhập mô tả bài tập (hỗ trợ Markdown)..." />
-                </Form.Item>
-
-                <Form.Item
-                    name="file"
-                    label={isEditing ? "Thay thế tệp đính kèm (Tùy chọn)" : "Đính kèm tệp"}
-                    valuePropName="fileList"
-                    getValueFromEvent={normFile}
-                    extra={isEditing ? "Tải lên file mới để thay thế file cũ. Chỉ chấp nhận 1 file nén (.zip, .rar, .gz), tối đa 10MB" : "Chỉ chấp nhận 1 file nén (.zip, .rar, .gz), tối đa 10MB"}
-                >
-                    <Upload
-                        maxCount={1}
-                        beforeUpload={(file) => {
-                            const isLt10M = file.size / 1024 / 1024 < 10;
-                            if (!isLt10M) {
-                                message.error('File phải nhỏ hơn 10MB!');
-                                return Upload.LIST_IGNORE;
-                            }
-                            return false;
-                        }}
-                        accept=".zip,.rar,.7z,.tar.gz,.gz"
-                    >
-                        <Button icon={<UploadOutlined />}>{isEditing ? "Chọn file thay thế" : "Chọn file đính kèm"}</Button>
-                    </Upload>
-                </Form.Item>
             </Form>
         </Modal>
     );

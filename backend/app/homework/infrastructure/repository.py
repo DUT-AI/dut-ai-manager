@@ -99,11 +99,31 @@ class HomeworkRepository:
             model.title = homework.title
             model.description = homework.description
             model.deadline = homework.deadline
+            model.link = homework.link
             model.file_url = homework.file_url
+            model.game_slug = homework.game_slug
+            model.homework_slug = homework.homework_slug
             self.session.add(model)
             self.session.flush()
             return model.to_entity()
         return None
+
+    def get_by_deadline_date(self, target_date: Any) -> list[HomeworkEntity]:
+        statement = (
+            select(HomeworkModel)
+            .options(
+                selectinload(HomeworkModel.submissions).joinedload(
+                    HomeworkSubmissionModel.owner
+                )
+            )
+            .where(
+                HomeworkModel.is_deleted == False,
+                func.date(HomeworkModel.deadline) == target_date,
+            )
+        )
+        models = self.session.scalars(statement).all()
+        return [m.to_entity() for m in models]
+
 
     def delete_by_id(self, homework_id: int) -> bool:
         statement = select(HomeworkModel).where(HomeworkModel.id == homework_id)

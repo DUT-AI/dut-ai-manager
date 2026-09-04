@@ -2,12 +2,10 @@
 User ORM Model — SQLAlchemy 2.0, infrastructure layer.
 """
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Enum as SQLEnum,
-)
-from sqlalchemy import (
     ForeignKey,
     String,
 )
@@ -74,24 +72,30 @@ class UserModel(SQLAlchemyTimestampMixin, Base):
         back_populates="users",
     )
     account: Mapped["AccountModel | None"] = relationship(
+        "AccountModel",
         back_populates="user",
-        foreign_keys="[AccountModel.user_id]",
+        primaryjoin="UserModel.id == AccountModel.user_id",
     )
+
     violations: Mapped[list["ViolationModel"]] = relationship(
+        "ViolationModel",
         back_populates="user",
-        foreign_keys="[ViolationModel.user_id]",
+        primaryjoin="UserModel.id == ViolationModel.user_id",
     )
     team_members: Mapped[list["TeamMemberModel"]] = relationship(
+        "TeamMemberModel",
         back_populates="user",
-        foreign_keys="[TeamMemberModel.user_id]",
+        primaryjoin="UserModel.id == TeamMemberModel.user_id",
     )
     meeting_participations: Mapped[list["MeetingParticipant"]] = relationship(
+        "MeetingParticipant",
         back_populates="user",
-        foreign_keys="[MeetingParticipant.user_id]",
+        primaryjoin="UserModel.id == MeetingParticipant.user_id",
     )
     bonus_points: Mapped[list["BonusPointModel"]] = relationship(
+        "BonusPointModel",
         back_populates="user",
-        foreign_keys="[BonusPointModel.user_id]",
+        primaryjoin="UserModel.id == BonusPointModel.user_id",
     )
 
     def to_entity(self) -> UserEntity:
@@ -105,27 +109,28 @@ class UserModel(SQLAlchemyTimestampMixin, Base):
             for r in self.roles:
                 role_names.append(r.name)
                 role_ids.append(r.id)
-                # Check if nested role_permissions is also loaded
-                if "role_permissions" in r.__dict__:
+                if hasattr(r, "role_permissions") and r.role_permissions:
                     for rp in r.role_permissions:
-                        if "permission" in rp.__dict__ and rp.permission:
-                            permissions.add(rp.permission.name)
+                        if hasattr(rp, "permission") and rp.permission:
+                            code = f"{rp.permission.resource}:{rp.permission.action}"
+                            permissions.add(code)
+
 
         return UserEntity(
             id=self.id,
             name=self.name,
-            email=self.email,
             phone_number=self.phone_number,
+            email=self.email,
             status=self.status,
-            avatar_url=self.avatar_url,
             discord_id=self.discord_id,
             check_in_card_code=self.check_in_card_code,
             zalo_id=self.zalo_id,
             zalo_bot_id=self.zalo_bot_id,
             zalo_bind_code=self.zalo_bind_code,
+            avatar_url=self.avatar_url,
             role_ids=role_ids,
-            role_names=role_names,
-            permissions=permissions,
+            roles=role_names,
+            permissions=list(permissions),
             created_at=self.created_at,
             updated_at=self.updated_at,
             created_by=self.created_by,
@@ -134,18 +139,18 @@ class UserModel(SQLAlchemyTimestampMixin, Base):
         )
 
     @classmethod
-    def from_entity(cls, entity: Any) -> "UserModel":
+    def from_entity(cls, entity: UserEntity) -> "UserModel":
         """Domain Entity → ORM Model."""
         return cls(
             id=entity.id,
             name=entity.name,
-            email=entity.email,
             phone_number=entity.phone_number,
+            email=entity.email,
             status=entity.status,
-            avatar_url=entity.avatar_url,
             discord_id=entity.discord_id,
             check_in_card_code=entity.check_in_card_code,
             zalo_id=entity.zalo_id,
             zalo_bot_id=entity.zalo_bot_id,
             zalo_bind_code=entity.zalo_bind_code,
+            avatar_url=entity.avatar_url,
         )

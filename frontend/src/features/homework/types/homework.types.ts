@@ -49,6 +49,9 @@ export const homeworkSchema = z.object({
   title: z.string(),
   description: z.string(),
   deadline: z.string(),
+  link: z.string().nullable().optional(),
+  game_slug: z.string().nullable().optional(),
+  homework_slug: z.string().nullable().optional(),
   created_at: z.string(),
   updated_at: z.string(),
   created_by: z.number().optional(),
@@ -60,8 +63,12 @@ export type Homework = z.infer<typeof homeworkSchema>;
 
 export const homeworkCreateSchema = z.object({
   title: z.string().min(1, 'Vui lòng nhập tiêu đề bài tập'),
-  description: z.string().min(1, 'Vui lòng nhập mô tả'),
+  description: z.string().optional(),
   deadline: z.string().min(1, 'Vui lòng chọn hạn nộp'),
+  link: z.string().optional(),
+  game_slug: z.string().optional(),
+  homework_slug: z.string().optional(),
+  slug: z.string().optional(),
   assignee_ids: z.array(z.number()).optional(),
   team_ids: z.array(z.number()).optional(),
 });
@@ -71,6 +78,7 @@ export type CreateHomeworkFormValues = HomeworkCreate;
 export const homeworkUpdateSchema = homeworkCreateSchema.partial();
 export type HomeworkUpdate = z.infer<typeof homeworkUpdateSchema>;
 export type UpdateHomeworkFormValues = HomeworkUpdate;
+
 
 export const homeworkSubmitSchema = z.object({
   link: z.string().url('Vui lòng nhập đường dẫn URL hợp lệ'),
