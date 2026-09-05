@@ -114,8 +114,7 @@ class HomeworkModel(SQLAlchemyTimestampMixin, Base):
     description: Mapped[str] = mapped_column(Text, default="")
     link: Mapped[str | None] = mapped_column(String(500), default=None, nullable=True)
     file_url: Mapped[str | None] = mapped_column(default=None, nullable=True)
-    game_slug: Mapped[str | None] = mapped_column(String(255), default=None, nullable=True)
-    homework_slug: Mapped[str | None] = mapped_column(String(255), default=None, nullable=True)
+    slug: Mapped[str | None] = mapped_column(String(255), default=None, nullable=True)
 
     # Relationships
     submissions: Mapped[list["HomeworkSubmissionModel"]] = relationship(
@@ -140,8 +139,7 @@ class HomeworkModel(SQLAlchemyTimestampMixin, Base):
             description=self.description or "",
             link=self.link,
             file_url=self.file_url,
-            game_slug=self.game_slug,
-            homework_slug=self.homework_slug,
+            slug=self.slug,
             submissions=submissions_entities,
             created_at=self.created_at,
             updated_at=self.updated_at,
@@ -159,7 +157,6 @@ class HomeworkModel(SQLAlchemyTimestampMixin, Base):
             description=entity.description,
             link=entity.link,
             file_url=entity.file_url,
-            game_slug=entity.game_slug,
-            homework_slug=entity.homework_slug,
+            slug=entity.slug,
         )
 

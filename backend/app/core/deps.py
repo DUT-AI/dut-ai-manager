@@ -141,14 +141,24 @@ def hasPermission(permission: str):
 
 def hasTeamLeaderAccess(target_user_id_param: str = "user_id"):
     async def dependency(request: Request, current_user: CurrentUser):
-        if RoleType.LEADER.value not in current_user.role_names:
-            return  # Admin/other roles bypass
+        roles_lower = [r.lower() for r in current_user.role_names]
+        if RoleType.ADMIN.value.lower() in roles_lower:
+            return  # Admin bypasses team check
+
+        if RoleType.LEADER.value.lower() not in roles_lower:
+            raise BadRequestException(
+                "Không có quyền truy cập",
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
 
         # Try to get from query params first, then from body
         target_user_id = request.query_params.get(target_user_id_param)
         if not target_user_id:
-            data = await request.json()
-            target_user_id = data.get(target_user_id_param)
+            try:
+                data = await request.json()
+                target_user_id = data.get(target_user_id_param)
+            except Exception:
+                target_user_id = None
 
         in_same_team = False
 
@@ -163,16 +173,20 @@ def hasTeamLeaderAccess(target_user_id_param: str = "user_id"):
 
 def onlyEditOrDeleteYourself(target_user_id_param: str = "user_id"):
     async def dependency(request: Request, current_user: CurrentUser):
-        if RoleType.LEADER.value not in current_user.role_names:
-            return  # Admin/other roles bypass
+        roles_lower = [r.lower() for r in current_user.role_names]
+        if RoleType.ADMIN.value.lower() in roles_lower:
+            return  # Admin bypasses self check
 
         # Try to get from query params first, then from body
         target_user_id = request.query_params.get(target_user_id_param)
         if not target_user_id:
-            data = await request.json()
-            target_user_id = data.get(target_user_id_param)
-        # Check team membership...
-        if current_user.id != int(target_user_id):
+            try:
+                data = await request.json()
+                target_user_id = data.get(target_user_id_param)
+            except Exception:
+                target_user_id = None
+
+        if target_user_id is None or current_user.id != int(target_user_id):
             raise BadRequestException(
                 "Chỉ được edit thông tin bản thân",
                 status_code=status.HTTP_403_FORBIDDEN,

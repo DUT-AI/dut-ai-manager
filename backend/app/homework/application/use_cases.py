@@ -88,55 +88,49 @@ class CheckOverdueHomeworkUseCase:
                 continue
 
 
-            game_slug = (homework.game_slug or "").strip()
-            homework_slug = (homework.homework_slug or "").strip()
+            slug = (homework.slug or "").strip()
 
-            completed_game_user_ids: set[int] = set()
-            completed_hw_user_ids: set[int] = set()
+            completed_user_ids: set[int] = set()
 
-            if game_slug:
-                leaderboard = await self.quiz_api.get_game_leaderboard(game_slug)
+            if slug:
+                # 1. Try fetching leaderboard for game quiz
+                leaderboard = await self.quiz_api.get_game_leaderboard(slug)
                 for item in leaderboard:
                     if isinstance(item, dict):
-                        # Yêu cầu học viên phải làm ĐỦ SỐ CÂU (answered_questions == total_questions) VÀ is_completed = True
                         is_completed = item.get("is_completed", True)
                         total_q = item.get("total_questions")
                         answered_q = item.get("answered_questions")
                         if total_q is not None and answered_q is not None:
                             if answered_q < total_q:
                                 is_completed = False
-
                         if not is_completed:
                             continue
-
                         uid = item.get("user_id")
                         if uid is not None:
                             try:
-                                completed_game_user_ids.add(int(uid))
+                                completed_user_ids.add(int(uid))
                             except (ValueError, TypeError):
                                 pass
                     elif isinstance(item, (int, str)):
                         try:
-                            completed_game_user_ids.add(int(item))
+                            completed_user_ids.add(int(item))
                         except (ValueError, TypeError):
                             pass
 
-            if homework_slug:
-                completed_members = await self.quiz_api.get_homework_completed_members(
-                    homework_slug
-                )
+                # 2. Try fetching completed members for coding homework
+                completed_members = await self.quiz_api.get_homework_completed_members(slug)
                 for item in completed_members:
                     if isinstance(item, dict):
                         uid = item.get("user_id")
                         sub_count = item.get("submission_count", 1)
                         if uid is not None and sub_count > 0:
                             try:
-                                completed_hw_user_ids.add(int(uid))
+                                completed_user_ids.add(int(uid))
                             except (ValueError, TypeError):
                                 pass
                     elif isinstance(item, (int, str)):
                         try:
-                            completed_hw_user_ids.add(int(item))
+                            completed_user_ids.add(int(item))
                         except (ValueError, TypeError):
                             pass
 
@@ -157,13 +151,13 @@ class CheckOverdueHomeworkUseCase:
 
                 is_postponed_expired = bool(req)
 
-                if game_slug:
-                    is_game_done = user_id in completed_game_user_ids
-                    if not is_game_done:
+                if slug:
+                    is_done = user_id in completed_user_ids
+                    if not is_done:
                         reason = (
-                            f"Chưa làm game bài tập ({game_slug}) quá thời gian xin hẹn"
+                            f"Chưa hoàn thành bài tập ({slug}) quá thời gian xin hẹn"
                             if is_postponed_expired
-                            else f"Chưa làm game bài tập ({game_slug}) và không phép"
+                            else f"Chưa hoàn thành bài tập ({slug}) và không phép"
                         )
                         await EventBus.publish(
                             HomeworkOverdueDetected(
@@ -175,29 +169,7 @@ class CheckOverdueHomeworkUseCase:
                             )
                         )
                         created_count += 1
-
-                if homework_slug:
-                    is_hw_done = user_id in completed_hw_user_ids
-                    if not is_hw_done:
-                        reason = (
-                            f"Chưa làm bài tập coding ({homework_slug}) quá thời gian xin hẹn"
-                            if is_postponed_expired
-                            else f"Chưa làm bài tập coding ({homework_slug}) và không phép"
-                        )
-                        await EventBus.publish(
-                            HomeworkOverdueDetected(
-                                user_id=user_id,
-                                homework_id=homework.id,
-                                homework_title=homework.title,
-                                deadline_date=str(homework.deadline.date()),
-                                reason=reason,
-                            )
-                        )
-                        created_count += 1
-
-
-
-                if not game_slug and not homework_slug:
+                else:
                     if sub.status == HomeworkStatus.NOT_SUBMITTED:
                         reason = (
                             "Không nộp bài tập quá thời gian xin hẹn"
@@ -289,14 +261,11 @@ class HomeworkUseCases:
             raise BadRequestException("Cần chọn người nhận hoặc team")
 
         homework_data = data.model_dump(
-            exclude={"assignee_ids", "team_ids", "file_url", "slug"}
+            exclude={"assignee_ids", "team_ids", "file_url"}
         )
 
         if data.slug:
-            if not homework_data.get("homework_slug") and not homework_data.get(
-                "game_slug"
-            ):
-                homework_data["homework_slug"] = data.slug.strip()
+            homework_data["slug"] = data.slug.strip()
 
         homework = HomeworkEntity(**homework_data, file_url=file_url)
         homework = self.homework_repo.create(homework)
@@ -340,12 +309,11 @@ class HomeworkUseCases:
             )
 
         update_data = data.model_dump(
-            exclude_unset=False, exclude={"assignee_ids", "team_ids", "file_url", "slug"}
+            exclude_unset=False, exclude={"assignee_ids", "team_ids", "file_url"}
         )
 
         if data.slug:
-            if not update_data.get("homework_slug") and not update_data.get("game_slug"):
-                update_data["homework_slug"] = data.slug.strip()
+            update_data["slug"] = data.slug.strip()
 
         for key, value in update_data.items():
             if value is not None:
@@ -442,15 +410,13 @@ class HomeworkUseCases:
                 if item.owner_id in team_member_ids
             ]
             return filter_submissions
-        elif RoleType.TEAMMATE.value in role_names:
+        else:
             filter_submissions = [
                 item
                 for item in homework_submissions
                 if item.owner_id == current_user.id
             ]
             return filter_submissions
-        else:
-            raise BadRequestException("Không có quyền xem bài nộp")
 
     async def submit_homework(
         self, homework_id: int, file: UploadFile

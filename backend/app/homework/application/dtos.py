@@ -13,12 +13,10 @@ class HomeworkBase(BaseModel):
     description: str = ""
     link: str | None = None
     file_url: str | None = None
-    game_slug: str | None = None
-    homework_slug: str | None = None
+    slug: str | None = None
 
 
 class HomeworkCreate(HomeworkBase):
-    slug: str | None = None
     assignee_ids: list[int] | None = None
     team_ids: list[int] | None = None  # Query users from these teams
 
@@ -29,8 +27,6 @@ class HomeworkUpdate(BaseModel):
     deadline: datetime | None = None
     link: str | None = None
     file_url: str | None = None
-    game_slug: str | None = None
-    homework_slug: str | None = None
     slug: str | None = None
     assignee_ids: list[int] | None = None  # Sync assignees
     team_ids: list[int] | None = None  # Add users from teams

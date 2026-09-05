@@ -129,7 +129,7 @@ class UserModel(SQLAlchemyTimestampMixin, Base):
             zalo_bind_code=self.zalo_bind_code,
             avatar_url=self.avatar_url,
             role_ids=role_ids,
-            roles=role_names,
+            role_names=role_names,
             permissions=list(permissions),
             created_at=self.created_at,
             updated_at=self.updated_at,

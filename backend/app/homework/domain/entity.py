@@ -72,8 +72,7 @@ class Homework(BaseEntity):
     deadline: datetime
     link: str | None = None
     file_url: str | None = None
-    game_slug: str | None = None
-    homework_slug: str | None = None
+    slug: str | None = None
     submissions: list[HomeworkSubmission] = []
 
 

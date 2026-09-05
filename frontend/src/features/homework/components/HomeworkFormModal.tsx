@@ -45,8 +45,7 @@ export const HomeworkFormModal = ({
         title: editingItem.title,
         deadline: dayjs(editingItem.deadline),
         link: editingItem.link,
-        homework_slug: editingItem.homework_slug,
-        game_slug: editingItem.game_slug,
+        slug: editingItem.slug || '',
         assignee_ids: currentAssignees,
     } : undefined;
 
@@ -58,8 +57,7 @@ export const HomeworkFormModal = ({
                 description: '',
                 deadline: values.deadline.format('YYYY-MM-DDTHH:mm:ss'),
                 link: values.link || '',
-                homework_slug: values.homework_slug || null,
-                game_slug: values.game_slug || null,
+                slug: values.slug || null,
             };
 
             if (isEditing) {
@@ -100,9 +98,9 @@ export const HomeworkFormModal = ({
                     <Input placeholder="Nhập tiêu đề bài tập..." />
                 </Form.Item>
 
-                <Form.Item 
-                    name="deadline" 
-                    label="Hạn nộp" 
+                <Form.Item
+                    name="deadline"
+                    label="Hạn nộp"
                     rules={[
                         { required: true, message: 'Vui lòng chọn hạn nộp' },
                         {
@@ -133,17 +131,10 @@ export const HomeworkFormModal = ({
                 </Form.Item>
 
                 <Form.Item
-                    name="homework_slug"
-                    label="Slug của bài tập Coding (Tùy chọn)"
+                    name="slug"
+                    label="Slug của bài tập"
                 >
-                    <Input placeholder="Nhập slug bài tập coding..." />
-                </Form.Item>
-
-                <Form.Item
-                    name="game_slug"
-                    label="Slug của Game Quiz (Tùy chọn)"
-                >
-                    <Input placeholder="Nhập slug game..." />
+                    <Input placeholder="Nhập slug bài tập..." />
                 </Form.Item>
 
 

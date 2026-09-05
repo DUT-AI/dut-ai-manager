@@ -236,11 +236,11 @@ export const HomeworkPage: React.FC = () => {
                             label: 'Quản lý bài tập',
                             children: renderListView(allHomeworks, allLoading)
                         }] : []),
-                        {
+                        ...(isAdminOrLeader() ? [{
                             key: '3',
                             label: 'Báo cáo',
                             children: <HomeworkReportTab />
-                        }
+                        }] : [])
                     ]}
                 />
 
