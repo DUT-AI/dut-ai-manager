@@ -355,24 +355,22 @@ const PermissionManagementPage = () => {
                             <Text type="secondary" className="text-xs md:text-sm">Danh sách và công cụ quản lý các yêu cầu</Text>
                         </div>
                     </Space>
-                    {canCreate && (
-                        <Button
-                            type="primary"
-                            icon={<PlusOutlined />}
-                            onClick={() => {
-                                setEditingItem(null);
-                                form.resetFields();
-                                form.setFieldsValue({
-                                    date: dayjs(),
-                                    category: 'ABSENCE'
-                                });
-                                setIsModalOpen(true);
-                            }}
-                            className="w-full md:w-auto bg-linear-to-r from-indigo-500 to-purple-600 border-none shadow-md h-10 px-6 font-semibold"
-                        >
-                            Tạo Đơn mới
-                        </Button>
-                    )}
+                    <Button
+                        type="primary"
+                        icon={<PlusOutlined />}
+                        onClick={() => {
+                            setEditingItem(null);
+                            form.resetFields();
+                            form.setFieldsValue({
+                                date: dayjs(),
+                                category: 'ABSENCE'
+                            });
+                            setIsModalOpen(true);
+                        }}
+                        className="w-full md:w-auto bg-linear-to-r from-indigo-500 to-purple-600 border-none shadow-md h-10 px-6 font-semibold"
+                    >
+                        Tạo Đơn mới
+                    </Button>
                 </motion.div>
 
                 <motion.div variants={itemVariants} className="bg-gray-50/50 p-4 rounded-xl mb-6 border border-gray-100">

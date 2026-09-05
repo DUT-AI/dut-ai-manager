@@ -55,14 +55,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const hasPermission = (permission: string): boolean => {
         if (!user) return false;
-        const roles = user.role_names?.map(r => r.toLowerCase()) || [];
+        const roles = user.role_names?.map((r) => r.toLowerCase()) || [];
         if (roles.includes('admin')) return true;
-        return user.permission_names?.includes(permission) || false;
+        const perms = user.permissions || user.permission_names || [];
+        return perms.includes(permission);
     };
 
     const isAdminOrLeader = (): boolean => {
         if (!user) return false;
-        const roles = user.role_names?.map(r => r.toLowerCase()) || [];
+        const roles = user.role_names?.map((r) => r.toLowerCase()) || [];
         return roles.includes('admin') || roles.includes('leader');
     };
 

@@ -1,5 +1,7 @@
 import { useReducer, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { message } from 'antd';
+
 import { useAuth } from '@/features/auth';
 import type { HomeworkSubmission } from '../types/homework.types';
 import {
@@ -111,10 +113,15 @@ export const useHomeworkActions = (activeTab: string) => {
         refreshData();
     };
 
+    const queryClient = useQueryClient();
+
     const handleSubmitSuccess = () => {
         dispatch({ type: 'CLOSE_SUBMIT' });
+        queryClient.invalidateQueries({ queryKey: ['submissions'] });
+        queryClient.invalidateQueries({ queryKey: ['homeworks'] });
         refetchMyHomeworks();
     };
+
 
     return {
         state,

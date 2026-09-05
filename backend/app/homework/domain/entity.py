@@ -68,10 +68,13 @@ class Homework(BaseEntity):
     """Domain model containing assignment details."""
 
     title: str
-    description: str
+    description: str = ""
     deadline: datetime
+    link: str | None = None
     file_url: str | None = None
+    slug: str | None = None
     submissions: list[HomeworkSubmission] = []
+
 
     @property
     def submission_count(self) -> int:
