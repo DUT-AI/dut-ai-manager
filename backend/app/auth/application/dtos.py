@@ -62,6 +62,7 @@ class UserReponseMe(BaseModel):
     email: str
     status: str
     avatar_url: str | None = None
+    zalo_bot_id: str | None = None
     role_names: list[str] = []
     permissions: list[str]
 

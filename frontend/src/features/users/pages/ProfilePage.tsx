@@ -303,7 +303,7 @@ const ProfilePage = () => {
                                                             <Avatar src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Icon_of_Zalo.svg/120px-Icon_of_Zalo.svg.png" size="small" />
                                                             <Text>Liên kết Zalo (Chatbot <Tag color="green" className="ml-1 border-none shadow-sm rounded-md">Miễn phí</Tag>)</Text>
                                                         </div>
-                                                        {(user as any).zalo_bot_id ? (
+                                                        {user?.zalo_bot_id ? (
                                                             <Tag color="green">Đã liên kết</Tag>
                                                         ) : (
                                                             <Button type="primary" size="small" className="bg-[#0068ff]" onClick={handleGenerateBotCode} loading={loadingBotCode}>Lấy mã</Button>

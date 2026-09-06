@@ -22,6 +22,7 @@ export const userResponseSchema = z.object({
   status: z.enum(['ACTIVE', 'INACTIVE']).or(z.string()),
   discord_id: z.string().nullable().optional(),
   zalo_id: z.string().nullable().optional(),
+  zalo_bot_id: z.string().nullable().optional(),
   check_in_card_code: z.string().nullable().optional(),
   check_in_card_code_configured: z.boolean().optional(),
   avatar_url: z.string().nullable().optional(),

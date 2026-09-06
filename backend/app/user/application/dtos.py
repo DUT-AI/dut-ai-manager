@@ -34,6 +34,7 @@ class UserResponse(UserBase):
     """API: không trả về giá trị thật của check_in_card_code, chỉ cờ đã cấu hình."""
 
     id: int
+    zalo_bot_id: str | None = None
     role_names: list[str] = []
     permissions: list[str] = []
     check_in_card_code_configured: bool = False
