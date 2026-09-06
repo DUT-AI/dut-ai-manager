@@ -27,6 +27,7 @@ export const userResponseSchema = z.object({
   avatar_url: z.string().nullable().optional(),
   role_names: z.array(z.string()).default([]),
   permission_names: z.array(z.string()).default([]),
+  permissions: z.array(z.string()).default([]),
   created_at: z.string().optional(),
   updated_at: z.string().optional(),
 });

@@ -36,8 +36,12 @@ export const homeworkService = {
     async create(data: HomeworkCreate & { file?: File }) {
         const formData = new FormData();
         formData.append('title', data.title);
-        formData.append('description', data.description);
+        formData.append('description', data.description || '');
         formData.append('deadline', data.deadline);
+        if (data.link) formData.append('link', data.link);
+        if (data.game_slug) formData.append('game_slug', data.game_slug);
+        if (data.homework_slug) formData.append('homework_slug', data.homework_slug);
+        if (data.slug) formData.append('slug', data.slug);
 
         if (data.assignee_ids) {
             data.assignee_ids.forEach(id => formData.append('assignee_ids', id.toString()));
@@ -60,8 +64,12 @@ export const homeworkService = {
     async update(id: number, data: HomeworkUpdate & { file?: File }) {
         const formData = new FormData();
         if (data.title) formData.append('title', data.title);
-        if (data.description) formData.append('description', data.description);
+        if (data.description !== undefined) formData.append('description', data.description);
         if (data.deadline) formData.append('deadline', typeof data.deadline === 'string' ? data.deadline : (data.deadline as { toISOString: () => string }).toISOString());
+        if (data.link !== undefined) formData.append('link', data.link || '');
+        if (data.game_slug !== undefined) formData.append('game_slug', data.game_slug || '');
+        if (data.homework_slug !== undefined) formData.append('homework_slug', data.homework_slug || '');
+        if (data.slug !== undefined) formData.append('slug', data.slug || '');
 
         if (data.assignee_ids) {
             data.assignee_ids.forEach((id: number) => formData.append('assignee_ids', id.toString()));
@@ -80,6 +88,7 @@ export const homeworkService = {
         });
         return response.data.data;
     },
+
 
     async delete(id: number) {
         const response = await axiosInstance.delete<ApiResponse<boolean>>(`/${this.baseUrl}/${id}`);

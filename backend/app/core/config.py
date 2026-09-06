@@ -94,9 +94,10 @@ class Settings(BaseSettings):
     POSTGRES_USER_DEV: str = ""
     POSTGRES_PASSWORD_DEV: str = ""
 
-    # Homework-checker api
+    # Homework-checker api & Quiz system
     HOMEWORK_CHECKER_API_URL: str = ""
     SUBMISSION_CHECKER_API_URL: str = ""
+    QUIZ_API_URL: str = "https://quiz.dutai.site"
 
     @computed_field
     @property

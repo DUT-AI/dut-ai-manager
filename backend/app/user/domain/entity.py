@@ -38,7 +38,7 @@ class UserEntity(BaseEntity):
     permissions: set[str] = Field(default_factory=set)
 
     def has_permission(self, permission_name: str) -> bool:
-        if "admin" in self.role_names:
+        if any(r.lower() == "admin" for r in self.role_names):
             return True
         return permission_name in self.permissions
 

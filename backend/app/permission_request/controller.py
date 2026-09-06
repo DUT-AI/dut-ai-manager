@@ -56,9 +56,7 @@ async def get_permission_requests(
 async def create_permission_request(
     data: PermissionRequestCreate,
     uc: FromDishka[CreatePermissionRequestUseCase],
-    _current_user: Annotated[
-        CurrentUser, hasPermission(PermissionRequestPermission.CREATE)
-    ],
+    _current_user: CurrentUser,
 ):
     """Tạo yêu cầu xin phép mới"""
     result = await uc.execute(

@@ -55,8 +55,9 @@ export const SubmissionsDrawer = ({ open, homework, onClose }: Props) => {
         let color = 'default';
         let label = status as string;
         if (status === HomeworkStatus.NOT_SUBMITTED) {
-            color = 'default';
+            color = 'error';
             label = 'Chưa nộp';
+
         } else if (status === HomeworkStatus.SUBMITTED) {
             color = 'processing';
             label = 'Đã nộp';
