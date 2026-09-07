@@ -15,7 +15,7 @@ export const zaloService = {
    * Generate new Bind Code for Zalo Bot Webhook
    */
   getBotBindCode: async () => {
-    const response = await axiosInstance.get<ApiResponse<{ bind_code: string }>>('/zalo-bot/generate-bind-code');
+    const response = await axiosInstance.get<ApiResponse<{ bind_code: string }>>('/zalo/bot/generate-bind-code');
     return response.data;
   },
 

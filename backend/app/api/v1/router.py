@@ -17,7 +17,10 @@ from app.report.controller import router as report_router
 from app.team.controller import router as team_router
 from app.user.controller import router as user_router
 from app.violation.controller import router as violation_router
-from app.zalo.controller import router as zalo_router
+from app.zalo.controller import (
+    bot_router as zalo_bot_router,
+    router as zalo_router,
+)
 
 api_v1_router = APIRouter(prefix="/api/v1")
 
@@ -35,6 +38,7 @@ routers = [
     homework_submission_router,
     meeting_router,
     zalo_router,
+    zalo_bot_router,
     billing_router,
     expense_router,
 ]

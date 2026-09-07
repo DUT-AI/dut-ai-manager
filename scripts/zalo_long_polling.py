@@ -14,7 +14,7 @@ if not BOT_TOKEN:
     print("❌ LỖI: Không tìm thấy ZALO_BOT_TOKEN trong file .env!")
     sys.exit(1)
 
-WEBHOOK_URL = "http://localhost:8001/api/v1/zalo-bot/webhook"
+WEBHOOK_URL = "http://localhost:8001/api/v1/zalo/bot/webhook"
 
 
 async def forward_to_webhook(update: Update, context: ContextTypes.DEFAULT_TYPE):

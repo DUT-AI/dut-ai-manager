@@ -15,6 +15,7 @@ from app.zalo.application.use_cases import (
 from app.zalo.schemas import ZaloBindCodeResponse, ZaloBindRequest, ZaloLoginUrlResponse
 
 router = APIRouter(prefix="/zalo", tags=["Zalo"])
+bot_router = APIRouter(prefix="/zalo-bot", tags=["Zalo Bot"])
 
 
 @router.get("/login-url", response_model=ApiResponse[ZaloLoginUrlResponse])
@@ -56,6 +57,7 @@ async def bind_zalo(
 
 
 @router.get("/bot/generate-bind-code", response_model=ApiResponse[ZaloBindCodeResponse])
+@bot_router.get("/generate-bind-code", response_model=ApiResponse[ZaloBindCodeResponse])
 @inject
 async def generate_zalo_bot_bind_code(
     uc: FromDishka[GenerateBotBindCodeUseCase],
@@ -67,6 +69,7 @@ async def generate_zalo_bot_bind_code(
 
 
 @router.post("/bot/webhook")
+@bot_router.post("/webhook")
 @inject
 async def zalo_bot_webhook(
     request: Request,
