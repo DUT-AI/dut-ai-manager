@@ -135,10 +135,18 @@ class HandleBotWebhookUseCase:
             text = None
 
             if event_name in ["user_send_text", "message.text.received"]:
-                if "sender" in body and isinstance(body["sender"], dict):
-                    sender_id = body["sender"].get("id")
                 if "message" in body and isinstance(body["message"], dict):
                     text = body["message"].get("text")
+                    chat = body["message"].get("chat", {})
+                    from_user = body["message"].get("from", {})
+                    sender_id = chat.get("id") or from_user.get("id")
+                elif "text" in body:
+                    text = body.get("text")
+
+                if not sender_id and "sender" in body and isinstance(body["sender"], dict):
+                    sender_id = body["sender"].get("id")
+
+            logger.info(f"Zalo Bot webhook parsed: sender_id={sender_id}, text={text}")
 
             if sender_id and text:
                 bind_code = text.strip().upper()
