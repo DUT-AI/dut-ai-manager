@@ -93,7 +93,7 @@ class GetViolationsUseCase:
         start_date: date | None = None,
         end_date: date | None = None,
     ) -> list[Violation]:
-        if not month and not year and not start_date and not end_date:
+        if not month and not year and not start_date and not end_date and not user_id:
             month = datetime.now().month
             year = datetime.now().year
 
