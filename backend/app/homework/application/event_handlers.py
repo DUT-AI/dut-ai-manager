@@ -68,11 +68,11 @@ class HomeworkNotificationHandler(EventHandler):
                 ],
                 "footer": {"text": "DUT AI Manager • Hệ thống tự động"},
             }
-            if homework.file_url:
+            if homework.link:
                 embed["fields"].append(
                     {
-                        "name": "🔗 File đính kèm",
-                        "value": f"[Tải về tài liệu]({homework.file_url})",
+                        "name": "🔗 Đường dẫn bài tập",
+                        "value": f"[Mở bài tập]({homework.link})",
                         "inline": False,
                     }
                 )

@@ -98,6 +98,7 @@ export const sidebarMenuConfig: MenuItemConfig[] = [
         icon: <BookOutlined />,
         label: 'Bài tập về nhà',
         path: '/dashboard/homeworks',
+        permission: 'homework:create',
     },
     {
         key: 'invoices',

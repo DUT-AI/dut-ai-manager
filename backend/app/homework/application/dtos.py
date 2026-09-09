@@ -10,9 +10,7 @@ from app.shared.domain.value_objects import UserRef
 class HomeworkBase(BaseModel):
     title: str
     deadline: datetime
-    description: str = ""
     link: str | None = None
-    file_url: str | None = None
     slug: str | None = None
 
 
@@ -23,10 +21,8 @@ class HomeworkCreate(HomeworkBase):
 
 class HomeworkUpdate(BaseModel):
     title: str | None = None
-    description: str | None = None
     deadline: datetime | None = None
     link: str | None = None
-    file_url: str | None = None
     slug: str | None = None
     assignee_ids: list[int] | None = None  # Sync assignees
     team_ids: list[int] | None = None  # Add users from teams
@@ -83,3 +79,15 @@ class HomeworkReportResponse(BaseModel):
     user_id: int
     owner: UserRef | None = None
     unsubmitted_count: int
+
+
+class UserSubmissionInfo(BaseModel):
+    user_id: int
+    name: str | None = None
+    avatar_url: str | None = None
+
+
+class HomeworkSubmissionStatusResponse(BaseModel):
+    submitted: list[UserSubmissionInfo]
+    not_submitted: list[UserSubmissionInfo]
+

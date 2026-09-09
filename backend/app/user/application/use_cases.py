@@ -6,7 +6,6 @@ from datetime import datetime
 from io import BytesIO
 from typing import cast
 
-import pandas as pd
 from fastapi import BackgroundTasks, HTTPException, UploadFile
 from loguru import logger
 

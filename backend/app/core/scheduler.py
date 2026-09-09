@@ -14,7 +14,6 @@ from dishka import AsyncContainer
 from loguru import logger
 
 from app.jobs.activity_scoring_job import calculate_activity_points
-from app.jobs.homework_checker_job import check_overdue_homework_submissions
 from app.jobs.meeting_checker_job import check_meeting_attendance
 from app.jobs.monthly_title_job import assign_monthly_titles
 
@@ -29,16 +28,6 @@ def start_scheduler(dishka_container: AsyncContainer) -> None:
     logger.info("📅 Starting background scheduler...")
 
     scheduler = AsyncIOScheduler(timezone="Asia/Ho_Chi_Minh")
-
-    # Schedule homework check job at 23:59 every day
-    scheduler.add_job(
-        check_overdue_homework_submissions,
-        CronTrigger(hour=23, minute=59, timezone="Asia/Ho_Chi_Minh"),
-        id="homework_deadline_check",
-        name="Check overdue homework submissions",
-        replace_existing=True,
-        kwargs={"container": dishka_container},
-    )
 
     # Schedule meeting attendance check at 23:59 every day
     scheduler.add_job(

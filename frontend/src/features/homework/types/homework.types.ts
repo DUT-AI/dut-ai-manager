@@ -47,7 +47,6 @@ export type HomeworkSubmission = z.infer<typeof homeworkSubmissionSchema>;
 export const homeworkSchema = z.object({
   id: z.number(),
   title: z.string(),
-  description: z.string(),
   deadline: z.string(),
   link: z.string().nullable().optional(),
   slug: z.string().nullable().optional(),
@@ -55,14 +54,12 @@ export const homeworkSchema = z.object({
   updated_at: z.string(),
   created_by: z.number().optional(),
   submission_count: z.number().optional(),
-  file_url: z.string().optional(),
   submissions: z.array(homeworkSubmissionSchema).optional(),
 });
 export type Homework = z.infer<typeof homeworkSchema>;
 
 export const homeworkCreateSchema = z.object({
   title: z.string().min(1, 'Vui lòng nhập tiêu đề bài tập'),
-  description: z.string().optional(),
   deadline: z.string().min(1, 'Vui lòng chọn hạn nộp'),
   link: z.string().optional(),
   slug: z.string().optional(),
@@ -103,3 +100,17 @@ export const homeworkReportResponseSchema = z.object({
   unsubmitted_count: z.number(),
 });
 export type HomeworkReportResponse = z.infer<typeof homeworkReportResponseSchema>;
+
+export const userSubmissionInfoSchema = z.object({
+  user_id: z.number(),
+  name: z.string().nullable().optional(),
+  avatar_url: z.string().nullable().optional(),
+});
+export type UserSubmissionInfo = z.infer<typeof userSubmissionInfoSchema>;
+
+export const homeworkSubmissionStatusSchema = z.object({
+  submitted: z.array(userSubmissionInfoSchema),
+  not_submitted: z.array(userSubmissionInfoSchema),
+});
+export type HomeworkSubmissionStatus = z.infer<typeof homeworkSubmissionStatusSchema>;
+

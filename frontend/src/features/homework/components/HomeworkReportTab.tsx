@@ -11,7 +11,7 @@ const { useBreakpoint } = Grid;
 
 export const HomeworkReportTab: React.FC = () => {
     const screens = useBreakpoint();
-    const { data: reportData, isLoading: reportLoading } = useUnsubmittedReport();
+    const { data: reportData, isLoading: reportLoading, refetch: refetchReport } = useUnsubmittedReport();
     const [selectedUser, setSelectedUser] = useState<HomeworkReportResponse | null>(null);
 
     const { data: userHomeworks, isLoading: userHomeworksLoading } = useUnsubmittedByUser(selectedUser?.user_id || null);
@@ -65,7 +65,7 @@ export const HomeworkReportTab: React.FC = () => {
     );
 
     return (
-        <div className="mt-4 px-3 md:px-0">
+        <div className="px-3 md:px-0">
             {!screens.md ? (
                 <List
                     dataSource={reportData || []}
@@ -103,7 +103,13 @@ export const HomeworkReportTab: React.FC = () => {
                                         <Tag color="red">Quá hạn</Tag>
                                     )}
                                 </div>
-                                <Text type="secondary" className="block mb-2 text-sm">{hw.description}</Text>
+                                {hw.link && (
+                                    <div className="mb-2">
+                                        <a href={hw.link} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 hover:underline">
+                                            Xem đề bài
+                                        </a>
+                                    </div>
+                                )}
                                 <div className="text-xs text-gray-500">
                                     Hạn nộp: <Text className={dayjs().isAfter(dayjs(hw.deadline)) ? 'text-red-500' : ''}>
                                         {dayjs(hw.deadline).format('DD/MM/YYYY HH:mm')}

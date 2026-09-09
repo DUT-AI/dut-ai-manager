@@ -6,12 +6,12 @@ import type {
     HomeworkCreate,
     HomeworkSubmission,
     HomeworkUpdate,
-    HomeworkReportResponse
+    HomeworkReportResponse,
+    HomeworkSubmissionStatus,
 } from '@/features/homework/types/homework.types';
 
 export const homeworkService = {
     baseUrl: 'homeworks',
-    submissionUrl: 'homework-submission',
 
     // Homeworks
     async getAll(skip = 0, limit = 100, deleted = false) {
@@ -21,37 +21,17 @@ export const homeworkService = {
         return response.data.data;
     },
 
-    async getMyHomeworks(skip = 0, limit = 100) {
-        const response = await axiosInstance.get<ApiResponse<Homework[]>>(`/${this.baseUrl}/me`, {
-            params: { skip, limit }
-        });
-        return response.data.data;
-    },
-
     async getById(id: number) {
         const response = await axiosInstance.get<ApiResponse<Homework>>(`/${this.baseUrl}/${id}`);
         return response.data.data;
     },
 
-    async create(data: HomeworkCreate & { file?: File }) {
+    async create(data: HomeworkCreate) {
         const formData = new FormData();
         formData.append('title', data.title);
-        formData.append('description', data.description || '');
         formData.append('deadline', data.deadline);
         if (data.link) formData.append('link', data.link);
-        if (data.game_slug) formData.append('game_slug', data.game_slug);
-        if (data.homework_slug) formData.append('homework_slug', data.homework_slug);
         if (data.slug) formData.append('slug', data.slug);
-
-        if (data.assignee_ids) {
-            data.assignee_ids.forEach(id => formData.append('assignee_ids', id.toString()));
-        }
-        if (data.team_ids) {
-            data.team_ids.forEach(id => formData.append('team_ids', id.toString()));
-        }
-        if (data.file) {
-            formData.append('file', data.file);
-        }
 
         const response = await axiosInstance.post<ApiResponse<Homework>>(`/${this.baseUrl}`, formData, {
             headers: {
@@ -61,25 +41,12 @@ export const homeworkService = {
         return response.data.data;
     },
 
-    async update(id: number, data: HomeworkUpdate & { file?: File }) {
+    async update(id: number, data: HomeworkUpdate) {
         const formData = new FormData();
         if (data.title) formData.append('title', data.title);
-        if (data.description !== undefined) formData.append('description', data.description);
         if (data.deadline) formData.append('deadline', typeof data.deadline === 'string' ? data.deadline : (data.deadline as { toISOString: () => string }).toISOString());
         if (data.link !== undefined) formData.append('link', data.link || '');
-        if (data.game_slug !== undefined) formData.append('game_slug', data.game_slug || '');
-        if (data.homework_slug !== undefined) formData.append('homework_slug', data.homework_slug || '');
         if (data.slug !== undefined) formData.append('slug', data.slug || '');
-
-        if (data.assignee_ids) {
-            data.assignee_ids.forEach((id: number) => formData.append('assignee_ids', id.toString()));
-        }
-        if (data.team_ids) {
-            data.team_ids.forEach((id: number) => formData.append('team_ids', id.toString()));
-        }
-        if (data.file) {
-            formData.append('file', data.file);
-        }
 
         const response = await axiosInstance.put<ApiResponse<Homework>>(`/${this.baseUrl}/${id}`, formData, {
             headers: {
@@ -111,42 +78,10 @@ export const homeworkService = {
         return response.data.data;
     },
 
-    // Submissions
-    async submit(homeworkId: number, file: File) {
-        const formData = new FormData();
-        formData.append('homework_id', homeworkId.toString());
-        formData.append('file', file);
-        const response = await axiosInstance.post<ApiResponse<HomeworkSubmission>>(
-            `/${this.submissionUrl}`,
-            formData,
-            {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            }
-        );
+    async getSubmissionStatus(homeworkId: number) {
+        const response = await axiosInstance.get<ApiResponse<HomeworkSubmissionStatus>>(`/${this.baseUrl}/${homeworkId}/submission-status`);
         return response.data.data;
     },
 
-    async getSubmissions(homeworkId: number) {
-        const response = await axiosInstance.get<ApiResponse<HomeworkSubmission[]>>(`/${this.submissionUrl}`, {
-            params: { homework_id: homeworkId }
-        });
-        return response.data.data;
-    },
-
-    async getMySubmission(homeworkId: number) {
-        // Return null data if 404 handled gracefully or rely on try-catch in component
-        const response = await axiosInstance.get<ApiResponse<HomeworkSubmission>>(`/${this.submissionUrl}/me`, {
-            params: { homework_id: homeworkId }
-        });
-        return response.data.data;
-    },
-
-    async updateStatus(submissionId: number, status: HomeworkStatus) {
-        const response = await axiosInstance.put<ApiResponse<HomeworkSubmission>>(`/${this.submissionUrl}/${submissionId}/status`, null, {
-            params: { status }
-        });
-        return response.data.data;
-    }
 };
+

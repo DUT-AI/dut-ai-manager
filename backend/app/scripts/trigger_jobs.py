@@ -21,7 +21,6 @@ from app.bonus_point.providers import BonusPointModuleProvider
 from app.core.events import bootstrap_events
 from app.homework.providers import HomeworkModuleProvider
 from app.jobs.activity_scoring_job import calculate_activity_points
-from app.jobs.homework_checker_job import check_overdue_homework_submissions
 from app.jobs.meeting_checker_job import check_meeting_attendance
 from app.jobs.monthly_title_job import assign_monthly_titles
 from app.meeting.providers import MeetingModuleProvider
@@ -63,10 +62,6 @@ async def run_jobs(target_date: date | None = None):
         # 1. Kết nối Events (Quan trọng để AutomatedViolationHandler có thể nhận tin)
         logger.info("📡 Bootstrapping events...")
         await bootstrap_events(container)
-
-        # 2. Chạy job kiểm tra bài tập
-        logger.info("⌛ Triggering Homework Checker Job...")
-        await check_overdue_homework_submissions(container, target_date=target_date)
 
         # # 3. Chạy job kiểm tra điểm danh
         logger.info("⌛ Triggering Meeting Checker Job...")

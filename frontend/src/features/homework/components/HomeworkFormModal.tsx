@@ -54,7 +54,6 @@ export const HomeworkFormModal = ({
         try {
             const baseData = {
                 title: values.title,
-                description: '',
                 deadline: values.deadline.format('YYYY-MM-DDTHH:mm:ss'),
                 link: values.link || '',
                 slug: values.slug || null,
@@ -127,12 +126,31 @@ export const HomeworkFormModal = ({
                     label="Link bài tập"
                     rules={[{ required: true, message: 'Vui lòng nhập link bài tập' }]}
                 >
-                    <Input placeholder="https://..." />
+                    <Input
+                        placeholder="https://..."
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            const currentSlug = form.getFieldValue('slug');
+                            if (!currentSlug && val) {
+                                const match = val.match(/\/(?:homeworks|game)\/([^/?#]+)/);
+                                if (match) {
+                                    form.setFieldsValue({ slug: match[1] });
+                                } else if (val.startsWith('http://') || val.startsWith('https://')) {
+                                    const parts = val.replace(/\/+$/, '').split('/');
+                                    const candidate = parts[parts.length - 1]?.split('?')[0]?.split('#')[0];
+                                    if (candidate && candidate.length > 1 && !candidate.includes(' ')) {
+                                        form.setFieldsValue({ slug: candidate });
+                                    }
+                                }
+                            }
+                        }}
+                    />
                 </Form.Item>
 
                 <Form.Item
                     name="slug"
                     label="Slug của bài tập"
+                    extra=""
                 >
                     <Input placeholder="Nhập slug bài tập..." />
                 </Form.Item>

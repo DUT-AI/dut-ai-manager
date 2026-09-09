@@ -3,7 +3,7 @@ Meeting ORM Models — SQLAlchemy 2.0, infrastructure layer.
 """
 
 from datetime import datetime
-
+from typing import TYPE_CHECKING
 from sqlalchemy import Boolean, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -12,7 +12,8 @@ from app.meeting.domain.entity import MeetingParticipant as MeetingParticipantEn
 from app.meeting.domain.entity import UserRef
 from app.meeting.domain.value_objects import ParticipantStatus
 from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
-from app.user.infrastructure.model import UserModel
+if TYPE_CHECKING:
+    from app.user.infrastructure.model import UserModel
 
 
 class Meeting(SQLAlchemyTimestampMixin, Base):
@@ -81,7 +82,7 @@ class MeetingParticipant(SQLAlchemyTimestampMixin, Base):
     )
 
     meeting: Mapped[Meeting] = relationship(back_populates="participants")
-    user: Mapped[UserModel] = relationship(
+    user: Mapped["UserModel"] = relationship(
         back_populates="meeting_participations",
         foreign_keys=[user_id],
     )

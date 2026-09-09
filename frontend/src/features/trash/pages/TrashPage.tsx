@@ -220,7 +220,6 @@ export const TrashPage: React.FC = () => {
     // Columns
     const homeworkColumns: ColumnsType<Homework> = [
         { title: 'Tiêu đề', dataIndex: 'title', key: 'title', render: (text) => <Text strong>{text}</Text> },
-        { title: 'Mô tả', dataIndex: 'description', key: 'description', ellipsis: true },
         { title: 'Hạn nộp', dataIndex: 'deadline', key: 'deadline', render: (date) => dayjs(date).format('DD/MM/YYYY HH:mm') },
         {
             title: 'Hành động', key: 'action', width: 120,
@@ -313,7 +312,7 @@ export const TrashPage: React.FC = () => {
                 <TrashMobileList
                     dataSource={sortedHomeworks}
                     loading={homeworkLoading}
-                    columns={['title', 'description']}
+                    columns={['title']}
                     onRestore={handleRestoreHomework}
                 />
             ) : (
