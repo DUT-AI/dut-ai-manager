@@ -9,8 +9,8 @@ class ParticipantStatus(str, Enum):
     """Trạng thái tham dự buổi họp"""
 
     NOT_JOINED = "NOT_JOINED"
-    JOINED = "JOINED"
-    COMPLETED = "COMPLETED"
+    JOINED = "JOINED" # Checkin
+    COMPLETED = "COMPLETED" # Checkouted
 
 
 class CapacityStatus(str, Enum):

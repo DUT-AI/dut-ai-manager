@@ -78,7 +78,10 @@ class CheckMeetingAttendanceUseCase:
             if not meeting.require_check_in:
                 continue
             for participant in meeting.participants:
-                if participant.status != ParticipantStatus.JOINED:
+                if participant.status not in (
+                    ParticipantStatus.JOINED,
+                    ParticipantStatus.COMPLETED,
+                ):
                     all_participant_user_ids.append(participant.user_id)
 
         # Lấy một lần duy nhất các user có đơn xin vắng
@@ -94,8 +97,11 @@ class CheckMeetingAttendanceUseCase:
                 continue
 
             for participant in meeting.participants:
-                # Nếu đã điểm danh xong (JOINED) thì bỏ qua
-                if participant.status == ParticipantStatus.JOINED:
+                # Nếu đã điểm danh (JOINED hoặc COMPLETED) thì bỏ qua
+                if participant.status in (
+                    ParticipantStatus.JOINED,
+                    ParticipantStatus.COMPLETED,
+                ):
                     continue
 
                 user_id = participant.user_id
@@ -312,7 +318,10 @@ class CheckInUseCase:
                 if not meeting:
                     continue
 
-                if participant.status == ParticipantStatus.JOINED:
+                if participant.status in (
+                    ParticipantStatus.JOINED,
+                    ParticipantStatus.COMPLETED,
+                ):
                     if (
                         client_event_id
                         and participant.client_event_id == client_event_id
