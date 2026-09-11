@@ -35,6 +35,8 @@ from app.team.providers import TeamModuleProvider
 from app.user.providers import UserModuleProvider
 from app.violation.providers import ViolationModuleProvider
 from app.zalo.providers import ZaloModuleProvider
+from app.core.database import create_db_and_tables
+import importlib
 
 
 @asynccontextmanager
@@ -42,6 +44,14 @@ async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown events."""
     # Startup
     logger.info("🚀 Starting application services...")
+
+    try:
+        importlib.import_module("app.user.infrastructure.model")
+        importlib.import_module("app.team.infrastructure.model")
+        importlib.import_module("app.homework.infrastructure.model")
+        create_db_and_tables()
+    except Exception as exc:
+        logger.warning(f"Failed to create database tables on startup: {exc}")
 
     # Event registration using Dishka
     await bootstrap_events(app.state.dishka_container)

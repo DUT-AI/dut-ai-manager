@@ -15,11 +15,12 @@ class QuizApiClient:
     def _get_headers(self) -> dict[str, str]:
         return {"Content-Type": "application/json"}
 
-    async def get_game_leaderboard(self, game_slug: str) -> list[dict[str, Any]]:
+    async def get_game_leaderboard(self, game_slug: str) -> list[dict[str, Any]] | None:
         """
         Calls GET /api/v1/game/{game_slug}/leaderboard
         Returns list of leaderboard entries:
         [{ "user_id": 24, "username": "...", "final_score": 135.0, "is_completed": true, "total_questions": 15, "answered_questions": 15 }]
+        Returns None if not found (404).
         """
         url = f"{self.base_url}/api/v1/game/{game_slug}/leaderboard"
         try:
@@ -32,6 +33,8 @@ class QuizApiClient:
                     elif isinstance(data, dict) and "data" in data and isinstance(data["data"], list):
                         return data["data"]
                     logger.warning(f"Unexpected response structure from {url}: {data}")
+                elif response.status_code == 404:
+                    return None
                 else:
                     logger.warning(
                         f"Quiz game leaderboard request failed: status={response.status_code}, url={url}"
@@ -43,11 +46,12 @@ class QuizApiClient:
 
     async def get_homework_completed_members(
         self, homework_slug: str
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, Any]] | None:
         """
         Calls GET /api/v1/homeworks/{homework_slug}/completed-members
         Returns list of completed member entries:
         [{ "user_id": 4, "submission_count": 2, "max_score": 100.0 }, ...]
+        Returns None if not found (404).
         """
         url = f"{self.base_url}/api/v1/homeworks/{homework_slug}/completed-members"
         try:
@@ -60,6 +64,8 @@ class QuizApiClient:
                     elif isinstance(res_json, list):
                         return res_json
                     logger.warning(f"Unexpected response structure from {url}: {res_json}")
+                elif response.status_code == 404:
+                    return None
                 else:
                     logger.warning(
                         f"Quiz homework completed-members request failed: status={response.status_code}, url={url}"

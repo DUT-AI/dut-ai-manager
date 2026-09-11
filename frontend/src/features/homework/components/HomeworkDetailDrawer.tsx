@@ -20,10 +20,15 @@ interface HomeworkDetailDrawerProps {
 const UserListItem: React.FC<{ user: UserSubmissionInfo }> = ({ user }) => (
     <List.Item className="!px-0 !py-2">
         <div className="flex items-center gap-3 w-full">
-            <Avatar src={user.avatar_url} icon={<UserOutlined />} size={36} className="flex-shrink-0" />
+            <Avatar src={user.avatar_url || undefined} icon={<UserOutlined />} size={36} className="flex-shrink-0" />
             <Text className="font-medium text-sm flex-1 truncate">
                 {user.name || `User #${user.user_id}`}
             </Text>
+            {user.is_late && (
+                <Tag color="error" className="m-0 font-medium text-xs">
+                    Trễ
+                </Tag>
+            )}
         </div>
     </List.Item>
 );
@@ -41,6 +46,54 @@ const UserList: React.FC<{ data: UserSubmissionInfo[]; isLoading: boolean; empty
         )}
     </div>
 );
+
+const CategorySubmissionView: React.FC<{
+    status?: { submitted: UserSubmissionInfo[]; not_submitted: UserSubmissionInfo[] };
+    isLoading: boolean;
+    isOverdue: boolean;
+}> = ({ status, isLoading, isOverdue }) => {
+    const submitted = status?.submitted ?? [];
+    const notSubmitted = status?.not_submitted ?? [];
+
+    const subTabItems = [
+        {
+            key: 'submitted',
+            label: (
+                <span className="flex items-center gap-1.5">
+                    <CheckCircleOutlined className="text-green-500" />
+                    Đã nộp
+                    <Badge count={submitted.length} showZero style={{ backgroundColor: '#22c55e' }} />
+                </span>
+            ),
+            children: (
+                <UserList
+                    data={submitted}
+                    isLoading={isLoading}
+                    emptyText="Chưa có ai nộp bài"
+                />
+            ),
+        },
+        ...(isOverdue ? [{
+            key: 'not_submitted',
+            label: (
+                <span className="flex items-center gap-1.5">
+                    <CloseCircleOutlined className="text-red-500" />
+                    Chưa nộp
+                    <Badge count={notSubmitted.length} showZero style={{ backgroundColor: '#ef4444' }} />
+                </span>
+            ),
+            children: (
+                <UserList
+                    data={notSubmitted}
+                    isLoading={isLoading}
+                    emptyText="Tất cả đã nộp bài 🎉"
+                />
+            ),
+        }] : []),
+    ];
+
+    return <Tabs defaultActiveKey="submitted" items={subTabItems} size="small" />;
+};
 
 export const HomeworkDetailDrawer: React.FC<HomeworkDetailDrawerProps> = ({ homework, onClose }) => {
     const screens = useBreakpoint();
@@ -94,45 +147,47 @@ export const HomeworkDetailDrawer: React.FC<HomeworkDetailDrawerProps> = ({ home
 
     const { data: statusData, isLoading } = useHomeworkSubmissionStatus(homework?.id ?? null);
 
-    const submittedCount = statusData?.submitted.length ?? 0;
-    const notCount = statusData?.not_submitted.length ?? 0;
-    const totalCount = submittedCount + notCount;
+    const codingStatus = statusData?.coding ?? { submitted: statusData?.submitted ?? [], not_submitted: statusData?.not_submitted ?? [] };
+    const gameStatus = statusData?.game ?? { submitted: [], not_submitted: [] };
 
-    const tabItems = [
+    const codingSubmittedCount = codingStatus.submitted.length;
+    const codingTotalCount = codingSubmittedCount + codingStatus.not_submitted.length;
+
+    const gameSubmittedCount = gameStatus.submitted.length;
+    const gameTotalCount = gameSubmittedCount + gameStatus.not_submitted.length;
+
+    const totalSubmitted = statusData?.submitted?.length ?? (codingSubmittedCount + gameSubmittedCount);
+    const totalAssigned = (statusData?.submitted?.length ?? 0) + (statusData?.not_submitted?.length ?? 0) || (codingTotalCount > 0 ? codingTotalCount : gameTotalCount);
+
+    const mainTabItems = [
         {
-            key: 'submitted',
+            key: 'coding',
             label: (
-                <span className="flex items-center gap-1.5">
-                    <CheckCircleOutlined className="text-green-500" />
-                    Đã nộp
-                    <Badge count={submittedCount} showZero style={{ backgroundColor: '#22c55e' }} />
+                <span className="flex items-center gap-1.5 font-medium">
+                    💻 Homework
+                    {codingTotalCount > 0 && (
+                        <span className="text-xs text-gray-400 font-normal">
+                            ({codingSubmittedCount}/{codingTotalCount})
+                        </span>
+                    )}
                 </span>
             ),
-            children: (
-                <UserList
-                    data={statusData?.submitted ?? []}
-                    isLoading={isLoading}
-                    emptyText="Chưa có ai nộp bài"
-                />
-            ),
+            children: <CategorySubmissionView status={codingStatus} isLoading={isLoading} isOverdue={isOverdue} />,
         },
-        ...(isOverdue ? [{
-            key: 'not_submitted',
+        {
+            key: 'game',
             label: (
-                <span className="flex items-center gap-1.5">
-                    <CloseCircleOutlined className="text-red-500" />
-                    Chưa nộp
-                    <Badge count={notCount} showZero style={{ backgroundColor: '#ef4444' }} />
+                <span className="flex items-center gap-1.5 font-medium">
+                    🎮 Game
+                    {gameTotalCount > 0 && (
+                        <span className="text-xs text-gray-400 font-normal">
+                            ({gameSubmittedCount}/{gameTotalCount})
+                        </span>
+                    )}
                 </span>
             ),
-            children: (
-                <UserList
-                    data={statusData?.not_submitted ?? []}
-                    isLoading={isLoading}
-                    emptyText="Tất cả đã nộp bài 🎉"
-                />
-            ),
-        }] : []),
+            children: <CategorySubmissionView status={gameStatus} isLoading={isLoading} isOverdue={isOverdue} />,
+        },
     ];
 
     return (
@@ -151,9 +206,9 @@ export const HomeworkDetailDrawer: React.FC<HomeworkDetailDrawerProps> = ({ home
                         ) : (
                             <Tag color="blue" className="text-xs m-0">Đang mở</Tag>
                         )}
-                        {!isLoading && totalCount > 0 && (
+                        {!isLoading && totalAssigned > 0 && (
                             <Text type="secondary" className="text-xs font-normal">
-                                · {submittedCount}/{totalCount} người đã nộp
+                                · {totalSubmitted}/{totalAssigned} đã nộp
                             </Text>
                         )}
                     </div>
@@ -189,7 +244,7 @@ export const HomeworkDetailDrawer: React.FC<HomeworkDetailDrawerProps> = ({ home
                     <Spin size="large" />
                 </div>
             ) : (
-                <Tabs defaultActiveKey="submitted" items={tabItems} size="small" />
+                <Tabs defaultActiveKey="coding" items={mainTabItems} size="middle" />
             )}
         </Drawer>
     );

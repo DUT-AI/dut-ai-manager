@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Any
 
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
@@ -54,6 +54,34 @@ async def get_my_homeworks(
     return ApiResponse.success(data=result)
 
 
+def parse_int_list(values: Any) -> list[int] | None:
+    if values is None:
+        return None
+    if isinstance(values, str):
+        val_str = values.strip()
+        if not val_str:
+            return []
+        if val_str.startswith("[") and val_str.endswith("]"):
+            import json
+            try:
+                parsed = json.loads(val_str)
+                return [int(x) for x in parsed if str(x).isdigit()]
+            except Exception:
+                pass
+        return [int(x.strip()) for x in val_str.split(",") if x.strip().isdigit()]
+    if isinstance(values, list):
+        res = []
+        for item in values:
+            if isinstance(item, int):
+                res.append(item)
+            elif isinstance(item, str):
+                parsed = parse_int_list(item)
+                if parsed:
+                    res.extend(parsed)
+        return res
+    return None
+
+
 @router.post(
     "",
     response_model=ApiResponse[HomeworkResponse],
@@ -76,17 +104,21 @@ async def create_homework(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid deadline format")
 
+    parsed_assignees = parse_int_list(assignee_ids)
+    parsed_teams = parse_int_list(team_ids)
+
     data = HomeworkCreate(
         title=title,
         deadline=deadline_dt,
         link=link,
         slug=slug,
-        assignee_ids=assignee_ids,
-        team_ids=team_ids,
+        assignee_ids=parsed_assignees,
+        team_ids=parsed_teams,
     )
 
     result = await use_cases.create(data)
     return ApiResponse.success(data=result)
+
 
 
 @router.get(
@@ -184,8 +216,8 @@ async def update_homework(
         deadline=deadline_dt,
         link=link,
         slug=slug,
-        assignee_ids=assignee_ids,
-        team_ids=team_ids,
+        assignee_ids=parse_int_list(assignee_ids),
+        team_ids=parse_int_list(team_ids),
     )
 
     result = await use_cases.update(homework_id, data)

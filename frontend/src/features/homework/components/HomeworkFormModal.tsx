@@ -34,19 +34,30 @@ export const HomeworkFormModal = ({
     const [loading, setLoading] = useState(false);
     const isEditing = !!editingItem;
 
-    // Update assignee_ids when async loading completes
     useEffect(() => {
-        if (isEditing && currentAssignees.length > 0) {
-            form.setFieldsValue({ assignee_ids: currentAssignees });
+        if (open) {
+            if (editingItem) {
+                form.setFieldsValue({
+                    title: editingItem.title,
+                    deadline: dayjs(editingItem.deadline),
+                    link: editingItem.link,
+                    slug: editingItem.slug || '',
+                    assignee_ids: (editingItem.assignee_ids && editingItem.assignee_ids.length > 0) ? editingItem.assignee_ids : currentAssignees,
+                    team_ids: editingItem.team_ids || [],
+                });
+            } else {
+                form.resetFields();
+            }
         }
-    }, [currentAssignees, isEditing, form]);
+    }, [open, editingItem, currentAssignees, form]);
 
     const initialValues = editingItem ? {
         title: editingItem.title,
         deadline: dayjs(editingItem.deadline),
         link: editingItem.link,
         slug: editingItem.slug || '',
-        assignee_ids: currentAssignees,
+        assignee_ids: (editingItem.assignee_ids && editingItem.assignee_ids.length > 0) ? editingItem.assignee_ids : currentAssignees,
+        team_ids: editingItem.team_ids || [],
     } : undefined;
 
     const handleFinish = async (values: any) => {

@@ -5,6 +5,7 @@ from app.homework.application.event_handlers import (
     HomeworkNotificationHandler,
 )
 from app.homework.application.use_cases import (
+    CheckOverdueHomeworkUseCase,
     HomeworkUseCases,
 )
 from app.homework.infrastructure.quiz_api import QuizApiClient
@@ -38,6 +39,7 @@ class HomeworkModuleProvider(Provider):
         team_repo: TeamRepository,
         minio_service: MinioService,
         quiz_api: QuizApiClient,
+        permission_repo: PermissionRequestRepository,
     ) -> HomeworkUseCases:
         return HomeworkUseCases(
             homework_repo=homework_repo,
@@ -45,6 +47,22 @@ class HomeworkModuleProvider(Provider):
             team_repo=team_repo,
             minio_service=minio_service,
             quiz_api=quiz_api,
+            permission_repo=permission_repo,
+        )
+    
+    @provide
+    def get_check_overdue_use_case(
+        self,
+        homework_repo: HomeworkRepository,
+        permission_repo: PermissionRequestRepository,
+        quiz_api: QuizApiClient,
+        user_repo: UserRepository,
+    ) -> CheckOverdueHomeworkUseCase:
+        return CheckOverdueHomeworkUseCase(
+            homework_repo=homework_repo,
+            permission_repo=permission_repo,
+            quiz_api=quiz_api,
+            user_repo=user_repo,
         )
 
 

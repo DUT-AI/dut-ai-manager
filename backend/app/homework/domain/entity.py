@@ -71,6 +71,8 @@ class Homework(BaseEntity):
     deadline: datetime
     link: str | None = None
     slug: str | None = None
+    assignee_ids: list[int] = []
+    team_ids: list[int] = []
     submissions: list[HomeworkSubmission] = []
 
     @property

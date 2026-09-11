@@ -50,6 +50,8 @@ export const homeworkSchema = z.object({
   deadline: z.string(),
   link: z.string().nullable().optional(),
   slug: z.string().nullable().optional(),
+  assignee_ids: z.array(z.number()).optional(),
+  team_ids: z.array(z.number()).optional(),
   created_at: z.string(),
   updated_at: z.string(),
   created_by: z.number().optional(),
@@ -105,12 +107,22 @@ export const userSubmissionInfoSchema = z.object({
   user_id: z.number(),
   name: z.string().nullable().optional(),
   avatar_url: z.string().nullable().optional(),
+  is_late: z.boolean().optional(),
+  submitted_at: z.string().nullable().optional(),
 });
 export type UserSubmissionInfo = z.infer<typeof userSubmissionInfoSchema>;
 
-export const homeworkSubmissionStatusSchema = z.object({
+export const categorySubmissionStatusSchema = z.object({
   submitted: z.array(userSubmissionInfoSchema),
   not_submitted: z.array(userSubmissionInfoSchema),
+});
+export type CategorySubmissionStatus = z.infer<typeof categorySubmissionStatusSchema>;
+
+export const homeworkSubmissionStatusSchema = z.object({
+  coding: categorySubmissionStatusSchema.optional(),
+  game: categorySubmissionStatusSchema.optional(),
+  submitted: z.array(userSubmissionInfoSchema).optional(),
+  not_submitted: z.array(userSubmissionInfoSchema).optional(),
 });
 export type HomeworkSubmissionStatus = z.infer<typeof homeworkSubmissionStatusSchema>;
 
