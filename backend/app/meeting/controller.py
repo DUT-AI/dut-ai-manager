@@ -16,6 +16,7 @@ from app.meeting.application.use_cases import (
     DeleteMeetingUseCase,
     GetMeetingsUseCase,
     UpdateMeetingUseCase,
+    UpdateParticipantStatusUseCase,
 )
 from app.meeting.domain.value_objects import CapacityMonitor
 from app.meeting.schemas import (
@@ -25,6 +26,7 @@ from app.meeting.schemas import (
     MeetingResponse,
     MeetingUpdate,
     ParticipantResponse,
+    UpdateParticipantStatusRequest,
 )
 from app.shared.application.response import ApiResponse, BadRequestException
 from app.shared.infrastructure.sse import sse_broadcaster
@@ -127,6 +129,33 @@ async def update_meeting(
     return ApiResponse.success(
         data=MeetingResponse.from_domain(meeting),
         message="Meeting updated successfully",
+    )
+
+
+@router.put(
+    "/{meeting_id}/participants/{user_id}/status",
+    response_model=ApiResponse[ParticipantResponse],
+)
+@inject
+async def update_participant_status(
+    meeting_id: int,
+    user_id: int,
+    data: UpdateParticipantStatusRequest,
+    uc: FromDishka[UpdateParticipantStatusUseCase],
+    _current_user: Annotated[CurrentUser, hasPermission(MeetingPermission.UPDATE)],
+    _: Annotated[None, Depends(check_meeting_ownership)],
+):
+    """Cập nhật thủ công trạng thái của một thành viên trong buổi họp (Người tạo meeting/Admin)"""
+    participant = uc.execute(
+        meeting_id=meeting_id,
+        user_id=user_id,
+        target_status=data.status,
+        check_in_at=data.check_in_at,
+        check_out_at=data.check_out_at,
+    )
+    return ApiResponse.success(
+        data=ParticipantResponse.from_domain(participant),
+        message="Cập nhật trạng thái thành viên thành công",
     )
 
 

@@ -22,6 +22,24 @@ engine = create_engine(
 )
 
 
+def import_all_models():
+    """Import all ORM models to register with Base before configuring mappers."""
+    import app.auth.infrastructure.model
+    import app.billing.infrastructure.model
+    import app.bonus_point.infrastructure.model
+    import app.expense.infrastructure.model
+    import app.homework.infrastructure.model
+    import app.meeting.infrastructure.model
+    import app.permission_request.infrastructure.model
+    import app.rbac.infrastructure.model
+    import app.team.infrastructure.model
+    import app.user.infrastructure.model
+    import app.violation.infrastructure.model
+
+import_all_models()
+configure_mappers()
+
+
 def create_db_and_tables():
     """Create all database tables."""
 

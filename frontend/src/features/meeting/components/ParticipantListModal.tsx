@@ -29,27 +29,48 @@ export const ParticipantListModal = ({ open, meeting, onCancel }: Props) => {
             title: 'Trạng thái',
             dataIndex: 'status',
             key: 'status',
-            render: (status: ParticipantStatus, record: ParticipantResponse) => {
-                const isJoinedOrCompleted = status === ParticipantStatus.JOINED || status === ParticipantStatus.COMPLETED;
-                const isLateNotJoined = status === ParticipantStatus.NOT_JOINED && meeting && dayjs().isAfter(dayjs(meeting.start_time).add(5, 'minute'));
-                const isLateJoined = isJoinedOrCompleted && record.check_in_at && meeting && dayjs(record.check_in_at).isAfter(dayjs(meeting.start_time).add(5, 'minute'));
-
+            render: (status: ParticipantStatus) => {
                 let tagColor = 'default';
                 let tagIcon = <CloseCircleOutlined />;
-                let tagText = 'CHƯA THAM GIA';
+                let tagText = 'CHƯA CHECKIN';
 
-                if (status === ParticipantStatus.COMPLETED) {
-                    tagColor = 'success';
-                    tagIcon = <CheckCircleOutlined />;
-                    tagText = 'HOÀN THÀNH';
-                } else if (status === ParticipantStatus.JOINED) {
-                    tagColor = isLateJoined ? 'warning' : 'green';
-                    tagIcon = <CheckCircleOutlined />;
-                    tagText = isLateJoined ? 'TRỄ (ĐÃ CÓ MẶT)' : 'ĐÃ CHECKIN';
-                } else if (isLateNotJoined) {
-                    tagColor = 'orange';
-                    tagIcon = <ClockCircleOutlined />;
-                    tagText = 'TRỄ (CHƯA CÓ MẶT)';
+                switch (status) {
+                    case ParticipantStatus.JOINED:
+                        tagColor = 'green';
+                        tagIcon = <CheckCircleOutlined />;
+                        tagText = 'ĐÃ CHECKIN';
+                        break;
+                    case ParticipantStatus.LATE_EXCUSED:
+                        tagColor = 'blue';
+                        tagIcon = <ClockCircleOutlined />;
+                        tagText = 'TRỄ (CÓ PHÉP)';
+                        break;
+                    case ParticipantStatus.LATE_UNEXCUSED:
+                        tagColor = 'orange';
+                        tagIcon = <ClockCircleOutlined />;
+                        tagText = 'TRỄ (KHÔNG PHÉP)';
+                        break;
+                    case ParticipantStatus.ABSENT_EXCUSED:
+                        tagColor = 'purple';
+                        tagIcon = <CloseCircleOutlined />;
+                        tagText = 'VẮNG (CÓ PHÉP)';
+                        break;
+                    case ParticipantStatus.ABSENT_UNEXCUSED:
+                        tagColor = 'red';
+                        tagIcon = <CloseCircleOutlined />;
+                        tagText = 'VẮNG (KHÔNG PHÉP)';
+                        break;
+                    case ParticipantStatus.COMPLETED:
+                        tagColor = 'cyan';
+                        tagIcon = <CheckCircleOutlined />;
+                        tagText = 'HOÀN THÀNH';
+                        break;
+                    case ParticipantStatus.NOT_JOINED:
+                    default:
+                        tagColor = 'default';
+                        tagIcon = <CloseCircleOutlined />;
+                        tagText = 'CHƯA CHECKIN';
+                        break;
                 }
 
                 return (

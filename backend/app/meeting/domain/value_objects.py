@@ -6,11 +6,15 @@ from pydantic import BaseModel
 
 
 class ParticipantStatus(str, Enum):
-    """Trạng thái tham dự buổi họp"""
+    """Trạng thái tham dự buổi họp (7 trạng thái)"""
 
-    NOT_JOINED = "NOT_JOINED"
-    JOINED = "JOINED" # Checkin
-    COMPLETED = "COMPLETED" # Checkouted
+    NOT_JOINED = "NOT_JOINED"        # Chưa checkin
+    JOINED = "JOINED"                # Đã checkin (đúng/trước giờ)
+    LATE_EXCUSED = "LATE_EXCUSED"    # Trễ có phép
+    LATE_UNEXCUSED = "LATE_UNEXCUSED" # Trễ không phép
+    ABSENT_EXCUSED = "ABSENT_EXCUSED" # Vắng có phép
+    ABSENT_UNEXCUSED = "ABSENT_UNEXCUSED" # Vắng không phép
+    COMPLETED = "COMPLETED"          # Đã hoàn thành / Đã checkout
 
 
 class CapacityStatus(str, Enum):

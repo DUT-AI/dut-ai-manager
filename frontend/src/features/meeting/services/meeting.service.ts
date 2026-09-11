@@ -1,6 +1,6 @@
 import axiosInstance from '../../../services/axiosInstance';
 import type { ApiResponse } from '@/types/api.types';
-import type { MeetingCreate, MeetingUpdate, MeetingResponse, ParticipantResponse } from '@/features/meeting/types/meeting.types';
+import type { MeetingCreate, MeetingUpdate, MeetingResponse, ParticipantResponse, UpdateParticipantStatusPayload } from '@/features/meeting/types/meeting.types';
 
 export const meetingService = {
   subPath: 'meetings',
@@ -48,6 +48,14 @@ export const meetingService = {
 
   async updateMeeting(id: number, data: MeetingUpdate) {
     const response = await axiosInstance.put<ApiResponse<MeetingResponse>>(`/${this.subPath}/${id}`, data);
+    return response.data;
+  },
+
+  async updateParticipantStatus(meetingId: number, userId: number, payload: UpdateParticipantStatusPayload) {
+    const response = await axiosInstance.put<ApiResponse<ParticipantResponse>>(
+      `/${this.subPath}/${meetingId}/participants/${userId}/status`,
+      payload
+    );
     return response.data;
   },
 

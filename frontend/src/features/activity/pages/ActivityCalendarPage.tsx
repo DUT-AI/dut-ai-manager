@@ -384,8 +384,9 @@ const ActivityCalendarPage = () => {
             }
             dispatch({ type: 'CLOSE_MEETING' });
             refreshData();
-        } catch (error) {
-            message.error(editingMeeting ? 'Cập nhật thất bại' : 'Tạo buổi sinh hoạt thất bại');
+        } catch (error: any) {
+            const apiMsg = error?.response?.data?.message || (editingMeeting ? 'Cập nhật thất bại' : 'Tạo buổi sinh hoạt thất bại');
+            message.error(apiMsg);
         }
     };
 

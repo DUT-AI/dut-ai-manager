@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { meetingService } from '@/features/meeting/services/meeting.service';
-import type { MeetingCreate, MeetingUpdate } from '@/features/meeting/types/meeting.types';
+import type { MeetingCreate, MeetingUpdate, UpdateParticipantStatusPayload } from '@/features/meeting/types/meeting.types';
 
 // Query Keys
 const meetingKeys = {
@@ -72,6 +72,18 @@ export const useUpdateMeeting = () => {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: MeetingUpdate }) =>
       meetingService.updateMeeting(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: meetingKeys.all });
+    },
+  });
+};
+
+export const useUpdateParticipantStatus = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ meetingId, userId, payload }: { meetingId: number; userId: number; payload: UpdateParticipantStatusPayload }) =>
+      meetingService.updateParticipantStatus(meetingId, userId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: meetingKeys.all });
     },

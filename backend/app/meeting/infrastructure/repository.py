@@ -538,6 +538,38 @@ class ParticipantRepository(BaseRepository[ORMParticipant, DomainParticipant]):
         self.session.flush()
         return self._to_domain(orm)
 
+    def update_participant_status(
+        self,
+        meeting_id: int,
+        user_id: int,
+        status: ParticipantStatus,
+        check_in_at: datetime | None = None,
+        check_out_at: datetime | None = None,
+    ) -> DomainParticipant:
+        """Cập nhật thủ công trạng thái và thời gian checkin/checkout cho participant."""
+        stmt = (
+            select(ORMParticipant)
+            .where(
+                ORMParticipant.meeting_id == meeting_id,
+                ORMParticipant.user_id == user_id,
+                ORMParticipant.is_deleted.is_(False),
+            )
+            .options(joinedload(ORMParticipant.user))
+        )
+        orm = self.session.scalars(stmt).first()
+        if not orm:
+            raise ValueError(f"Không tìm thấy tham gia của user {user_id} trong meeting {meeting_id}")
+
+        orm.status = status
+        if check_in_at is not None:
+            orm.check_in_at = check_in_at
+        if check_out_at is not None:
+            orm.check_out_at = check_out_at
+
+        self.session.add(orm)
+        self.session.flush()
+        return self._to_domain(orm)
+
     def get_completed_since(self, since: datetime) -> list[DomainParticipant]:
         """Lấy participants đã check-out sau thời điểm since."""
         stmt = (
