@@ -34,7 +34,7 @@ class InvoiceItemResponse(InvoiceItemBase):
 class InvoiceCreate(BaseModel):
     user_id: int | None = None
     user_ids: list[int] = Field(default_factory=list)
-    team_id: int = 6
+    team_id: int
     items: list[InvoiceItemCreate]
     billing_period: date
     description: str | None = None
@@ -164,7 +164,7 @@ class MonthlyInvoicePreviewResponse(BaseModel):
 class MonthlyInvoiceCreate(BaseModel):
     month: int
     year: int
-    team_id: int | None = None
+    team_id: int
     user_ids: list[int] = []
     violation_price: int = 20000
     fund_amount: int = 50000

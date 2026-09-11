@@ -27,13 +27,18 @@ class CreateInvoiceUseCase:
         self,
         items_data: list[dict],
         billing_period: date,
+        team_id: int,
         user_id: int | None = None,
         user_ids: list[int] | None = None,
-        team_id: int = 6,
         description: str | None = None,
     ) -> list[Invoice]:
+        if not team_id:
+            raise BadRequestException("Vui lòng chọn nhóm")
+
         # Determine target user IDs
-        target_uids = list(user_ids) if user_ids else ([user_id] if user_id is not None else [])
+        target_uids = (
+            list(user_ids) if user_ids else ([user_id] if user_id is not None else [])
+        )
         if not target_uids:
             raise BadRequestException("Vui lòng chọn ít nhất 1 thành viên")
 
@@ -82,7 +87,8 @@ class CreateInvoiceUseCase:
                 team_id=team_id,
                 amount=total_amount,
                 status=InvoiceStatus.PENDING,
-                description=description or f"Thanh toán các khoản thu - {reference_code}",
+                description=description
+                or f"Thanh toán các khoản thu - {reference_code}",
                 reference_code=reference_code,
                 billing_period=billing_period,
                 items=invoice_items,
@@ -293,25 +299,28 @@ class CreateMonthlyInvoicesUseCase:
         self,
         month: int,
         year: int,
-        team_id: int | None = None,
+        team_id: int,
         user_ids: list[int] = [],
         violation_price: int = 20000,
         fund_amount: int = 50000,
         extra_items: list[dict] = [],
         execute: bool = False,
     ) -> dict:
-        target_users = {}  # user_id -> user_name
+        if not team_id:
+            raise BadRequestException("Vui lòng chọn nhóm để gán hóa đơn")
+
+        team = self.team_repo.get_by_id_with_members(team_id)
+        if not team:
+            raise BadRequestException(f"Không tìm thấy nhóm #{team_id}")
+
+        if not user_ids:
+            raise BadRequestException("Vui lòng chọn ít nhất 1 thành viên để tạo hóa đơn")
+
+        team_member_map = {m.user_id: m.user_name for m in team.members}
+        target_users = {}
+
         for uid in user_ids:
-            target_users[uid] = f"User #{uid}"
-
-        if team_id:
-            team = self.team_repo.get_by_id_with_members(team_id)
-            if team:
-                for member in team.members:
-                    target_users[member.user_id] = member.user_name
-
-        if not target_users:
-            raise BadRequestException("Không tìm thấy người dùng nào để tạo hóa đơn")
+            target_users[uid] = team_member_map.get(uid, f"User #{uid}")
 
         preview_items = []
         created_invoices = []

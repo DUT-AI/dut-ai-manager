@@ -46,6 +46,13 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
   const [previewData, setPreviewData] = useState<MonthlyInvoiceItemPreview[]>([]);
   const [isPreviewing, setIsPreviewing] = useState(false);
 
+  const selectedTeamId = Form.useWatch('team_id', form);
+  const selectedUserIds: number[] = Form.useWatch('user_ids', form) || [];
+  const currentTeam = (teams ?? []).find(t => t.id === selectedTeamId);
+  const teamMemberIds = new Set((currentTeam?.members ?? []).map(m => m.user_id));
+  const teamMembers = (currentTeam?.members ?? []).map(m => ({ id: m.user_id, name: m.user_name, email: m.user_email }));
+  const otherUsers = (users ?? []).filter(u => !teamMemberIds.has(u.id));
+
   const handlePreview = async () => {
     try {
       const values = await form.validateFields();
@@ -190,11 +197,13 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
 
           <Form.Item
             name="team_id"
-            label="Chọn Team (Tùy chọn)"
+            label="Gán cho Nhóm / Quỹ (Bắt buộc)"
+            rules={[{ required: true, message: 'Vui lòng chọn nhóm gán hóa đơn' }]}
           >
             <Select
-              placeholder="Chọn team để áp dụng cho tất cả thành viên"
-              allowClear
+              placeholder="Chọn nhóm để gán hóa đơn"
+              showSearch
+              optionFilterProp="children"
             >
               {(teams ?? []).map(t => (
                 <Option key={t.id} value={t.id}>{t.team_name}</Option>
@@ -205,18 +214,80 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
 
         <Form.Item
           name="user_ids"
-          label="Hoặc chọn thành viên cụ thể"
+          label={
+            <div className="flex justify-between items-center w-full">
+              <span>
+                Chọn thành viên nhận hóa đơn{' '}
+                {selectedUserIds.length > 0 && (
+                  <Text strong className="text-indigo-600 text-xs">
+                    ({selectedUserIds.length} người được chọn)
+                  </Text>
+                )}
+              </span>
+              <Space size="middle">
+                {selectedTeamId && currentTeam && (currentTeam.members?.length ?? 0) > 0 && (
+                  <Button
+                    type="link"
+                    size="small"
+                    className="p-0 text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+                    onClick={() => {
+                      const memberIds = currentTeam.members.map(m => m.user_id);
+                      form.setFieldsValue({ user_ids: memberIds });
+                    }}
+                  >
+                    ⚡ Chọn cả team ({currentTeam.members.length})
+                  </Button>
+                )}
+                {selectedUserIds.length > 0 && (
+                  <Button
+                    type="link"
+                    size="small"
+                    className="p-0 text-xs text-red-500 hover:text-red-700"
+                    onClick={() => form.setFieldsValue({ user_ids: [] })}
+                  >
+                    ✕ Bỏ chọn tất cả
+                  </Button>
+                )}
+                {users.length > 0 && selectedUserIds.length === 0 && (
+                  <Button
+                    type="link"
+                    size="small"
+                    className="p-0 text-xs text-gray-500 hover:text-gray-700"
+                    onClick={() => form.setFieldsValue({ user_ids: users.map(u => u.id) })}
+                  >
+                    Chọn tất cả mọi người
+                  </Button>
+                )}
+              </Space>
+            </div>
+          }
+          rules={[{ required: true, message: 'Vui lòng chọn ít nhất 1 thành viên nhận hóa đơn' }]}
         >
           <Select
             mode="multiple"
-            placeholder="Chọn 1 hoặc nhiều thành viên"
+            placeholder="Tìm kiếm và chọn các thành viên (hoặc bấm 'Chọn cả team' ở trên)"
             allowClear
             showSearch
             optionFilterProp="children"
           >
-            {users.map(u => (
-              <Option key={u.id} value={u.id}>{u.name} ({u.email})</Option>
-            ))}
+            {currentTeam && teamMembers.length > 0 && (
+              <Select.OptGroup label={`Thành viên nhóm ${currentTeam.team_name} (${teamMembers.length})`}>
+                {teamMembers.map(u => (
+                  <Option key={u.id} value={u.id}>
+                    {u.name} ({u.email})
+                  </Option>
+                ))}
+              </Select.OptGroup>
+            )}
+            {otherUsers.length > 0 && (
+              <Select.OptGroup label={currentTeam ? `Các thành viên khác trong công ty (${otherUsers.length})` : 'Tất cả thành viên'}>
+                {otherUsers.map(u => (
+                  <Option key={u.id} value={u.id}>
+                    {u.name} ({u.email})
+                  </Option>
+                ))}
+              </Select.OptGroup>
+            )}
           </Select>
         </Form.Item>
 

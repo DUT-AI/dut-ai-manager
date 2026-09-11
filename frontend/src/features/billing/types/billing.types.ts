@@ -84,7 +84,7 @@ export interface MonthlyInvoiceExtraItem {
 export interface MonthlyInvoiceCreate {
   month: number;
   year: number;
-  team_id?: number;
+  team_id: number;
   user_ids?: number[];
   violation_price?: number;
   fund_amount?: number;
