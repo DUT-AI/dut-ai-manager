@@ -1,4 +1,5 @@
-import { Drawer, Table, Avatar, Tag, Typography, Descriptions, Button, Popconfirm, Image } from 'antd';
+import { useState } from 'react';
+import { Drawer, Table, Avatar, Tag, Typography, Descriptions, Button, Popconfirm, Image, Tooltip } from 'antd';
 import {
     UserOutlined,
     CheckCircleOutlined,
@@ -9,9 +10,11 @@ import {
     SafetyCertificateOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import type { MeetingResponse, ParticipantResponse } from '@/features/meeting/types/meeting.types';
+import type { MeetingResponse, ParticipantResponse, UpdateParticipantStatusPayload } from '@/features/meeting/types/meeting.types';
 import { ParticipantStatus } from '@/features/meeting/types/meeting.types';
 import { useMeetingEvents } from '@/features/meeting/hooks/useMeetingEvents';
+import { useUpdateParticipantStatus } from '@/features/meeting/hooks/useMeetings';
+import { EditParticipantStatusModal } from './EditParticipantStatusModal';
 
 const { Text, Title } = Typography;
 
@@ -24,15 +27,35 @@ interface Props {
 }
 
 export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }: Props) => {
+    const [editingParticipant, setEditingParticipant] = useState<ParticipantResponse | null>(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+    // Mutation hook để cập nhật trạng thái participant
+    const updateParticipantStatusMutation = useUpdateParticipantStatus();
+
     // Lắng nghe sự kiện SSE cho buổi họp này chỉ khi drawer đang mở
     useMeetingEvents(meeting?.id, open);
 
     if (!meeting) return null;
 
-    const checkedIn = meeting.participants.filter(p => p.status === ParticipantStatus.JOINED || p.status === ParticipantStatus.COMPLETED).length;
+    const checkedIn = meeting.participants.filter(
+        p => p.status === ParticipantStatus.JOINED ||
+             p.status === ParticipantStatus.LATE_EXCUSED ||
+             p.status === ParticipantStatus.LATE_UNEXCUSED ||
+             p.status === ParticipantStatus.COMPLETED
+    ).length;
     const total = meeting.participants.length;
     const isOngoing = dayjs().isAfter(dayjs(meeting.start_time)) && dayjs().isBefore(dayjs(meeting.end_time));
     const isEnded = dayjs().isAfter(dayjs(meeting.end_time));
+
+    const handleUpdateStatus = async (payload: UpdateParticipantStatusPayload) => {
+        if (!editingParticipant || !meeting) return;
+        await updateParticipantStatusMutation.mutateAsync({
+            meetingId: meeting.id,
+            userId: editingParticipant.user_id,
+            payload,
+        });
+    };
 
     const columns = [
         {
@@ -50,27 +73,48 @@ export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }
             title: 'Trạng thái',
             dataIndex: 'status',
             key: 'status',
-            render: (status: ParticipantStatus, record: ParticipantResponse) => {
-                const isJoinedOrCompleted = status === ParticipantStatus.JOINED || status === ParticipantStatus.COMPLETED;
-                const isLateNotJoined = status === ParticipantStatus.NOT_JOINED && dayjs().isAfter(dayjs(meeting.start_time).add(5, 'minute'));
-                const isLateJoined = isJoinedOrCompleted && record.check_in_at && dayjs(record.check_in_at).isAfter(dayjs(meeting.start_time).add(5, 'minute'));
-
+            render: (status: ParticipantStatus) => {
                 let tagColor = 'default';
                 let tagIcon = <CloseCircleOutlined />;
-                let tagText = 'Chưa tham gia';
+                let tagText = 'Chưa checkin';
 
-                if (status === ParticipantStatus.COMPLETED) {
-                    tagColor = 'success';
-                    tagIcon = <CheckCircleOutlined />;
-                    tagText = 'Hoàn thành';
-                } else if (status === ParticipantStatus.JOINED) {
-                    tagColor = isLateJoined ? 'warning' : 'green';
-                    tagIcon = <CheckCircleOutlined />;
-                    tagText = isLateJoined ? 'Trễ (Đã có mặt)' : 'Đã checkin';
-                } else if (isLateNotJoined) {
-                    tagColor = 'orange';
-                    tagIcon = <ClockCircleOutlined />;
-                    tagText = 'Trễ (Chưa có mặt)';
+                switch (status) {
+                    case ParticipantStatus.JOINED:
+                        tagColor = 'green';
+                        tagIcon = <CheckCircleOutlined />;
+                        tagText = 'Đã checkin';
+                        break;
+                    case ParticipantStatus.LATE_EXCUSED:
+                        tagColor = 'blue';
+                        tagIcon = <ClockCircleOutlined />;
+                        tagText = 'Trễ (Có phép)';
+                        break;
+                    case ParticipantStatus.LATE_UNEXCUSED:
+                        tagColor = 'orange';
+                        tagIcon = <ClockCircleOutlined />;
+                        tagText = 'Trễ (Không phép)';
+                        break;
+                    case ParticipantStatus.ABSENT_EXCUSED:
+                        tagColor = 'purple';
+                        tagIcon = <CloseCircleOutlined />;
+                        tagText = 'Vắng (Có phép)';
+                        break;
+                    case ParticipantStatus.ABSENT_UNEXCUSED:
+                        tagColor = 'red';
+                        tagIcon = <CloseCircleOutlined />;
+                        tagText = 'Vắng (Không phép)';
+                        break;
+                    case ParticipantStatus.COMPLETED:
+                        tagColor = 'cyan';
+                        tagIcon = <CheckCircleOutlined />;
+                        tagText = 'Hoàn thành';
+                        break;
+                    case ParticipantStatus.NOT_JOINED:
+                    default:
+                        tagColor = 'default';
+                        tagIcon = <CloseCircleOutlined />;
+                        tagText = 'Chưa checkin';
+                        break;
                 }
 
                 return (
@@ -79,7 +123,7 @@ export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }
                     </Tag>
                 );
             },
-            sorter: (a: ParticipantResponse, b: ParticipantResponse) => a.status.localeCompare(b.status),
+            sorter: (a: ParticipantResponse, b: ParticipantResponse) => (a.status || '').localeCompare(b.status || ''),
         },
         {
             title: 'Checkin',
@@ -96,11 +140,20 @@ export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }
             title: 'Checkout',
             dataIndex: 'check_out_at',
             key: 'check_out_at',
-            render: (text: string) => text ? dayjs(text).format('HH:mm:ss') : '—',
+            render: (text: string, record: ParticipantResponse) => {
+                if (text) return dayjs(text).format('HH:mm:ss');
+                // Nếu không checkout mà meeting đã kết thúc và thành viên có checkin
+                if (isEnded && record.check_in_at) {
+                    return dayjs(meeting.end_time).format('HH:mm:ss');
+                }
+                return '—';
+            },
             sorter: (a: ParticipantResponse, b: ParticipantResponse) => {
-                if (!a.check_out_at) return 1;
-                if (!b.check_out_at) return -1;
-                return dayjs(a.check_out_at).unix() - dayjs(b.check_out_at).unix();
+                const aTime = a.check_out_at || (isEnded && a.check_in_at ? meeting.end_time : null);
+                const bTime = b.check_out_at || (isEnded && b.check_in_at ? meeting.end_time : null);
+                if (!aTime) return 1;
+                if (!bTime) return -1;
+                return dayjs(aTime).unix() - dayjs(bTime).unix();
             },
         },
         {
@@ -122,6 +175,23 @@ export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }
                     '—'
                 ),
         },
+        {
+            title: 'Thao tác',
+            key: 'actions',
+            render: (_: unknown, record: ParticipantResponse) => (
+                <Tooltip title="Chỉnh sửa trạng thái">
+                    <Button
+                        icon={<EditOutlined />}
+                        size="small"
+                        type="text"
+                        onClick={() => {
+                            setEditingParticipant(record);
+                            setIsEditModalOpen(true);
+                        }}
+                    />
+                </Tooltip>
+            ),
+        },
     ];
 
     return (
@@ -129,7 +199,7 @@ export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }
             title={null}
             open={open}
             onClose={onClose}
-            width={680}
+            width={720}
             styles={{ body: { padding: 0 } }}
         >
             {/* Header */}
@@ -178,7 +248,7 @@ export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }
                     items={[
                         {
                             key: 'checkin',
-                            label: 'Đã checkin',
+                            label: 'Đã điểm danh',
                             children: (
                                 <Text strong className="text-green-600">
                                     {checkedIn}/{total}
@@ -211,7 +281,7 @@ export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }
                             onClick={() => onEdit(meeting)}
                             size="small"
                         >
-                            Chỉnh sửa
+                            Chỉnh sửa meeting
                         </Button>
                     )}
                     {onDelete && (
@@ -223,7 +293,7 @@ export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }
                             cancelText="Hủy"
                         >
                             <Button icon={<DeleteOutlined />} danger size="small">
-                                Xóa
+                                Xóa meeting
                             </Button>
                         </Popconfirm>
                     )}
@@ -242,6 +312,18 @@ export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }
                     className="meeting-detail-table"
                 />
             </div>
+
+            {/* Edit Participant Status Modal */}
+            <EditParticipantStatusModal
+                open={isEditModalOpen}
+                participant={editingParticipant}
+                onClose={() => {
+                    setIsEditModalOpen(false);
+                    setEditingParticipant(null);
+                }}
+                onSubmit={handleUpdateStatus}
+                loading={updateParticipantStatusMutation.isPending}
+            />
 
             <style>{`
                 .meeting-detail-table .ant-table-thead > tr > th {

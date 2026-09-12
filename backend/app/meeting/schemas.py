@@ -102,6 +102,12 @@ class ParticipantResponse(BaseModel):
         )
 
 
+class UpdateParticipantStatusRequest(BaseModel):
+    status: ParticipantStatus
+    check_in_at: datetime | None = None
+    check_out_at: datetime | None = None
+
+
 class MeetingCreate(BaseModel):
     title: str = Field(..., max_length=255)
     content: str | None = Field(None, max_length=1000)
@@ -140,9 +146,42 @@ class MeetingResponse(BaseModel):
         """Map domain Meeting → schema (user_name, timestamps, participant id)."""
         if m.id is None or m.created_at is None or m.updated_at is None:
             raise ValueError("Meeting thiếu id hoặc timestamps sau khi lưu")
+        
+        # Check if meeting has ended to auto-apply end_time for checkout if not checked out
+        from app.utils.datetime import get_current_utc7_time
+        now = get_current_utc7_time()
+        is_ended = now > m.end_time
+
         participants: list[ParticipantResponse] = []
         for p in m.participants:
-            participants.append(ParticipantResponse.from_domain(p))
+            check_out_at = p.check_out_at
+            status = p.status
+
+            # Auto-set checkout time and status if meeting ended & checked in but not checked out
+            if is_ended:
+                if p.check_in_at and not check_out_at:
+                    check_out_at = m.end_time
+                    if status in (ParticipantStatus.JOINED, ParticipantStatus.LATE_EXCUSED, ParticipantStatus.LATE_UNEXCUSED):
+                        status = ParticipantStatus.COMPLETED
+                elif not p.check_in_at and status == ParticipantStatus.NOT_JOINED:
+                    status = ParticipantStatus.ABSENT_UNEXCUSED
+
+            if p.id is None:
+                continue
+            
+            participants.append(
+                ParticipantResponse(
+                    id=p.id,
+                    user_id=p.user_id,
+                    user_name=p.user.name if p.user else f"User #{p.user_id}",
+                    user_avatar_url=p.user.avatar_url if p.user else None,
+                    check_in_at=p.check_in_at,
+                    check_out_at=check_out_at,
+                    status=status,
+                    link_image=p.link_image,
+                )
+            )
+
         return cls(
             id=m.id,
             title=m.title,

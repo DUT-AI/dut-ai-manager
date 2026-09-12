@@ -14,6 +14,7 @@ from app.meeting.application.use_cases import (
     GetMeetingsUseCase,
     MeetingUseCases,
     UpdateMeetingUseCase,
+    UpdateParticipantStatusUseCase,
 )
 from app.meeting.infrastructure.repository import (
     MeetingRepository,
@@ -80,6 +81,12 @@ class MeetingModuleProvider(Provider):
         self, repo: MeetingRepository, team_repo: TeamRepository
     ) -> UpdateMeetingUseCase:
         return UpdateMeetingUseCase(repo, team_repo)
+
+    @provide
+    def update_participant_status_uc(
+        self, meeting_repo: MeetingRepository, participant_repo: ParticipantRepository
+    ) -> UpdateParticipantStatusUseCase:
+        return UpdateParticipantStatusUseCase(meeting_repo, participant_repo)
 
     @provide
     def delete_meeting_uc(self, repo: MeetingRepository) -> DeleteMeetingUseCase:

@@ -3,11 +3,29 @@ import { z } from 'zod';
 export const ParticipantStatus = {
   NOT_JOINED: 'NOT_JOINED',
   JOINED: 'JOINED',
+  LATE_EXCUSED: 'LATE_EXCUSED',
+  LATE_UNEXCUSED: 'LATE_UNEXCUSED',
+  ABSENT_EXCUSED: 'ABSENT_EXCUSED',
+  ABSENT_UNEXCUSED: 'ABSENT_UNEXCUSED',
   COMPLETED: 'COMPLETED',
 } as const;
 
 export type ParticipantStatus = typeof ParticipantStatus[keyof typeof ParticipantStatus];
-export const participantStatusSchema = z.enum(['NOT_JOINED', 'JOINED', 'COMPLETED']);
+export const participantStatusSchema = z.enum([
+  'NOT_JOINED',
+  'JOINED',
+  'LATE_EXCUSED',
+  'LATE_UNEXCUSED',
+  'ABSENT_EXCUSED',
+  'ABSENT_UNEXCUSED',
+  'COMPLETED',
+]);
+
+export interface UpdateParticipantStatusPayload {
+  status: ParticipantStatus;
+  check_in_at?: string | null;
+  check_out_at?: string | null;
+}
 
 export const participantResponseSchema = z.object({
   id: z.number(),

@@ -238,6 +238,26 @@ def seed_mock_data():
             )
 
             session.commit()
+
+            # Reset sequences to MAX(id) to prevent key collision on insert
+            from sqlalchemy import text
+            tables = [
+                ('meetings', 'meetings_id_seq'),
+                ('users', 'users_id_seq'),
+                ('roles', 'roles_id_seq'),
+                ('violations', 'violations_id_seq'),
+                ('bonus_points', 'bonus_points_id_seq'),
+                ('permission_requests', 'permission_requests_id_seq'),
+                ('teams', 'teams_id_seq'),
+                ('homeworks', 'homeworks_id_seq'),
+                ('meeting_participants', 'meeting_participants_id_seq'),
+            ]
+            for table, seq in tables:
+                try:
+                    session.execute(text(f"SELECT setval('{seq}', (SELECT COALESCE(MAX(id), 1) FROM {table}));"))
+                except Exception:
+                    pass
+            session.commit()
             logger.success("Mock data seeded successfully.")
         else:
             logger.info("Mock data already exists.")

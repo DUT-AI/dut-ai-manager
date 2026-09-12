@@ -78,7 +78,10 @@ class CheckMeetingAttendanceUseCase:
             if not meeting.require_check_in:
                 continue
             for participant in meeting.participants:
-                if participant.status != ParticipantStatus.JOINED:
+                if participant.status not in (
+                    ParticipantStatus.JOINED,
+                    ParticipantStatus.COMPLETED,
+                ):
                     all_participant_user_ids.append(participant.user_id)
 
         # Lấy một lần duy nhất các user có đơn xin vắng
@@ -94,8 +97,11 @@ class CheckMeetingAttendanceUseCase:
                 continue
 
             for participant in meeting.participants:
-                # Nếu đã điểm danh xong (JOINED) thì bỏ qua
-                if participant.status == ParticipantStatus.JOINED:
+                # Nếu đã điểm danh (JOINED hoặc COMPLETED) thì bỏ qua
+                if participant.status in (
+                    ParticipantStatus.JOINED,
+                    ParticipantStatus.COMPLETED,
+                ):
                     continue
 
                 user_id = participant.user_id
@@ -312,7 +318,10 @@ class CheckInUseCase:
                 if not meeting:
                     continue
 
-                if participant.status == ParticipantStatus.JOINED:
+                if participant.status in (
+                    ParticipantStatus.JOINED,
+                    ParticipantStatus.COMPLETED,
+                ):
                     if (
                         client_event_id
                         and participant.client_event_id == client_event_id
@@ -326,7 +335,11 @@ class CheckInUseCase:
                     )
                     continue
 
-                success, msg = participant.check_in(check_in_dt, image_url)
+                # Logic: Lateness check & status assignment
+                is_late = meeting.is_late(check_in_dt)
+                target_status = ParticipantStatus.LATE_UNEXCUSED if is_late else ParticipantStatus.JOINED
+
+                success, msg = participant.check_in(check_in_dt, image_url, status=target_status)
                 if not success:
                     messages.append(msg)
                     updated_participants.append(participant)
@@ -335,9 +348,6 @@ class CheckInUseCase:
                 # Lưu thông tin idempotency nếu có
                 if client_event_id:
                     participant.client_event_id = client_event_id
-
-                # Logic: Lateness check & violation creation via events
-                is_late = meeting.is_late(check_in_dt)
 
                 # Save participant state
                 saved_p = self.participant_repo.save(participant)
@@ -590,6 +600,53 @@ class UpdateMeetingUseCase:
             )
         )
         return saved
+
+
+class UpdateParticipantStatusUseCase:
+    """Cập nhật thủ công trạng thái của thành viên trong meeting (người tạo meeting / Admin)"""
+
+    def __init__(
+        self,
+        meeting_repo: MeetingRepository,
+        participant_repo: ParticipantRepository,
+    ):
+        self.meeting_repo = meeting_repo
+        self.participant_repo = participant_repo
+
+    def execute(
+        self,
+        meeting_id: int,
+        user_id: int,
+        target_status: ParticipantStatus,
+        check_in_at: datetime | None = None,
+        check_out_at: datetime | None = None,
+    ) -> MeetingParticipant:
+        meeting = self.meeting_repo.get_by_id(meeting_id)
+        if not meeting:
+            raise BadRequestException(
+                "Không tìm thấy buổi họp", status_code=status.HTTP_404_NOT_FOUND
+            )
+
+        # Trợ giúp tự động gợi ý mốc thời gian nếu không truyền
+        if check_in_at is None and target_status in (
+            ParticipantStatus.JOINED,
+            ParticipantStatus.LATE_EXCUSED,
+            ParticipantStatus.LATE_UNEXCUSED,
+            ParticipantStatus.COMPLETED,
+        ):
+            check_in_at = meeting.start_time
+
+        if check_out_at is None and target_status == ParticipantStatus.COMPLETED:
+            check_out_at = meeting.end_time
+
+        updated = self.participant_repo.update_participant_status(
+            meeting_id=meeting_id,
+            user_id=user_id,
+            status=target_status,
+            check_in_at=check_in_at,
+            check_out_at=check_out_at,
+        )
+        return updated
 
 
 class DeleteMeetingUseCase:

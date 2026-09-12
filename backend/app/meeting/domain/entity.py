@@ -28,14 +28,25 @@ class MeetingParticipant(BaseEntity):
     client_event_id: str | None = None
     user: UserRef | None = None
 
-    def check_in(self, check_in_time: datetime, image_url: str | None = None):
+    def check_in(
+        self,
+        check_in_time: datetime,
+        image_url: str | None = None,
+        status: ParticipantStatus = ParticipantStatus.JOINED,
+    ):
         """Thực hiện check-in cho thành viên (image_url tùy chọn, ví dụ quẹt thẻ)."""
-        if self.status == ParticipantStatus.JOINED:
+        if self.status in (
+            ParticipantStatus.JOINED,
+            ParticipantStatus.LATE_EXCUSED,
+            ParticipantStatus.LATE_UNEXCUSED,
+            ParticipantStatus.COMPLETED,
+        ):
             return True, "Checkin thanh cong"
 
         self.check_in_at = check_in_time
-        self.status = ParticipantStatus.JOINED
-        self.link_image = image_url
+        self.status = status
+        if image_url:
+            self.link_image = image_url
         return True, "Checkin thanh cong"
 
     def check_out(self, check_out_time: datetime):
