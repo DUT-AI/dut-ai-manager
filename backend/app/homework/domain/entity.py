@@ -68,13 +68,12 @@ class Homework(BaseEntity):
     """Domain model containing assignment details."""
 
     title: str
-    description: str = ""
     deadline: datetime
     link: str | None = None
-    file_url: str | None = None
     slug: str | None = None
+    assignee_ids: list[int] = []
+    team_ids: list[int] = []
     submissions: list[HomeworkSubmission] = []
-
 
     @property
     def submission_count(self) -> int:
@@ -87,8 +86,7 @@ class Homework(BaseEntity):
                 response = await client.post(
                     settings.HOMEWORK_CHECKER_API_URL,
                     json={
-                        "homework_link": self.file_url or "",
-                        "description": self.description,
+                        "homework_link": self.link or "",
                         "homework_id": str(self.id),
                     },
                 )

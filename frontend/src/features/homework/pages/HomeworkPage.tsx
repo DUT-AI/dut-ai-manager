@@ -1,27 +1,27 @@
 import React, { useState, useMemo } from 'react';
+
 import {
     Table, Button, Tabs, Space, Popconfirm, Typography, Grid
 } from 'antd';
 import {
-    PlusOutlined, UploadOutlined, EyeOutlined, EditOutlined, DeleteOutlined, ReadOutlined
+    PlusOutlined, EyeOutlined, EditOutlined, DeleteOutlined, ReadOutlined, ReloadOutlined
 } from '@ant-design/icons';
 import { motion, type Variants } from 'motion/react';
 import type { ColumnsType } from 'antd/es/table';
 
 // Hooks & Types
 import { useHomeworkActions } from '../hooks/useHomeworkActions';
+import { useUnsubmittedReport } from '../hooks/useHomeworks';
 import type { Homework } from '@/features/homework/types/homework.types';
 import { HomeworkPermission } from '@/features/rbac/types/rbac.types';
 
 // Sub-components
 import {
-    SubmissionStatusTag,
     DeadlineText,
     HomeworkMobileList,
     HomeworkFormModal,
-    SubmitHomeworkModal,
-    SubmissionsDrawer,
-    HomeworkReportTab
+    HomeworkReportTab,
+    HomeworkDetailDrawer,
 } from '../components';
 
 const { Title, Text } = Typography;
@@ -38,8 +38,12 @@ const itemVariants: Variants = {
 };
 
 export const HomeworkPage: React.FC = () => {
-    const [activeTab, setActiveTab] = useState('1');
+    const [activeTab, setActiveTab] = useState('2');
+    const [detailHomework, setDetailHomework] = useState<Homework | null>(null);
     const screens = Grid.useBreakpoint();
+
+    // Report refetch (lifted here for tabBarExtraContent)
+    const { isLoading: reportLoading, refetch: refetchReport } = useUnsubmittedReport();
 
     // Core Logic Hook
     const {
@@ -53,74 +57,28 @@ export const HomeworkPage: React.FC = () => {
     } = useHomeworkActions(activeTab);
 
     const {
-        isFormModalOpen, isSubmitModalOpen, isSubmissionsDrawerOpen,
+        isFormModalOpen,
         selectedHomework, editingHomework, currentAssignees, assigneesLoading
     } = state;
 
     const {
-        myHomeworks, allHomeworks, users, teams,
-        myLoading, allLoading
+        allHomeworks, users, teams,
+        allLoading
     } = data;
 
     const {
         handleOpenCreate, handleOpenEdit, handleDelete,
-        handleOpenSubmit, handleViewSubmissions,
-        handleFormSuccess, handleSubmitSuccess
+        handleFormSuccess
     } = handlers;
 
     // Table Columns Definitions
-    const myColumns = useMemo<ColumnsType<Homework>>(() => [
-        {
-            title: 'Tiêu đề',
-            dataIndex: 'title',
-            key: 'title',
-            render: (text: string) => <Text strong className="text-indigo-600">{text}</Text>,
-        },
-        {
-            title: 'Hạn nộp',
-            dataIndex: 'deadline',
-            key: 'deadline',
-            render: (date: string, record: Homework) => (
-                <DeadlineText date={date} record={record} />
-            ),
-        },
-        {
-            title: 'Tình trạng',
-            key: 'status',
-            align: 'center',
-            render: (_, record: Homework) => (
-                <SubmissionStatusTag record={record} />
-            )
-        },
-        {
-            title: 'Hành động',
-            key: 'action',
-            align: 'right',
-            render: (_: any, record: Homework) => (
-                <Button
-                    type="primary"
-                    icon={<UploadOutlined />}
-                    onClick={() => handleOpenSubmit(record)}
-                    className="bg-indigo-600 hover:bg-indigo-700"
-                >
-                    Nộp bài / Xem
-                </Button>
-            ),
-        }
-    ], [user?.id, handleOpenSubmit]);
+
 
     const adminColumns = useMemo<ColumnsType<Homework>>(() => [
         {
             title: 'Tiêu đề',
             dataIndex: 'title',
             key: 'title',
-            width: 200,
-        },
-        {
-            title: 'Mô tả',
-            dataIndex: 'description',
-            key: 'description',
-            ellipsis: true,
             width: 250,
         },
         {
@@ -133,14 +91,28 @@ export const HomeworkPage: React.FC = () => {
             ),
         },
         {
+            title: 'Hành động',
+            key: 'detail',
+            width: 100,
+            align: 'center' as const,
+            render: (_: any, record: Homework) => (
+                <Button
+                    icon={<EyeOutlined />}
+                    size="small"
+                    onClick={() => setDetailHomework(record)}
+                    style={{ color: '#6366f1', borderColor: '#6366f1' }}
+                >
+                    Chi tiết
+                </Button>
+            ),
+        },
+        {
             title: 'Thao tác',
             key: 'action',
-            width: 280,
+            width: 120,
+            align: 'center' as const,
             render: (_: any, record: Homework) => (
                 <Space>
-                    <Button icon={<EyeOutlined />} onClick={() => handleViewSubmissions(record)}>
-                        Bài nộp
-                    </Button>
                     {hasPermission(HomeworkPermission.UPDATE) && (
                         <Button icon={<EditOutlined />} onClick={() => handleOpenEdit(record)} />
                     )}
@@ -159,7 +131,7 @@ export const HomeworkPage: React.FC = () => {
                 </Space>
             ),
         },
-    ], [hasPermission, handleViewSubmissions, handleOpenEdit, handleDelete]);
+    ], [hasPermission, handleOpenEdit, handleDelete, setDetailHomework]);
 
     const renderListView = (dataSource: Homework[], loading: boolean, emptyText?: string) => {
         if (!screens.md) {
@@ -176,7 +148,7 @@ export const HomeworkPage: React.FC = () => {
         return (
             <Table
                 dataSource={dataSource}
-                columns={activeTab === '1' ? myColumns : adminColumns}
+                columns={adminColumns}
                 rowKey="id"
                 loading={loading}
                 locale={{ emptyText }}
@@ -213,38 +185,36 @@ export const HomeworkPage: React.FC = () => {
                 )}
             </motion.div>
 
-            <motion.div variants={itemVariants} className="overflow-x-auto no-scrollbar">
+            <motion.div variants={itemVariants}>
                 <Tabs
                     activeKey={activeTab}
                     onChange={setActiveTab}
-                    type="card"
-                    className="homework-tabs"
-                    tabBarStyle={{
-                        paddingLeft: !screens.md ? '16px' : '0',
-                        paddingRight: !screens.md ? '16px' : '0',
-                        marginBottom: 0,
-                        minWidth: !screens.md ? 'max-content' : '100%'
-                    }}
+                    tabBarExtraContent={activeTab === '3' ? (
+                        <Button
+                            icon={<ReloadOutlined />}
+                            loading={reportLoading}
+                            onClick={() => refetchReport()}
+                            size="small"
+                            className="mr-1"
+                        >
+                            Làm mới
+                        </Button>
+                    ) : null}
                     items={[
                         {
-                            key: '1',
-                            label: 'Bài tập của tôi',
-                            children: renderListView(myHomeworks, myLoading, "Không có bài tập nào được giao")
-                        },
-                        ...(isAdminOrLeader() ? [{
                             key: '2',
                             label: 'Quản lý bài tập',
                             children: renderListView(allHomeworks, allLoading)
-                        }] : []),
-                        ...(isAdminOrLeader() ? [{
+                        },
+                        {
                             key: '3',
                             label: 'Báo cáo',
                             children: <HomeworkReportTab />
-                        }] : [])
+                        }
                     ]}
                 />
 
-                {/* Modals & Drawer */}
+                {/* Modals & Drawers */}
                 <HomeworkFormModal
                     key={`form-${editingHomework?.id ?? 'create'}`}
                     open={isFormModalOpen}
@@ -256,20 +226,9 @@ export const HomeworkPage: React.FC = () => {
                     onSuccess={handleFormSuccess}
                     onCancel={() => dispatch({ type: 'CLOSE_FORM' })}
                 />
-
-                <SubmitHomeworkModal
-                    key={`submit-${selectedHomework?.id ?? 'new'}`}
-                    open={isSubmitModalOpen}
-                    homework={selectedHomework}
-                    onSuccess={handleSubmitSuccess}
-                    onCancel={() => dispatch({ type: 'CLOSE_SUBMIT' })}
-                />
-
-                <SubmissionsDrawer
-                    key={`drawer-${selectedHomework?.id ?? 'new'}`}
-                    open={isSubmissionsDrawerOpen}
-                    homework={selectedHomework}
-                    onClose={() => dispatch({ type: 'CLOSE_SUBMISSIONS' })}
+                <HomeworkDetailDrawer
+                    homework={detailHomework}
+                    onClose={() => setDetailHomework(null)}
                 />
             </motion.div>
         </motion.div>

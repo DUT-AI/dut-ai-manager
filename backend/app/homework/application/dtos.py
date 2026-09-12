@@ -10,9 +10,7 @@ from app.shared.domain.value_objects import UserRef
 class HomeworkBase(BaseModel):
     title: str
     deadline: datetime
-    description: str = ""
     link: str | None = None
-    file_url: str | None = None
     slug: str | None = None
 
 
@@ -23,10 +21,8 @@ class HomeworkCreate(HomeworkBase):
 
 class HomeworkUpdate(BaseModel):
     title: str | None = None
-    description: str | None = None
     deadline: datetime | None = None
     link: str | None = None
-    file_url: str | None = None
     slug: str | None = None
     assignee_ids: list[int] | None = None  # Sync assignees
     team_ids: list[int] | None = None  # Add users from teams
@@ -37,6 +33,8 @@ class HomeworkResponse(HomeworkBase):
     created_at: datetime
     updated_at: datetime
     created_by: int | None = None
+    assignee_ids: list[int] = []
+    team_ids: list[int] = []
 
     # Computed fields (can be populated by service/repo)
     submission_count: int = 0
@@ -83,3 +81,26 @@ class HomeworkReportResponse(BaseModel):
     user_id: int
     owner: UserRef | None = None
     unsubmitted_count: int
+
+
+class UserSubmissionInfo(BaseModel):
+    user_id: int
+    name: str | None = None
+    avatar_url: str | None = None
+    is_late: bool = False
+    submitted_at: str | None = None
+
+
+class CategorySubmissionStatus(BaseModel):
+    submitted: list[UserSubmissionInfo] = []
+    not_submitted: list[UserSubmissionInfo] = []
+
+
+class HomeworkSubmissionStatusResponse(BaseModel):
+    coding: CategorySubmissionStatus = CategorySubmissionStatus()
+    game: CategorySubmissionStatus = CategorySubmissionStatus()
+
+    # Top-level combined fields for fallback
+    submitted: list[UserSubmissionInfo] = []
+    not_submitted: list[UserSubmissionInfo] = []
+

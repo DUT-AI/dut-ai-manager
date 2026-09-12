@@ -5,10 +5,7 @@ import type { HomeworkCreate, HomeworkUpdate, HomeworkStatus } from '@/features/
 // Query Keys
 const homeworkKeys = {
   all: ['homeworks'] as const,
-  my: ['homeworks', 'me'] as const,
   detail: (id: number) => ['homeworks', id] as const,
-  submissions: (homeworkId: number) => ['submissions', homeworkId] as const,
-  mySubmission: (homeworkId: number) => ['submissions', 'me', homeworkId] as const,
 };
 
 // Queries
@@ -16,14 +13,6 @@ export const useHomeworks = () => {
   return useQuery({
     queryKey: homeworkKeys.all,
     queryFn: () => homeworkService.getAll(),
-    staleTime: 2 * 60 * 1000, // 2 minutes
-  });
-};
-
-export const useMyHomeworks = () => {
-  return useQuery({
-    queryKey: homeworkKeys.my,
-    queryFn: () => homeworkService.getMyHomeworks(),
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 };
@@ -36,30 +25,12 @@ export const useHomework = (id: number) => {
   });
 };
 
-export const useSubmissions = (homeworkId: number) => {
-  return useQuery({
-    queryKey: homeworkKeys.submissions(homeworkId),
-    queryFn: () => homeworkService.getSubmissions(homeworkId),
-    enabled: !!homeworkId,
-    staleTime: 60 * 1000, // 1 minute
-  });
-};
-
-export const useMySubmission = (homeworkId: number) => {
-  return useQuery({
-    queryKey: homeworkKeys.mySubmission(homeworkId),
-    queryFn: () => homeworkService.getMySubmission(homeworkId),
-    enabled: !!homeworkId,
-    staleTime: 30 * 1000, // 30 seconds
-    retry: false, // Don't retry on 404
-  });
-};
-
 export const useUnsubmittedReport = () => {
   return useQuery({
     queryKey: ['homeworks', 'report', 'unsubmitted'],
     queryFn: () => homeworkService.getUnsubmittedReport(),
-    staleTime: 60 * 1000, // 1 minute
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 };
 
@@ -72,6 +43,15 @@ export const useUnsubmittedByUser = (userId: number | null) => {
   });
 };
 
+export const useHomeworkSubmissionStatus = (homeworkId: number | null) => {
+  return useQuery({
+    queryKey: ['homeworks', 'submission-status', homeworkId],
+    queryFn: () => homeworkService.getSubmissionStatus(homeworkId!),
+    enabled: !!homeworkId,
+    staleTime: 60 * 1000, // 1 minute
+  });
+};
+
 // Mutations
 export const useCreateHomework = () => {
   const queryClient = useQueryClient();
@@ -80,7 +60,6 @@ export const useCreateHomework = () => {
     mutationFn: (data: HomeworkCreate) => homeworkService.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: homeworkKeys.all });
-      queryClient.invalidateQueries({ queryKey: homeworkKeys.my });
     },
   });
 };
@@ -93,7 +72,6 @@ export const useUpdateHomework = () => {
       homeworkService.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: homeworkKeys.all });
-      queryClient.invalidateQueries({ queryKey: homeworkKeys.my });
     },
   });
 };
@@ -105,41 +83,7 @@ export const useDeleteHomework = () => {
     mutationFn: (id: number) => homeworkService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: homeworkKeys.all });
-      queryClient.invalidateQueries({ queryKey: homeworkKeys.my });
     },
   });
 };
 
-export const useSubmitHomework = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ homeworkId, file }: { homeworkId: number; file: File }) =>
-      homeworkService.submit(homeworkId, file),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: homeworkKeys.submissions(variables.homeworkId)
-      });
-      queryClient.invalidateQueries({
-        queryKey: homeworkKeys.mySubmission(variables.homeworkId)
-      });
-    },
-  });
-};
-
-export const useUpdateSubmissionStatus = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ submissionId, status }: {
-      submissionId: number;
-      status: HomeworkStatus;
-      homeworkId: number;
-    }) => homeworkService.updateStatus(submissionId, status),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: homeworkKeys.submissions(variables.homeworkId)
-      });
-    },
-  });
-};

@@ -3,7 +3,7 @@ from datetime import date
 from app.bonus_point.infrastructure.repository import BonusPointRepository
 from app.homework.application.dtos import HomeworkResponse
 from app.homework.domain.entity import HomeworkStatus
-from app.homework.infrastructure.repository import HomeworkSubmissionRepository
+
 from app.meeting.infrastructure.repository import MeetingRepository
 from app.meeting.schemas import MeetingResponse
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
@@ -108,6 +108,9 @@ class GetMonthlyActivityDatesUseCase:
         return sorted(list(activity_dates))
 
 
+from app.homework.application.use_cases import HomeworkUseCases
+
+
 class GetDashboardOverviewUseCase:
     """Thống kê tổng quan cho Dashboard cá nhân của người dùng"""
 
@@ -118,16 +121,18 @@ class GetDashboardOverviewUseCase:
         permission_repo: PermissionRequestRepository,
         violation_repo: ViolationRepository,
         bonus_point_repo: BonusPointRepository,
-        submission_repo: HomeworkSubmissionRepository,
+        homework_use_cases: HomeworkUseCases,
     ):
         self.user_repo = user_repo
         self.meeting_repo = meeting_repo
         self.permission_repo = permission_repo
         self.violation_repo = violation_repo
         self.bonus_point_repo = bonus_point_repo
-        self.submission_repo = submission_repo
+        self.homework_use_cases = homework_use_cases
 
-    def execute(self, user_id: int, month: int, year: int) -> DashboardOverviewResponse:
+    async def execute(
+        self, user_id: int, month: int, year: int
+    ) -> DashboardOverviewResponse:
         # 1. Permission Requests
         permissions = self.permission_repo.get_by_user(
             user_id=user_id, month=month, year=year
@@ -143,15 +148,13 @@ class GetDashboardOverviewUseCase:
             user_id=user_id, month=month, year=year
         )
 
-        # 4. Assigned Homework (Lấy thực thể bài tập)
-        submissions = self.submission_repo.get_all_by_user(user_id)
-        homework_entities = []
-        for s in submissions:
-            if s.status == HomeworkStatus.NOT_SUBMITTED:
-                if hasattr(s, "homework") and s.homework:
-                    hw = s.homework
-                    hw.submissions = [s]
-                    homework_entities.append(hw)
+        # 4. Assigned Homework (Lấy thực thể bài tập chưa nộp trong tháng được chọn)
+        user_unsubmitted = await self.homework_use_cases.get_unsubmitted_by_user(user_id)
+        month_unsubmitted = [
+            h
+            for h in user_unsubmitted
+            if h.deadline and h.deadline.month == month and h.deadline.year == year
+        ]
 
         # 5. Meetings (Lấy các buổi sinh hoạt mà user tham gia trong tháng)
         user_meetings = self.meeting_repo.get_participating_meetings(
@@ -165,7 +168,7 @@ class GetDashboardOverviewUseCase:
             bonus_points=[BonusPointResponse.model_validate(b) for b in bonus_points],
             violations=[ViolationResponse.model_validate(v) for v in violations],
             unsubmitted_homeworks=[
-                HomeworkResponse.model_validate(h) for h in homework_entities
+                HomeworkResponse.model_validate(h) for h in month_unsubmitted
             ],
             meetings=[MeetingResponse.from_domain(m) for m in user_meetings],
         )

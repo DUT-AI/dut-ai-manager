@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Any
 
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
@@ -10,17 +10,14 @@ from app.homework.application.dtos import (
     HomeworkCreate,
     HomeworkReportResponse,
     HomeworkResponse,
-    HomeworkSubmissionResponse,
     HomeworkUpdate,
+    HomeworkSubmissionStatusResponse,
 )
 from app.homework.application.use_cases import HomeworkUseCases
 from app.homework.domain.value_objects import HomeworkStatus
 from app.shared.application.response import ApiResponse
 
 router = APIRouter(prefix="/homeworks", tags=["homeworks"])
-submission_router = APIRouter(
-    prefix="/homework-submission", tags=["homework-submission"]
-)
 
 
 @router.get(
@@ -57,6 +54,34 @@ async def get_my_homeworks(
     return ApiResponse.success(data=result)
 
 
+def parse_int_list(values: Any) -> list[int] | None:
+    if values is None:
+        return None
+    if isinstance(values, str):
+        val_str = values.strip()
+        if not val_str:
+            return []
+        if val_str.startswith("[") and val_str.endswith("]"):
+            import json
+            try:
+                parsed = json.loads(val_str)
+                return [int(x) for x in parsed if str(x).isdigit()]
+            except Exception:
+                pass
+        return [int(x.strip()) for x in val_str.split(",") if x.strip().isdigit()]
+    if isinstance(values, list):
+        res = []
+        for item in values:
+            if isinstance(item, int):
+                res.append(item)
+            elif isinstance(item, str):
+                parsed = parse_int_list(item)
+                if parsed:
+                    res.extend(parsed)
+        return res
+    return None
+
+
 @router.post(
     "",
     response_model=ApiResponse[HomeworkResponse],
@@ -66,13 +91,11 @@ async def get_my_homeworks(
 async def create_homework(
     use_cases: FromDishka[HomeworkUseCases],
     title: str = Form(...),
-    description: str = Form(""),
     deadline: str = Form(...),
     link: str | None = Form(None),
     slug: str | None = Form(None),
     assignee_ids: list[int] | None = Form(None),
     team_ids: list[int] | None = Form(None),
-    file: UploadFile | None = File(None),
 ):
     try:
         deadline_dt = datetime.fromisoformat(deadline.replace("Z", "+00:00"))
@@ -81,18 +104,21 @@ async def create_homework(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid deadline format")
 
+    parsed_assignees = parse_int_list(assignee_ids)
+    parsed_teams = parse_int_list(team_ids)
+
     data = HomeworkCreate(
         title=title,
-        description=description,
         deadline=deadline_dt,
         link=link,
         slug=slug,
-        assignee_ids=assignee_ids,
-        team_ids=team_ids,
+        assignee_ids=parsed_assignees,
+        team_ids=parsed_teams,
     )
 
-    result = await use_cases.create(data, file)
+    result = await use_cases.create(data)
     return ApiResponse.success(data=result)
+
 
 
 @router.get(
@@ -105,7 +131,9 @@ async def get_unsubmitted_report(
     use_cases: FromDishka[HomeworkUseCases],
 ):
     """Báo cáo bài tập chưa nộp của tất cả active user"""
-    result = use_cases.get_unsubmitted_report()
+    print(">>> [API] GET /homeworks/report/unsubmitted CALLED!")
+    result = await use_cases.get_unsubmitted_report()
+    print(f">>> [API] Returning {len(result)} items. Top item: {result[0].model_dump() if result else None}")
     return ApiResponse.success(data=result)
 
 
@@ -120,7 +148,24 @@ async def get_unsubmitted_by_user(
     use_cases: FromDishka[HomeworkUseCases],
 ):
     """Lấy danh sách bài tập chưa nộp của một user cụ thể"""
-    result = use_cases.get_unsubmitted_by_user(user_id)
+    result = await use_cases.get_unsubmitted_by_user(user_id)
+    return ApiResponse.success(data=result)
+
+
+@router.get(
+    "/{homework_id}/submission-status",
+    response_model=ApiResponse[HomeworkSubmissionStatusResponse],
+    dependencies=[hasPermission(HomeworkPermission.READ)],
+)
+@inject
+async def get_homework_submission_status(
+    homework_id: int,
+    use_cases: FromDishka[HomeworkUseCases],
+):
+    """Lấy danh sách người đã nộp / chưa nộp của một bài tập cụ thể"""
+    result = await use_cases.get_submission_status(homework_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Homework not found")
     return ApiResponse.success(data=result)
 
 
@@ -140,6 +185,7 @@ async def get_homework(
     return ApiResponse.success(data=result)
 
 
+
 @router.put(
     "/{homework_id}",
     response_model=ApiResponse[HomeworkResponse],
@@ -150,13 +196,11 @@ async def update_homework(
     homework_id: int,
     use_cases: FromDishka[HomeworkUseCases],
     title: str | None = Form(None),
-    description: str | None = Form(None),
     deadline: str | None = Form(None),
     link: str | None = Form(None),
     slug: str | None = Form(None),
     assignee_ids: list[int] | None = Form(None),
     team_ids: list[int] | None = Form(None),
-    file: UploadFile | None = File(None),
 ):
     deadline_dt = None
     if deadline:
@@ -169,15 +213,14 @@ async def update_homework(
 
     data = HomeworkUpdate(
         title=title,
-        description=description,
         deadline=deadline_dt,
         link=link,
         slug=slug,
-        assignee_ids=assignee_ids,
-        team_ids=team_ids,
+        assignee_ids=parse_int_list(assignee_ids),
+        team_ids=parse_int_list(team_ids),
     )
 
-    result = await use_cases.update(homework_id, data, file)
+    result = await use_cases.update(homework_id, data)
     if not result:
         raise HTTPException(status_code=404, detail="Homework not found")
     return ApiResponse.success(data=result)
@@ -213,73 +256,4 @@ async def restore_homework(
     return ApiResponse.success(data=result)
 
 
-# --- Submission Routes ---
 
-
-@submission_router.post(
-    "",
-    response_model=ApiResponse[HomeworkSubmissionResponse],
-    dependencies=[hasPermission(HomeworkSubmissionPermission.CREATE)],
-)
-@inject
-async def submit_homework(
-    use_cases: FromDishka[HomeworkUseCases],
-    homework_id: int = Form(..., description="ID của bài tập"),
-    file: UploadFile = File(
-        ..., description="File nén bài tập (.zip, .rar, .7z, .tar.gz)"
-    ),
-):
-    """Submit homework by uploading a compressed file."""
-    result = await use_cases.submit_homework(homework_id, file)
-    return ApiResponse.success(data=result)
-
-
-@submission_router.get(
-    "",
-    response_model=ApiResponse[list[HomeworkSubmissionResponse]],
-    dependencies=[hasPermission(HomeworkSubmissionPermission.READ)],
-)
-@inject
-async def get_submissions(
-    current_user: CurrentUser,
-    use_cases: FromDishka[HomeworkUseCases],
-    homework_id: int = Query(
-        ..., description="ID của bài tập để lấy danh sách bài nộp"
-    ),
-):
-    """Lấy danh sách các bài nộp của một bài tập cụ thể"""
-    result = use_cases.get_all_submissions_by_homework(homework_id, current_user)
-    return ApiResponse.success(data=result)
-
-
-@submission_router.get(
-    "/me",
-    response_model=ApiResponse[HomeworkSubmissionResponse],
-    dependencies=[hasPermission(HomeworkSubmissionPermission.READ)],
-)
-@inject
-async def get_my_submission(
-    use_cases: FromDishka[HomeworkUseCases],
-    homework_id: int = Query(..., description="ID của bài tập"),
-):
-    """Lấy bài nộp cá nhân của bài tập này"""
-    result = use_cases.get_submission_of_user(homework_id)
-    return ApiResponse.success(data=result)
-
-
-@submission_router.put(
-    "/{submission_id}/status",
-    response_model=ApiResponse[HomeworkSubmissionResponse],
-    dependencies=[hasPermission(HomeworkSubmissionPermission.UPDATE)],
-)
-@inject
-async def update_submission_status(
-    submission_id: int,
-    status: HomeworkStatus,
-    current_user: CurrentUser,
-    use_cases: FromDishka[HomeworkUseCases],
-):
-    result = use_cases.update_submission_status(submission_id, status, current_user)
-    if not result:
-        raise HTTPException(status_code=404, detail="Submission not found")
-    return ApiResponse.success(data=result)

@@ -1,9 +1,9 @@
 import React from 'react';
 import { List, Card, Button, Space, Popconfirm, Typography } from 'antd';
-import { UploadOutlined, EyeOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { Homework } from '@/features/homework/types/homework.types';
 import { HomeworkPermission } from '@/features/rbac/types/rbac.types';
-import { SubmissionStatusTag } from './SubmissionStatusTag';
+
 import { DeadlineText } from './DeadlineText';
 
 import { useAuth } from '@/features/auth/context/AuthContext';
@@ -16,8 +16,6 @@ interface HomeworkMobileListProps {
     emptyText?: string;
     activeTab: string;
     handlers: {
-        handleOpenSubmit: (homework: Homework) => void;
-        handleViewSubmissions: (homework: Homework) => void;
         handleOpenEdit: (homework: Homework) => void;
         handleDelete: (id: number) => void;
     };
@@ -31,7 +29,7 @@ export const HomeworkMobileList: React.FC<HomeworkMobileListProps> = ({
     handlers
 }) => {
     const { hasPermission } = useAuth();
-    const { handleOpenSubmit, handleViewSubmissions, handleOpenEdit, handleDelete } = handlers;
+    const { handleOpenEdit, handleDelete } = handlers;
 
     return (
         <div className="mt-4 px-3">
@@ -48,7 +46,7 @@ export const HomeworkMobileList: React.FC<HomeworkMobileListProps> = ({
                         >
                             <div className="flex items-center justify-between mb-4">
                                 <Text strong className="text-base truncate max-w-[70%]">{record.title}</Text>
-                                <SubmissionStatusTag record={record} />
+
                             </div>
 
                             <div className="flex items-center gap-2 mb-4 text-xs">
@@ -57,21 +55,7 @@ export const HomeworkMobileList: React.FC<HomeworkMobileListProps> = ({
                             </div>
 
                             <div className="flex justify-end gap-2 pt-3 border-t border-gray-50 bg-gray-50 -mx-4 -mb-4 px-4 py-3">
-                                {activeTab === '1' ? (
-                                    <Button
-                                        type="primary"
-                                        size="small"
-                                        icon={<UploadOutlined />}
-                                        onClick={() => handleOpenSubmit(record)}
-                                        className="bg-indigo-600"
-                                    >
-                                        Nộp bài
-                                    </Button>
-                                ) : (
                                     <Space size="small">
-                                        <Button size="small" icon={<EyeOutlined />} onClick={() => handleViewSubmissions(record)}>
-                                            Bài nộp
-                                        </Button>
                                         {hasPermission(HomeworkPermission.UPDATE) && (
                                             <Button size="small" icon={<EditOutlined />} onClick={() => handleOpenEdit(record)} />
                                         )}
@@ -86,7 +70,6 @@ export const HomeworkMobileList: React.FC<HomeworkMobileListProps> = ({
                                             </Popconfirm>
                                         )}
                                     </Space>
-                                )}
                             </div>
                         </Card>
                     </List.Item>

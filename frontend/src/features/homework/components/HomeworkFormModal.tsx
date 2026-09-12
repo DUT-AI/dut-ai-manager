@@ -34,19 +34,30 @@ export const HomeworkFormModal = ({
     const [loading, setLoading] = useState(false);
     const isEditing = !!editingItem;
 
-    // Update assignee_ids when async loading completes
     useEffect(() => {
-        if (isEditing && currentAssignees.length > 0) {
-            form.setFieldsValue({ assignee_ids: currentAssignees });
+        if (open) {
+            if (editingItem) {
+                form.setFieldsValue({
+                    title: editingItem.title,
+                    deadline: dayjs(editingItem.deadline),
+                    link: editingItem.link,
+                    slug: editingItem.slug || '',
+                    assignee_ids: (editingItem.assignee_ids && editingItem.assignee_ids.length > 0) ? editingItem.assignee_ids : currentAssignees,
+                    team_ids: editingItem.team_ids || [],
+                });
+            } else {
+                form.resetFields();
+            }
         }
-    }, [currentAssignees, isEditing, form]);
+    }, [open, editingItem, currentAssignees, form]);
 
     const initialValues = editingItem ? {
         title: editingItem.title,
         deadline: dayjs(editingItem.deadline),
         link: editingItem.link,
         slug: editingItem.slug || '',
-        assignee_ids: currentAssignees,
+        assignee_ids: (editingItem.assignee_ids && editingItem.assignee_ids.length > 0) ? editingItem.assignee_ids : currentAssignees,
+        team_ids: editingItem.team_ids || [],
     } : undefined;
 
     const handleFinish = async (values: any) => {
@@ -54,7 +65,6 @@ export const HomeworkFormModal = ({
         try {
             const baseData = {
                 title: values.title,
-                description: '',
                 deadline: values.deadline.format('YYYY-MM-DDTHH:mm:ss'),
                 link: values.link || '',
                 slug: values.slug || null,
@@ -127,12 +137,31 @@ export const HomeworkFormModal = ({
                     label="Link bài tập"
                     rules={[{ required: true, message: 'Vui lòng nhập link bài tập' }]}
                 >
-                    <Input placeholder="https://..." />
+                    <Input
+                        placeholder="https://..."
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            const currentSlug = form.getFieldValue('slug');
+                            if (!currentSlug && val) {
+                                const match = val.match(/\/(?:homeworks|game)\/([^/?#]+)/);
+                                if (match) {
+                                    form.setFieldsValue({ slug: match[1] });
+                                } else if (val.startsWith('http://') || val.startsWith('https://')) {
+                                    const parts = val.replace(/\/+$/, '').split('/');
+                                    const candidate = parts[parts.length - 1]?.split('?')[0]?.split('#')[0];
+                                    if (candidate && candidate.length > 1 && !candidate.includes(' ')) {
+                                        form.setFieldsValue({ slug: candidate });
+                                    }
+                                }
+                            }
+                        }}
+                    />
                 </Form.Item>
 
                 <Form.Item
                     name="slug"
                     label="Slug của bài tập"
+                    extra=""
                 >
                     <Input placeholder="Nhập slug bài tập..." />
                 </Form.Item>

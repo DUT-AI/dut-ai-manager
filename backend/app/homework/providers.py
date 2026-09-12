@@ -2,7 +2,6 @@ from dishka import Provider, Scope, provide
 from sqlalchemy.orm import Session
 
 from app.homework.application.event_handlers import (
-    HomeworkGradedNotificationHandler,
     HomeworkNotificationHandler,
 )
 from app.homework.application.use_cases import (
@@ -12,7 +11,6 @@ from app.homework.application.use_cases import (
 from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.homework.infrastructure.repository import (
     HomeworkRepository,
-    HomeworkSubmissionRepository,
 )
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
 from app.shared.infrastructure.discord_service import DiscordService
@@ -34,39 +32,37 @@ class HomeworkModuleProvider(Provider):
         return HomeworkRepository(session)
 
     @provide
-    def get_submission_repo(self, session: Session) -> HomeworkSubmissionRepository:
-        return HomeworkSubmissionRepository(session)
-
-    @provide
     def get_use_cases(
         self,
         homework_repo: HomeworkRepository,
-        submission_repo: HomeworkSubmissionRepository,
         user_repo: UserRepository,
         team_repo: TeamRepository,
         minio_service: MinioService,
+        quiz_api: QuizApiClient,
+        permission_repo: PermissionRequestRepository,
     ) -> HomeworkUseCases:
         return HomeworkUseCases(
             homework_repo=homework_repo,
-            submission_repo=submission_repo,
             user_repo=user_repo,
             team_repo=team_repo,
             minio_service=minio_service,
+            quiz_api=quiz_api,
+            permission_repo=permission_repo,
         )
-
+    
     @provide
     def get_check_overdue_use_case(
         self,
         homework_repo: HomeworkRepository,
-        submission_repo: HomeworkSubmissionRepository,
         permission_repo: PermissionRequestRepository,
         quiz_api: QuizApiClient,
+        user_repo: UserRepository,
     ) -> CheckOverdueHomeworkUseCase:
         return CheckOverdueHomeworkUseCase(
             homework_repo=homework_repo,
-            submission_repo=submission_repo,
             permission_repo=permission_repo,
             quiz_api=quiz_api,
+            user_repo=user_repo,
         )
 
 
@@ -82,14 +78,3 @@ class HomeworkModuleProvider(Provider):
             discord_service, homework_repo, user_repo, zalo_bot
         )
 
-    @provide
-    def get_graded_notification_handler(
-        self,
-        discord_service: DiscordService,
-        homework_repo: HomeworkRepository,
-        user_repo: UserRepository,
-        zalo_bot: ZaloBotClient,
-    ) -> HomeworkGradedNotificationHandler:
-        return HomeworkGradedNotificationHandler(
-            discord_service, homework_repo, user_repo, zalo_bot
-        )
