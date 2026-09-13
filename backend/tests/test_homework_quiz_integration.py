@@ -12,13 +12,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.stdout.reconfigure(encoding='utf-8')
 
+import pytest
 from app.homework.domain.entity import Homework
 from app.user.domain.entity import UserEntity
-from app.homework.application.use_cases import CheckOverdueHomeworkUseCase
+from app.homework.application.checker_use_cases import CheckOverdueHomeworkUseCase
 from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.shared.domain.event_bus import EventBus
 
 
+@pytest.mark.asyncio
 async def test_quiz_api_integration():
     print("=" * 60)
     print("Running Test Case 1: Quiz API Integration & Homework Coding Check")
@@ -77,6 +79,7 @@ async def test_quiz_api_integration():
     print("=" * 60)
 
 
+@pytest.mark.asyncio
 async def test_separate_game_and_coding_violations():
     print("=" * 60)
     print("Running Test Case 2: Separate Game & Coding Tickets + Full Game Check")
@@ -140,6 +143,7 @@ async def test_separate_game_and_coding_violations():
     print("=" * 60)
 
 
+@pytest.mark.asyncio
 async def test_with_valid_and_expired_permission_requests():
     print("=" * 60)
     print("Running Test Case 3: Permission Requests (Valid vs Expired)")

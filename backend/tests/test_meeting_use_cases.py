@@ -8,7 +8,7 @@ backend_dir = Path(__file__).resolve().parent.parent
 if str(backend_dir) not in sys.path:
     sys.path.insert(0, str(backend_dir))
 
-from app.meeting.application.use_cases import CheckMeetingAttendanceUseCase
+from app.meeting.application.attendance_use_cases import CheckMeetingAttendanceUseCase
 from app.meeting.domain.entity import Meeting, MeetingParticipant
 from app.meeting.domain.value_objects import ParticipantStatus
 from app.permission_request.domain.entity import PermissionRequest

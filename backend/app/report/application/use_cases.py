@@ -108,7 +108,7 @@ class GetMonthlyActivityDatesUseCase:
         return sorted(list(activity_dates))
 
 
-from app.homework.application.use_cases import HomeworkUseCases
+from app.homework.application.crud_use_cases import HomeworkUseCases
 
 
 class GetDashboardOverviewUseCase:
