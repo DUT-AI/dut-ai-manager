@@ -431,19 +431,24 @@ class HomeworkUseCases:
             # --- Coding Status ---
             if uid in coding_completed_uids:
                 entry = coding_map.get(uid, {})
-                submitted_at_str = entry.get("submitted_at") or entry.get("completed_at")
+                submitted_at_str = (
+                    entry.get("submitted_at")
+                    or entry.get("completed_at")
+                    or entry.get("updated_at")
+                    or entry.get("created_at")
+                )
                 is_late = False
                 if submitted_at_str:
                     try:
-                        sub_dt = datetime.fromisoformat(str(submitted_at_str).replace("Z", "+00:00")).replace(tzinfo=None)
+                        sub_dt = datetime.fromisoformat(
+                            str(submitted_at_str).replace("Z", "+00:00")
+                        ).replace(tzinfo=None)
                         if sub_dt > effective_deadline:
                             is_late = True
                     except Exception:
-                        if now > effective_deadline:
-                            is_late = True
-                else:
-                    if now > effective_deadline:
-                        is_late = True
+                        pass
+                elif entry.get("is_late") is True:
+                    is_late = True
 
                 coding_submitted.append(
                     UserSubmissionInfo(
@@ -467,19 +472,24 @@ class HomeworkUseCases:
             # --- Game Status ---
             if uid in game_completed_uids:
                 entry = game_map.get(uid, {})
-                submitted_at_str = entry.get("submitted_at") or entry.get("completed_at")
+                submitted_at_str = (
+                    entry.get("submitted_at")
+                    or entry.get("completed_at")
+                    or entry.get("updated_at")
+                    or entry.get("created_at")
+                )
                 is_late = False
                 if submitted_at_str:
                     try:
-                        sub_dt = datetime.fromisoformat(str(submitted_at_str).replace("Z", "+00:00")).replace(tzinfo=None)
+                        sub_dt = datetime.fromisoformat(
+                            str(submitted_at_str).replace("Z", "+00:00")
+                        ).replace(tzinfo=None)
                         if sub_dt > effective_deadline:
                             is_late = True
                     except Exception:
-                        if now > effective_deadline:
-                            is_late = True
-                else:
-                    if now > effective_deadline:
-                        is_late = True
+                        pass
+                elif entry.get("is_late") is True:
+                    is_late = True
 
                 game_submitted.append(
                     UserSubmissionInfo(
