@@ -12,32 +12,41 @@ from app.homework.infrastructure.model import (
 )
 
 
+from app.shared.domain.query_support import QuerySupport, apply_query_support
+
+
 class HomeworkRepository:
     def __init__(self, session: Session):
         self.session = session
 
     def get_all(
-        self, skip: int = 0, limit: int = 100, deleted: bool = False
+        self,
+        query_support: QuerySupport | None = None,
+        skip: int = 0,
+        limit: int = 100,
+        deleted: bool = False,
     ) -> list[HomeworkEntity]:
-        """Get all homeworks optionally with pagination."""
-        statement = (
-            select(HomeworkModel)
-            .where(HomeworkModel.is_deleted == deleted)
-            .order_by(
-                desc(
-                    cast(
-                        Any,
-                        (
-                            HomeworkModel.updated_at
-                            if deleted
-                            else HomeworkModel.created_at
-                        ),
+        """Get all homeworks optionally with query support or pagination."""
+        statement = select(HomeworkModel).where(HomeworkModel.is_deleted == deleted)
+        if query_support:
+            statement = apply_query_support(statement, HomeworkModel, query_support)
+        else:
+            statement = (
+                statement.order_by(
+                    desc(
+                        cast(
+                            Any,
+                            (
+                                HomeworkModel.updated_at
+                                if deleted
+                                else HomeworkModel.created_at
+                            ),
+                        )
                     )
                 )
+                .offset(skip)
+                .limit(limit)
             )
-            .offset(skip)
-            .limit(limit)
-        )
         models = self.session.scalars(statement).all()
         return [m.to_entity() for m in models]
 
@@ -138,13 +147,8 @@ class HomeworkRepository:
     def get_by_deadline_date(self, target_date: Any) -> list[HomeworkEntity]:
         statement = (
             select(HomeworkModel)
-            .options(
-                selectinload(HomeworkModel.submissions).joinedload(
-                    HomeworkSubmissionModel.owner
-                )
-            )
             .where(
-                HomeworkModel.is_deleted == False,
+                HomeworkModel.is_deleted == False,  # noqa: E712
                 func.date(HomeworkModel.deadline) == target_date,
             )
         )
@@ -160,6 +164,15 @@ class HomeworkRepository:
             self.session.flush()
             return True
         return False
+
+    def save(self, homework: HomeworkEntity) -> HomeworkEntity:
+        if homework.id:
+            res = self.update(homework)
+            return res if res else homework
+        return self.create(homework)
+
+    def delete(self, homework_id: int) -> bool:
+        return self.delete_by_id(homework_id)
 
     def restore(self, homework_id: int) -> HomeworkEntity | None:
         statement = select(HomeworkModel).where(

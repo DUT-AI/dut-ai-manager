@@ -1,12 +1,10 @@
 from dishka import Provider, Scope, provide
 from sqlalchemy.orm import Session
 
+from app.homework.application.checker_use_cases import CheckOverdueHomeworkUseCase
+from app.homework.application.use_cases import HomeworkUseCases
 from app.homework.application.event_handlers import (
     HomeworkNotificationHandler,
-)
-from app.homework.application.use_cases import (
-    CheckOverdueHomeworkUseCase,
-    HomeworkUseCases,
 )
 from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.homework.infrastructure.repository import (

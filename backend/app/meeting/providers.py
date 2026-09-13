@@ -1,21 +1,25 @@
 from dishka import Provider, Scope, provide
 from sqlalchemy.orm import Session
 
+from app.meeting.application.attendance_use_cases import (
+    CheckMeetingAttendanceUseCase,
+    UpdateParticipantStatusUseCase,
+)
 from app.meeting.application.capacity_use_cases import CalculateCurrentCapacityUseCase
-from app.meeting.application.event_handlers import MeetingNotificationHandler
-from app.meeting.application.sse_handler import MeetingSseHandler
-from app.meeting.application.use_cases import (
+from app.meeting.application.checkin_use_cases import (
     CheckInUseCase,
     CheckInWithCardUseCase,
-    CheckMeetingAttendanceUseCase,
     CheckOutUseCase,
+)
+from app.meeting.application.crud_use_cases import (
     CreateMeetingUseCase,
     DeleteMeetingUseCase,
     GetMeetingsUseCase,
     MeetingUseCases,
     UpdateMeetingUseCase,
-    UpdateParticipantStatusUseCase,
 )
+from app.meeting.application.event_handlers import MeetingNotificationHandler
+from app.meeting.application.sse_handler import MeetingSseHandler
 from app.meeting.infrastructure.repository import (
     MeetingRepository,
     ParticipantRepository,

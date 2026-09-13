@@ -7,16 +7,18 @@ from fastapi.responses import StreamingResponse
 
 from app.core.deps import CurrentUser, hasPermission
 from app.core.permissions import MeetingPermission
+from app.meeting.application.attendance_use_cases import UpdateParticipantStatusUseCase
 from app.meeting.application.capacity_use_cases import CalculateCurrentCapacityUseCase
-from app.meeting.application.use_cases import (
+from app.meeting.application.checkin_use_cases import (
     CheckInUseCase,
     CheckInWithCardUseCase,
     CheckOutUseCase,
+)
+from app.meeting.application.crud_use_cases import (
     CreateMeetingUseCase,
     DeleteMeetingUseCase,
     GetMeetingsUseCase,
     UpdateMeetingUseCase,
-    UpdateParticipantStatusUseCase,
 )
 from app.meeting.domain.value_objects import CapacityMonitor
 from app.meeting.schemas import (
