@@ -1,6 +1,6 @@
 from datetime import date
 
-from sqlalchemy import desc, extract, func, select
+from sqlalchemy import desc, extract, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.meeting.infrastructure.model import Meeting
@@ -163,6 +163,28 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
 
         rows = self.session.scalars(stmt).unique().all()
         return {r for r in rows if r is not None}
+
+    def get_requests_for_meetings(
+        self, meeting_ids: list[int], user_ids: list[int]
+    ) -> list[DomainEntity]:
+        """Lấy tất cả đơn xin phép liên quan đến danh sách meeting_id hoặc user_id."""
+        if not user_ids:
+            return []
+
+        stmt = select(ORMModel).where(
+            ORMModel.is_deleted == False,  # noqa: E712
+            ORMModel.created_by.in_(user_ids),
+        )
+        if meeting_ids:
+            stmt = stmt.where(
+                or_(
+                    ORMModel.meeting_id.in_(meeting_ids),
+                    ORMModel.meeting_id.is_(None),
+                )
+            )
+
+        rows = self.session.scalars(stmt).unique().all()
+        return [r.to_entity() for r in rows]
 
     def get_postpone_requests_for_homeworks(
         self, homework_ids: list[int], user_ids: list[int]

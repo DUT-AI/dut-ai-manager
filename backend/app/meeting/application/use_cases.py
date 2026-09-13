@@ -18,6 +18,7 @@ from app.meeting.infrastructure.repository import (
     ParticipantRepository,
 )
 from app.meeting.schemas import MeetingUpdate
+from app.permission_request.domain.entity import PermissionRequest
 from app.permission_request.domain.value_objects import RequestCategory
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
 from app.shared.application.query_support_utils import build_query_support
@@ -28,6 +29,7 @@ from app.shared.infrastructure.minio_service import MinioService
 from app.team.infrastructure.repository import TeamRepository
 from app.user.infrastructure.repository import UserRepository
 from app.utils.datetime import get_current_utc7_time
+from app.violation.application.use_cases import CreateViolationUseCase
 
 
 def _parse_client_time_to_utc7_naive(client_time: str) -> datetime:
@@ -43,86 +45,164 @@ def _parse_client_time_to_utc7_naive(client_time: str) -> datetime:
 
 
 class CheckMeetingAttendanceUseCase:
-    """Kiểm tra điểm danh các buổi họp & tạo vi phạm tự động"""
+    """Kiểm tra điểm danh các buổi họp & tạo vi phạm tự động lúc 23:59 hàng ngày"""
 
     def __init__(
         self,
         meeting_repo: MeetingRepository,
+        participant_repo: ParticipantRepository,
         permission_repo: PermissionRequestRepository,
+        create_violation_use_case: CreateViolationUseCase,
     ):
         self.meeting_repo = meeting_repo
+        self.participant_repo = participant_repo
         self.permission_repo = permission_repo
+        self.create_violation_use_case = create_violation_use_case
 
-    async def execute(self, target_date: date | None = None):
+    async def execute(self, target_date: date | None = None) -> int:
         """
-        Logic:
-        1. Lấy tất cả các buổi họp diễn ra trong ngày hôm nay.
-        2. Với mỗi buổi họp:
-           - Duyệt qua danh sách người tham gia (participants).
-           - Nếu người tham gia chưa điểm danh (status != ATTENDED):
-             - Kiểm tra xem họ có đơn xin vắng (ABSENCE) cho ngày hôm đó không.
-             - Nếu KHÔNG → tạo Vi phạm.
+        Quét các buổi họp trong ngày (target_date) có require_check_in=True:
+        1. Người không check-in:
+           - Có đơn xin vắng -> Cập nhật trạng thái ABSENT_EXCUSED (Không vi phạm)
+           - Không xin phép -> Cập nhật trạng thái ABSENT_UNEXCUSED + Tạo vi phạm "Vắng sinh hoạt: [Title] (Không xin phép)"
+        2. Người đã check-in:
+           - Tự động bổ sung check_out_at = meeting.end_time nếu chưa check-out.
+           - Không trễ -> Cập nhật trạng thái COMPLETED (Không vi phạm)
+           - Trễ không xin phép -> Cập nhật trạng thái LATE_UNEXCUSED + Tạo vi phạm "Đi trễ sinh hoạt: [Title] (Không xin phép)"
+           - Trễ nhưng đúng hạn trong đơn -> Cập nhật trạng thái LATE_EXCUSED (Không vi phạm)
+           - Trễ quá thời gian xin phép -> Cập nhật trạng thái LATE_UNEXCUSED + Tạo vi phạm "Đi trễ hơn thời gian xin phép (HH:MM): [Title]"
         """
         if target_date is None:
             now = get_current_utc7_time()
             target_date = now.date()
 
         meetings = self.meeting_repo.get_by_date(target_date)
-
         if not meetings:
             return 0
 
-        # Tối ưu N+1: Thu thập toàn bộ user_id cần kiểm tra
-        all_participant_user_ids = []
-        for meeting in meetings:
-            if not meeting.require_check_in:
-                continue
-            for participant in meeting.participants:
-                if participant.status not in (
-                    ParticipantStatus.JOINED,
-                    ParticipantStatus.COMPLETED,
-                ):
-                    all_participant_user_ids.append(participant.user_id)
+        active_meetings = [m for m in meetings if m.require_check_in]
+        if not active_meetings:
+            return 0
 
-        # Lấy một lần duy nhất các user có đơn xin vắng
-        absence_user_ids = self.permission_repo.get_user_ids_with_requests_for_date(
-            user_ids=all_participant_user_ids,
-            target_date=target_date,
-            category=RequestCategory.ABSENCE,
+        meeting_ids = [m.id for m in active_meetings if m.id is not None]
+        all_user_ids = list(
+            {p.user_id for m in active_meetings for p in m.participants}
         )
 
-        created_count = 0
-        for meeting in meetings:
-            if not meeting.require_check_in:
-                continue
+        if not all_user_ids:
+            return 0
 
+        # Lấy tất cả các đơn xin phép của danh sách user này
+        requests = self.permission_repo.get_requests_for_meetings(
+            meeting_ids, all_user_ids
+        )
+
+        absence_set: set[tuple[int, int | None]] = set()
+        late_request_map: dict[tuple[int, int | None], PermissionRequest] = {}
+
+        for req in requests:
+            if req.category == RequestCategory.ABSENCE:
+                if req.meeting_id:
+                    absence_set.add((req.user_id, req.meeting_id))
+                else:
+                    absence_set.add((req.user_id, None))
+            elif req.category == RequestCategory.LATE:
+                if req.meeting_id:
+                    late_request_map[(req.user_id, req.meeting_id)] = req
+                else:
+                    late_request_map[(req.user_id, None)] = req
+
+        created_violations_count = 0
+        now_utc7 = get_current_utc7_time()
+        violation_date = (
+            datetime.combine(target_date, datetime.min.time())
+            if target_date != now_utc7.date()
+            else now_utc7
+        )
+
+        for meeting in active_meetings:
+            m_id = meeting.id or 0
             for participant in meeting.participants:
-                # Nếu đã điểm danh (JOINED hoặc COMPLETED) thì bỏ qua
-                if participant.status in (
-                    ParticipantStatus.JOINED,
-                    ParticipantStatus.COMPLETED,
-                ):
-                    continue
-
                 user_id = participant.user_id
-                meeting_date = meeting.start_time.date()
 
-                # Kiểm tra đơn xin vắng (Thao tác trong bộ nhớ trên tập hợp "set")
-                if user_id in absence_user_ids:
-                    continue
+                has_absence_perm = (user_id, m_id) in absence_set or (
+                    user_id,
+                    None,
+                ) in absence_set
+                late_perm = late_request_map.get(
+                    (user_id, m_id)
+                ) or late_request_map.get((user_id, None))
 
-                # Phát sự kiện phát hiện vắng mặt không phép
-                await EventBus.publish(
-                    MeetingAbsenceDetected(
-                        user_id=user_id,
-                        meeting_id=meeting.id if meeting.id else 0,
-                        meeting_title=meeting.title,
-                        meeting_date=str(meeting_date),
-                    )
-                )
-                created_count += 1
+                # Trường hợp A: Không check-in
+                if participant.check_in_at is None:
+                    if has_absence_perm:
+                        participant.status = ParticipantStatus.ABSENT_EXCUSED
+                        self.participant_repo.save(participant)
+                    else:
+                        participant.status = ParticipantStatus.ABSENT_UNEXCUSED
+                        self.participant_repo.save(participant)
 
-        return created_count
+                        reason = f"Vắng sinh hoạt: {meeting.title} (Không xin phép)"
+                        violations = await self.create_violation_use_case.execute(
+                            user_ids=[user_id],
+                            reason=reason,
+                            date=violation_date,
+                            is_system=True,
+                        )
+                        if violations:
+                            created_violations_count += len(violations)
+
+                # Trường hợp B: Đã check-in
+                else:
+                    # Tự động gán check_out_at nếu quên check-out
+                    if participant.check_out_at is None:
+                        participant.check_out_at = meeting.end_time
+
+                    is_late = meeting.is_late(participant.check_in_at)
+                    if not is_late:
+                        participant.status = ParticipantStatus.COMPLETED
+                        self.participant_repo.save(participant)
+                    else:
+                        if late_perm is None:
+                            participant.status = ParticipantStatus.LATE_UNEXCUSED
+                            self.participant_repo.save(participant)
+
+                            reason = f"Đi trễ sinh hoạt: {meeting.title} (Không xin phép)"
+                            violations = await self.create_violation_use_case.execute(
+                                user_ids=[user_id],
+                                reason=reason,
+                                date=violation_date,
+                                is_system=True,
+                            )
+                            if violations:
+                                created_violations_count += len(violations)
+                        else:
+                            if (
+                                late_perm.start_time
+                                and participant.check_in_at <= late_perm.start_time
+                            ):
+                                participant.status = ParticipantStatus.LATE_EXCUSED
+                                self.participant_repo.save(participant)
+                            else:
+                                participant.status = ParticipantStatus.LATE_UNEXCUSED
+                                self.participant_repo.save(participant)
+
+                                limit_str = (
+                                    late_perm.start_time.strftime("%H:%M")
+                                    if late_perm.start_time
+                                    else "thời gian quy định"
+                                )
+                                reason = f"Đi trễ hơn thời gian xin phép ({limit_str}): {meeting.title}"
+                                violations = await self.create_violation_use_case.execute(
+                                    user_ids=[user_id],
+                                    reason=reason,
+                                    date=violation_date,
+                                    is_system=True,
+                                )
+                                if violations:
+                                    created_violations_count += len(violations)
+
+        return created_violations_count
 
 
 class GetMeetingsUseCase:
@@ -335,11 +415,9 @@ class CheckInUseCase:
                     )
                     continue
 
-                # Logic: Lateness check & status assignment
+                # Logic: Check-in records participant as JOINED; lateness & violation checks are evaluated at 23:59 daily job
                 is_late = meeting.is_late(check_in_dt)
-                target_status = ParticipantStatus.LATE_UNEXCUSED if is_late else ParticipantStatus.JOINED
-
-                success, msg = participant.check_in(check_in_dt, image_url, status=target_status)
+                success, msg = participant.check_in(check_in_dt, image_url, status=ParticipantStatus.JOINED)
                 if not success:
                     messages.append(msg)
                     updated_participants.append(participant)
