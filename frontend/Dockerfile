@@ -23,7 +23,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Build argument for API URL
-ARG VITE_API_URL=http://localhost:8000
+ARG VITE_API_URL=/api/v1
 ENV VITE_API_URL=${VITE_API_URL}
 
 # Build the application
