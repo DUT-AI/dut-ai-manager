@@ -146,30 +146,6 @@ def upgrade() -> None:
                 {"hw_id": hw_id, "uid": uid},
             )
 
-        # Lookup team_ids for legacy_uids in team_members
-        team_rows = bind.execute(
-            sa.text(
-                "SELECT DISTINCT team_id FROM team_members WHERE user_id IN :uids AND is_deleted = false"
-            ).bindparams(sa.bindparam("uids", expanding=True)),
-            {"uids": list(legacy_uids)},
-        ).fetchall()
-
-        # Insert team_ids into homework_teams with homework's original created_at
-        for (tid,) in team_rows:
-            if tid:
-                bind.execute(
-                    sa.text(
-                        """
-                        INSERT INTO homework_teams (homework_id, team_id, is_deleted, created_at, updated_at)
-                        SELECT :hw_id, :tid, false, created_at, NOW() FROM homeworks WHERE id = :hw_id
-                        AND NOT EXISTS (
-                            SELECT 1 FROM homework_teams WHERE homework_id = :hw_id AND team_id = :tid AND is_deleted = false
-                        )
-                        """
-                    ),
-                    {"hw_id": hw_id, "tid": tid},
-                )
-
 
 def downgrade() -> None:
     """Downgrade schema."""

@@ -227,18 +227,11 @@ class RescanAllHomeworksUseCase:
                         legacy_uids.update(game_uids)
 
                 if legacy_uids:
-                    target_teams: set[int] = set()
-                    if self.team_repo:
-                        for uid in legacy_uids:
-                            tids = self.team_repo.get_team_ids_by_user(uid)
-                            if tids:
-                                target_teams.update(tids)
-
                     if hasattr(self.homework_repo, "sync_assignees_and_teams"):
                         self.homework_repo.sync_assignees_and_teams(
                             hw.id,
                             assignee_ids=list(legacy_uids),
-                            team_ids=list(target_teams),
+                            team_ids=None,
                         )
 
             # Thực thi kiểm tra vi phạm cho bài tập này
