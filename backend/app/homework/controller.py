@@ -6,6 +6,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 
 from app.core.deps import CurrentUser, hasPermission
 from app.core.permissions import HomeworkPermission, HomeworkSubmissionPermission
+from app.homework.application.checker_use_cases import RescanAllHomeworksUseCase
 from app.homework.application.dtos import (
     HomeworkCreate,
     HomeworkReportResponse,
@@ -34,6 +35,23 @@ async def get_all_homeworks(
 ):
     result = use_cases.get_all(skip=skip, limit=limit, deleted=deleted)
     return ApiResponse.success(data=result)
+
+
+@router.post(
+    "/admin/rescan-all",
+    response_model=ApiResponse[dict[str, Any]],
+    dependencies=[hasPermission(HomeworkPermission.CREATE)],
+)
+@inject
+async def rescan_all_homeworks(
+    rescan_use_case: FromDishka[RescanAllHomeworksUseCase],
+    dry_run: bool = Query(False, description="Chạy thử nghiệm không lưu DB"),
+):
+    """Admin API: Quét lại toàn bộ bài tập (cũ & mới) và tạo lại vi phạm chuẩn"""
+    count = await rescan_use_case.execute(auto_sync_legacy=not dry_run)
+    return ApiResponse.success(
+        data={"message": "Rescan completed", "violations_processed": count, "dry_run": dry_run}
+    )
 
 
 @router.get(

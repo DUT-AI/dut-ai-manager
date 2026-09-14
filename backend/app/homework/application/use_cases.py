@@ -35,6 +35,7 @@ from app.homework.domain.entity import Homework as HomeworkEntity
 from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.homework.infrastructure.repository import HomeworkRepository
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
+from app.shared.domain.query_support import QuerySupport
 from app.shared.domain.value_objects import UserRef
 from app.shared.infrastructure.minio_service import MinioService
 from app.team.infrastructure.repository import TeamRepository
@@ -98,10 +99,6 @@ class HomeworkUseCases:
             if repo_uids:
                 assigned_uids.update(repo_uids)
 
-        if not assigned_uids and hasattr(self, "user_repo") and self.user_repo:
-            active_users = self.user_repo.get_active_users()
-            assigned_uids.update({u.id for u in active_users if u.id is not None})
-
         return assigned_uids
 
     def get_by_id(self, homework_id: int) -> HomeworkEntity | None:
@@ -114,6 +111,11 @@ class HomeworkUseCases:
         self, user_id: int, skip: int = 0, limit: int = 100
     ) -> list[HomeworkEntity]:
         return self.get_homeworks.get_assigned_to_user(user_id, skip=skip, limit=limit)
+
+    def get_query_support(
+        self, query_support: QuerySupport, deleted: bool = False
+    ) -> list[HomeworkEntity]:
+        return self.get_homeworks.get_query_support(query_support, deleted=deleted)
 
     async def create(
         self, data: HomeworkCreate, attachment: Any = None
@@ -159,12 +161,13 @@ class HomeworkUseCases:
         for hw in homeworks:
             slug = self._extract_slug(hw)
             if slug:
-                if slug not in coding_completed_cache:
+                hw_type = QuizSubmissionHelper.detect_homework_type(hw.link, hw.slug)
+                if hw_type in ("coding", "both") and slug not in coding_completed_cache:
                     c_ids = await QuizSubmissionHelper.get_coding_completed_user_ids(
                         self.quiz_api, slug
                     )
                     coding_completed_cache[slug] = c_ids if c_ids is not None else set()
-                if slug not in game_completed_cache:
+                if hw_type in ("game", "both") and slug not in game_completed_cache:
                     g_ids = await QuizSubmissionHelper.get_game_completed_user_ids(
                         self.quiz_api, slug
                     )
@@ -208,17 +211,15 @@ class HomeworkUseCases:
                 slug = self._extract_slug(hw)
 
                 if slug:
-                    is_coding_submitted = user.id in coding_completed_cache.get(
-                        slug, set()
-                    )
-                    is_game_submitted = user.id in game_completed_cache.get(
-                        slug, set()
-                    )
-
-                    if not is_coding_submitted:
-                        unsubmitted_count += 1
-                    if not is_game_submitted:
-                        unsubmitted_count += 1
+                    hw_type = QuizSubmissionHelper.detect_homework_type(hw.link, hw.slug)
+                    if hw_type in ("coding", "both"):
+                        is_coding_submitted = user.id in coding_completed_cache.get(slug, set())
+                        if not is_coding_submitted:
+                            unsubmitted_count += 1
+                    if hw_type in ("game", "both"):
+                        is_game_submitted = user.id in game_completed_cache.get(slug, set())
+                        if not is_game_submitted:
+                            unsubmitted_count += 1
                 else:
                     if hw.deadline and hw.deadline.replace(tzinfo=None) > now:
                         unsubmitted_count += 1
