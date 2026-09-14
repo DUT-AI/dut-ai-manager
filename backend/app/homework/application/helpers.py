@@ -22,12 +22,16 @@ class QuizSubmissionHelper:
             return slug.strip()
         if link and link.strip():
             link_clean = link.strip()
-            match = re.search(r"/(?:homeworks|game)/([^/?#]+)", link_clean)
+            match = re.search(r"/(?:homeworks|game|lessons)/([^/?#]+)", link_clean)
             if match:
                 return match.group(1).strip()
             if link_clean.startswith("http://") or link_clean.startswith("https://"):
                 candidate = link_clean.rstrip("/").split("/")[-1].split("?")[0].split("#")[0].strip()
                 if candidate and len(candidate) > 1 and " " not in candidate:
+                    if candidate.lower() in ("game", "homeworks", "coding"):
+                        parts = [p for p in link_clean.rstrip("/").split("/") if p]
+                        if len(parts) >= 2:
+                            return parts[-2].strip()
                     return candidate
         return None
 
@@ -35,6 +39,11 @@ class QuizSubmissionHelper:
     def extract_slug_from_entity(cls, homework: HomeworkEntity) -> str | None:
         """Trích xuất slug từ Homework entity."""
         return cls.extract_slug(homework.link, homework.slug)
+
+    @staticmethod
+    def detect_homework_type(link: str | None, slug: str | None) -> str:
+        """Tự động kiểm tra cả Coding và Game; nếu mục nào Quiz API trả về 404/None sẽ tự động bỏ qua."""
+        return "both"
 
     @staticmethod
     async def get_coding_completed_map(quiz_api: QuizApiClient | None, slug: str) -> dict[int, dict] | None:

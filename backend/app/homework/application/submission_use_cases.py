@@ -57,10 +57,6 @@ class GetHomeworkSubmissionStatusUseCase:
             if repo_uids:
                 assigned_uids.update(repo_uids)
 
-        if not assigned_uids and hasattr(self, "user_repo") and self.user_repo:
-            active_users = self.user_repo.get_active_users()
-            assigned_uids.update({u.id for u in active_users if u.id is not None})
-
         return assigned_uids
 
     async def execute(self, homework_id: int) -> HomeworkSubmissionStatusResponse | None:

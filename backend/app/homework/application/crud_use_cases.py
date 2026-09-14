@@ -180,13 +180,11 @@ class CreateHomeworkUseCase:
 
         homework = HomeworkEntity(
             title=data.title,
-            description=data.description,
             deadline=data.deadline,
             link=data.link,
             slug=data.slug,
-            attachment_url=attachment_url,
-            assigned_user_ids=data.assigned_user_ids or [],
-            assigned_team_ids=data.assigned_team_ids or [],
+            assignee_ids=data.assignee_ids or [],
+            team_ids=data.team_ids or [],
         )
 
         return self.homework_repo.save(homework)
@@ -217,28 +215,16 @@ class UpdateHomeworkUseCase:
                 "Homework not found", status_code=status.HTTP_404_NOT_FOUND
             )
 
-        attachment_url = existing.attachment_url
-        if attachment:
-            file_content = await attachment.read()
-            filename = f"homeworks/{get_current_utc7_time().strftime('%Y%m%d_%H%M%S')}_{attachment.filename}"
-            attachment_url = await self.minio_service.upload_file(
-                file_data=file_content,
-                filename=filename,
-                content_type=attachment.content_type or "application/octet-stream",
-            )
-
         updated = existing.model_copy(
             update={
                 k: v
                 for k, v in {
                     "title": data.title,
-                    "description": data.description,
                     "deadline": data.deadline,
                     "link": data.link,
                     "slug": data.slug,
-                    "attachment_url": attachment_url,
-                    "assigned_user_ids": data.assigned_user_ids,
-                    "assigned_team_ids": data.assigned_team_ids,
+                    "assignee_ids": data.assignee_ids,
+                    "team_ids": data.team_ids,
                 }.items()
                 if v is not None
             }

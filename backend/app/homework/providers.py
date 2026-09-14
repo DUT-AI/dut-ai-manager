@@ -1,7 +1,10 @@
 from dishka import Provider, Scope, provide
 from sqlalchemy.orm import Session
 
-from app.homework.application.checker_use_cases import CheckOverdueHomeworkUseCase
+from app.homework.application.checker_use_cases import (
+    CheckOverdueHomeworkUseCase,
+    RescanAllHomeworksUseCase,
+)
 from app.homework.application.use_cases import HomeworkUseCases
 from app.homework.application.event_handlers import (
     HomeworkNotificationHandler,
@@ -55,12 +58,31 @@ class HomeworkModuleProvider(Provider):
         permission_repo: PermissionRequestRepository,
         quiz_api: QuizApiClient,
         user_repo: UserRepository,
+        team_repo: TeamRepository,
     ) -> CheckOverdueHomeworkUseCase:
         return CheckOverdueHomeworkUseCase(
             homework_repo=homework_repo,
             permission_repo=permission_repo,
             quiz_api=quiz_api,
             user_repo=user_repo,
+            team_repo=team_repo,
+        )
+
+    @provide
+    def get_rescan_all_use_case(
+        self,
+        homework_repo: HomeworkRepository,
+        permission_repo: PermissionRequestRepository,
+        quiz_api: QuizApiClient,
+        user_repo: UserRepository,
+        team_repo: TeamRepository,
+    ) -> RescanAllHomeworksUseCase:
+        return RescanAllHomeworksUseCase(
+            homework_repo=homework_repo,
+            permission_repo=permission_repo,
+            quiz_api=quiz_api,
+            user_repo=user_repo,
+            team_repo=team_repo,
         )
 
 

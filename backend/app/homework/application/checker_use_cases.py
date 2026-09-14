@@ -57,10 +57,6 @@ class CheckOverdueHomeworkUseCase:
             if repo_uids:
                 assigned_uids.update(repo_uids)
 
-        if not assigned_uids and hasattr(self, "user_repo") and self.user_repo:
-            active_users = self.user_repo.get_active_users()
-            assigned_uids.update({u.id for u in active_users if u.id is not None})
-
         return assigned_uids
 
     async def execute(self, target_date: date | None = None) -> int:
@@ -70,7 +66,8 @@ class CheckOverdueHomeworkUseCase:
         2. Kiểm tra xem họ có hoàn thành Coding và Game (nếu có) trên Quiz API không.
         3. Nếu CHƯA hoàn thành:
            - Kiểm tra xem có đơn xin tạm hoãn (POSTPONE) chưa hết hạn hay không.
-           - Nếu KHÔNG có đơn hợp lệ -> Phát sự kiện HomeworkOverdueDetected để hệ thống tự động tạo Vi phạm.
+           - Nếu KHÔNG có đơn hợp lệ -> Phát đúng 1 sự kiện HomeworkOverdueDetected duy nhất
+             gộp lý do tất cả bài coding/game còn thiếu để tự động tạo Vi phạm.
         """
         if target_date is None:
             now = get_current_utc7_time()
@@ -94,8 +91,15 @@ class CheckOverdueHomeworkUseCase:
                 )
                 continue
 
-            coding_completed_uids = await QuizSubmissionHelper.get_coding_completed_user_ids(self.quiz_api, slug)
-            game_completed_uids = await QuizSubmissionHelper.get_game_completed_user_ids(self.quiz_api, slug)
+            hw_type = QuizSubmissionHelper.detect_homework_type(homework.link, homework.slug)
+
+            coding_completed_uids = None
+            if hw_type in ("coding", "both"):
+                coding_completed_uids = await QuizSubmissionHelper.get_coding_completed_user_ids(self.quiz_api, slug)
+
+            game_completed_uids = None
+            if hw_type in ("game", "both"):
+                game_completed_uids = await QuizSubmissionHelper.get_game_completed_user_ids(self.quiz_api, slug)
 
             assigned_uids = self._get_effective_assigned_user_ids(homework)
             if not assigned_uids:
@@ -109,22 +113,6 @@ class CheckOverdueHomeworkUseCase:
             now_naive = get_current_utc7_time().replace(tzinfo=None)
 
             for user_id in assigned_uids:
-                is_coding_done = (
-                    coding_completed_uids is not None and user_id in coding_completed_uids
-                )
-                is_game_done = (
-                    game_completed_uids is not None and user_id in game_completed_uids
-                )
-
-                uncompleted_types = []
-                if coding_completed_uids is not None and not is_coding_done:
-                    uncompleted_types.append("code")
-                if game_completed_uids is not None and not is_game_done:
-                    uncompleted_types.append("game")
-
-                if not uncompleted_types:
-                    continue
-
                 req = postpone_map.get((user_id, homework.id))
                 has_valid_postpone = False
                 if req and req.start_time:
@@ -142,25 +130,120 @@ class CheckOverdueHomeworkUseCase:
                     )
                     continue
 
-                for ticket_type in uncompleted_types:
-                    reason_msg = (
-                        f"Chưa hoàn thành bài tập {ticket_type} ({homework.title}) quá thời gian xin hẹn"
-                        if req
-                        else f"Chưa hoàn thành bài tập {ticket_type} ({homework.title}) và không phép"
+                uncompleted_labels = []
+                if hw_type in ("coding", "both"):
+                    is_coding_done = (
+                        coding_completed_uids is not None and user_id in coding_completed_uids
                     )
+                    if not is_coding_done:
+                        uncompleted_labels.append("bài tập coding")
 
-                    await self.event_bus.publish(
-                        cast(
-                            DomainEvent,
-                            HomeworkOverdueDetected(
-                                user_id=user_id,
-                                homework_id=homework.id,
-                                homework_title=homework.title,
-                                deadline_date=str(homework.deadline.date()),
-                                reason=reason_msg,
-                            ),
-                        )
+                if hw_type in ("game", "both"):
+                    is_game_done = (
+                        game_completed_uids is not None and user_id in game_completed_uids
                     )
-                    created_violations_count += 1
+                    if not is_game_done:
+                        uncompleted_labels.append("trắc nghiệm game")
+
+                if not uncompleted_labels:
+                    continue
+
+                items_str = " và ".join(uncompleted_labels)
+                reason_suffix = "quá thời gian xin hẹn" if req else "và không phép"
+                reason_msg = f"Chưa hoàn thành {items_str} ({homework.title}) {reason_suffix}"
+
+                await self.event_bus.publish(
+                    cast(
+                        DomainEvent,
+                        HomeworkOverdueDetected(
+                            user_id=user_id,
+                            homework_id=homework.id,
+                            homework_title=homework.title,
+                            deadline_date=str(homework.deadline.date()),
+                            reason=reason_msg,
+                        ),
+                    )
+                )
+                created_violations_count += 1
 
         return created_violations_count
+
+
+class RescanAllHomeworksUseCase:
+    """Quét lại toàn bộ bài tập (cũ & mới), đồng bộ team phân công bài cũ và tạo lại vi phạm chuẩn."""
+
+    def __init__(
+        self,
+        homework_repo: HomeworkRepository,
+        permission_repo: PermissionRequestRepository,
+        quiz_api: QuizApiClient,
+        user_repo: UserRepository,
+        team_repo: TeamRepository | None = None,
+        event_bus: type[EventBus] = EventBus,
+    ):
+        self.checker = CheckOverdueHomeworkUseCase(
+            homework_repo=homework_repo,
+            permission_repo=permission_repo,
+            quiz_api=quiz_api,
+            user_repo=user_repo,
+            team_repo=team_repo,
+            event_bus=event_bus,
+        )
+        self.homework_repo = homework_repo
+        self.quiz_api = quiz_api
+        self.team_repo = team_repo
+        self.user_repo = user_repo
+
+    async def execute(self, auto_sync_legacy: bool = True) -> int:
+        """
+        Quét lại toàn bộ các bài tập trong quá khứ có deadline <= hiện tại:
+        1. Đồng bộ các bài tập cũ chưa có dữ liệu trong homework_assignees/homework_teams.
+        2. Chạy kiểm tra vi phạm cho từng bài tập và phát sinh event tạo vi phạm chuẩn.
+        """
+        all_homeworks = self.homework_repo.get_all(limit=1000)
+        now_date = get_current_utc7_time().date()
+        past_homeworks = [
+            hw for hw in all_homeworks if hw.deadline and hw.deadline.date() <= now_date
+        ]
+
+        total_violations_created = 0
+
+        for hw in past_homeworks:
+            if not hw.id:
+                continue
+
+            # Tự động đồng bộ bài tập cũ nếu thiếu assignees/teams
+            assigned_uids = self.checker._get_effective_assigned_user_ids(hw)
+            if not assigned_uids and auto_sync_legacy:
+                slug = QuizSubmissionHelper.extract_slug_from_entity(hw)
+                legacy_uids: set[int] = set()
+
+                if slug:
+                    coding_uids = await QuizSubmissionHelper.get_coding_completed_user_ids(self.quiz_api, slug)
+                    if coding_uids:
+                        legacy_uids.update(coding_uids)
+                    game_uids = await QuizSubmissionHelper.get_game_completed_user_ids(self.quiz_api, slug)
+                    if game_uids:
+                        legacy_uids.update(game_uids)
+
+                if legacy_uids:
+                    target_teams: set[int] = set()
+                    if self.team_repo:
+                        for uid in legacy_uids:
+                            tids = self.team_repo.get_team_ids_by_user(uid)
+                            if tids:
+                                target_teams.update(tids)
+
+                    if hasattr(self.homework_repo, "sync_assignees_and_teams"):
+                        self.homework_repo.sync_assignees_and_teams(
+                            hw.id,
+                            assignee_ids=list(legacy_uids),
+                            team_ids=list(target_teams),
+                        )
+
+            # Thực thi kiểm tra vi phạm cho bài tập này
+            count = await self.checker.execute(target_date=hw.deadline.date())
+            total_violations_created += count
+
+        return total_violations_created
+
