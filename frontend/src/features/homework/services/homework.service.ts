@@ -53,19 +53,11 @@ export const homeworkService = {
         if (data.deadline) formData.append('deadline', typeof data.deadline === 'string' ? data.deadline : (data.deadline as { toISOString: () => string }).toISOString());
         if (data.link !== undefined) formData.append('link', data.link || '');
         if (data.slug !== undefined) formData.append('slug', data.slug || '');
-        if (data.assignee_ids !== undefined) {
-            if (data.assignee_ids.length === 0) {
-                formData.append('assignee_ids', '[]');
-            } else {
-                data.assignee_ids.forEach(id => formData.append('assignee_ids', String(id)));
-            }
+        if (data.assignee_ids && data.assignee_ids.length > 0) {
+            data.assignee_ids.forEach(id => formData.append('assignee_ids', String(id)));
         }
-        if (data.team_ids !== undefined) {
-            if (data.team_ids.length === 0) {
-                formData.append('team_ids', '[]');
-            } else {
-                data.team_ids.forEach(id => formData.append('team_ids', String(id)));
-            }
+        if (data.team_ids && data.team_ids.length > 0) {
+            data.team_ids.forEach(id => formData.append('team_ids', String(id)));
         }
 
         const response = await axiosInstance.put<ApiResponse<Homework>>(`/${this.baseUrl}/${id}`, formData, {
