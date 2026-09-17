@@ -60,7 +60,7 @@ backend-install: ## Install backend dependencies
 	cd backend && uv sync
 
 backend-dev: ## Backend dev server — Postgres lấy từ .env (dùng tunnel: đặt POSTGRES_SERVER=localhost trong .env)
-	cd backend && uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
+	cd backend && uv run python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
 
 backend-test: ## Run backend tests
 	cd backend && uv run pytest

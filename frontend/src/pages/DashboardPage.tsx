@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useLayoutEffect } from 'react';
 import { Layout, Menu, Spin, Tag, Typography, Drawer, Grid } from 'antd';
 import type { MenuProps } from 'antd';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
@@ -13,40 +13,63 @@ const { Content, Sider } = Layout;
 const { Text } = Typography;
 const { useBreakpoint } = Grid;
 
-
+let savedSidebarScrollTop = 0;
 
 interface SidebarContentProps {
     activeKey: string;
     sideMenuItems: MenuProps['items'];
 }
 
-const SidebarContent = ({ activeKey, sideMenuItems }: SidebarContentProps) => (
-    <div className="flex flex-col h-full overflow-hidden">
-        <div className="flex items-center justify-center py-4 shrink-0">
-            {/* Logo area if needed */}
-        </div>
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
-            <Menu
-                mode="inline"
-                selectedKeys={[activeKey]}
-                items={sideMenuItems}
-                className="border-none mt-4 custom-sidebar-menu"
-            />
-        </div>
-        <div className="p-4 border-t border-gray-50 shrink-0">
-            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                <Text className="text-[10px] text-gray-400 font-bold uppercase block mb-2 px-1">Trạng thái</Text>
-                <div className="flex items-center justify-between px-1">
-                    <Tag color="success" className="m-0 rounded-full px-3 text-[10px] font-bold">ONLINE</Tag>
-                    <span className="flex h-2 w-2 relative">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                    </span>
+const SidebarContent = ({ activeKey, sideMenuItems }: SidebarContentProps) => {
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+    useLayoutEffect(() => {
+        if (scrollContainerRef.current && savedSidebarScrollTop > 0) {
+            scrollContainerRef.current.scrollTop = savedSidebarScrollTop;
+            requestAnimationFrame(() => {
+                if (scrollContainerRef.current) {
+                    scrollContainerRef.current.scrollTop = savedSidebarScrollTop;
+                }
+            });
+        }
+    }, [activeKey]);
+
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        savedSidebarScrollTop = e.currentTarget.scrollTop;
+    };
+
+    return (
+        <div className="flex flex-col h-full overflow-hidden">
+            <div className="flex items-center justify-center py-4 shrink-0">
+                {/* Logo area if needed */}
+            </div>
+            <div
+                ref={scrollContainerRef}
+                onScroll={handleScroll}
+                className="flex-1 overflow-y-auto custom-scrollbar"
+            >
+                <Menu
+                    mode="inline"
+                    selectedKeys={[activeKey]}
+                    items={sideMenuItems}
+                    className="border-none mt-4 custom-sidebar-menu"
+                />
+            </div>
+            <div className="p-4 border-t border-gray-50 shrink-0">
+                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                    <Text className="text-[10px] text-gray-400 font-bold uppercase block mb-2 px-1">Trạng thái</Text>
+                    <div className="flex items-center justify-between px-1">
+                        <Tag color="success" className="m-0 rounded-full px-3 text-[10px] font-bold">ONLINE</Tag>
+                        <span className="flex h-2 w-2 relative">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 const DashboardPage = () => {
     const { loading, hasPermission } = useAuth();
@@ -67,6 +90,8 @@ const DashboardPage = () => {
         if (path.includes('/activities')) return 'activities';
         if (path.includes('/permissions')) return 'permissions';
         if (path.includes('/violations')) return 'violations';
+        if (path.includes('/my-homeworks')) return 'my_homeworks';
+        if (path.includes('/homeworks')) return 'homework';
         if (path.includes('/teams')) return 'teams';
         if (path.includes('/profile')) return 'profile_detail';
         if (path.includes('/settings')) return 'settings';

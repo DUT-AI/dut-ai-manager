@@ -4,6 +4,7 @@ Homework CRUD Use Cases — application layer.
 Handles querying, creation, updating, and deletion of Homework entities.
 """
 
+import asyncio
 from fastapi import UploadFile, status
 from loguru import logger
 
@@ -64,18 +65,36 @@ class GetHomeworksUseCase:
     def get_by_id(self, homework_id: int) -> HomeworkEntity | None:
         return self.homework_repo.get_by_id(homework_id)
 
-    def _get_effective_assigned_user_ids(self, homework: HomeworkEntity) -> set[int]:
+    def _get_effective_assigned_user_ids(
+        self,
+        homework: HomeworkEntity,
+        team_cache: dict[tuple[int, ...], list[int]] | None = None,
+    ) -> set[int]:
         assigned_uids: set[int] = set()
-        user_ids = getattr(homework, "assignee_ids", None) or getattr(homework, "assigned_user_ids", None)
+        user_ids = getattr(homework, "assignee_ids", None) or getattr(
+            homework, "assigned_user_ids", None
+        )
         if user_ids:
             assigned_uids.update(user_ids)
 
-        team_ids = getattr(homework, "team_ids", None) or getattr(homework, "assigned_team_ids", None)
+        team_ids = getattr(homework, "team_ids", None) or getattr(
+            homework, "assigned_team_ids", None
+        )
         if team_ids and self.team_repo:
-            team_user_ids = self.team_repo.get_user_ids_by_teams(team_ids)
-            assigned_uids.update(team_user_ids)
+            if team_cache is not None:
+                key = tuple(sorted(team_ids))
+                if key not in team_cache:
+                    team_cache[key] = self.team_repo.get_user_ids_by_teams(team_ids)
+                assigned_uids.update(team_cache[key])
+            else:
+                team_user_ids = self.team_repo.get_user_ids_by_teams(team_ids)
+                assigned_uids.update(team_user_ids)
 
-        if not assigned_uids and homework.id and hasattr(self.homework_repo, "get_assigned_user_ids"):
+        if (
+            not assigned_uids
+            and homework.id
+            and hasattr(self.homework_repo, "get_assigned_user_ids")
+        ):
             repo_uids = self.homework_repo.get_assigned_user_ids(homework.id)
             if repo_uids:
                 assigned_uids.update(repo_uids)
@@ -89,33 +108,66 @@ class GetHomeworksUseCase:
 
     async def get_unsubmitted_for_user(self, user_id: int) -> list[HomeworkEntity]:
         """Lấy danh sách bài tập chưa nộp của user_id (kiểm tra Quiz API hoặc DB vi phạm)."""
-        homeworks = self.homework_repo.get_all()
+        all_homeworks = self.homework_repo.get_all()
         now = get_current_utc7_time()
 
-        slugs = [
-            QuizSubmissionHelper.extract_slug_from_entity(hw)
-            for hw in homeworks
-            if QuizSubmissionHelper.extract_slug_from_entity(hw)
-        ]
+        # 1. Pre-filter homeworks assigned to target user_id
+        team_cache: dict[tuple[int, ...], list[int]] = {}
+        assigned_homeworks: list[HomeworkEntity] = []
+        for hw in all_homeworks:
+            if not hw.id:
+                continue
+            assigned_uids = self._get_effective_assigned_user_ids(
+                hw, team_cache=team_cache
+            )
+            if user_id in assigned_uids:
+                assigned_homeworks.append(hw)
+
+        if not assigned_homeworks:
+            return []
+
+        # 2. Extract unique slugs only for assigned homeworks
+        unique_slugs = list(
+            set(
+                QuizSubmissionHelper.extract_slug_from_entity(hw)
+                for hw in assigned_homeworks
+                if QuizSubmissionHelper.extract_slug_from_entity(hw)
+            )
+        )
 
         coding_completed_cache: dict[str, set[int]] = {}
         game_completed_cache: dict[str, set[int]] = {}
 
-        if self.quiz_api and slugs:
-            for slug in set(slugs):
-                coding_uids = await QuizSubmissionHelper.get_coding_completed_user_ids(self.quiz_api, slug)
-                if coding_uids is not None:
-                    coding_completed_cache[slug] = coding_uids
+        # 3. Fetch Quiz API status in parallel via asyncio.gather
+        if self.quiz_api and unique_slugs:
 
-                game_uids = await QuizSubmissionHelper.get_game_completed_user_ids(self.quiz_api, slug)
-                if game_uids is not None:
-                    game_completed_cache[slug] = game_uids
+            async def fetch_coding(slug: str):
+                uids = await QuizSubmissionHelper.get_coding_completed_user_ids(
+                    self.quiz_api, slug
+                )
+                if uids is not None:
+                    coding_completed_cache[slug] = uids
 
+            async def fetch_game(slug: str):
+                uids = await QuizSubmissionHelper.get_game_completed_user_ids(
+                    self.quiz_api, slug
+                )
+                if uids is not None:
+                    game_completed_cache[slug] = uids
+
+            tasks = []
+            for slug in unique_slugs:
+                tasks.append(fetch_coding(slug))
+                tasks.append(fetch_game(slug))
+            await asyncio.gather(*tasks)
+
+        # 4. Fetch user violation reasons
         user_reasons: list[str] = []
         try:
             from app.core.database import engine
-            from sqlalchemy import select, func, text
+            from sqlalchemy import text
             from sqlalchemy.orm import Session
+
             with Session(engine) as session:
                 stmt = text(
                     "SELECT reason FROM violations WHERE user_id = :uid AND is_deleted = false"
@@ -125,21 +177,16 @@ class GetHomeworksUseCase:
         except Exception as exc:
             logger.warning(f"Error fetching user violations: {exc}")
 
+        # 5. Determine unsubmitted homeworks
         unsubmitted: list[HomeworkEntity] = []
-        for hw in homeworks:
-            if not hw.id:
-                continue
-            assigned_uids = self._get_effective_assigned_user_ids(hw)
-            if user_id not in assigned_uids:
-                continue
-
+        for hw in assigned_homeworks:
             slug = QuizSubmissionHelper.extract_slug_from_entity(hw)
 
             if slug:
-                is_coding_submitted = user_id in coding_completed_cache.get(slug, set())
-                is_game_submitted = user_id in game_completed_cache.get(slug, set())
-                
-                if not is_coding_submitted or not is_game_submitted:
+                coding_set = coding_completed_cache.get(slug, set())
+                game_set = game_completed_cache.get(slug, set())
+
+                if not QuizSubmissionHelper.is_user_submitted(user_id, coding_set, game_set):
                     unsubmitted.append(hw)
             else:
                 if hw.deadline and hw.deadline > now:
@@ -268,7 +315,12 @@ class HomeworkUseCases:
         self.permission_repo = permission_repo
 
         self.get_homeworks = GetHomeworksUseCase(
-            homework_repo, team_repo, minio_service, quiz_api, permission_repo, user_repo
+            homework_repo,
+            team_repo,
+            minio_service,
+            quiz_api,
+            permission_repo,
+            user_repo,
         )
         self.create_homework = (
             CreateHomeworkUseCase(homework_repo, team_repo, minio_service)  # type: ignore
@@ -283,7 +335,11 @@ class HomeworkUseCases:
         self.delete_homework = DeleteHomeworkUseCase(homework_repo)
         self.get_submission_status_uc = (
             GetHomeworkSubmissionStatusUseCase(
-                homework_repo, user_repo, quiz_api, permission_repo, team_repo  # type: ignore
+                homework_repo,
+                user_repo,
+                quiz_api,
+                permission_repo,
+                team_repo,  # type: ignore
             )
             if user_repo and quiz_api
             else None
@@ -333,9 +389,7 @@ class HomeworkUseCases:
             return None
         return await self.get_submission_status_uc.get_submission_status(homework_id)
 
-    async def get_unsubmitted_by_user(
-        self, user_id: int
-    ) -> list[HomeworkEntity]:
+    async def get_unsubmitted_by_user(self, user_id: int) -> list[HomeworkEntity]:
         return await self.get_homeworks.get_unsubmitted_for_user(user_id)
 
     async def get_unsubmitted_report(self) -> list[HomeworkReportResponse]:
@@ -361,5 +415,3 @@ class HomeworkUseCases:
                     )
                 )
         return report
-
-

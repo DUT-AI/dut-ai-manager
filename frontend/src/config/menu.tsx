@@ -21,6 +21,7 @@ import {
     VideoCameraOutlined,
     CreditCardOutlined,
     AuditOutlined,
+    ScheduleOutlined,
 } from '@ant-design/icons';
 
 // Định nghĩa kiểu dữ liệu cho một item trong menu để hỗ trợ phân quyền sau này
@@ -94,9 +95,15 @@ export const sidebarMenuConfig: MenuItemConfig[] = [
         path: '/dashboard/violations',
     },
     {
-        key: 'homework',
+        key: 'my_homeworks',
         icon: <BookOutlined />,
-        label: 'Bài tập về nhà',
+        label: 'Bài tập của tôi',
+        path: '/dashboard/my-homeworks',
+    },
+    {
+        key: 'homework',
+        icon: <ScheduleOutlined />,
+        label: 'Quản lý Bài tập',
         path: '/dashboard/homeworks',
         permission: 'homework:create',
     },
