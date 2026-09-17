@@ -130,20 +130,21 @@ class CheckOverdueHomeworkUseCase:
                     )
                     continue
 
-                uncompleted_labels = []
-                if hw_type in ("coding", "both"):
-                    is_coding_done = (
-                        coding_completed_uids is not None and user_id in coding_completed_uids
-                    )
-                    if not is_coding_done:
-                        uncompleted_labels.append("bài tập coding")
+                coding_set = coding_completed_uids or set()
+                game_set = game_completed_uids or set()
 
-                if hw_type in ("game", "both"):
-                    is_game_done = (
-                        game_completed_uids is not None and user_id in game_completed_uids
-                    )
-                    if not is_game_done:
-                        uncompleted_labels.append("trắc nghiệm game")
+                if QuizSubmissionHelper.is_user_submitted(user_id, coding_set, game_set):
+                    continue
+
+                uncompleted_labels = []
+                has_coding = len(coding_set) > 0
+                has_game = len(game_set) > 0
+
+                if (has_coding or not has_game) and user_id not in coding_set:
+                    uncompleted_labels.append("bài tập coding")
+
+                if has_game and user_id not in game_set:
+                    uncompleted_labels.append("trắc nghiệm game")
 
                 if not uncompleted_labels:
                     continue

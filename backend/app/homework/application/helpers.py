@@ -109,3 +109,32 @@ class QuizSubmissionHelper:
         if completed_map is None:
             return None
         return set(completed_map.keys())
+
+    @staticmethod
+    def is_user_submitted(
+        user_id: int,
+        coding_completed_uids: set[int] | None,
+        game_completed_uids: set[int] | None,
+    ) -> bool:
+        """
+        Kiểm tra xem user_id đã nộp bài tập hay chưa dựa trên cache coding và game.
+        Xử lý thông minh cho bài tập chỉ có Coding, chỉ có Game, hoặc cả hai.
+        """
+        coding_set = coding_completed_uids or set()
+        game_set = game_completed_uids or set()
+
+        is_coding_done = user_id in coding_set
+        is_game_done = user_id in game_set
+
+        has_coding = len(coding_set) > 0
+        has_game = len(game_set) > 0
+
+        if has_coding and has_game:
+            return is_coding_done and is_game_done
+        elif has_coding:
+            return is_coding_done
+        elif has_game:
+            return is_game_done
+        else:
+            return is_coding_done or is_game_done
+

@@ -24,7 +24,7 @@ class QuizApiClient:
         """
         url = f"{self.base_url}/api/v1/game/{game_slug}/leaderboard"
         try:
-            async with httpx.AsyncClient(timeout=30.0, headers=self._get_headers()) as client:
+            async with httpx.AsyncClient(timeout=5.0, headers=self._get_headers()) as client:
                 response = await client.get(url)
                 if response.status_code == 200:
                     data = response.json()
@@ -55,7 +55,7 @@ class QuizApiClient:
         """
         url = f"{self.base_url}/api/v1/homeworks/{homework_slug}/completed-members"
         try:
-            async with httpx.AsyncClient(timeout=30.0, headers=self._get_headers()) as client:
+            async with httpx.AsyncClient(timeout=5.0, headers=self._get_headers()) as client:
                 response = await client.get(url)
                 if response.status_code == 200:
                     res_json = response.json()

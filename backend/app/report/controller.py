@@ -76,7 +76,7 @@ async def get_dashboard_overview(
     Bao gồm: Yêu cầu xin phép, Điểm cộng, Vi phạm, Bài tập chưa nộp, Buổi sinh hoạt tham gia.
     """
     assert current_user.id is not None
-    overview = uc.execute(user_id=current_user.id, month=month, year=year)
+    overview = await uc.execute(user_id=current_user.id, month=month, year=year)
     return ApiResponse.success(data=overview)
 
 

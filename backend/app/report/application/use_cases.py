@@ -108,7 +108,7 @@ class GetMonthlyActivityDatesUseCase:
         return sorted(list(activity_dates))
 
 
-from app.homework.application.crud_use_cases import HomeworkUseCases
+from app.homework.application.use_cases import HomeworkUseCases
 
 
 class GetDashboardOverviewUseCase:
@@ -148,12 +148,12 @@ class GetDashboardOverviewUseCase:
             user_id=user_id, month=month, year=year
         )
 
-        # 4. Assigned Homework (Lấy thực thể bài tập chưa nộp trong tháng được chọn)
+        # 4. Assigned Homework (Lấy các bài tập chưa nộp tính đến tháng được chọn)
         user_unsubmitted = await self.homework_use_cases.get_unsubmitted_by_user(user_id)
         month_unsubmitted = [
             h
             for h in user_unsubmitted
-            if h.deadline and h.deadline.month == month and h.deadline.year == year
+            if not h.deadline or (h.deadline.year < year or (h.deadline.year == year and h.deadline.month <= month))
         ]
 
         # 5. Meetings (Lấy các buổi sinh hoạt mà user tham gia trong tháng)

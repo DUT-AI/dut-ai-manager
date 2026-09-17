@@ -67,6 +67,8 @@ const DashboardPage = () => {
         if (path.includes('/activities')) return 'activities';
         if (path.includes('/permissions')) return 'permissions';
         if (path.includes('/violations')) return 'violations';
+        if (path.includes('/my-homeworks')) return 'my_homeworks';
+        if (path.includes('/homeworks')) return 'homework';
         if (path.includes('/teams')) return 'teams';
         if (path.includes('/profile')) return 'profile_detail';
         if (path.includes('/settings')) return 'settings';

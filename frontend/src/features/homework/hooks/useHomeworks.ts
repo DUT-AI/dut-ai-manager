@@ -17,6 +17,14 @@ export const useHomeworks = () => {
   });
 };
 
+export const useMyHomeworks = () => {
+  return useQuery({
+    queryKey: ['homeworks', 'me'],
+    queryFn: () => homeworkService.getMyHomeworks(),
+    staleTime: 60 * 1000,
+  });
+};
+
 export const useHomework = (id: number) => {
   return useQuery({
     queryKey: homeworkKeys.detail(id),
