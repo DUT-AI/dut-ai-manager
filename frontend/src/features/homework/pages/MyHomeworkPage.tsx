@@ -1,14 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import {
-    Button, Tabs, Space, Typography, Tag, Card, Input, Row, Col, Empty, Spin
+    Button, Tabs, Space, Typography, Input, Row, Col, Empty, Spin
 } from 'antd';
 import {
     BookOutlined,
-    CheckCircleOutlined,
-    ClockCircleOutlined,
-    ExclamationCircleOutlined,
-    ExportOutlined,
-    EyeOutlined,
     SearchOutlined,
     ReloadOutlined
 } from '@ant-design/icons';
@@ -20,7 +15,7 @@ import 'dayjs/locale/vi';
 import { useAuth } from '@/features/auth';
 import { useMyHomeworks, useUnsubmittedByUser } from '../hooks/useHomeworks';
 import type { Homework } from '../types/homework.types';
-import { HomeworkDetailDrawer } from '../components';
+import { HomeworkDetailDrawer, HomeworkCard } from '../components';
 
 dayjs.extend(relativeTime);
 dayjs.locale('vi');
@@ -103,45 +98,6 @@ export const MyHomeworkPage: React.FC = () => {
         refetchUnsub();
     };
 
-    const renderStatusBadge = (record: { isSubmitted: boolean; isOverdue: boolean; deadline: string }) => {
-        if (record.isSubmitted) {
-            return (
-                <Tag icon={<CheckCircleOutlined />} color="success" className="px-3 py-1 text-xs font-semibold rounded-full">
-                    Đã nộp bài
-                </Tag>
-            );
-        }
-        if (record.isOverdue) {
-            return (
-                <Tag icon={<ExclamationCircleOutlined />} color="error" className="px-3 py-1 text-xs font-semibold rounded-full">
-                    Quá hạn nộp
-                </Tag>
-            );
-        }
-        return (
-            <Tag icon={<ClockCircleOutlined />} color="warning" className="px-3 py-1 text-xs font-semibold rounded-full">
-                Chưa nộp
-            </Tag>
-        );
-    };
-
-    const renderDeadlineText = (deadline: string, isOverdue: boolean) => {
-        const d = dayjs(deadline);
-        const formatted = d.format('DD/MM/YYYY HH:mm');
-        const fromNow = d.fromNow();
-
-        return (
-            <div>
-                <div className={`font-medium text-sm ${isOverdue ? 'text-red-600' : 'text-gray-800'}`}>
-                    {formatted}
-                </div>
-                <div className={`text-xs ${isOverdue ? 'text-red-500' : 'text-gray-500'}`}>
-                    {isOverdue ? `Hết hạn ${fromNow}` : `Còn ${fromNow}`}
-                </div>
-            </div>
-        );
-    };
-
     return (
         <motion.div
             variants={containerVariants}
@@ -152,7 +108,7 @@ export const MyHomeworkPage: React.FC = () => {
             {/* Page Header */}
             <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                 <Space size="middle">
-                    <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-sm">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-50 to-indigo-100/60 flex items-center justify-center text-indigo-600 shadow-xs border border-indigo-100">
                         <BookOutlined className="text-2xl" />
                     </div>
                     <div>
@@ -168,7 +124,7 @@ export const MyHomeworkPage: React.FC = () => {
                     icon={<ReloadOutlined />}
                     onClick={handleRefresh}
                     loading={isLoading}
-                    className="h-10 px-4 rounded-lg border-gray-200 hover:border-indigo-500"
+                    className="h-10 px-4 rounded-xl border-gray-200 hover:border-indigo-500 font-medium"
                 >
                     Làm mới
                 </Button>
@@ -178,34 +134,34 @@ export const MyHomeworkPage: React.FC = () => {
             <motion.div variants={itemVariants} className="mb-6">
                 <Row gutter={[16, 16]}>
                     <Col xs={12} sm={6}>
-                        <Card bordered={false} className="bg-indigo-50/60 rounded-xl shadow-2xs">
-                            <Text type="secondary" className="text-xs uppercase font-semibold">Tất cả bài tập</Text>
-                            <Title level={3} className="!mt-1 !mb-0 text-indigo-700">{stats.total}</Title>
-                        </Card>
+                        <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-50/70 via-indigo-50/30 to-slate-50 border border-indigo-100/70 shadow-2xs hover:shadow-xs transition-all">
+                            <Text type="secondary" className="text-xs uppercase font-bold tracking-wider text-indigo-600/80">Tất cả bài tập</Text>
+                            <div className="text-2xl sm:text-3xl font-extrabold text-indigo-700 mt-1">{stats.total}</div>
+                        </div>
                     </Col>
                     <Col xs={12} sm={6}>
-                        <Card bordered={false} className="bg-emerald-50/60 rounded-xl shadow-2xs">
-                            <Text type="secondary" className="text-xs uppercase font-semibold">Đã hoàn thành</Text>
-                            <Title level={3} className="!mt-1 !mb-0 text-emerald-600">{stats.submitted}</Title>
-                        </Card>
+                        <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50/70 via-emerald-50/30 to-teal-50/30 border border-emerald-100/70 shadow-2xs hover:shadow-xs transition-all">
+                            <Text type="secondary" className="text-xs uppercase font-bold tracking-wider text-emerald-600/80">Đã hoàn thành</Text>
+                            <div className="text-2xl sm:text-3xl font-extrabold text-emerald-600 mt-1">{stats.submitted}</div>
+                        </div>
                     </Col>
                     <Col xs={12} sm={6}>
-                        <Card bordered={false} className="bg-amber-50/60 rounded-xl shadow-2xs">
-                            <Text type="secondary" className="text-xs uppercase font-semibold">Chưa nộp</Text>
-                            <Title level={3} className="!mt-1 !mb-0 text-amber-600">{stats.unsubmitted}</Title>
-                        </Card>
+                        <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50/70 via-amber-50/30 to-yellow-50/30 border border-amber-100/70 shadow-2xs hover:shadow-xs transition-all">
+                            <Text type="secondary" className="text-xs uppercase font-bold tracking-wider text-amber-600/80">Chưa nộp</Text>
+                            <div className="text-2xl sm:text-3xl font-extrabold text-amber-600 mt-1">{stats.unsubmitted}</div>
+                        </div>
                     </Col>
                     <Col xs={12} sm={6}>
-                        <Card bordered={false} className="bg-rose-50/60 rounded-xl shadow-2xs">
-                            <Text type="secondary" className="text-xs uppercase font-semibold">Quá hạn</Text>
-                            <Title level={3} className="!mt-1 !mb-0 text-rose-600">{stats.overdue}</Title>
-                        </Card>
+                        <div className="p-4 rounded-2xl bg-gradient-to-br from-rose-50/70 via-rose-50/30 to-pink-50/30 border border-rose-100/70 shadow-2xs hover:shadow-xs transition-all">
+                            <Text type="secondary" className="text-xs uppercase font-bold tracking-wider text-rose-600/80">Quá hạn</Text>
+                            <div className="text-2xl sm:text-3xl font-extrabold text-rose-600 mt-1">{stats.overdue}</div>
+                        </div>
                     </Col>
                 </Row>
             </motion.div>
 
             {/* Filter Tabs & Search */}
-            <motion.div variants={itemVariants} className="mb-4 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
+            <motion.div variants={itemVariants} className="mb-5 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
                 <Tabs
                     activeKey={activeTab}
                     onChange={setActiveTab}
@@ -223,7 +179,7 @@ export const MyHomeworkPage: React.FC = () => {
                     value={searchText}
                     onChange={e => setSearchText(e.target.value)}
                     allowClear
-                    className="w-full md:w-64 h-10 rounded-lg shadow-2xs"
+                    className="w-full md:w-64 h-10 rounded-xl shadow-2xs"
                 />
             </motion.div>
 
@@ -247,48 +203,11 @@ export const MyHomeworkPage: React.FC = () => {
                 ) : (
                     <div className="space-y-4">
                         {filteredHomeworks.map((hw) => (
-                            <Card
+                            <HomeworkCard
                                 key={hw.id}
-                                hoverable
-                                className={`rounded-xl border transition-all shadow-2xs hover:shadow-xs ${hw.isOverdue
-                                    ? 'border-red-200 bg-red-50/20'
-                                    : hw.isSubmitted
-                                        ? 'border-emerald-200 bg-emerald-50/10'
-                                        : 'border-gray-200 bg-white'
-                                    }`}
-                            >
-                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                            {renderStatusBadge(hw)}
-                                        </div>
-                                        <Title level={5} className="!mb-1 text-gray-800 font-semibold truncate text-base">
-                                            {hw.title}
-                                        </Title>
-                                        <div className="mt-2 text-xs text-gray-500">
-                                            Hạn nộp: {renderDeadlineText(hw.deadline, hw.isOverdue)}
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-2 w-full md:w-auto justify-end pt-2 md:pt-0 border-t md:border-t-0 border-gray-100">
-                                        {hw.link && (
-                                            <Button
-                                                type="primary"
-                                                icon={<ExportOutlined />}
-                                                href={hw.link}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className={`${hw.isSubmitted
-                                                    ? 'bg-emerald-600 hover:bg-emerald-700'
-                                                    : 'bg-indigo-600 hover:bg-indigo-700'
-                                                    } font-medium h-9 rounded-lg`}
-                                            >
-                                                {hw.isSubmitted ? 'Xem bài nộp trên Quiz ↗' : 'Làm bài ngay ↗'}
-                                            </Button>
-                                        )}
-                                    </div>
-                                </div>
-                            </Card>
+                                homework={hw}
+                                onViewDetail={(item) => setDetailHomework(item)}
+                            />
                         ))}
                     </div>
                 )}
@@ -304,3 +223,4 @@ export const MyHomeworkPage: React.FC = () => {
 };
 
 export default MyHomeworkPage;
+

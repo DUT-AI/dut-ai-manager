@@ -21,7 +21,8 @@ export const useMyHomeworks = () => {
   return useQuery({
     queryKey: ['homeworks', 'me'],
     queryFn: () => homeworkService.getMyHomeworks(),
-    staleTime: 60 * 1000,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 };
 
@@ -47,7 +48,8 @@ export const useUnsubmittedByUser = (userId: number | null) => {
     queryKey: ['homeworks', 'report', 'unsubmitted', userId],
     queryFn: () => homeworkService.getUnsubmittedByUser(userId!),
     enabled: !!userId,
-    staleTime: 60 * 1000, // 1 minute
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 };
 
