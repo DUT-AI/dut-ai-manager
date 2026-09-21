@@ -60,7 +60,18 @@ class GetHomeworksUseCase:
     def get_assigned_to_user(
         self, user_id: int, skip: int = 0, limit: int = 100
     ) -> list[HomeworkEntity]:
-        return self.homework_repo.get_all(skip=skip, limit=limit)
+        all_homeworks = self.homework_repo.get_all(skip=0, limit=1000)
+        team_cache: dict[tuple[int, ...], list[int]] = {}
+        assigned_homeworks: list[HomeworkEntity] = []
+        for hw in all_homeworks:
+            if not hw.id:
+                continue
+            assigned_uids = self._get_effective_assigned_user_ids(
+                hw, team_cache=team_cache
+            )
+            if user_id in assigned_uids:
+                assigned_homeworks.append(hw)
+        return assigned_homeworks[skip : skip + limit]
 
     def get_by_id(self, homework_id: int) -> HomeworkEntity | None:
         return self.homework_repo.get_by_id(homework_id)
