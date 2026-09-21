@@ -21,6 +21,13 @@ export const homeworkService = {
         return response.data.data;
     },
 
+    async getMyHomeworks(skip = 0, limit = 100) {
+        const response = await axiosInstance.get<ApiResponse<Homework[]>>(`/${this.baseUrl}/me`, {
+            params: { skip, limit }
+        });
+        return response.data.data;
+    },
+
     async getById(id: number) {
         const response = await axiosInstance.get<ApiResponse<Homework>>(`/${this.baseUrl}/${id}`);
         return response.data.data;

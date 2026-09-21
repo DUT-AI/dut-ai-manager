@@ -211,15 +211,10 @@ class HomeworkUseCases:
                 slug = self._extract_slug(hw)
 
                 if slug:
-                    hw_type = QuizSubmissionHelper.detect_homework_type(hw.link, hw.slug)
-                    if hw_type in ("coding", "both"):
-                        is_coding_submitted = user.id in coding_completed_cache.get(slug, set())
-                        if not is_coding_submitted:
-                            unsubmitted_count += 1
-                    if hw_type in ("game", "both"):
-                        is_game_submitted = user.id in game_completed_cache.get(slug, set())
-                        if not is_game_submitted:
-                            unsubmitted_count += 1
+                    coding_set = coding_completed_cache.get(slug, set())
+                    game_set = game_completed_cache.get(slug, set())
+                    if not QuizSubmissionHelper.is_user_submitted(user.id, coding_set, game_set):
+                        unsubmitted_count += 1
                 else:
                     if hw.deadline and hw.deadline.replace(tzinfo=None) > now:
                         unsubmitted_count += 1
