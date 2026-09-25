@@ -72,4 +72,30 @@ Khi nhận HomeworkOverdueDetected:
      - KHÔNG tạo Violation.
   3. NẾU KHÔNG CÓ ĐƠN HOẶC QUÁ HẠN XIN HOÃN:
      - TẠO Violation: "Chưa hoàn thành {uncompleted_items} ({homework_title})".
+
+---
+
+## 3. Cấu Trúc Phân Tách Use Case (1 File / 1 Use Case)
+
+### Domain Violation (`backend/app/violation/application/`):
+- `create_violation_use_case.py` -> `CreateViolationUseCase` (Tạo vi phạm hệ thống / thủ công, phát `ViolationCreated`)
+- `get_violations_use_case.py` -> `GetViolationsUseCase` (Truy vấn vi phạm theo tháng, user, khoảng ngày)
+- `update_violation_use_case.py` -> `UpdateViolationUseCase` (Cập nhật lý do, ngày vi phạm)
+- `delete_violation_use_case.py` -> `DeleteViolationUseCase` (Xóa mềm vi phạm)
+- `restore_violation_use_case.py` -> `RestoreViolationUseCase` (Khôi phục vi phạm đã xóa mềm)
+- `__init__.py` -> Re-export 5 use cases trên.
+
+### Domain Meeting (`backend/app/meeting/application/`):
+- `create_meeting_use_case.py` -> `CreateMeetingUseCase` (Tạo buổi họp, gán participants)
+- `get_meetings_use_case.py` -> `GetMeetingsUseCase` (Lấy danh sách / chi tiết meeting theo ngày, user, team)
+- `update_meeting_use_case.py` -> `UpdateMeetingUseCase` (Cập nhật thông tin cuộc họp)
+- `delete_meeting_use_case.py` -> `DeleteMeetingUseCase` (Xóa cuộc họp)
+- `checkin_use_case.py` -> `CheckInUseCase` (Check-in qua ảnh/tọa độ)
+- `checkin_with_card_use_case.py` -> `CheckInWithCardUseCase` (Check-in qua mã thẻ RFID/NFC)
+- `checkout_use_case.py` -> `CheckOutUseCase` (Check-out buổi họp)
+- `check_meeting_attendance_use_case.py` -> `CheckMeetingAttendanceUseCase` (Đánh giá điểm danh & phát sự kiện vắng/trễ)
+- `update_participant_status_use_case.py` -> `UpdateParticipantStatusUseCase` (Cập nhật thủ công trạng thái thành viên)
+- `calculate_current_capacity_use_case.py` -> `CalculateCurrentCapacityUseCase` (Tính tải và capacity phòng họp)
+- `__init__.py` -> Re-export 10 use cases trên.
+
 ```

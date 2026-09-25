@@ -185,9 +185,12 @@ async def test_handle_homework_overdue_without_postpone_creates_violation():
     permission_repo = MagicMock()
     permission_repo.get_postpone_requests_for_homeworks.return_value = []
 
+    participant_repo = MagicMock()
+
     handler = AutomatedViolationHandler(
         create_violation_use_case=create_violation_uc,
         permission_repo=permission_repo,
+        participant_repo=participant_repo,
     )
 
     event = HomeworkOverdueDetected(
@@ -204,3 +207,33 @@ async def test_handle_homework_overdue_without_postpone_creates_violation():
     call_args = create_violation_uc.execute.call_args[1]
     assert call_args["user_ids"] == [201]
     assert "Chưa hoàn thành bài tập coding (Bài tập Pytest)" in call_args["reason"]
+
+
+@pytest.mark.asyncio
+async def test_handle_meeting_absence_skips_violation_when_participant_not_found():
+    create_violation_uc = MagicMock()
+    create_violation_uc.execute = AsyncMock()
+    permission_repo = MagicMock()
+    permission_repo.get_requests_for_meetings.return_value = []
+    participant_repo = MagicMock()
+    participant_repo.update_participant_status.side_effect = ValueError(
+        "Không tìm thấy tham gia của user 105 trong meeting 1"
+    )
+
+    handler = AutomatedViolationHandler(
+        create_violation_use_case=create_violation_uc,
+        permission_repo=permission_repo,
+        participant_repo=participant_repo,
+    )
+
+    event = ParticipantAbsenceRecorded(
+        user_id=105,
+        meeting_id=1,
+        meeting_title="Họp Lab Tuần 1",
+        meeting_date="2026-09-25",
+    )
+
+    await handler.handle(event)
+
+    # Should NOT create violation because participant was removed / not found
+    assert create_violation_uc.execute.call_count == 0

@@ -1,8 +1,13 @@
 """MinIO / S3 Storage Service for file uploads using aioboto3."""
 
-import aioboto3
-from botocore.config import Config
-from botocore.exceptions import ClientError
+try:
+    import aioboto3
+    from botocore.config import Config
+    from botocore.exceptions import ClientError
+except ImportError:
+    aioboto3 = None
+    Config = None
+    ClientError = Exception
 from loguru import logger
 
 from app.core.config import settings

@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 
-from app.violation.application.use_cases import GetViolationsUseCase
+from app.violation.application import GetViolationsUseCase
 
 
 def test_get_by_month_with_user_id_only():

@@ -13,7 +13,7 @@ from app.permission_request.domain.value_objects import RequestCategory
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
 from app.shared.application.event_handler import EventHandler
 from app.utils.datetime import get_current_utc7_time
-from app.violation.application.use_cases import CreateViolationUseCase
+from app.violation.application.create_violation_use_case import CreateViolationUseCase
 
 
 class AutomatedViolationHandler(EventHandler):
@@ -81,7 +81,10 @@ class AutomatedViolationHandler(EventHandler):
                     status=ParticipantStatus.ABSENT_UNEXCUSED,
                 )
             except Exception as e:
-                logger.warning(f"Could not update participant status: {e}")
+                logger.warning(
+                    f"Could not update participant status for user {event.user_id} in meeting {event.meeting_id}: {e}. Skipping violation creation."
+                )
+                return
 
         reason = f"Vắng sinh hoạt: {event.meeting_title} (Không xin phép)"
         await self.create_violation_use_case.execute(
@@ -110,15 +113,18 @@ class AutomatedViolationHandler(EventHandler):
         )
 
         if late_req is None:
-
-            try:
-                self.participant_repo.update_participant_status(
-                    meeting_id=event.meeting_id,
-                    user_id=event.user_id,
-                    status=ParticipantStatus.LATE_UNEXCUSED,
-                )
-            except Exception as e:
-                logger.warning(f"Could not update participant status: {e}")
+            if self.participant_repo:
+                try:
+                    self.participant_repo.update_participant_status(
+                        meeting_id=event.meeting_id,
+                        user_id=event.user_id,
+                        status=ParticipantStatus.LATE_UNEXCUSED,
+                    )
+                except Exception as e:
+                    logger.warning(
+                        f"Could not update participant status for user {event.user_id} in meeting {event.meeting_id}: {e}. Skipping violation creation."
+                    )
+                    return
 
             reason = f"Đi trễ sinh hoạt: {event.meeting_title} (Không xin phép)"
             await self.create_violation_use_case.execute(
@@ -171,7 +177,10 @@ class AutomatedViolationHandler(EventHandler):
                         status=ParticipantStatus.LATE_UNEXCUSED,
                     )
                 except Exception as e:
-                    logger.warning(f"Could not update participant status: {e}")
+                    logger.warning(
+                        f"Could not update participant status for user {event.user_id} in meeting {event.meeting_id}: {e}. Skipping violation creation."
+                    )
+                    return
 
             limit_str = (
                 late_req.start_time.strftime("%H:%M")

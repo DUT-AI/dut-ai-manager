@@ -1,7 +1,8 @@
 <!--
 Sync Impact Report:
-- Version: initial template -> v1.0.0
+- Version: v1.0.0 -> v1.1.0
 - Ratification Date: 2026-09-25
+- Last Amended: 2026-09-25
 - Principles established:
   1. I. Clean Architecture & DDD Boundaries (MUST)
   2. II. Dependency Injection with Dishka (MUST)
@@ -9,7 +10,9 @@ Sync Impact Report:
   4. IV. Event-Driven Decoupling & Asynchronous Handlers (MUST)
   5. V. API Backward Compatibility & Unified Response Format (MUST)
   6. VI. Idempotency & Network Resilience (MUST)
-- Sections added: Security & Compliance Standards, Testing & Verification Gates, Governance
+  7. VII. Single-Responsibility Use Cases (MUST)
+- Sections added: Principle VII
+- Rationale: Chuẩn hóa 1 File / 1 Use Case (`*_use_case.py`) cho toàn bộ các domain, đóng gói module qua `__init__.py`.
 -->
 
 # DUT AI Manager Constitution
@@ -38,6 +41,9 @@ Existing REST API endpoints consumed by the Web Frontend (`frontend/`) and Zalo 
 ### VI. Idempotency & Network Resilience (MUST)
 Any endpoint that records transactional state over unreliable networks (such as bulk check-in, card tap, check-out) MUST support idempotency keys (`client_event_id` / `event_id`) to prevent duplicate processing on client retries.
 
+### VII. Single-Responsibility Use Cases (MUST)
+Each use case in the `application/` layer of every domain MUST be implemented in its own dedicated Python file with the `*_use_case.py` naming convention (e.g. `create_meeting_use_case.py`, `get_violations_use_case.py`). Grouping multiple use case classes into a monolithic file (such as `use_cases.py`, `crud_use_cases.py`, `checkin_use_cases.py`) is prohibited. The `application/__init__.py` file MUST explicitly re-export all domain use cases via `__all__`.
+
 ## Security & Compliance Standards
 
 1. **Zero Secret Leakage**: No hardcoding of passwords, JWT secrets, Discord Bot tokens, MinIO credentials, or Zalo App secrets. All configurations MUST read from environment variables managed via `app.core.config.Settings`.
@@ -59,4 +65,4 @@ Any endpoint that records transactional state over unreliable networks (such as 
    - **MINOR**: Addition of new principles or major workflow standards.
    - **PATCH**: Non-semantic clarifications and wording updates.
 
-**Version**: 1.0.0 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-09-25
+**Version**: 1.1.0 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-09-25

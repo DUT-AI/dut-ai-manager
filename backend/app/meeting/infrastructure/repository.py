@@ -22,42 +22,52 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
     def _to_domain(self, orm: ORMMeeting) -> DomainMeeting:
         participants = []
         for p in orm.participants:
+            if getattr(p, "is_deleted", False):
+                continue
             user_ref = None
             if p.user and p.user.id is not None:
                 user_ref = UserRef(
                     id=p.user.id, name=p.user.name or "", avatar_url=p.user.avatar_url
                 )
 
-            participants.append(
-                DomainParticipant(
-                    id=p.id,
-                    meeting_id=p.meeting_id,
-                    user_id=p.user_id if p.user_id is not None else 0,
-                    status=p.status,
-                    check_in_at=p.check_in_at,
-                    check_out_at=p.check_out_at,
-                    link_image=p.link_image,
-                    user=user_ref,
-                    created_at=p.created_at,
-                    updated_at=p.updated_at,
-                    created_by=p.created_by,
-                    updated_by=p.updated_by,
-                )
-            )
+            p_kwargs = {
+                "id": p.id,
+                "meeting_id": p.meeting_id,
+                "user_id": p.user_id if p.user_id is not None else 0,
+                "status": p.status or ParticipantStatus.NOT_JOINED,
+                "check_in_at": p.check_in_at,
+                "check_out_at": p.check_out_at,
+                "link_image": p.link_image,
+                "user": user_ref,
+                "created_by": p.created_by,
+                "updated_by": p.updated_by,
+            }
+            if p.created_at is not None:
+                p_kwargs["created_at"] = p.created_at
+            if p.updated_at is not None:
+                p_kwargs["updated_at"] = p.updated_at
+            participants.append(DomainParticipant(**p_kwargs))
 
-        return DomainMeeting(
-            id=orm.id,
-            title=orm.title,
-            start_time=orm.start_time,
-            end_time=orm.end_time,
-            content=orm.content,
-            require_check_in=orm.require_check_in,
-            participants=participants,
-            created_at=orm.created_at,
-            updated_at=orm.updated_at,
-            created_by=orm.created_by,
-            updated_by=orm.updated_by,
-        )
+        m_kwargs = {
+            "id": orm.id,
+            "title": orm.title,
+            "start_time": orm.start_time,
+            "end_time": orm.end_time,
+            "content": orm.content,
+            "require_check_in": (
+                orm.require_check_in
+                if orm.require_check_in is not None
+                else True
+            ),
+            "participants": participants,
+            "created_by": orm.created_by,
+            "updated_by": orm.updated_by,
+        }
+        if orm.created_at is not None:
+            m_kwargs["created_at"] = orm.created_at
+        if orm.updated_at is not None:
+            m_kwargs["updated_at"] = orm.updated_at
+        return DomainMeeting(**m_kwargs)
 
     def get_with_participants(self, meeting_id: int) -> DomainMeeting | None:
         statement = (
@@ -177,8 +187,15 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
                 ORMMeeting.is_deleted.is_(False),
                 func.date(ORMMeeting.start_time) == target_date,
             )
+            .outerjoin(
+                ORMParticipant,
+                and_(
+                    ORMMeeting.id == ORMParticipant.meeting_id,
+                    ORMParticipant.is_deleted.is_(False),
+                ),
+            )
             .options(
-                joinedload(ORMMeeting.participants).joinedload(ORMParticipant.user)
+                contains_eager(ORMMeeting.participants).joinedload(ORMParticipant.user)
             )
         )
         orms = self.session.scalars(statement).unique().all()
@@ -269,53 +286,38 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
             and hasattr(domain, "participants")
             and domain.participants is not None
         ):
-            # Sync participants correctly by modifying the relationship list
+            # Sync participants correctly with hard delete for removed participants
             stmt = select(ORMParticipant).where(
                 ORMParticipant.meeting_id == orm.id,
-                ORMParticipant.is_deleted == False,  # noqa: E712
             )
             existing_participants = self.session.scalars(stmt).all()
 
             existing_user_ids = {p.user_id: p for p in existing_participants}
             new_user_ids = {p.user_id: p for p in domain.participants}
 
-            # 1. Remove participants not in the new list
+            # 1. Hard delete participants not in the new list
             for old_user_id, old_p in existing_user_ids.items():
                 if old_user_id not in new_user_ids:
-                    old_p.is_deleted = True
-                    self.session.add(old_p)
+                    self.session.delete(old_p)
 
             # 2. Add or update participants
             for new_user_id, new_p in new_user_ids.items():
                 if new_user_id not in existing_user_ids:
-                    # Check if there's a soft-deleted record we can reuse
-                    stmt_deleted = select(ORMParticipant).where(
-                        ORMParticipant.meeting_id == orm.id,
-                        ORMParticipant.user_id == new_user_id,
-                        ORMParticipant.is_deleted == True,  # noqa: E712
+                    po = ORMParticipant(
+                        meeting_id=orm.id,
+                        user_id=new_user_id,
+                        status=new_p.status,
+                        check_in_at=new_p.check_in_at,
+                        check_out_at=new_p.check_out_at,
+                        link_image=new_p.link_image,
                     )
-                    reusable = self.session.scalars(stmt_deleted).first()
-
-                    if reusable:
-                        reusable.is_deleted = False
-                        reusable.status = new_p.status
-                        reusable.check_in_at = new_p.check_in_at
-                        reusable.link_image = new_p.link_image
-                        self.session.add(reusable)
-                    else:
-                        po = ORMParticipant(
-                            meeting_id=orm.id,
-                            user_id=new_user_id,
-                            status=new_p.status,
-                            check_in_at=new_p.check_in_at,
-                            link_image=new_p.link_image,
-                        )
-                        self.session.add(po)
+                    self.session.add(po)
                 else:
                     existing = existing_user_ids[new_user_id]
-                    # Update fields if they changed in the domain
+                    existing.is_deleted = False
                     existing.status = new_p.status
                     existing.check_in_at = new_p.check_in_at
+                    existing.check_out_at = new_p.check_out_at
                     existing.link_image = new_p.link_image
                     self.session.add(existing)
 

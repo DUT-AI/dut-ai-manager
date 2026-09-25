@@ -41,6 +41,17 @@ Xác thực rằng việc chuyển đổi sang mô hình Event-Driven không là
 
 ---
 
+### Kịch bản 4: Kiểm tra cấu trúc Single-Responsibility Use Cases (1 File / 1 Use Case)
+- **Lệnh chạy**:
+  ```bash
+  # Kiểm tra không còn file gom chung use_cases.py / crud_use_cases.py trong meeting và violation
+  ls backend/app/violation/application/create_violation_use_case.py backend/app/violation/application/get_violations_use_case.py
+  ls backend/app/meeting/application/create_meeting_use_case.py backend/app/meeting/application/get_meetings_use_case.py
+  ```
+- **Kỳ vọng**: Mỗi Use Case nằm ở file riêng và `__init__.py` export đầy đủ.
+
+---
+
 ## 3. Lệnh chạy toàn bộ Test Suite
 ```bash
 pytest backend/tests/ -v

@@ -34,22 +34,35 @@ class Meeting(SQLAlchemyTimestampMixin, Base):
     )
 
     def to_entity(self) -> MeetingEntity:
-        return MeetingEntity(
-            id=self.id,
-            title=self.title,
-            content=self.content,
-            start_time=self.start_time,
-            end_time=self.end_time,
-            require_check_in=self.require_check_in,
-            participants=(
-                [p.to_entity() for p in self.participants] if self.participants else []
+        kwargs = {
+            "id": self.id,
+            "title": self.title,
+            "content": self.content,
+            "start_time": self.start_time,
+            "end_time": self.end_time,
+            "require_check_in": (
+                self.require_check_in
+                if self.require_check_in is not None
+                else True
             ),
-            created_at=self.created_at,
-            updated_at=self.updated_at,
-            created_by=self.created_by,
-            updated_by=self.updated_by,
-            is_deleted=self.is_deleted,
-        )
+            "participants": (
+                [
+                    p.to_entity()
+                    for p in self.participants
+                    if not getattr(p, "is_deleted", False)
+                ]
+                if self.participants
+                else []
+            ),
+            "created_by": self.created_by,
+            "updated_by": self.updated_by,
+            "is_deleted": self.is_deleted if self.is_deleted is not None else False,
+        }
+        if self.created_at is not None:
+            kwargs["created_at"] = self.created_at
+        if self.updated_at is not None:
+            kwargs["updated_at"] = self.updated_at
+        return MeetingEntity(**kwargs)
 
     @classmethod
     def from_entity(cls, entity: MeetingEntity) -> "Meeting":
@@ -96,21 +109,24 @@ class MeetingParticipant(SQLAlchemyTimestampMixin, Base):
                 avatar_url=self.user.avatar_url,
             )
 
-        return MeetingParticipantEntity(
-            id=self.id,
-            meeting_id=self.meeting_id,
-            user_id=self.user_id,
-            check_in_at=self.check_in_at,
-            check_out_at=self.check_out_at,
-            status=self.status,
-            link_image=self.link_image,
-            client_event_id=self.client_event_id,
-            user=user_ref,
-            created_at=self.created_at,
-            updated_at=self.updated_at,
-            created_by=self.created_by,
-            updated_by=self.updated_by,
-        )
+        kwargs = {
+            "id": self.id,
+            "meeting_id": self.meeting_id,
+            "user_id": self.user_id or 0,
+            "check_in_at": self.check_in_at,
+            "check_out_at": self.check_out_at,
+            "status": self.status or ParticipantStatus.NOT_JOINED,
+            "link_image": self.link_image,
+            "client_event_id": self.client_event_id,
+            "user": user_ref,
+            "created_by": self.created_by,
+            "updated_by": self.updated_by,
+        }
+        if self.created_at is not None:
+            kwargs["created_at"] = self.created_at
+        if self.updated_at is not None:
+            kwargs["updated_at"] = self.updated_at
+        return MeetingParticipantEntity(**kwargs)
 
     @classmethod
     def from_entity(cls, entity: MeetingParticipantEntity) -> "MeetingParticipant":

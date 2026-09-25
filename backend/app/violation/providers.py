@@ -5,7 +5,7 @@ from app.permission_request.infrastructure.repository import PermissionRequestRe
 from app.shared.infrastructure.discord_service import DiscordService
 from app.user.infrastructure.repository import UserRepository
 from app.violation.application.event_handlers import AutomatedViolationHandler
-from app.violation.application.use_cases import (
+from app.violation.application import (
     CreateViolationUseCase,
     DeleteViolationUseCase,
     GetViolationsUseCase,

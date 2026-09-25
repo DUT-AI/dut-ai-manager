@@ -11,7 +11,7 @@ from datetime import date
 from dishka import AsyncContainer
 from loguru import logger
 
-from app.meeting.application.attendance_use_cases import CheckMeetingAttendanceUseCase
+from app.meeting.application import CheckMeetingAttendanceUseCase
 from app.shared.infrastructure.request_context import (
     _request_container_context,
     set_request_container,

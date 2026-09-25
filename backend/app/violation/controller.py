@@ -15,7 +15,7 @@ from app.core.deps import hasPermission
 from app.core.permissions import ViolationPermission
 from app.shared.application.response import ApiResponse
 from app.user.domain.entity import UserEntity
-from app.violation.application.use_cases import (
+from app.violation.application import (
     CreateViolationUseCase,
     DeleteViolationUseCase,
     GetViolationsUseCase,

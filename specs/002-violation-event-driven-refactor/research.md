@@ -22,6 +22,17 @@
 - **Lý do**:
   - Đảm bảo khi job chạy lại hoặc rescan (`RescanAllHomeworksUseCase`), không bị sinh trùng hàng loạt biên bản vi phạm cho cùng một sự kiện.
 
+### Decision 4: Phân tách Mỗi Use Case thành File Riêng Biệt (Single-Responsibility Use Cases)
+- **Quyết định**: 
+  - Trong domain `Violation` và `Meeting`, mỗi Use Case class sẽ nằm trong 01 file Python riêng biệt với hậu tố `_use_case.py` (ví dụ: `create_violation_use_case.py`, `get_violations_use_case.py`, `create_meeting_use_case.py`,...).
+  - Thư mục `application/` của mỗi domain sử dụng file `__init__.py` để re-export tập trung toàn bộ Use Cases.
+  - Xóa bỏ các file gộp nhiều use case (`use_cases.py`, `crud_use_cases.py`, `checkin_use_cases.py`, `attendance_use_cases.py`, `capacity_use_cases.py`).
+- **Lý do**:
+  - Tuân thủ nguyên tắc Single Responsibility (SRP) và Clean Architecture.
+  - Giúp việc đọc code, bảo trì, review PR và viết Unit Test cho từng Use Case trở nên hoàn toàn độc lập và mạch lạc.
+- **Phương án thay thế đã cân nhắc**:
+  - *Tạo thư mục con `use_cases/`*: Không cần thiết vì số lượng Use Case trong mỗi domain hiện tại ở mức vừa phải (5-10 use cases), đặt phẳng trong `application/` kèm hậu tố `_use_case.py` giúp cấu trúc gọn gàng hơn.
+
 ---
 
 ## 2. Danh sách Domain Events cần chuẩn hóa
@@ -34,14 +45,17 @@
 
 ---
 
-## 3. Tác động đến Dependency Injection (Dishka)
+## 3. Tác động đến Dependency Injection (Dishka) & Imports
 
 1. **`app/meeting/providers.py`**:
    - Xóa `create_violation_uc` và `permission_repo` khỏi định nghĩa `check_meeting_attendance_use_case`.
-   - Giảm phụ thuộc từ 4 repo/service xuống 2 (`meeting_repo`, `participant_repo`).
+   - Cập nhật import trỏ đến các file use case riêng lẻ: `CreateMeetingUseCase`, `GetMeetingsUseCase`, `UpdateMeetingUseCase`, `DeleteMeetingUseCase`, `CheckInUseCase`, `CheckInWithCardUseCase`, `CheckOutUseCase`, `CheckMeetingAttendanceUseCase`, `UpdateParticipantStatusUseCase`, `CalculateCurrentCapacityUseCase`.
 2. **`app/homework/providers.py`**:
    - Xóa `permission_repo` khỏi `CheckOverdueHomeworkUseCase` (chuyển việc kiểm tra postpone về handler của violation).
 3. **`app/violation/providers.py`**:
+   - Cập nhật import các use cases từ các file `*_use_case.py` (hoặc qua `app.violation.application`).
    - Đăng ký `AutomatedViolationHandler` với các dependencies: `create_violation_use_case`, `permission_repo`, `participant_repo`, `violation_repo`.
 4. **`app/core/events.py`**:
    - Đăng ký `AutomatedViolationHandler` lắng nghe `ParticipantAbsenceRecorded`, `ParticipantLateRecorded`, `HomeworkOverdueDetected`.
+5. **Controllers & Tests**:
+   - Cập nhật import trong `meeting/controller.py`, `violation/controller.py`, `test_meeting_use_cases.py`, `test_violation_use_cases.py`.

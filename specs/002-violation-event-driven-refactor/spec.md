@@ -8,6 +8,13 @@
 
 **Input**: User description: "Refactor kiến trúc Violation Domain theo mô hình Event-Driven: Tách rời hoàn toàn logic xử lý vi phạm khỏi domain Meeting và Homework. Các domain chỉ phát Domain Event, domain Violation sẽ lắng nghe và tự quyết định xử lý vi phạm"
 
+## Clarifications
+
+### Session 2026-09-25
+- Q: Bạn muốn cấu trúc thư mục và đặt tên file cho từng Use Case riêng lẻ trong `Violation` và `Meeting` theo quy chuẩn nào? → A: Tách mỗi Use Case thành 1 file riêng lẻ trong `application/`, không cần giữ tương thích ngược, chỉ cần 1 file `__init__.py` để export.
+
+---
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Tự động phát hiện và xử lý vi phạm điểm danh từ sự kiện Meeting (Priority: P1)
@@ -69,6 +76,21 @@ Tất cả các logic nghiệp vụ liên quan đến việc: kiểm tra đơn x
 
 ---
 
+### User Story 5 - Phân tách Mỗi Use Case thành File Riêng Biệt (Single-Responsibility Use Cases) (Priority: P2)
+
+Mỗi Use Case trong domain `Meeting` và `Violation` được tách hoàn toàn thành 1 file Python độc lập (1 class / 1 file) và export tập trung qua `application/__init__.py`. Không gộp chung nhiều use case vào một file lớn (`use_cases.py`, `crud_use_cases.py`, `checkin_use_cases.py`).
+
+**Why this priority**: Tăng tính cô lập, dễ đọc, dễ viết test đơn lập và tuân thủ chặt chẽ Clean Architecture.
+
+**Independent Test**: Kiểm tra cấu trúc thư mục `app/meeting/application` và `app/violation/application` để xác nhận mỗi file chỉ chứa 1 Use Case và không còn file gom chung.
+
+**Acceptance Scenarios**:
+
+1. **Given** domain `Violation`, **When** kiểm tra cấu trúc mã nguồn, **Then** mỗi use case (`CreateViolationUseCase`, `GetViolationsUseCase`, `UpdateViolationUseCase`, `DeleteViolationUseCase`, `RestoreViolationUseCase`) nằm ở 1 file `*_use_case.py` riêng và được re-export qua `__init__.py`.
+2. **Given** domain `Meeting`, **When** kiểm tra cấu trúc mã nguồn, **Then** các use case CRUD, CheckIn, Attendance, Capacity nằm ở các file riêng biệt và được re-export qua `__init__.py`.
+
+---
+
 ### Edge Cases
 
 - **Mất kết nối hoặc lỗi trong Event Handler**: Khi handler của Violation gặp lỗi xử lý, lỗi này không được làm gián đoạn hoặc rollback luồng hoàn thành của buổi họp hay bài tập trong domain phát sự kiện.
@@ -91,6 +113,8 @@ Tất cả các logic nghiệp vụ liên quan đến việc: kiểm tra đơn x
 - **FR-008**: Hệ thống PHẢI đảm bảo cơ chế chống tạo trùng biên bản vi phạm (kiểm tra xem vi phạm cho cùng user, cùng ngày và cùng sự kiện đã tồn tại chưa trước khi tạo).
 - **FR-009**: Hệ thống PHẢI đảm bảo toàn bộ thời gian ghi nhận vi phạm tuân thủ múi giờ chuẩn **UTC+7 (Asia/Ho_Chi_Minh)**.
 - **FR-010**: Hệ thống PHẢI đảm bảo các bài kiểm thử tự động (Unit Tests) cho Meeting và Violation được cập nhật và vượt qua 100% sau khi refactor.
+- **FR-011**: Mỗi Use Case trong domain `Violation` và `Meeting` PHẢI được định nghĩa trong 01 file Python riêng biệt tuân thủ Single Responsibility Principle (ví dụ: `create_violation_use_case.py`, `get_violations_use_case.py`, `create_meeting_use_case.py`, v.v.).
+- **FR-012**: Thư mục `application/` của mỗi domain PHẢI cung cấp file `__init__.py` re-export toàn bộ các Use Case; loại bỏ các file gom nhiều use case (`use_cases.py`, `crud_use_cases.py`, `checkin_use_cases.py`, `attendance_use_cases.py`, `capacity_use_cases.py`).
 
 ---
 
@@ -112,6 +136,7 @@ Tất cả các logic nghiệp vụ liên quan đến việc: kiểm tra đơn x
 - **SC-002**: 100% các trường hợp vắng không phép, trễ không phép và quá hạn bài tập vẫn được ghi nhận vi phạm chính xác thông qua luồng EventBus.
 - **SC-003**: 100% các trường hợp có đơn xin phép hợp lệ được miễn trừ vi phạm chính xác mà không cần domain Meeting phải xử lý.
 - **SC-004**: Toàn bộ hệ thống test suite hiện tại và các test suite mới cho Event-Driven Violation đạt tỷ lệ Pass **100%** (Zero Regression).
+- **SC-005**: 100% các Use Case trong domain `Meeting` và `Violation` được tổ chức theo cấu trúc 1 file / 1 Use Case và re-export qua `__init__.py`.
 
 ---
 

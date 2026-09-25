@@ -1,9 +1,3 @@
-"""
-Capacity Use Cases
-
-Chứa logic nghiệp vụ liên quan đến việc tính toán sức chứa của phòng lab.
-"""
-
 from datetime import timedelta
 
 from app.meeting.domain.value_objects import CapacityMonitor
@@ -12,10 +6,10 @@ from app.utils.datetime import get_current_utc7_time
 
 
 class CalculateCurrentCapacityUseCase:
-    """Tính toán capacity hiện tại"""
+    """Tính toán capacity hiện tại của phòng lab."""
 
     INCOMING_WINDOW_MINUTES = 30  # Sắp đến: 30 phút tới
-    OUTGOING_WINDOW_MINUTES = 10  # Sắp đi: 10 phút tới (was 30)
+    OUTGOING_WINDOW_MINUTES = 10  # Sắp đi: 10 phút tới
 
     def __init__(
         self,
@@ -29,7 +23,6 @@ class CalculateCurrentCapacityUseCase:
         incoming_end = now + timedelta(minutes=self.INCOMING_WINDOW_MINUTES)
         outgoing_end = now + timedelta(minutes=self.OUTGOING_WINDOW_MINUTES)
 
-        # MeetingRepository now has capacity methods directly
         n_current = self.meeting_repo.get_present_participants_count(now)
         n_incoming = self.meeting_repo.get_upcoming_participants_count(
             now, incoming_end

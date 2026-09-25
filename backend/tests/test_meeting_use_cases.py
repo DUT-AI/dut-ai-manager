@@ -8,13 +8,17 @@ backend_dir = Path(__file__).resolve().parent.parent
 if str(backend_dir) not in sys.path:
     sys.path.insert(0, str(backend_dir))
 
-from app.meeting.application.attendance_use_cases import CheckMeetingAttendanceUseCase
+from app.meeting.application import CheckMeetingAttendanceUseCase
 from app.meeting.domain.entity import Meeting, MeetingParticipant
 from app.meeting.domain.events import (
     ParticipantAbsenceRecorded,
     ParticipantLateRecorded,
 )
 from app.meeting.domain.value_objects import ParticipantStatus
+import app.user.infrastructure.model  # noqa: F401
+import app.homework.infrastructure.model  # noqa: F401
+import app.permission_request.infrastructure.model  # noqa: F401
+import app.violation.infrastructure.model  # noqa: F401
 
 
 def test_check_meeting_attendance_decoupled_job():
@@ -85,5 +89,83 @@ def test_check_meeting_attendance_decoupled_job():
     print("CheckMeetingAttendanceUseCase decoupled tests PASSED!")
 
 
+def test_meeting_repository_save_hard_deletes_removed_participants():
+    """Kiểm tra MeetingRepository.save thực hiện session.delete đối với participant bị loại bỏ."""
+    from app.meeting.infrastructure.repository import MeetingRepository
+    from app.meeting.infrastructure.model import Meeting as ORMMeeting, MeetingParticipant as ORMParticipant
+
+    session = MagicMock()
+
+    orm_p1 = ORMParticipant(id=1, meeting_id=10, user_id=101)
+    orm_p2 = ORMParticipant(id=2, meeting_id=10, user_id=102)
+
+    orm_meeting = ORMMeeting(
+        id=10,
+        title="Test Meeting",
+        start_time=datetime(2026, 9, 10, 18, 0),
+        end_time=datetime(2026, 9, 10, 20, 0),
+    )
+    orm_meeting.participants = [orm_p1, orm_p2]
+
+    session.get.return_value = orm_meeting
+    session.scalars.return_value.all.return_value = [orm_p1, orm_p2]
+
+    repo = MeetingRepository(session=session)
+
+    # Cập nhật danh sách participant: chỉ giữ user 101, loại user 102, thêm user 103
+    domain_meeting = Meeting(
+        id=10,
+        title="Test Meeting",
+        start_time=datetime(2026, 9, 10, 18, 0),
+        end_time=datetime(2026, 9, 10, 20, 0),
+        participants=[
+            MeetingParticipant(id=1, meeting_id=10, user_id=101),
+            MeetingParticipant(user_id=103),
+        ],
+    )
+
+    repo.save(domain_meeting)
+
+    # Xác nhận session.delete được gọi cho orm_p2 (user 102 bị loại bỏ)
+    session.delete.assert_called_once_with(orm_p2)
+    session.flush.assert_called()
+    session.refresh.assert_called_with(orm_meeting)
+
+
+def test_meeting_mapping_filters_is_deleted_participants():
+    """Kiểm tra Meeting.to_entity() và MeetingRepository._to_domain() bỏ qua participant is_deleted=True."""
+    from app.meeting.infrastructure.repository import MeetingRepository
+    from app.meeting.infrastructure.model import Meeting as ORMMeeting, MeetingParticipant as ORMParticipant
+
+    orm_p_active = ORMParticipant(id=1, meeting_id=10, user_id=101)
+    orm_p_active.is_deleted = False
+
+    orm_p_deleted = ORMParticipant(id=2, meeting_id=10, user_id=102)
+    orm_p_deleted.is_deleted = True
+
+    orm_meeting = ORMMeeting(
+        id=10,
+        title="Test Meeting",
+        start_time=datetime(2026, 9, 10, 18, 0),
+        end_time=datetime(2026, 9, 10, 20, 0),
+    )
+    orm_meeting.participants = [orm_p_active, orm_p_deleted]
+
+    # 1. Test model.to_entity()
+    entity = orm_meeting.to_entity()
+    assert len(entity.participants) == 1
+    assert entity.participants[0].user_id == 101
+
+    # 2. Test repo._to_domain()
+    session = MagicMock()
+    repo = MeetingRepository(session=session)
+    domain = repo._to_domain(orm_meeting)
+    assert len(domain.participants) == 1
+    assert domain.participants[0].user_id == 101
+
+
 if __name__ == "__main__":
     test_check_meeting_attendance_decoupled_job()
+    test_meeting_repository_save_hard_deletes_removed_participants()
+    test_meeting_mapping_filters_is_deleted_participants()
+    print("All Meeting tests PASSED!")

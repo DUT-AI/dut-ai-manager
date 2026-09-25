@@ -1,22 +1,17 @@
 from dishka import Provider, Scope, provide
 from sqlalchemy.orm import Session
 
-from app.meeting.application.attendance_use_cases import (
-    CheckMeetingAttendanceUseCase,
-    UpdateParticipantStatusUseCase,
-)
-from app.meeting.application.capacity_use_cases import CalculateCurrentCapacityUseCase
-from app.meeting.application.checkin_use_cases import (
+from app.meeting.application import (
+    CalculateCurrentCapacityUseCase,
     CheckInUseCase,
     CheckInWithCardUseCase,
+    CheckMeetingAttendanceUseCase,
     CheckOutUseCase,
-)
-from app.meeting.application.crud_use_cases import (
     CreateMeetingUseCase,
     DeleteMeetingUseCase,
     GetMeetingsUseCase,
-    MeetingUseCases,
     UpdateMeetingUseCase,
+    UpdateParticipantStatusUseCase,
 )
 from app.meeting.application.event_handlers import MeetingNotificationHandler
 from app.meeting.application.sse_handler import MeetingSseHandler
@@ -112,19 +107,6 @@ class MeetingModuleProvider(Provider):
     ) -> CalculateCurrentCapacityUseCase:
         return CalculateCurrentCapacityUseCase(meeting_repo)
 
-    @provide
-    def meeting_use_cases(
-        self,
-        get_meetings: GetMeetingsUseCase,
-        create_meeting: CreateMeetingUseCase,
-        update_meeting: UpdateMeetingUseCase,
-        delete_meeting: DeleteMeetingUseCase,
-        check_in: CheckInUseCase,
-        repo: MeetingRepository,
-    ) -> MeetingUseCases:
-        return MeetingUseCases(
-            get_meetings, create_meeting, update_meeting, delete_meeting, check_in, repo
-        )
 
     @provide
     def get_meeting_notification_handler(
