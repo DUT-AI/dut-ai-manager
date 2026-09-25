@@ -1,9 +1,7 @@
 from datetime import datetime
 
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, Field
 
-from app.homework.domain.entity import HomeworkStatus
-from app.homework.domain.value_objects import ScoreDetail
 from app.shared.domain.value_objects import UserRef
 
 
@@ -15,8 +13,7 @@ class HomeworkBase(BaseModel):
 
 
 class HomeworkCreate(HomeworkBase):
-    assignee_ids: list[int] | None = None
-    team_ids: list[int] | None = None  # Query users from these teams
+    assignee_ids: list[int] = Field(default_factory=list)
 
 
 class HomeworkUpdate(BaseModel):
@@ -24,8 +21,7 @@ class HomeworkUpdate(BaseModel):
     deadline: datetime | None = None
     link: str | None = None
     slug: str | None = None
-    assignee_ids: list[int] | None = None  # Sync assignees
-    team_ids: list[int] | None = None  # Add users from teams
+    assignee_ids: list[int] | None = None
 
 
 class HomeworkResponse(HomeworkBase):
@@ -34,53 +30,19 @@ class HomeworkResponse(HomeworkBase):
     updated_at: datetime
     created_by: int | None = None
     assignee_ids: list[int] = []
-    team_ids: list[int] = []
 
-    # Computed fields (can be populated by service/repo)
+    # Computed fields (populated by use cases)
     submission_count: int = 0
+    is_submitted: bool | None = None
+    is_overdue: bool | None = None
+    has_coding: bool = False
+    coding_submitted: bool = False
+    has_game: bool = False
+    game_submitted: bool = False
+    uncompleted_items: list[str] = Field(default_factory=list)
 
     class Config:
         from_attributes = True
-
-
-
-class HomeworkSubmissionCreate(BaseModel):
-    link: HttpUrl
-
-
-class HomeworkSubmissionUpdate(BaseModel):
-    link: HttpUrl | None = None
-    status: HomeworkStatus | None = None
-
-
-class HomeworkSubmissionResponse(BaseModel):
-    id: int
-    homework_id: int
-    owner_id: int
-    owner: UserRef | None = None
-    created_by: int | None = None
-    link: str
-    status: HomeworkStatus
-    is_late: bool
-    is_pass: bool | None = None
-    score: float | None = None
-    feedback: str | None = None
-    score_details: list[ScoreDetail] | None = None
-    plagiarism_info: list[dict] | None = None
-    is_plagiarized: bool = False
-    plagiarized_from_user_id: int | None = None
-
-    created_at: datetime
-    updated_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
-class HomeworkReportResponse(BaseModel):
-    user_id: int
-    owner: UserRef | None = None
-    unsubmitted_count: int
 
 
 class UserSubmissionInfo(BaseModel):
@@ -104,3 +66,8 @@ class HomeworkSubmissionStatusResponse(BaseModel):
     submitted: list[UserSubmissionInfo] = []
     not_submitted: list[UserSubmissionInfo] = []
 
+
+class HomeworkReportResponse(BaseModel):
+    user_id: int
+    owner: UserRef | None = None
+    unsubmitted_count: int = 0

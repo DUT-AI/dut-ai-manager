@@ -16,7 +16,7 @@ from app.auth.providers import AuthModuleProvider
 from app.billing.providers import BillingModuleProvider
 from app.bonus_point.providers import BonusPointModuleProvider
 from app.expense.providers import ExpenseModuleProvider
-from app.homework.application.checker_use_cases import RescanAllHomeworksUseCase
+from app.homework.application import RescanAllHomeworksUseCase
 from app.homework.providers import HomeworkModuleProvider
 from app.meeting.providers import MeetingModuleProvider
 from app.permission_request.providers import PermissionRequestModuleProvider

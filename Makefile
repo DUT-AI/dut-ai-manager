@@ -12,31 +12,7 @@ help: ## Show this help
 	@echo "Targets:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-15s$(NC) %s\n", $$1, $$2}'
 
-# ==================== Docker ====================
-docker-up: ## Start all docker containers (local dev mode)
-	docker compose up -d
 
-docker-down: ## Stop all docker containers
-	docker compose down
-
-docker-restart: ## Restart all docker containers
-	docker compose restart
-
-docker-logs: ## View docker logs
-	docker compose logs -f
-
-docker-ps: ## List running containers
-	docker compose ps
-
-docker-clean: ## Remove all containers and volumes
-	docker compose down -v --remove-orphans
-
-docker-build: ## Build all docker images
-	docker compose build
-
-
-
-# ==================== Migrations (auto-starts tunnel) ====================
 migrate-create: ## Create a new migration (usage: make migrate-create msg="description")
 	cd backend && uv run alembic revision --autogenerate -m "$(msg)"
 

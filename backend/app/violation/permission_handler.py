@@ -3,7 +3,7 @@ from loguru import logger
 from app.permission_request.domain.events import PermissionRequestCreated
 from app.permission_request.domain.value_objects import RequestCategory
 from app.utils.datetime import get_current_utc7_time
-from app.violation.application.use_cases import CreateViolationUseCase
+from app.violation.application import CreateViolationUseCase
 
 
 class PermissionViolationHandler:

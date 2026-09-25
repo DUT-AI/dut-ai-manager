@@ -1,17 +1,13 @@
 from typing import Any, cast
 
 from sqlalchemy import desc, func, select
-from sqlalchemy.orm import Session, joinedload, selectinload
-from sqlalchemy.sql.functions import count
+from sqlalchemy.orm import Session
 
 from app.homework.domain.entity import Homework as HomeworkEntity
 from app.homework.infrastructure.model import (
     HomeworkAssigneeModel,
     HomeworkModel,
-    HomeworkTeamModel,
 )
-
-
 from app.shared.domain.query_support import QuerySupport, apply_query_support
 
 
@@ -69,9 +65,6 @@ class HomeworkRepository:
         if homework.assignee_ids:
             for uid in homework.assignee_ids:
                 self.session.add(HomeworkAssigneeModel(homework_id=model.id, user_id=uid))
-        if homework.team_ids:
-            for tid in homework.team_ids:
-                self.session.add(HomeworkTeamModel(homework_id=model.id, team_id=tid))
         self.session.flush()
         return model.to_entity()
 
@@ -84,37 +77,26 @@ class HomeworkRepository:
             model.link = homework.link
             model.slug = homework.slug
             self.session.add(model)
-            self.session.flush()
-
-            self.sync_assignees_and_teams(homework.id, homework.assignee_ids, homework.team_ids)
+            if model.id is not None:
+                self.sync_assignees(model.id, homework.assignee_ids)
             return model.to_entity()
         return None
 
-    def sync_assignees_and_teams(
-        self, homework_id: int, assignee_ids: list[int] | None, team_ids: list[int] | None
-    ):
+    def sync_assignees(
+        self, homework_id: int, assignee_ids: list[int] | None
+    ) -> None:
         if assignee_ids is not None:
             existing_assignees = self.session.scalars(
                 select(HomeworkAssigneeModel).where(HomeworkAssigneeModel.homework_id == homework_id)
             ).all()
             for a in existing_assignees:
                 self.session.delete(a)
-            for uid in assignee_ids:
+            for uid in set(assignee_ids):
                 self.session.add(HomeworkAssigneeModel(homework_id=homework_id, user_id=uid))
-
-        if team_ids is not None:
-            existing_teams = self.session.scalars(
-                select(HomeworkTeamModel).where(HomeworkTeamModel.homework_id == homework_id)
-            ).all()
-            for t in existing_teams:
-                self.session.delete(t)
-            for tid in team_ids:
-                self.session.add(HomeworkTeamModel(homework_id=homework_id, team_id=tid))
-
-        self.session.flush()
+            self.session.flush()
 
     def get_assigned_user_ids(self, homework_id: int) -> set[int]:
-        """Lấy danh sách user_id được phân làm homework (gồm cá nhân + thành viên thuộc team)."""
+        """Lấy danh sách user_id được phân làm homework."""
         direct_uids = set(
             self.session.scalars(
                 select(HomeworkAssigneeModel.user_id).where(
@@ -123,26 +105,7 @@ class HomeworkRepository:
                 )
             ).all()
         )
-        team_ids = self.session.scalars(
-            select(HomeworkTeamModel.team_id).where(
-                HomeworkTeamModel.homework_id == homework_id,
-                HomeworkTeamModel.is_deleted == False,
-            )
-        ).all()
-
-        team_uids = set()
-        if team_ids:
-            from app.team.infrastructure.model import TeamMemberModel
-            team_uids = set(
-                self.session.scalars(
-                    select(TeamMemberModel.user_id).where(
-                        TeamMemberModel.team_id.in_(team_ids),
-                        TeamMemberModel.is_deleted == False,
-                    )
-                ).all()
-            )
-
-        return direct_uids | team_uids
+        return direct_uids
 
     def get_by_deadline_date(self, target_date: Any) -> list[HomeworkEntity]:
         statement = (

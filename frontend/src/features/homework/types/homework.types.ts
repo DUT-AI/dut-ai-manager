@@ -51,11 +51,17 @@ export const homeworkSchema = z.object({
   link: z.string().nullable().optional(),
   slug: z.string().nullable().optional(),
   assignee_ids: z.array(z.number()).optional(),
-  team_ids: z.array(z.number()).optional(),
   created_at: z.string(),
   updated_at: z.string(),
   created_by: z.number().optional(),
   submission_count: z.number().optional(),
+  is_submitted: z.boolean().nullable().optional(),
+  is_overdue: z.boolean().nullable().optional(),
+  has_coding: z.boolean().optional(),
+  coding_submitted: z.boolean().optional(),
+  has_game: z.boolean().optional(),
+  game_submitted: z.boolean().optional(),
+  uncompleted_items: z.array(z.string()).optional(),
   submissions: z.array(homeworkSubmissionSchema).optional(),
 });
 export type Homework = z.infer<typeof homeworkSchema>;
@@ -66,7 +72,6 @@ export const homeworkCreateSchema = z.object({
   link: z.string().optional(),
   slug: z.string().optional(),
   assignee_ids: z.array(z.number()).optional(),
-  team_ids: z.array(z.number()).optional(),
 });
 export type HomeworkCreate = z.infer<typeof homeworkCreateSchema>;
 export type CreateHomeworkFormValues = HomeworkCreate;

@@ -49,7 +49,7 @@ class QuizSubmissionHelper:
     async def get_coding_completed_map(quiz_api: QuizApiClient | None, slug: str) -> dict[int, dict] | None:
         """Lấy bản đồ thành viên đã hoàn thành bài tập Coding theo user_id từ Quiz API."""
         if not quiz_api:
-            return {}
+            return None
         try:
             members = await quiz_api.get_homework_completed_members(slug)
             if members is None:
@@ -65,13 +65,13 @@ class QuizSubmissionHelper:
             return res
         except Exception as exc:
             logger.warning(f"Quiz completed-members error for slug={slug}: {exc}")
-            return {}
+            return None
 
     @staticmethod
     async def get_game_completed_map(quiz_api: QuizApiClient | None, slug: str) -> dict[int, dict] | None:
         """Lấy bản đồ thành viên đã hoàn thành game theo user_id từ Quiz API."""
         if not quiz_api:
-            return {}
+            return None
         try:
             leaderboard = await quiz_api.get_game_leaderboard(slug)
             if leaderboard is None:
@@ -92,7 +92,7 @@ class QuizSubmissionHelper:
             return res
         except Exception as exc:
             logger.warning(f"Quiz leaderboard error for slug={slug}: {exc}")
-            return {}
+            return None
 
     @classmethod
     async def get_coding_completed_user_ids(cls, quiz_api: QuizApiClient | None, slug: str) -> set[int] | None:
@@ -117,24 +117,21 @@ class QuizSubmissionHelper:
         game_completed_uids: set[int] | None,
     ) -> bool:
         """
-        Kiểm tra xem user_id đã nộp bài tập hay chưa dựa trên cache coding và game.
-        Xử lý thông minh cho bài tập chỉ có Coding, chỉ có Game, hoặc cả hai.
+        Kiểm tra xem user_id đã nộp bài tập hay chưa dựa trên kết quả từ Quiz API.
+        - coding_completed_uids is None: không có phần Coding.
+        - game_completed_uids is None: không có phần Game.
+        - Nếu có cả 2: User phải hoàn thành CẢ 2.
+        - Nếu chỉ có 1: User phải hoàn thành phần đó.
         """
-        coding_set = coding_completed_uids or set()
-        game_set = game_completed_uids or set()
-
-        is_coding_done = user_id in coding_set
-        is_game_done = user_id in game_set
-
-        has_coding = len(coding_set) > 0
-        has_game = len(game_set) > 0
+        has_coding = coding_completed_uids is not None
+        has_game = game_completed_uids is not None
 
         if has_coding and has_game:
-            return is_coding_done and is_game_done
+            return (user_id in (coding_completed_uids or set())) and (user_id in (game_completed_uids or set()))
         elif has_coding:
-            return is_coding_done
+            return user_id in (coding_completed_uids or set())
         elif has_game:
-            return is_game_done
+            return user_id in (game_completed_uids or set())
         else:
-            return is_coding_done or is_game_done
+            return False
 

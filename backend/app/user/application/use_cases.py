@@ -8,6 +8,7 @@ from typing import cast
 
 from fastapi import BackgroundTasks, HTTPException, UploadFile
 from loguru import logger
+import pandas as pd
 
 from app.shared.application.query_support_utils import build_query_support
 from app.shared.domain.event_bus import EventBus

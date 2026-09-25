@@ -1,11 +1,15 @@
 from dishka import Provider, Scope, provide
 from sqlalchemy.orm import Session
 
-from app.homework.application.checker_use_cases import (
+from app.homework.application import (
     CheckOverdueHomeworkUseCase,
+    CreateHomeworkUseCase,
+    DeleteHomeworkUseCase,
+    GetHomeworkSubmissionStatusUseCase,
+    GetHomeworksUseCase,
     RescanAllHomeworksUseCase,
+    UpdateHomeworkUseCase,
 )
-from app.homework.application.use_cases import HomeworkUseCases
 from app.homework.application.event_handlers import (
     HomeworkNotificationHandler,
 )
@@ -15,8 +19,6 @@ from app.homework.infrastructure.repository import (
 )
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
 from app.shared.infrastructure.discord_service import DiscordService
-from app.shared.infrastructure.minio_service import MinioService
-from app.team.infrastructure.repository import TeamRepository
 from app.user.infrastructure.repository import UserRepository
 from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
 
@@ -33,37 +35,69 @@ class HomeworkModuleProvider(Provider):
         return HomeworkRepository(session)
 
     @provide
-    def get_use_cases(
+    def get_get_homeworks_use_case(
+        self,
+        homework_repo: HomeworkRepository,
+        quiz_api: QuizApiClient,
+        user_repo: UserRepository,
+    ) -> GetHomeworksUseCase:
+        return GetHomeworksUseCase(
+            homework_repo=homework_repo,
+            quiz_api=quiz_api,
+            user_repo=user_repo,
+        )
+
+    @provide
+    def get_create_homework_use_case(
+        self,
+        homework_repo: HomeworkRepository,
+    ) -> CreateHomeworkUseCase:
+        return CreateHomeworkUseCase(
+            homework_repo=homework_repo,
+        )
+
+    @provide
+    def get_update_homework_use_case(
+        self,
+        homework_repo: HomeworkRepository,
+    ) -> UpdateHomeworkUseCase:
+        return UpdateHomeworkUseCase(
+            homework_repo=homework_repo,
+        )
+
+    @provide
+    def get_delete_homework_use_case(
+        self,
+        homework_repo: HomeworkRepository,
+    ) -> DeleteHomeworkUseCase:
+        return DeleteHomeworkUseCase(homework_repo=homework_repo)
+
+    @provide
+    def get_submission_status_use_case(
         self,
         homework_repo: HomeworkRepository,
         user_repo: UserRepository,
-        team_repo: TeamRepository,
-        minio_service: MinioService,
         quiz_api: QuizApiClient,
         permission_repo: PermissionRequestRepository,
-    ) -> HomeworkUseCases:
-        return HomeworkUseCases(
+    ) -> GetHomeworkSubmissionStatusUseCase:
+        return GetHomeworkSubmissionStatusUseCase(
             homework_repo=homework_repo,
             user_repo=user_repo,
-            team_repo=team_repo,
-            minio_service=minio_service,
             quiz_api=quiz_api,
             permission_repo=permission_repo,
         )
-    
+
     @provide
     def get_check_overdue_use_case(
         self,
         homework_repo: HomeworkRepository,
         quiz_api: QuizApiClient,
         user_repo: UserRepository,
-        team_repo: TeamRepository,
     ) -> CheckOverdueHomeworkUseCase:
         return CheckOverdueHomeworkUseCase(
             homework_repo=homework_repo,
             quiz_api=quiz_api,
             user_repo=user_repo,
-            team_repo=team_repo,
         )
 
     @provide
@@ -72,16 +106,12 @@ class HomeworkModuleProvider(Provider):
         homework_repo: HomeworkRepository,
         quiz_api: QuizApiClient,
         user_repo: UserRepository,
-        team_repo: TeamRepository,
     ) -> RescanAllHomeworksUseCase:
         return RescanAllHomeworksUseCase(
             homework_repo=homework_repo,
             quiz_api=quiz_api,
             user_repo=user_repo,
-            team_repo=team_repo,
         )
-
-
 
     @provide
     def get_notification_handler(
@@ -94,4 +124,3 @@ class HomeworkModuleProvider(Provider):
         return HomeworkNotificationHandler(
             discord_service, homework_repo, user_repo, zalo_bot
         )
-

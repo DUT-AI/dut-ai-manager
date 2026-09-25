@@ -132,6 +132,8 @@ class GetParticipationLeaderboardUseCase:
         users = self.user_repo.get_active_users()
         stats_list = []
         for u in users:
+            if u.id is None:
+                continue
             stat = self.analysis_uc.execute(u.id, month, year)
 
             # Add UserInfo

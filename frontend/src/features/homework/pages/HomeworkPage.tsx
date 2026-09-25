@@ -58,7 +58,7 @@ export const HomeworkPage: React.FC = () => {
 
     const {
         isFormModalOpen,
-        selectedHomework, editingHomework, currentAssignees, assigneesLoading
+        editingHomework
     } = state;
 
     const {
@@ -221,8 +221,6 @@ export const HomeworkPage: React.FC = () => {
                     editingItem={editingHomework}
                     users={users}
                     teams={teams}
-                    currentAssignees={currentAssignees}
-                    assigneesLoading={assigneesLoading}
                     onSuccess={handleFormSuccess}
                     onCancel={() => dispatch({ type: 'CLOSE_FORM' })}
                 />

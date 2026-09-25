@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Optional
+from typing import Literal, Optional
 
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, Query
@@ -185,7 +185,9 @@ async def get_activity_trend(
     _current_user: CurrentUser,
     month: int = Query(..., description="Month (1-12)"),
     year: int = Query(..., description="Year"),
-    mode: str = Query("week", description="Aggregation mode: 'week' or 'month'"),
+    mode: Literal["week", "month"] = Query(
+        "week", description="Aggregation mode: 'week' or 'month'"
+    ),
 ):
     """Lấy dữ liệu xu hướng hoạt động (điểm cộng + vi phạm) theo tuần hoặc tháng."""
     return ApiResponse.success(data=uc.execute(month, year, mode))

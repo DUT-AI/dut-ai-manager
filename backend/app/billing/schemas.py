@@ -89,10 +89,11 @@ class InvoiceResponse(BaseModel):
         ]
 
         effective_team = team
-        if effective_team is None and getattr(invoice, "team_name", None):
+        invoice_team_name = getattr(invoice, "team_name", None)
+        if effective_team is None and invoice_team_name:
             effective_team = InvoiceTeamInfo(
                 id=getattr(invoice, "team_id", 6),
-                team_name=invoice.team_name,
+                team_name=str(invoice_team_name),
             )
 
         response = cls(

@@ -1,10 +1,9 @@
-import asyncio
 from datetime import date, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.homework.application.checker_use_cases import CheckOverdueHomeworkUseCase
+from app.homework.application import CheckOverdueHomeworkUseCase
 from app.homework.domain.entity import Homework as HomeworkEntity
 from app.homework.domain.value_objects import HomeworkOverdueDetected
 
@@ -14,7 +13,6 @@ async def test_check_overdue_homework_publishes_event():
     homework_repo = MagicMock()
     quiz_api = MagicMock()
     user_repo = MagicMock()
-    team_repo = MagicMock()
     event_bus = MagicMock()
     event_bus.publish = AsyncMock()
 
@@ -29,15 +27,14 @@ async def test_check_overdue_homework_publishes_event():
     )
     homework_repo.get_by_deadline_date.return_value = [hw]
 
-    # User 101 submitted coding, User 102 has NOT submitted
+    # User 101 submitted coding, User 102 has NOT submitted; No game component for this homework (returns None)
     quiz_api.get_homework_completed_members = AsyncMock(return_value=[{"user_id": 101, "submission_count": 1}])
-    quiz_api.get_game_leaderboard = AsyncMock(return_value=[])
+    quiz_api.get_game_leaderboard = AsyncMock(return_value=None)
 
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=homework_repo,
         quiz_api=quiz_api,
         user_repo=user_repo,
-        team_repo=team_repo,
         event_bus=event_bus,
     )
 

@@ -139,7 +139,7 @@ class UserModel(SQLAlchemyTimestampMixin, Base):
             avatar_url=self.avatar_url,
             role_ids=role_ids,
             role_names=role_names,
-            permissions=list(permissions),
+            permissions=permissions,
             created_at=self.created_at,
             updated_at=self.updated_at,
             created_by=self.created_by,

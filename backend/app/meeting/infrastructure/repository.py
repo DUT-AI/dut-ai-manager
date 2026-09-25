@@ -20,6 +20,8 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         super().__init__(session, ORMMeeting)
 
     def _to_domain(self, orm: ORMMeeting) -> DomainMeeting:
+        from app.utils.datetime import get_current_utc7_time
+
         participants = []
         for p in orm.participants:
             if getattr(p, "is_deleted", False):
@@ -30,44 +32,40 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
                     id=p.user.id, name=p.user.name or "", avatar_url=p.user.avatar_url
                 )
 
-            p_kwargs = {
-                "id": p.id,
-                "meeting_id": p.meeting_id,
-                "user_id": p.user_id if p.user_id is not None else 0,
-                "status": p.status or ParticipantStatus.NOT_JOINED,
-                "check_in_at": p.check_in_at,
-                "check_out_at": p.check_out_at,
-                "link_image": p.link_image,
-                "user": user_ref,
-                "created_by": p.created_by,
-                "updated_by": p.updated_by,
-            }
-            if p.created_at is not None:
-                p_kwargs["created_at"] = p.created_at
-            if p.updated_at is not None:
-                p_kwargs["updated_at"] = p.updated_at
-            participants.append(DomainParticipant(**p_kwargs))
+            participants.append(
+                DomainParticipant(
+                    id=p.id,
+                    meeting_id=p.meeting_id,
+                    user_id=p.user_id if p.user_id is not None else 0,
+                    status=p.status or ParticipantStatus.NOT_JOINED,
+                    check_in_at=p.check_in_at,
+                    check_out_at=p.check_out_at,
+                    link_image=p.link_image,
+                    user=user_ref,
+                    created_at=p.created_at or get_current_utc7_time(),
+                    updated_at=p.updated_at or get_current_utc7_time(),
+                    created_by=p.created_by,
+                    updated_by=p.updated_by,
+                )
+            )
 
-        m_kwargs = {
-            "id": orm.id,
-            "title": orm.title,
-            "start_time": orm.start_time,
-            "end_time": orm.end_time,
-            "content": orm.content,
-            "require_check_in": (
+        return DomainMeeting(
+            id=orm.id,
+            title=orm.title,
+            start_time=orm.start_time,
+            end_time=orm.end_time,
+            content=orm.content,
+            require_check_in=(
                 orm.require_check_in
                 if orm.require_check_in is not None
                 else True
             ),
-            "participants": participants,
-            "created_by": orm.created_by,
-            "updated_by": orm.updated_by,
-        }
-        if orm.created_at is not None:
-            m_kwargs["created_at"] = orm.created_at
-        if orm.updated_at is not None:
-            m_kwargs["updated_at"] = orm.updated_at
-        return DomainMeeting(**m_kwargs)
+            participants=participants,
+            created_at=orm.created_at or get_current_utc7_time(),
+            updated_at=orm.updated_at or get_current_utc7_time(),
+            created_by=orm.created_by,
+            updated_by=orm.updated_by,
+        )
 
     def get_with_participants(self, meeting_id: int) -> DomainMeeting | None:
         statement = (

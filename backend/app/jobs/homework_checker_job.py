@@ -10,7 +10,7 @@ from datetime import date
 from dishka import AsyncContainer
 from loguru import logger
 
-from app.homework.application.checker_use_cases import CheckOverdueHomeworkUseCase
+from app.homework.application import CheckOverdueHomeworkUseCase
 from app.shared.infrastructure.request_context import (
     _request_container_context,
     set_request_container,

@@ -71,13 +71,6 @@ class HomeworkPermission(str, Enum):
     DELETE = "homework:delete"
 
 
-class HomeworkSubmissionPermission(str, Enum):
-    CREATE = "homework_submission:create"
-    READ = "homework_submission:read"
-    UPDATE = "homework_submission:update"
-    DELETE = "homework_submission:delete"
-
-
 class MeetingPermission(str, Enum):
     CREATE = "meeting:create"
     READ = "meeting:read"

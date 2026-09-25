@@ -9,7 +9,7 @@ Key differences from the old BaseRepository (api/v1/repositories/base.py):
 Old modules can keep using the old BaseRepository until they are migrated.
 """
 
-from typing import Generic, TypeVar, cast
+from typing import Any, Generic, TypeVar, cast
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -132,8 +132,8 @@ class BaseRepository(Generic[TModel, TEntity]):
 
         model_id = entity.id
         statement = select(self.model).where(
-            self.model.id == model_id,
-            self.model.is_deleted == True,
+            cast(Any, self.model).id == model_id,
+            cast(Any, self.model).is_deleted == True,  # noqa: E712
         )
         model = self.session.scalars(statement).first()
 

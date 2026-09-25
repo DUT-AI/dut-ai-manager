@@ -1,9 +1,3 @@
-"""
-Homework Submission Use Cases — application layer.
-
-Handles querying submission status breakdown (Coding & Game) with late detection.
-"""
-
 from datetime import datetime
 
 from app.homework.application.dtos import (
@@ -16,7 +10,6 @@ from app.homework.domain.entity import Homework as HomeworkEntity
 from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.homework.infrastructure.repository import HomeworkRepository
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
-from app.team.infrastructure.repository import TeamRepository
 from app.user.infrastructure.repository import UserRepository
 from app.utils.datetime import get_current_utc7_time
 
@@ -30,34 +23,14 @@ class GetHomeworkSubmissionStatusUseCase:
         user_repo: UserRepository,
         quiz_api: QuizApiClient,
         permission_repo: PermissionRequestRepository | None = None,
-        team_repo: TeamRepository | None = None,
     ):
         self.homework_repo = homework_repo
         self.user_repo = user_repo
         self.quiz_api = quiz_api
         self.permission_repo = permission_repo
-        self.team_repo = team_repo
 
     def get_by_id(self, homework_id: int) -> HomeworkEntity | None:
         return self.homework_repo.get_by_id(homework_id)
-
-    def _get_effective_assigned_user_ids(self, homework: HomeworkEntity) -> set[int]:
-        assigned_uids: set[int] = set()
-        user_ids = getattr(homework, "assignee_ids", None) or getattr(homework, "assigned_user_ids", None)
-        if user_ids:
-            assigned_uids.update(user_ids)
-
-        team_ids = getattr(homework, "team_ids", None) or getattr(homework, "assigned_team_ids", None)
-        if team_ids and self.team_repo:
-            team_user_ids = self.team_repo.get_user_ids_by_teams(team_ids)
-            assigned_uids.update(team_user_ids)
-
-        if not assigned_uids and homework.id and hasattr(self.homework_repo, "get_assigned_user_ids"):
-            repo_uids = self.homework_repo.get_assigned_user_ids(homework.id)
-            if repo_uids:
-                assigned_uids.update(repo_uids)
-
-        return assigned_uids
 
     async def execute(self, homework_id: int) -> HomeworkSubmissionStatusResponse | None:
         return await self.get_submission_status(homework_id)
@@ -74,22 +47,34 @@ class GetHomeworkSubmissionStatusUseCase:
 
         slug = QuizSubmissionHelper.extract_slug_from_entity(homework)
 
-        coding_map = await QuizSubmissionHelper.get_coding_completed_map(self.quiz_api, slug) if slug else {}
-        game_map = await QuizSubmissionHelper.get_game_completed_map(self.quiz_api, slug) if slug else {}
+        coding_map = (
+            await QuizSubmissionHelper.get_coding_completed_map(self.quiz_api, slug)
+            if slug
+            else {}
+        ) or {}
+        game_map = (
+            await QuizSubmissionHelper.get_game_completed_map(self.quiz_api, slug)
+            if slug
+            else {}
+        ) or {}
 
-        coding_completed_uids = set(coding_map.keys()) if coding_map is not None else set()
-        game_completed_uids = set(game_map.keys()) if game_map is not None else set()
+        coding_completed_uids = set(coding_map.keys())
+        game_completed_uids = set(game_map.keys())
 
-        assigned_uids = self._get_effective_assigned_user_ids(homework)
+        assigned_uids = set(homework.assignee_ids or [])
 
         postpone_requests = (
             self.permission_repo.get_postpone_requests_for_homeworks(
                 homework_ids=[homework.id], user_ids=list(assigned_uids)
-            ) if self.permission_repo and homework.id else []
+            )
+            if self.permission_repo and homework.id
+            else []
         )
         postpone_map = {(r.created_by, r.homework_id): r for r in postpone_requests}
 
-        all_active_users = {u.id: u for u in self.user_repo.get_active_users() if u.id is not None}
+        all_active_users = {
+            u.id: u for u in self.user_repo.get_active_users() if u.id is not None
+        }
 
         coding_submitted: list[UserSubmissionInfo] = []
         coding_not_submitted: list[UserSubmissionInfo] = []
@@ -103,10 +88,16 @@ class GetHomeworkSubmissionStatusUseCase:
             if not user:
                 continue
 
+            user_id = user.id or uid
+
             req = postpone_map.get((uid, homework.id))
             effective_deadline = hw_deadline
             if req and req.start_time:
-                req_time = req.start_time.replace(tzinfo=None) if req.start_time.tzinfo is not None else req.start_time
+                req_time = (
+                    req.start_time.replace(tzinfo=None)
+                    if req.start_time.tzinfo is not None
+                    else req.start_time
+                )
                 if req_time > effective_deadline:
                     effective_deadline = req_time
 
@@ -134,20 +125,27 @@ class GetHomeworkSubmissionStatusUseCase:
 
                 coding_submitted.append(
                     UserSubmissionInfo(
-                        user_id=user.id,
+                        user_id=user_id,
                         name=user.name,
                         avatar_url=user.avatar_url,
                         is_late=is_late,
-                        submitted_at=str(submitted_at_str) if submitted_at_str else None,
+                        submitted_at=(
+                            str(submitted_at_str) if submitted_at_str else None
+                        ),
                     )
                 )
             else:
                 coding_not_submitted.append(
                     UserSubmissionInfo(
-                        user_id=user.id,
+                        user_id=user_id,
                         name=user.name,
                         avatar_url=user.avatar_url,
-                        is_late=is_past_deadline and not (req and req.start_time and now <= req.start_time.replace(tzinfo=None)),
+                        is_late=is_past_deadline
+                        and not (
+                            req
+                            and req.start_time
+                            and now <= req.start_time.replace(tzinfo=None)
+                        ),
                     )
                 )
 
@@ -175,20 +173,27 @@ class GetHomeworkSubmissionStatusUseCase:
 
                 game_submitted.append(
                     UserSubmissionInfo(
-                        user_id=user.id,
+                        user_id=user_id,
                         name=user.name,
                         avatar_url=user.avatar_url,
                         is_late=is_late,
-                        submitted_at=str(submitted_at_str) if submitted_at_str else None,
+                        submitted_at=(
+                            str(submitted_at_str) if submitted_at_str else None
+                        ),
                     )
                 )
             else:
                 game_not_submitted.append(
                     UserSubmissionInfo(
-                        user_id=user.id,
+                        user_id=user_id,
                         name=user.name,
                         avatar_url=user.avatar_url,
-                        is_late=is_past_deadline and not (req and req.start_time and now <= req.start_time.replace(tzinfo=None)),
+                        is_late=is_past_deadline
+                        and not (
+                            req
+                            and req.start_time
+                            and now <= req.start_time.replace(tzinfo=None)
+                        ),
                     )
                 )
 
@@ -208,7 +213,7 @@ class GetHomeworkSubmissionStatusUseCase:
                 if user:
                     top_not_submitted.append(
                         UserSubmissionInfo(
-                            user_id=user.id,
+                            user_id=user.id or uid,
                             name=user.name,
                             avatar_url=user.avatar_url,
                         )

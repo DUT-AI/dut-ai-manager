@@ -1,7 +1,6 @@
 from datetime import datetime
-from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, String, Text
+from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.homework.domain.entity import Homework as HomeworkEntity
@@ -22,9 +21,6 @@ class HomeworkModel(SQLAlchemyTimestampMixin, Base):
     assignees: Mapped[list["HomeworkAssigneeModel"]] = relationship(
         back_populates="homework", cascade="all, delete-orphan", lazy="selectin"
     )
-    teams: Mapped[list["HomeworkTeamModel"]] = relationship(
-        back_populates="homework", cascade="all, delete-orphan", lazy="selectin"
-    )
 
     def to_entity(self) -> HomeworkEntity:
         return HomeworkEntity(
@@ -34,8 +30,6 @@ class HomeworkModel(SQLAlchemyTimestampMixin, Base):
             link=self.link,
             slug=self.slug,
             assignee_ids=[a.user_id for a in self.assignees] if self.assignees else [],
-            team_ids=[t.team_id for t in self.teams] if self.teams else [],
-            submissions=[],
             created_at=self.created_at,
             updated_at=self.updated_at,
             created_by=self.created_by,
@@ -64,16 +58,3 @@ class HomeworkAssigneeModel(SQLAlchemyTimestampMixin, Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
 
     homework: Mapped[HomeworkModel] = relationship(back_populates="assignees")
-
-
-class HomeworkTeamModel(SQLAlchemyTimestampMixin, Base):
-    """Mapping between Homework and Team assignees"""
-
-    __tablename__ = "homework_teams"
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    homework_id: Mapped[int] = mapped_column(ForeignKey("homeworks.id", ondelete="CASCADE"), index=True)
-    team_id: Mapped[int] = mapped_column(ForeignKey("teams.id", ondelete="CASCADE"), index=True)
-
-    homework: Mapped[HomeworkModel] = relationship(back_populates="teams")
-
