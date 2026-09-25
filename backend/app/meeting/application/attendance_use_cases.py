@@ -1,42 +1,46 @@
 """
 Meeting Attendance & Status Use Cases — application layer.
 
-Handles 23:59 daily job meeting attendance checking, violation creation,
-and manual participant status updates.
+Handles 23:59 daily job meeting attendance checking by evaluating participant
+check-in states and publishing domain events to EventBus for decoupled violation handling.
 """
 
 from datetime import date, datetime
+from typing import cast
 
 from fastapi import status
 
 from app.meeting.domain.entity import MeetingParticipant
+from app.meeting.domain.events import (
+    ParticipantAbsenceRecorded,
+    ParticipantLateRecorded,
+)
 from app.meeting.domain.value_objects import ParticipantStatus
 from app.meeting.infrastructure.repository import (
     MeetingRepository,
     ParticipantRepository,
 )
-from app.permission_request.domain.entity import PermissionRequest
-from app.permission_request.domain.value_objects import RequestCategory
-from app.permission_request.infrastructure.repository import PermissionRequestRepository
 from app.shared.application.response import BadRequestException
+from app.shared.domain.event_bus import DomainEvent, EventBus
 from app.utils.datetime import get_current_utc7_time
-from app.violation.application.use_cases import CreateViolationUseCase
 
 
 class CheckMeetingAttendanceUseCase:
-    """Kiểm tra điểm danh các buổi họp & tạo vi phạm tự động lúc 23:59 hàng ngày"""
+    """
+    Kiểm tra điểm danh các buổi họp lúc 23:59 hàng ngày.
+    Đánh giá trạng thái tham dự và phát tán Domain Events (ParticipantAbsenceRecorded, ParticipantLateRecorded).
+    Việc xử lý vi phạm do Violation Domain tự động tiếp nhận và quyết định qua EventBus.
+    """
 
     def __init__(
         self,
         meeting_repo: MeetingRepository,
         participant_repo: ParticipantRepository,
-        permission_repo: PermissionRequestRepository,
-        create_violation_use_case: CreateViolationUseCase,
+        event_bus: type[EventBus] = EventBus,
     ):
         self.meeting_repo = meeting_repo
         self.participant_repo = participant_repo
-        self.permission_repo = permission_repo
-        self.create_violation_use_case = create_violation_use_case
+        self.event_bus = event_bus
 
     async def execute(self, target_date: date | None = None) -> int:
         if target_date is None:
@@ -51,72 +55,28 @@ class CheckMeetingAttendanceUseCase:
         if not active_meetings:
             return 0
 
-        meeting_ids = [m.id for m in active_meetings if m.id is not None]
-        all_user_ids = list(
-            {p.user_id for m in active_meetings for p in m.participants}
-        )
-
-        if not all_user_ids:
-            return 0
-
-        requests = self.permission_repo.get_requests_for_meetings(
-            meeting_ids, all_user_ids
-        )
-
-        absence_set: set[tuple[int, int | None]] = set()
-        late_request_map: dict[tuple[int, int | None], PermissionRequest] = {}
-
-        for req in requests:
-            if req.category == RequestCategory.ABSENCE:
-                if req.meeting_id:
-                    absence_set.add((req.user_id, req.meeting_id))
-                else:
-                    absence_set.add((req.user_id, None))
-            elif req.category == RequestCategory.LATE:
-                if req.meeting_id:
-                    late_request_map[(req.user_id, req.meeting_id)] = req
-                else:
-                    late_request_map[(req.user_id, None)] = req
-
-        created_violations_count = 0
-        now_utc7 = get_current_utc7_time()
-        violation_date = (
-            datetime.combine(target_date, datetime.min.time())
-            if target_date != now_utc7.date()
-            else now_utc7
-        )
+        events_published_count = 0
+        date_str = str(target_date)
 
         for meeting in active_meetings:
             m_id = meeting.id or 0
             for participant in meeting.participants:
                 user_id = participant.user_id
 
-                has_absence_perm = (user_id, m_id) in absence_set or (
-                    user_id,
-                    None,
-                ) in absence_set
-                late_perm = late_request_map.get(
-                    (user_id, m_id)
-                ) or late_request_map.get((user_id, None))
-
                 # Trường hợp A: Không check-in
                 if participant.check_in_at is None:
-                    if has_absence_perm:
-                        participant.status = ParticipantStatus.ABSENT_EXCUSED
-                        self.participant_repo.save(participant)
-                    else:
-                        participant.status = ParticipantStatus.ABSENT_UNEXCUSED
-                        self.participant_repo.save(participant)
-
-                        reason = f"Vắng sinh hoạt: {meeting.title} (Không xin phép)"
-                        violations = await self.create_violation_use_case.execute(
-                            user_ids=[user_id],
-                            reason=reason,
-                            date=violation_date,
-                            is_system=True,
+                    await self.event_bus.publish(
+                        cast(
+                            DomainEvent,
+                            ParticipantAbsenceRecorded(
+                                user_id=user_id,
+                                meeting_id=m_id,
+                                meeting_title=meeting.title,
+                                meeting_date=date_str,
+                            ),
                         )
-                        if violations:
-                            created_violations_count += len(violations)
+                    )
+                    events_published_count += 1
 
                 # Trường hợp B: Đã check-in
                 else:
@@ -128,46 +88,21 @@ class CheckMeetingAttendanceUseCase:
                         participant.status = ParticipantStatus.COMPLETED
                         self.participant_repo.save(participant)
                     else:
-                        if late_perm is None:
-                            participant.status = ParticipantStatus.LATE_UNEXCUSED
-                            self.participant_repo.save(participant)
-
-                            reason = f"Đi trễ sinh hoạt: {meeting.title} (Không xin phép)"
-                            violations = await self.create_violation_use_case.execute(
-                                user_ids=[user_id],
-                                reason=reason,
-                                date=violation_date,
-                                is_system=True,
+                        await self.event_bus.publish(
+                            cast(
+                                DomainEvent,
+                                ParticipantLateRecorded(
+                                    user_id=user_id,
+                                    meeting_id=m_id,
+                                    meeting_title=meeting.title,
+                                    check_in_at=participant.check_in_at,
+                                    start_time=meeting.start_time,
+                                ),
                             )
-                            if violations:
-                                created_violations_count += len(violations)
-                        else:
-                            if (
-                                late_perm.start_time
-                                and participant.check_in_at <= late_perm.start_time
-                            ):
-                                participant.status = ParticipantStatus.LATE_EXCUSED
-                                self.participant_repo.save(participant)
-                            else:
-                                participant.status = ParticipantStatus.LATE_UNEXCUSED
-                                self.participant_repo.save(participant)
+                        )
+                        events_published_count += 1
 
-                                limit_str = (
-                                    late_perm.start_time.strftime("%H:%M")
-                                    if late_perm.start_time
-                                    else "thời gian quy định"
-                                )
-                                reason = f"Đi trễ hơn thời gian xin phép ({limit_str}): {meeting.title}"
-                                violations = await self.create_violation_use_case.execute(
-                                    user_ids=[user_id],
-                                    reason=reason,
-                                    date=violation_date,
-                                    is_system=True,
-                                )
-                                if violations:
-                                    created_violations_count += len(violations)
-
-        return created_violations_count
+        return events_published_count
 
 
 class UpdateParticipantStatusUseCase:

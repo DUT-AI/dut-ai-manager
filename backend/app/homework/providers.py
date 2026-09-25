@@ -55,14 +55,12 @@ class HomeworkModuleProvider(Provider):
     def get_check_overdue_use_case(
         self,
         homework_repo: HomeworkRepository,
-        permission_repo: PermissionRequestRepository,
         quiz_api: QuizApiClient,
         user_repo: UserRepository,
         team_repo: TeamRepository,
     ) -> CheckOverdueHomeworkUseCase:
         return CheckOverdueHomeworkUseCase(
             homework_repo=homework_repo,
-            permission_repo=permission_repo,
             quiz_api=quiz_api,
             user_repo=user_repo,
             team_repo=team_repo,
@@ -72,18 +70,17 @@ class HomeworkModuleProvider(Provider):
     def get_rescan_all_use_case(
         self,
         homework_repo: HomeworkRepository,
-        permission_repo: PermissionRequestRepository,
         quiz_api: QuizApiClient,
         user_repo: UserRepository,
         team_repo: TeamRepository,
     ) -> RescanAllHomeworksUseCase:
         return RescanAllHomeworksUseCase(
             homework_repo=homework_repo,
-            permission_repo=permission_repo,
             quiz_api=quiz_api,
             user_repo=user_repo,
             team_repo=team_repo,
         )
+
 
 
     @provide

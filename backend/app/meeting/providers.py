@@ -24,13 +24,12 @@ from app.meeting.infrastructure.repository import (
     MeetingRepository,
     ParticipantRepository,
 )
-from app.permission_request.infrastructure.repository import PermissionRequestRepository
 from app.shared.infrastructure.discord_service import DiscordService
 from app.shared.infrastructure.minio_service import MinioService
 from app.team.infrastructure.repository import TeamRepository
 from app.user.infrastructure.repository import UserRepository
-from app.violation.application.use_cases import CreateViolationUseCase
 from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
+
 
 
 class MeetingModuleProvider(Provider):
@@ -102,12 +101,9 @@ class MeetingModuleProvider(Provider):
         self,
         meeting_repo: MeetingRepository,
         participant_repo: ParticipantRepository,
-        permission_repo: PermissionRequestRepository,
-        create_violation_uc: CreateViolationUseCase,
     ) -> CheckMeetingAttendanceUseCase:
-        return CheckMeetingAttendanceUseCase(
-            meeting_repo, participant_repo, permission_repo, create_violation_uc
-        )
+        return CheckMeetingAttendanceUseCase(meeting_repo, participant_repo)
+
 
     @provide
     def calculate_current_capacity_uc(

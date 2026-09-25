@@ -43,9 +43,29 @@ class ParticipantCheckedOut(DomainEvent):
 
 
 class MeetingAbsenceDetected(DomainEvent):
-    """Sự kiện phát hiện vắng mặt không phép"""
+    """Sự kiện phát hiện vắng mặt (Legacy alias cho ParticipantAbsenceRecorded)"""
 
     user_id: int
     meeting_id: int
     meeting_title: str
     meeting_date: str
+
+
+class ParticipantAbsenceRecorded(DomainEvent):
+    """Sự kiện ghi nhận thành viên vắng mặt trong buổi họp"""
+
+    user_id: int
+    meeting_id: int
+    meeting_title: str
+    meeting_date: str
+
+
+class ParticipantLateRecorded(DomainEvent):
+    """Sự kiện ghi nhận thành viên điểm danh trễ trong buổi họp"""
+
+    user_id: int
+    meeting_id: int
+    meeting_title: str
+    check_in_at: datetime
+    start_time: datetime
+

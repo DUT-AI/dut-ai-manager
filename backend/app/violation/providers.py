@@ -18,6 +18,9 @@ from app.violation.permission_handler import PermissionViolationHandler
 from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
 
 
+from app.meeting.infrastructure.repository import ParticipantRepository
+
+
 class ViolationModuleProvider(Provider):
     scope = Scope.REQUEST
 
@@ -60,8 +63,12 @@ class ViolationModuleProvider(Provider):
         self,
         create_violation_uc: CreateViolationUseCase,
         permission_repo: PermissionRequestRepository,
+        participant_repo: ParticipantRepository,
     ) -> AutomatedViolationHandler:
-        return AutomatedViolationHandler(create_violation_uc, permission_repo)
+        return AutomatedViolationHandler(
+            create_violation_uc, permission_repo, participant_repo
+        )
+
 
     @provide
     def get_violation_notification_handler(

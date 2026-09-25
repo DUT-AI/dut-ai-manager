@@ -1,7 +1,8 @@
 """
 Homework Checker Use Cases — application layer.
 
-Handles daily background job (23:59) checking for overdue homework submissions and creating system violations.
+Handles daily background job (23:59) checking for overdue homework submissions
+and publishing domain events (HomeworkOverdueDetected) for decoupled violation processing.
 """
 
 from datetime import date
@@ -14,8 +15,6 @@ from app.homework.domain.entity import Homework as HomeworkEntity
 from app.homework.domain.value_objects import HomeworkOverdueDetected
 from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.homework.infrastructure.repository import HomeworkRepository
-from app.permission_request.domain.value_objects import RequestCategory
-from app.permission_request.infrastructure.repository import PermissionRequestRepository
 from app.shared.domain.event_bus import DomainEvent, EventBus
 from app.team.infrastructure.repository import TeamRepository
 from app.user.infrastructure.repository import UserRepository
@@ -23,19 +22,17 @@ from app.utils.datetime import get_current_utc7_time
 
 
 class CheckOverdueHomeworkUseCase:
-    """Kiểm tra bài tập quá hạn và tạo vi phạm tự động dựa trên kết quả từ Quiz API."""
+    """Kiểm tra bài tập quá hạn và phát sự kiện HomeworkOverdueDetected qua EventBus."""
 
     def __init__(
         self,
         homework_repo: HomeworkRepository,
-        permission_repo: PermissionRequestRepository,
         quiz_api: QuizApiClient,
         user_repo: UserRepository,
-        team_repo: TeamRepository | None = None,
+        team_repo: TeamRepository,
         event_bus: type[EventBus] = EventBus,
     ):
         self.homework_repo = homework_repo
-        self.permission_repo = permission_repo
         self.quiz_api = quiz_api
         self.user_repo = user_repo
         self.team_repo = team_repo
@@ -64,10 +61,7 @@ class CheckOverdueHomeworkUseCase:
         Quét tất cả các bài tập có deadline là target_date (mặc định là hôm nay):
         1. Lấy danh sách thành viên được phân công.
         2. Kiểm tra xem họ có hoàn thành Coding và Game (nếu có) trên Quiz API không.
-        3. Nếu CHƯA hoàn thành:
-           - Kiểm tra xem có đơn xin tạm hoãn (POSTPONE) chưa hết hạn hay không.
-           - Nếu KHÔNG có đơn hợp lệ -> Phát đúng 1 sự kiện HomeworkOverdueDetected duy nhất
-             gộp lý do tất cả bài coding/game còn thiếu để tự động tạo Vi phạm.
+        3. Nếu CHƯA hoàn thành -> Phát sự kiện HomeworkOverdueDetected lên EventBus.
         """
         if target_date is None:
             now = get_current_utc7_time()
@@ -78,7 +72,7 @@ class CheckOverdueHomeworkUseCase:
             logger.info(f"Không có bài tập nào có deadline vào ngày {target_date}")
             return 0
 
-        created_violations_count = 0
+        events_published_count = 0
 
         for homework in due_homeworks:
             if not homework.id:
@@ -105,31 +99,7 @@ class CheckOverdueHomeworkUseCase:
             if not assigned_uids:
                 continue
 
-            postpone_requests = self.permission_repo.get_postpone_requests_for_homeworks(
-                homework_ids=[homework.id], user_ids=list(assigned_uids)
-            )
-            postpone_map = {(r.created_by, r.homework_id): r for r in postpone_requests}
-
-            now_naive = get_current_utc7_time().replace(tzinfo=None)
-
             for user_id in assigned_uids:
-                req = postpone_map.get((user_id, homework.id))
-                has_valid_postpone = False
-                if req and req.start_time:
-                    req_time = (
-                        req.start_time.replace(tzinfo=None)
-                        if req.start_time.tzinfo is not None
-                        else req.start_time
-                    )
-                    if now_naive <= req_time:
-                        has_valid_postpone = True
-
-                if has_valid_postpone:
-                    logger.info(
-                        f"User {user_id} chưa xong bài tập '{homework.title}' nhưng có đơn xin hoãn hợp lệ đến {req.start_time}. Bỏ qua vi phạm."
-                    )
-                    continue
-
                 coding_set = coding_completed_uids or set()
                 game_set = game_completed_uids or set()
 
@@ -150,8 +120,7 @@ class CheckOverdueHomeworkUseCase:
                     continue
 
                 items_str = " và ".join(uncompleted_labels)
-                reason_suffix = "quá thời gian xin hẹn" if req else "và không phép"
-                reason_msg = f"Chưa hoàn thành {items_str} ({homework.title}) {reason_suffix}"
+                reason_msg = f"Chưa hoàn thành {items_str} ({homework.title})"
 
                 await self.event_bus.publish(
                     cast(
@@ -162,21 +131,21 @@ class CheckOverdueHomeworkUseCase:
                             homework_title=homework.title,
                             deadline_date=str(homework.deadline.date()),
                             reason=reason_msg,
+                            uncompleted_items=uncompleted_labels,
                         ),
                     )
                 )
-                created_violations_count += 1
+                events_published_count += 1
 
-        return created_violations_count
+        return events_published_count
 
 
 class RescanAllHomeworksUseCase:
-    """Quét lại toàn bộ bài tập (cũ & mới), đồng bộ team phân công bài cũ và tạo lại vi phạm chuẩn."""
+    """Quét lại toàn bộ bài tập (cũ & mới), đồng bộ team phân công bài cũ và phát event kiểm tra."""
 
     def __init__(
         self,
         homework_repo: HomeworkRepository,
-        permission_repo: PermissionRequestRepository,
         quiz_api: QuizApiClient,
         user_repo: UserRepository,
         team_repo: TeamRepository | None = None,
@@ -184,7 +153,6 @@ class RescanAllHomeworksUseCase:
     ):
         self.checker = CheckOverdueHomeworkUseCase(
             homework_repo=homework_repo,
-            permission_repo=permission_repo,
             quiz_api=quiz_api,
             user_repo=user_repo,
             team_repo=team_repo,
@@ -240,4 +208,3 @@ class RescanAllHomeworksUseCase:
             total_violations_created += count
 
         return total_violations_created
-

@@ -1,65 +1,54 @@
-"""
-Test script to manually run the homework checker job.
-
-Usage:
-    cd backend
-    python -m tests.test_homework_checker
-"""
-
 import asyncio
+from datetime import date, datetime
+from unittest.mock import AsyncMock, MagicMock
 
-import tests  # noqa: F401
-from dishka import make_async_container
+import pytest
 
-from app.auth.providers import AuthModuleProvider
-from app.billing.providers import BillingModuleProvider
-from app.bonus_point.providers import BonusPointModuleProvider
-from app.expense.providers import ExpenseModuleProvider
-from app.homework.providers import HomeworkModuleProvider
-from app.jobs.homework_checker_job import check_overdue_homework_submissions
-from app.meeting.providers import MeetingModuleProvider
-from app.permission_request.providers import PermissionRequestModuleProvider
-from app.rbac.providers import RbacModuleProvider
-from app.report.providers import ReportModuleProvider
-from app.shared.providers import InfrastructureProvider
-from app.team.providers import TeamModuleProvider
-from app.user.providers import UserModuleProvider
-from app.violation.providers import ViolationModuleProvider
-from app.zalo.providers import ZaloModuleProvider
+from app.homework.application.checker_use_cases import CheckOverdueHomeworkUseCase
+from app.homework.domain.entity import Homework as HomeworkEntity
+from app.homework.domain.value_objects import HomeworkOverdueDetected
 
 
-async def main():
-    print("=" * 60)
-    print("Testing Homework Checker Job")
-    print("=" * 60)
+@pytest.mark.asyncio
+async def test_check_overdue_homework_publishes_event():
+    homework_repo = MagicMock()
+    quiz_api = MagicMock()
+    user_repo = MagicMock()
+    team_repo = MagicMock()
+    event_bus = MagicMock()
+    event_bus.publish = AsyncMock()
 
-    container = make_async_container(
-        InfrastructureProvider(),
-        AuthModuleProvider(),
-        UserModuleProvider(),
-        RbacModuleProvider(),
-        ViolationModuleProvider(),
-        PermissionRequestModuleProvider(),
-        ReportModuleProvider(),
-        MeetingModuleProvider(),
-        BonusPointModuleProvider(),
-        HomeworkModuleProvider(),
-        TeamModuleProvider(),
-        BillingModuleProvider(),
-        ZaloModuleProvider(),
-        ExpenseModuleProvider(),
+    # Create dummy homework due today with assignee user 101 and 102
+    hw = HomeworkEntity(
+        id=1,
+        title="Bài tập Python OOP",
+        slug="python-oop",
+        deadline=datetime(2026, 9, 25, 23, 59),
+        link="https://quiz.example.com/homeworks/python-oop",
+        assignee_ids=[101, 102],
+    )
+    homework_repo.get_by_deadline_date.return_value = [hw]
+
+    # User 101 submitted coding, User 102 has NOT submitted
+    quiz_api.get_homework_completed_members = AsyncMock(return_value=[{"user_id": 101, "submission_count": 1}])
+    quiz_api.get_game_leaderboard = AsyncMock(return_value=[])
+
+    use_case = CheckOverdueHomeworkUseCase(
+        homework_repo=homework_repo,
+        quiz_api=quiz_api,
+        user_repo=user_repo,
+        team_repo=team_repo,
+        event_bus=event_bus,
     )
 
-    try:
-        await check_overdue_homework_submissions(container)
-    finally:
-        await container.close()
+    count = await use_case.execute(target_date=date(2026, 9, 25))
 
-    print("=" * 60)
-    print("Test completed!")
-    print("=" * 60)
+    # User 102 should trigger HomeworkOverdueDetected event
+    assert count >= 1
+    assert event_bus.publish.called
 
-
-if __name__ == "__main__":
-    asyncio.run(main())
-
+    published_events = [call[0][0] for call in event_bus.publish.call_args_list]
+    overdue_events = [e for e in published_events if isinstance(e, HomeworkOverdueDetected)]
+    assert len(overdue_events) >= 1
+    assert overdue_events[0].user_id == 102
+    assert overdue_events[0].homework_id == 1
