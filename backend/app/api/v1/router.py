@@ -33,7 +33,6 @@ routers = [
     violation_router,
     team_router,
     homework_router,
-
     meeting_router,
     zalo_router,
     zalo_bot_router,

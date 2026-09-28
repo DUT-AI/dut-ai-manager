@@ -21,10 +21,10 @@ from app.meeting.infrastructure.repository import (
 )
 from app.shared.infrastructure.discord_service import DiscordService
 from app.shared.infrastructure.minio_service import MinioService
+from app.shared.infrastructure.tts_service import TTSService
 from app.team.infrastructure.repository import TeamRepository
 from app.user.infrastructure.repository import UserRepository
 from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
-
 
 
 class MeetingModuleProvider(Provider):
@@ -64,8 +64,11 @@ class MeetingModuleProvider(Provider):
         user_repo: UserRepository,
         participant_repo: ParticipantRepository,
         meeting_repo: MeetingRepository,
+        tts_service: TTSService,
     ) -> CheckInWithCardUseCase:
-        return CheckInWithCardUseCase(user_repo, participant_repo, meeting_repo)
+        return CheckInWithCardUseCase(
+            user_repo, participant_repo, meeting_repo, tts_service
+        )
 
     @provide
     def check_out_uc(
@@ -83,12 +86,16 @@ class MeetingModuleProvider(Provider):
 
     @provide
     def update_participant_status_uc(
-        self, meeting_repo: MeetingRepository, participant_repo: ParticipantRepository
+        self,
+        meeting_repo: MeetingRepository,
+        participant_repo: ParticipantRepository,
     ) -> UpdateParticipantStatusUseCase:
         return UpdateParticipantStatusUseCase(meeting_repo, participant_repo)
 
     @provide
-    def delete_meeting_uc(self, repo: MeetingRepository) -> DeleteMeetingUseCase:
+    def delete_meeting_uc(
+        self, repo: MeetingRepository
+    ) -> DeleteMeetingUseCase:
         return DeleteMeetingUseCase(repo)
 
     @provide
@@ -99,14 +106,12 @@ class MeetingModuleProvider(Provider):
     ) -> CheckMeetingAttendanceUseCase:
         return CheckMeetingAttendanceUseCase(meeting_repo, participant_repo)
 
-
     @provide
     def calculate_current_capacity_uc(
         self,
         meeting_repo: MeetingRepository,
     ) -> CalculateCurrentCapacityUseCase:
         return CalculateCurrentCapacityUseCase(meeting_repo)
-
 
     @provide
     def get_meeting_notification_handler(

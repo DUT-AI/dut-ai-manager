@@ -10,6 +10,7 @@ build/
 .env
 .env.local
 .env.*.local
+checkin-esp32/secrets.h
 
 # IDE
 .idea/

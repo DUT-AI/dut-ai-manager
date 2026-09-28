@@ -2,7 +2,7 @@ from datetime import date
 from typing import Annotated
 
 from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import APIRouter, Depends, File, Form, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Response, UploadFile, status
 from fastapi.responses import StreamingResponse
 
 from app.core.deps import CurrentUser, hasPermission
@@ -174,7 +174,13 @@ async def delete_meeting(
 
 @router.post(
     "/check-in-with-card",
-    response_model=ApiResponse[None],
+    summary="Check-in bằng mã thẻ và trả về audio giọng nói",
+    responses={
+        200: {
+            "content": {"audio/wav": {}},
+            "description": "Audio WAV giọng nói thông báo check-in",
+        }
+    },
 )
 @inject
 async def check_in_with_card(
@@ -185,9 +191,18 @@ async def check_in_with_card(
     """
     Check-in bằng mã thẻ: không yêu cầu JWT (thiết bị quầy).
     Tìm user theo `check_in_card_code`, meeting giao khung ±30 phút quanh hiện tại.
+    Trả về dữ liệu âm thanh (WAV) thông báo kết quả điểm danh để thiết bị phát ra loa.
     """
-    message = await uc.execute(card_code=body.card_code)
-    return ApiResponse.success(data=None, message=remove_vietnamese_tones(message))
+    message, audio_bytes = await uc.execute(card_code=body.card_code)
+    return Response(
+        content=audio_bytes,
+        media_type="audio/wav",
+        headers={
+            "Content-Disposition": 'inline; filename="checkin.wav"',
+            "X-Message": remove_vietnamese_tones(message),
+            "Content-Length": str(len(audio_bytes)),
+        },
+    )
 
 
 @router.post("/check-in", response_model=ApiResponse[list[ParticipantResponse]])

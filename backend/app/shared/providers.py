@@ -9,6 +9,7 @@ from app.core.config import settings
 from app.shared.infrastructure.discord_service import DiscordService
 from app.shared.infrastructure.email_service import EmailService
 from app.shared.infrastructure.minio_service import MinioService
+from app.shared.infrastructure.tts_service import TTSService
 
 
 class InfrastructureProvider(Provider):
@@ -40,3 +41,7 @@ class InfrastructureProvider(Provider):
     @provide(scope=Scope.APP)
     def get_discord_service(self) -> DiscordService:
         return DiscordService()
+
+    @provide(scope=Scope.APP)
+    def get_tts_service(self) -> TTSService:
+        return TTSService()
