@@ -1,10 +1,11 @@
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <SPI.h>
+#include <Wire.h>
 #include <MFRC522.h>
 #include <LiquidCrystal_I2C.h>
 #include <ArduinoJson.h>
-#include "sound_data.h"
 #include "secrets.h"
 
 // --- CẤU HÌNH WIFI & API ---
@@ -23,10 +24,25 @@ const String authCode = AUTH_CODE;
 
 // --- KHỞI TẠO ĐỐI TƯỢNG ---
 MFRC522 mfrc522(SS_PIN, RST_PIN);
-LiquidCrystal_I2C lcd(0x27, 16, 2); // Địa chỉ I2C có thể là 0x27 hoặc 0x3F tùy module
+LiquidCrystal_I2C lcd(0x27, 16, 2); // Khởi tạo mặc định, sẽ tự quét lại ở setup
+
+// Hàm tự động quét tìm địa chỉ I2C của màn hình LCD (0x27 hoặc 0x3F)
+uint8_t findI2CLCDAddress() {
+  Wire.begin();
+  for (uint8_t addr = 1; addr < 127; addr++) {
+    Wire.beginTransmission(addr);
+    if (Wire.endTransmission() == 0) {
+      if (addr == 0x27 || addr == 0x3F) {
+        return addr;
+      }
+    }
+  }
+  return 0x27; // Mặc định nếu không tìm thấy
+}
 
 void setup() {
   Serial.begin(115200);
+  delay(100);
   
   // Thiết lập chân âm thanh DAC và LED
   dacWrite(SPEAKER_PIN, 0); // Mức 0V ban đầu để chống rè/ù loa
@@ -34,19 +50,26 @@ void setup() {
   pinMode(LED_GREEN_PIN, OUTPUT);
   pinMode(LED_RED_PIN, OUTPUT);
 
-  // Khởi tạo LCD
+  // Tự động nhận diện địa chỉ I2C và khởi tạo LCD
+  uint8_t lcdAddr = findI2CLCDAddress();
+  Serial.printf("LCD I2C Address: 0x%02X\n", lcdAddr);
+  lcd = LiquidCrystal_I2C(lcdAddr, 16, 2);
   lcd.init();
   lcd.backlight();
+  lcd.clear();
   lcd.setCursor(0, 0);
+  lcd.print("DUT AI Manager");
+  lcd.setCursor(0, 1);
   lcd.print("Dang ket noi...");
 
   // Kết nối WiFi
+  Serial.println("Dang ket noi WiFi: " + String(ssid));
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    Serial.println("connecting...");
+    Serial.print(".");
   }
-  Serial.println("\nWiFi connected");
+  Serial.println("\nWiFi connected! IP: " + WiFi.localIP().toString());
 
   // Khởi tạo SPI và RFID
   SPI.begin();
@@ -128,7 +151,7 @@ void playErrorSound() {
 }
 
 // 3. Phát âm thanh WAV trực tiếp từ luồng HTTP nhận về từ Server qua DAC GPIO 26
-void playWavStream(WiFiClient* stream, int totalBytes) {
+void playWavStream(Stream* stream, int totalBytes) {
   if (!stream) return;
 
   // Đọc 44 bytes header của file WAV
@@ -159,7 +182,6 @@ void playWavStream(WiFiClient* stream, int totalBytes) {
   Serial.printf("Phat audio WAV: %u Hz, %u channels, %u bits\n", sampleRate, numChannels, bitsPerSample);
 
   unsigned long sampleIntervalUs = 1000000UL / sampleRate;
-  unsigned long nextMicros = micros();
 
   // Khử tiếng bụp loa: Fade-in nhẹ từ 0 lên mức 128 (DC bias của DAC)
   for (int v = 0; v <= 128; v += 4) {
@@ -167,13 +189,13 @@ void playWavStream(WiFiClient* stream, int totalBytes) {
     delayMicroseconds(50);
   }
 
-  const size_t BUF_SIZE = 1024;
+  const size_t BUF_SIZE = 512;
   uint8_t buffer[BUF_SIZE];
   uint8_t lastSample = 128;
 
   int remainingBytes = totalBytes > 44 ? totalBytes - 44 : -1;
 
-  while (stream->connected() && (remainingBytes > 0 || remainingBytes == -1 || stream->available())) {
+  while (stream->available() || remainingBytes > 0 || remainingBytes == -1) {
     size_t toRead = sizeof(buffer);
     if (remainingBytes > 0 && (int)toRead > remainingBytes) {
       toRead = remainingBytes;
@@ -182,6 +204,9 @@ void playWavStream(WiFiClient* stream, int totalBytes) {
     size_t n = stream->readBytes(buffer, toRead);
     if (n == 0) break;
     if (remainingBytes > 0) remainingBytes -= n;
+
+    // Thiết lập mốc thời gian phát cho từng chunk
+    unsigned long nextMicros = micros();
 
     if (bitsPerSample == 16) {
       size_t step = 2 * numChannels;
@@ -262,22 +287,39 @@ void setIdleState() {
 // Hàm gọi API và xử lý Response
 void checkCardAPI(String id) {
   if (WiFi.status() == WL_CONNECTED) {
-    HTTPClient http;
-    http.begin(apiUrl);
-    
-    // Thu thập các Header tùy chỉnh trả về từ Server
-    const char* headerKeys[] = {"X-Message", "Content-Type"};
-    http.collectHeaders(headerKeys, 2);
+    WiFiClientSecure client;
+    client.setInsecure(); // Cho phép kết nối HTTPS không cần xác thực SSL cert
+    client.setTimeout(15);
 
+    HTTPClient http;
+    if (!http.begin(client, apiUrl)) {
+      Serial.println("Loi: Khong the ket noi HTTP Client");
+      lcd.clear();
+      lcd.print("Loi ket noi!");
+      playErrorSound();
+      return;
+    }
+
+    // Thiết lập User-Agent trình duyệt để Cloudflare không chặn mã lỗi 1010
+    http.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
     http.addHeader("Authorization", "Bearer " + authCode);
     http.addHeader("Content-Type", "application/json");
+
+    // Thu thập các Header tùy chỉnh trả về từ Server
+    const char* headerKeys[] = {"X-Message", "x-message", "Content-Type"};
+    http.collectHeaders(headerKeys, 3);
     
     String jsonBody = "{\"card_code\":\"" + id + "\"}";
     Serial.println("Sending Request Body: " + jsonBody);
     
     int httpResponseCode = http.POST(jsonBody);
+    Serial.printf("HTTP Response Code: %d\n", httpResponseCode);
+
     String contentType = http.header("Content-Type");
     String serverMessage = http.header("X-Message");
+    if (serverMessage.length() == 0) {
+      serverMessage = http.header("x-message");
+    }
 
     lcd.clear();
     lcd.setCursor(0, 0);
@@ -301,7 +343,7 @@ void checkCardAPI(String id) {
       
       // Phát trực tiếp luồng Audio WAV nhận về từ Server qua DAC GPIO 26
       if (contentType.indexOf("audio") >= 0 || contentType.indexOf("wav") >= 0 || http.getSize() > 100) {
-        WiFiClient* stream = http.getStreamPtr();
+        Stream* stream = http.getStreamPtr();
         playWavStream(stream, http.getSize());
       } else {
         playFallbackSuccessSound();
@@ -321,7 +363,7 @@ void checkCardAPI(String id) {
         }
 
         if (contentType.indexOf("audio") >= 0 || contentType.indexOf("wav") >= 0) {
-          WiFiClient* stream = http.getStreamPtr();
+          Stream* stream = http.getStreamPtr();
           playWavStream(stream, http.getSize());
         } else {
           playErrorSound();
@@ -338,7 +380,7 @@ void checkCardAPI(String id) {
             lcd.print(serverMessage.substring(16, 32));
           }
         } else {
-          lcd.print("Loi the / Meeting!");
+          lcd.print("The chua dang ky!");
         }
         playErrorSound();
       }
@@ -349,7 +391,7 @@ void checkCardAPI(String id) {
       lcd.print("Loi Server!");
       lcd.setCursor(0, 1);
       lcd.print("Code: " + String(httpResponseCode));
-      Serial.println("HTTP Error code: " + String(httpResponseCode));
+      Serial.printf("HTTP Error code: %d\n", httpResponseCode);
       playErrorSound();
       delay(3000); 
     }

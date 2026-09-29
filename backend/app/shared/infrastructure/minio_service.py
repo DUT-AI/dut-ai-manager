@@ -143,3 +143,52 @@ class MinioService:
         except Exception as e:
             logger.error(f"Failed to delete file from S3/MinIO: {e}")
             return False
+
+    async def file_exists(self, filename: str) -> bool:
+        """
+        Check if a file exists in S3/MinIO.
+
+        Args:
+            filename: Object key to check
+
+        Returns:
+            True if file exists, False otherwise
+        """
+        try:
+            async with self._get_client() as s3:
+                await s3.head_object(Bucket=self.bucket_name, Key=filename)
+                return True
+        except ClientError:
+            return False
+        except Exception as e:
+            logger.debug(f"Error checking file existence in S3/MinIO: {e}")
+            return False
+
+    async def get_file_bytes(self, filename: str) -> bytes | None:
+        """
+        Download file content from S3/MinIO as raw bytes.
+
+        Args:
+            filename: Object key to retrieve
+
+        Returns:
+            bytes of the file if exists, None otherwise
+        """
+        try:
+            async with self._get_client() as s3:
+                response = await s3.get_object(
+                    Bucket=self.bucket_name, Key=filename
+                )
+                async with response["Body"] as stream:
+                    return await stream.read()
+        except ClientError as e:
+            error_code = e.response.get("Error", {}).get("Code")
+            if error_code in ("404", "NoSuchKey"):
+                return None
+            logger.error(f"Failed to get file {filename} from S3/MinIO: {e}")
+            return None
+        except Exception as e:
+            logger.error(
+                f"Unexpected error getting file {filename} from S3/MinIO: {e}"
+            )
+            return None

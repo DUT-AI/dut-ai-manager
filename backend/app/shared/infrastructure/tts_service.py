@@ -374,3 +374,63 @@ class TTSService:
         )
         logger.info(f"TTS audio uploaded to MinIO: {public_url}")
         return public_url
+
+    async def synthesize_with_cache(
+        self,
+        text: str,
+        cache_key: str,
+        minio_service: Any,
+        **kwargs: Any,
+    ) -> bytes:
+        """
+        Synthesize speech with MinIO caching.
+        If the audio already exists on MinIO under `cache_key`, return it directly.
+        Otherwise, synthesize via TTS API, save to MinIO, and return audio bytes.
+
+        Args:
+            text: Text to convert to speech
+            cache_key: Unique MinIO storage key (e.g. 'tts/users/user_1.wav')
+            minio_service: MinioService instance
+            **kwargs: Extra parameters passed to `synthesize`
+
+        Returns:
+            bytes: The raw audio bytes.
+        """
+        if not text or not text.strip():
+            raise TTSServiceError("Input text cannot be empty", status_code=400)
+
+        # 1. Try to read from MinIO cache
+        try:
+            cached_bytes = await minio_service.get_file_bytes(cache_key)
+            if cached_bytes and len(cached_bytes) > 0:
+                logger.info(
+                    f"🎯 MinIO TTS Cache HIT: {cache_key} ({len(cached_bytes)} bytes)"
+                )
+                return cached_bytes
+        except Exception as exc:
+            logger.warning(
+                f"Error reading MinIO TTS cache for {cache_key}: {exc}"
+            )
+
+        # 2. Cache MISS: Synthesize via external TTS API
+        logger.info(
+            f"⚡ MinIO TTS Cache MISS for {cache_key}. Calling TTS API..."
+        )
+        audio_bytes = await self.synthesize(text, **kwargs)
+
+        # 3. Save to MinIO cache asynchronously
+        try:
+            response_format = kwargs.get(
+                "response_format", DEFAULT_RESPONSE_FORMAT
+            )
+            content_type = self.get_mime_type(response_format)
+            await minio_service.upload_file(
+                file_data=audio_bytes,
+                filename=cache_key,
+                content_type=content_type,
+            )
+            logger.info(f"Saved TTS audio to MinIO cache: {cache_key}")
+        except Exception as exc:
+            logger.warning(f"Failed to cache TTS audio on MinIO: {exc}")
+
+        return audio_bytes

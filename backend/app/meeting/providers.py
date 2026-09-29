@@ -65,9 +65,14 @@ class MeetingModuleProvider(Provider):
         participant_repo: ParticipantRepository,
         meeting_repo: MeetingRepository,
         tts_service: TTSService,
+        minio_service: MinioService,
     ) -> CheckInWithCardUseCase:
         return CheckInWithCardUseCase(
-            user_repo, participant_repo, meeting_repo, tts_service
+            user_repo,
+            participant_repo,
+            meeting_repo,
+            tts_service,
+            minio_service,
         )
 
     @provide

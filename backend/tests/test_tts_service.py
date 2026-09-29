@@ -55,7 +55,10 @@ def test_check_in_with_card_use_case_returns_speech_audio():
     participant_repo = MagicMock()
     meeting_repo = MagicMock()
     tts_service = MagicMock()
-    tts_service.synthesize = AsyncMock(return_value=b"RIFF_FAKE_AUDIO_BYTES")
+    minio_service = MagicMock()
+    tts_service.synthesize_with_cache = AsyncMock(
+        return_value=b"RIFF_FAKE_AUDIO_BYTES"
+    )
     event_bus = MagicMock()
     event_bus.publish = AsyncMock()
 
@@ -90,6 +93,7 @@ def test_check_in_with_card_use_case_returns_speech_audio():
         participant_repo=participant_repo,
         meeting_repo=meeting_repo,
         tts_service=tts_service,
+        minio_service=minio_service,
         event_bus=event_bus,
     )
 
@@ -98,5 +102,54 @@ def test_check_in_with_card_use_case_returns_speech_audio():
     assert "Nguyễn Phước Nguyên" in msg
     assert "thành công" in msg
     assert audio_bytes == b"RIFF_FAKE_AUDIO_BYTES"
-    tts_service.synthesize.assert_called_once()
+    tts_service.synthesize_with_cache.assert_called_once()
+    assert (
+        tts_service.synthesize_with_cache.call_args.kwargs["cache_key"]
+        == "tts/users/user_1_checkin.wav"
+    )
     event_bus.publish.assert_called_once()
+
+
+def test_tts_service_synthesize_with_cache_hit():
+    service = TTSService()
+    minio_mock = MagicMock()
+    minio_mock.get_file_bytes = AsyncMock(return_value=b"CACHED_AUDIO_FROM_MINIO")
+    service.synthesize = AsyncMock()
+
+    result = asyncio.run(
+        service.synthesize_with_cache(
+            text="Xin chào",
+            cache_key="tts/users/user_1_checkin.wav",
+            minio_service=minio_mock,
+        )
+    )
+
+    assert result == b"CACHED_AUDIO_FROM_MINIO"
+    minio_mock.get_file_bytes.assert_called_once_with(
+        "tts/users/user_1_checkin.wav"
+    )
+    service.synthesize.assert_not_called()
+
+
+def test_tts_service_synthesize_with_cache_miss():
+    service = TTSService()
+    minio_mock = MagicMock()
+    minio_mock.get_file_bytes = AsyncMock(return_value=None)
+    minio_mock.upload_file = AsyncMock(return_value="https://minio/tts.wav")
+    service.synthesize = AsyncMock(return_value=b"FRESH_GENERATED_TTS_BYTES")
+
+    result = asyncio.run(
+        service.synthesize_with_cache(
+            text="Xin chào",
+            cache_key="tts/users/user_1_checkin.wav",
+            minio_service=minio_mock,
+        )
+    )
+
+    assert result == b"FRESH_GENERATED_TTS_BYTES"
+    minio_mock.get_file_bytes.assert_called_once_with(
+        "tts/users/user_1_checkin.wav"
+    )
+    service.synthesize.assert_called_once_with("Xin chào")
+    minio_mock.upload_file.assert_called_once()
+
