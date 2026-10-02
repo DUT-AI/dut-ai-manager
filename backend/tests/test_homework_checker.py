@@ -28,7 +28,9 @@ async def test_check_overdue_homework_publishes_event():
     homework_repo.get_by_deadline_date.return_value = [hw]
 
     # User 101 submitted coding, User 102 has NOT submitted; No game component for this homework (returns None)
-    quiz_api.get_homework_completed_members = AsyncMock(return_value=[{"user_id": 101, "submission_count": 1}])
+    quiz_api.get_homework_completed_members = AsyncMock(
+        return_value=[{"user_id": 101, "submission_count": 1}]
+    )
     quiz_api.get_game_leaderboard = AsyncMock(return_value=None)
 
     use_case = CheckOverdueHomeworkUseCase(
@@ -45,7 +47,9 @@ async def test_check_overdue_homework_publishes_event():
     assert event_bus.publish.called
 
     published_events = [call[0][0] for call in event_bus.publish.call_args_list]
-    overdue_events = [e for e in published_events if isinstance(e, HomeworkOverdueDetected)]
+    overdue_events = [
+        e for e in published_events if isinstance(e, HomeworkOverdueDetected)
+    ]
     assert len(overdue_events) >= 1
     assert overdue_events[0].user_id == 102
     assert overdue_events[0].homework_id == 1

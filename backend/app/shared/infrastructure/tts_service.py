@@ -96,13 +96,9 @@ class TTSService:
             "speed": speed if speed is not None else DEFAULT_SPEED,
             "stream": stream,
             "normalize_text": (
-                normalize_text
-                if normalize_text is not None
-                else DEFAULT_NORMALIZE_TEXT
+                normalize_text if normalize_text is not None else DEFAULT_NORMALIZE_TEXT
             ),
-            "cfg_scale": (
-                cfg_scale if cfg_scale is not None else DEFAULT_CFG_SCALE
-            ),
+            "cfg_scale": (cfg_scale if cfg_scale is not None else DEFAULT_CFG_SCALE),
             "audio_temperature": (
                 audio_temperature
                 if audio_temperature is not None
@@ -205,9 +201,7 @@ class TTSService:
                         )
 
                     audio_data = await response.read()
-                    logger.info(
-                        f"TTS synthesis done ({len(audio_data)} bytes)"
-                    )
+                    logger.info(f"TTS synthesis done ({len(audio_data)} bytes)")
                     return audio_data
         except aiohttp.ClientError as exc:
             logger.error(f"Network error during TTS API request: {exc}")
@@ -268,9 +262,7 @@ class TTSService:
         )
 
         timeout = aiohttp.ClientTimeout(total=self.timeout_seconds)
-        logger.debug(
-            f"Starting streaming TTS for voice '{payload.get('voice')}'"
-        )
+        logger.debug(f"Starting streaming TTS for voice '{payload.get('voice')}'")
 
         try:
             async with aiohttp.ClientSession(timeout=timeout) as session:
@@ -408,21 +400,15 @@ class TTSService:
                 )
                 return cached_bytes
         except Exception as exc:
-            logger.warning(
-                f"Error reading MinIO TTS cache for {cache_key}: {exc}"
-            )
+            logger.warning(f"Error reading MinIO TTS cache for {cache_key}: {exc}")
 
         # 2. Cache MISS: Synthesize via external TTS API
-        logger.info(
-            f"⚡ MinIO TTS Cache MISS for {cache_key}. Calling TTS API..."
-        )
+        logger.info(f"⚡ MinIO TTS Cache MISS for {cache_key}. Calling TTS API...")
         audio_bytes = await self.synthesize(text, **kwargs)
 
         # 3. Save to MinIO cache asynchronously
         try:
-            response_format = kwargs.get(
-                "response_format", DEFAULT_RESPONSE_FORMAT
-            )
+            response_format = kwargs.get("response_format", DEFAULT_RESPONSE_FORMAT)
             content_type = self.get_mime_type(response_format)
             await minio_service.upload_file(
                 file_data=audio_bytes,

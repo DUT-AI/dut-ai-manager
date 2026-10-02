@@ -6,6 +6,7 @@ Eliminates code duplication (DRY principle) across Homework use cases.
 """
 
 import re
+
 from loguru import logger
 
 from app.homework.domain.entity import Homework as HomeworkEntity
@@ -26,7 +27,13 @@ class QuizSubmissionHelper:
             if match:
                 return match.group(1).strip()
             if link_clean.startswith("http://") or link_clean.startswith("https://"):
-                candidate = link_clean.rstrip("/").split("/")[-1].split("?")[0].split("#")[0].strip()
+                candidate = (
+                    link_clean.rstrip("/")
+                    .split("/")[-1]
+                    .split("?")[0]
+                    .split("#")[0]
+                    .strip()
+                )
                 if candidate and len(candidate) > 1 and " " not in candidate:
                     if candidate.lower() in ("game", "homeworks", "coding"):
                         parts = [p for p in link_clean.rstrip("/").split("/") if p]
@@ -46,7 +53,9 @@ class QuizSubmissionHelper:
         return "both"
 
     @staticmethod
-    async def get_coding_completed_map(quiz_api: QuizApiClient | None, slug: str) -> dict[int, dict] | None:
+    async def get_coding_completed_map(
+        quiz_api: QuizApiClient | None, slug: str
+    ) -> dict[int, dict] | None:
         """Lấy bản đồ thành viên đã hoàn thành bài tập Coding theo user_id từ Quiz API."""
         if not quiz_api:
             return None
@@ -68,7 +77,9 @@ class QuizSubmissionHelper:
             return None
 
     @staticmethod
-    async def get_game_completed_map(quiz_api: QuizApiClient | None, slug: str) -> dict[int, dict] | None:
+    async def get_game_completed_map(
+        quiz_api: QuizApiClient | None, slug: str
+    ) -> dict[int, dict] | None:
         """Lấy bản đồ thành viên đã hoàn thành game theo user_id từ Quiz API."""
         if not quiz_api:
             return None
@@ -95,7 +106,9 @@ class QuizSubmissionHelper:
             return None
 
     @classmethod
-    async def get_coding_completed_user_ids(cls, quiz_api: QuizApiClient | None, slug: str) -> set[int] | None:
+    async def get_coding_completed_user_ids(
+        cls, quiz_api: QuizApiClient | None, slug: str
+    ) -> set[int] | None:
         """Lấy danh sách user_id đã hoàn thành bài tập Coding."""
         completed_map = await cls.get_coding_completed_map(quiz_api, slug)
         if completed_map is None:
@@ -103,7 +116,9 @@ class QuizSubmissionHelper:
         return set(completed_map.keys())
 
     @classmethod
-    async def get_game_completed_user_ids(cls, quiz_api: QuizApiClient | None, slug: str) -> set[int] | None:
+    async def get_game_completed_user_ids(
+        cls, quiz_api: QuizApiClient | None, slug: str
+    ) -> set[int] | None:
         """Lấy danh sách user_id đã hoàn thành game."""
         completed_map = await cls.get_game_completed_map(quiz_api, slug)
         if completed_map is None:
@@ -127,11 +142,12 @@ class QuizSubmissionHelper:
         has_game = game_completed_uids is not None
 
         if has_coding and has_game:
-            return (user_id in (coding_completed_uids or set())) and (user_id in (game_completed_uids or set()))
+            return (user_id in (coding_completed_uids or set())) and (
+                user_id in (game_completed_uids or set())
+            )
         elif has_coding:
             return user_id in (coding_completed_uids or set())
         elif has_game:
             return user_id in (game_completed_uids or set())
         else:
             return False
-

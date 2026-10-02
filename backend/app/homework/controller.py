@@ -56,7 +56,11 @@ async def rescan_all_homeworks(
     """Admin API: Quét lại toàn bộ bài tập (cũ & mới) và tạo lại vi phạm chuẩn"""
     count = await rescan_use_case.execute(auto_sync_legacy=not dry_run)
     return ApiResponse.success(
-        data={"message": "Rescan completed", "violations_processed": count, "dry_run": dry_run}
+        data={
+            "message": "Rescan completed",
+            "violations_processed": count,
+            "dry_run": dry_run,
+        }
     )
 
 
@@ -97,7 +101,9 @@ async def create_homework(
         else datetime.now().timestamp()
     )
     if deadline_ts < now_ts:
-        raise HTTPException(status_code=400, detail="Hạn nộp không được ở trong quá khứ")
+        raise HTTPException(
+            status_code=400, detail="Hạn nộp không được ở trong quá khứ"
+        )
 
     result = await create_uc.execute(data)
     return ApiResponse.success(data=result)
@@ -184,7 +190,9 @@ async def update_homework(
             else datetime.now().timestamp()
         )
         if deadline_ts < now_ts:
-            raise HTTPException(status_code=400, detail="Hạn nộp không được ở trong quá khứ")
+            raise HTTPException(
+                status_code=400, detail="Hạn nộp không được ở trong quá khứ"
+            )
 
     result = await update_uc.execute(homework_id, data)
     if not result:

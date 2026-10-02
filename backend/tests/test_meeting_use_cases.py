@@ -1,6 +1,6 @@
 import asyncio
-from datetime import datetime, date
 import sys
+from datetime import date, datetime
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
@@ -8,6 +8,10 @@ backend_dir = Path(__file__).resolve().parent.parent
 if str(backend_dir) not in sys.path:
     sys.path.insert(0, str(backend_dir))
 
+import app.homework.infrastructure.model  # noqa: F401
+import app.permission_request.infrastructure.model  # noqa: F401
+import app.user.infrastructure.model  # noqa: F401
+import app.violation.infrastructure.model  # noqa: F401
 from app.meeting.application import CheckMeetingAttendanceUseCase
 from app.meeting.domain.entity import Meeting, MeetingParticipant
 from app.meeting.domain.events import (
@@ -15,10 +19,6 @@ from app.meeting.domain.events import (
     ParticipantLateRecorded,
 )
 from app.meeting.domain.value_objects import ParticipantStatus
-import app.user.infrastructure.model  # noqa: F401
-import app.homework.infrastructure.model  # noqa: F401
-import app.permission_request.infrastructure.model  # noqa: F401
-import app.violation.infrastructure.model  # noqa: F401
 
 
 def test_check_meeting_attendance_decoupled_job():
@@ -31,16 +31,24 @@ def test_check_meeting_attendance_decoupled_job():
     end_time = datetime(2026, 9, 10, 21, 0)
 
     # Participant 1: Chưa check-in -> Phát ParticipantAbsenceRecorded
-    p_no_checkin = MeetingParticipant(id=1, user_id=101, status=ParticipantStatus.NOT_JOINED)
+    p_no_checkin = MeetingParticipant(
+        id=1, user_id=101, status=ParticipantStatus.NOT_JOINED
+    )
 
     # Participant 2: Check-in đúng giờ, quên check-out -> Auto check_out_at = end_time, COMPLETED (Không phát event vi phạm)
     p_ontime = MeetingParticipant(
-        id=2, user_id=102, check_in_at=datetime(2026, 9, 10, 18, 2), status=ParticipantStatus.JOINED
+        id=2,
+        user_id=102,
+        check_in_at=datetime(2026, 9, 10, 18, 2),
+        status=ParticipantStatus.JOINED,
     )
 
     # Participant 3: Check-in trễ -> Phát ParticipantLateRecorded
     p_late = MeetingParticipant(
-        id=3, user_id=103, check_in_at=datetime(2026, 9, 10, 18, 20), status=ParticipantStatus.JOINED
+        id=3,
+        user_id=103,
+        check_in_at=datetime(2026, 9, 10, 18, 20),
+        status=ParticipantStatus.JOINED,
     )
 
     dummy_meeting = Meeting(
@@ -71,8 +79,12 @@ def test_check_meeting_attendance_decoupled_job():
     assert event_bus.publish.call_count == 2
 
     published_events = [call[0][0] for call in event_bus.publish.call_args_list]
-    absence_events = [e for e in published_events if isinstance(e, ParticipantAbsenceRecorded)]
-    late_events = [e for e in published_events if isinstance(e, ParticipantLateRecorded)]
+    absence_events = [
+        e for e in published_events if isinstance(e, ParticipantAbsenceRecorded)
+    ]
+    late_events = [
+        e for e in published_events if isinstance(e, ParticipantLateRecorded)
+    ]
 
     assert len(absence_events) == 1
     assert absence_events[0].user_id == 101
@@ -91,8 +103,13 @@ def test_check_meeting_attendance_decoupled_job():
 
 def test_meeting_repository_save_hard_deletes_removed_participants():
     """Kiểm tra MeetingRepository.save thực hiện session.delete đối với participant bị loại bỏ."""
+    from app.meeting.infrastructure.model import (
+        Meeting as ORMMeeting,
+    )
+    from app.meeting.infrastructure.model import (
+        MeetingParticipant as ORMParticipant,
+    )
     from app.meeting.infrastructure.repository import MeetingRepository
-    from app.meeting.infrastructure.model import Meeting as ORMMeeting, MeetingParticipant as ORMParticipant
 
     session = MagicMock()
 
@@ -134,8 +151,13 @@ def test_meeting_repository_save_hard_deletes_removed_participants():
 
 def test_meeting_mapping_filters_is_deleted_participants():
     """Kiểm tra Meeting.to_entity() và MeetingRepository._to_domain() bỏ qua participant is_deleted=True."""
+    from app.meeting.infrastructure.model import (
+        Meeting as ORMMeeting,
+    )
+    from app.meeting.infrastructure.model import (
+        MeetingParticipant as ORMParticipant,
+    )
     from app.meeting.infrastructure.repository import MeetingRepository
-    from app.meeting.infrastructure.model import Meeting as ORMMeeting, MeetingParticipant as ORMParticipant
 
     orm_p_active = ORMParticipant(id=1, meeting_id=10, user_id=101)
     orm_p_active.is_deleted = False

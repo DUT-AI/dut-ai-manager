@@ -37,7 +37,11 @@ class DiscordService:
         }
 
     async def send_message_to_user(
-        self, user_id: str, content: str = "", embed: dict | None = None
+        self,
+        user_id: str,
+        content: str = "",
+        embed: dict | None = None,
+        file_path: str | None = None,
     ) -> dict:
         """
         Send a direct message to a Discord user.
@@ -46,6 +50,7 @@ class DiscordService:
             user_id: The Discord user ID to send the message to.
             content: The message content to send.
             embed: Optional embed dictionary for rich content.
+            file_path: Optional local file path to attach directly to Discord.
         """
         try:
             async with aiohttp.ClientSession() as session:
@@ -69,43 +74,24 @@ class DiscordService:
                     dm_channel = await response.json()
                     channel_id = dm_channel["id"]
 
-                # Then, send the message to the DM channel
-                send_message_url = f"{self.BASE_URL}/channels/{channel_id}/messages"
-                from typing import Any
-
-                message_payload: dict[str, Any] = {"content": content}
-
-                if embed:
-                    # Discord REST API expects an array of embeds
-                    if "timestamp" not in embed:
-                        from datetime import datetime
-
-                        embed["timestamp"] = datetime.now(UTC).isoformat()
-                    message_payload["embeds"] = [embed]
-
-                async with session.post(
-                    send_message_url, json=message_payload, headers=self.headers
-                ) as response:
-                    if response.status not in [200, 201]:
-                        error_text = await response.text()
-                        logger.error(
-                            f"Failed to send message to user {user_id}: {error_text}"
-                        )
-                        raise DiscordServiceError(
-                            f"Failed to send message: {error_text}",
-                            status_code=response.status,
-                        )
-
-                    result = await response.json()
-                    logger.info(f"Successfully sent message to user {user_id}")
-                    return result
+                return await self._send_to_channel(
+                    session=session,
+                    channel_id=channel_id,
+                    content=content,
+                    embed=embed,
+                    file_path=file_path,
+                )
 
         except aiohttp.ClientError as e:
             logger.error(f"Network error while sending message to user {user_id}: {e}")
             raise DiscordServiceError(f"Network error: {e}") from e
 
     async def send_message_to_room(
-        self, channel_id: str, content: str = "", embed: dict | None = None
+        self,
+        channel_id: str,
+        content: str = "",
+        embed: dict | None = None,
+        file_path: str | None = None,
     ) -> dict:
         """
         Send a message to a Discord channel (room/text channel).
@@ -114,49 +100,71 @@ class DiscordService:
             channel_id: The Discord channel ID to send the message to.
             content: The message content to send.
             embed: Optional embed dictionary for rich content.
+            file_path: Optional local file path to attach directly to Discord.
         """
-        from app.core.config import settings
-
-        if settings.ENVIRONMENT != "production":
-            logger.warning(
-                f"Skipping Discord message to room {channel_id} (not in production)"
-            )
-            return {}
-
         try:
             async with aiohttp.ClientSession() as session:
-                send_message_url = f"{self.BASE_URL}/channels/{channel_id}/messages"
-                from typing import Any
-
-                payload: dict[str, Any] = {"content": content}
-
-                if embed:
-                    # Discord REST API expects an array of embeds
-                    if "timestamp" not in embed:
-                        from datetime import datetime
-
-                        embed["timestamp"] = datetime.now(UTC).isoformat()
-                    payload["embeds"] = [embed]
-
-                async with session.post(
-                    send_message_url, json=payload, headers=self.headers
-                ) as response:
-                    if response.status not in [200, 201]:
-                        error_text = await response.text()
-                        logger.error(
-                            f"Failed to send message to channel {channel_id}: {error_text}"
-                        )
-                        raise DiscordServiceError(
-                            f"Failed to send message: {error_text}",
-                            status_code=response.status,
-                        )
-
-                    result = await response.json()
-                    logger.info(f"Successfully sent message to channel {channel_id}")
-                    return result
-
+                return await self._send_to_channel(
+                    session=session,
+                    channel_id=channel_id,
+                    content=content,
+                    embed=embed,
+                    file_path=file_path,
+                )
         except aiohttp.ClientError as e:
             logger.error(
                 f"Network error while sending message to channel {channel_id}: {e}"
             )
             raise DiscordServiceError(f"Network error: {e}") from e
+
+    async def _send_to_channel(
+        self,
+        session: aiohttp.ClientSession,
+        channel_id: str,
+        content: str = "",
+        embed: dict | None = None,
+        file_path: str | None = None,
+    ) -> dict:
+        """Helper to send message or multipart attachment to a channel."""
+        import json
+        from pathlib import Path
+        from typing import Any
+
+        send_message_url = f"{self.BASE_URL}/channels/{channel_id}/messages"
+        message_payload: dict[str, Any] = {"content": content}
+
+        if embed:
+            if "timestamp" not in embed:
+                embed["timestamp"] = datetime.now(UTC).isoformat()
+            message_payload["embeds"] = [embed]
+
+        if file_path and Path(file_path).is_file():
+            data = aiohttp.FormData()
+            data.add_field(
+                "payload_json",
+                json.dumps(message_payload),
+                content_type="application/json",
+            )
+            data.add_field(
+                "files[0]",
+                open(file_path, "rb"),
+                filename=Path(file_path).name,
+            )
+            headers = {"Authorization": f"Bot {self.bot_token}"}
+            async with session.post(send_message_url, data=data, headers=headers) as response:
+                if response.status not in [200, 201]:
+                    error_text = await response.text()
+                    logger.error(f"Failed to send multipart message to channel {channel_id}: {error_text}")
+                    raise DiscordServiceError(f"Failed to send message: {error_text}", status_code=response.status)
+                result = await response.json()
+                logger.info(f"Successfully sent multipart message to channel {channel_id}")
+                return result
+        else:
+            async with session.post(send_message_url, json=message_payload, headers=self.headers) as response:
+                if response.status not in [200, 201]:
+                    error_text = await response.text()
+                    logger.error(f"Failed to send message to channel {channel_id}: {error_text}")
+                    raise DiscordServiceError(f"Failed to send message: {error_text}", status_code=response.status)
+                result = await response.json()
+                logger.info(f"Successfully sent message to channel {channel_id}")
+                return result

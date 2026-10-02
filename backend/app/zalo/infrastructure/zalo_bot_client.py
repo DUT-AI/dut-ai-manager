@@ -19,7 +19,9 @@ class ZaloBotClient:
 
     async def send_message(self, chat_id: str, text: str) -> dict[str, Any] | None:
         if not self.bot:
-            logger.warning(f"Zalo Bot client chưa được cấu hình token, bỏ qua gửi tin tới {chat_id}")
+            logger.warning(
+                f"Zalo Bot client chưa được cấu hình token, bỏ qua gửi tin tới {chat_id}"
+            )
             return None
         try:
             async with self.bot:
@@ -29,4 +31,3 @@ class ZaloBotClient:
         except Exception as e:
             logger.error(f"Lỗi khi gửi tin nhắn Zalo Bot: {e}")
             return None
-

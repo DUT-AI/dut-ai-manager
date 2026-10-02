@@ -3,6 +3,8 @@ from dishka import AsyncContainer
 from app.auth.account_notification_handler import AccountNotificationHandler
 from app.auth.application.user_event_handler import UserAccountHandler
 from app.auth.domain.events import AccountCreated, ForgotPasswordRequested
+from app.billing.application.notification_handler import BillingNotificationHandler
+from app.billing.domain.events import InvoiceCreated, InvoicePaid
 from app.bonus_point.domain.events import (
     BonusPointCreated,
     BonusPointDeleted,
@@ -29,7 +31,6 @@ from app.meeting.domain.events import (
     ParticipantCheckedOut,
     ParticipantLateRecorded,
 )
-
 from app.permission_request.application.event_handlers import (
     PermissionRequestNotificationHandler,
 )
@@ -59,6 +60,10 @@ async def bootstrap_events(container: AsyncContainer):
     EventBus.subscribe(BonusPointUpdated, BonusPointNotificationHandler)
     EventBus.subscribe(BonusPointDeleted, BonusPointNotificationHandler)
 
+    # Billing Module
+    EventBus.subscribe(InvoiceCreated, BillingNotificationHandler)
+    EventBus.subscribe(InvoicePaid, BillingNotificationHandler)
+
     # Violation Module
     EventBus.subscribe(PermissionRequestCreated, PermissionViolationHandler)
     EventBus.subscribe(PermissionRequestCreated, PermissionRequestNotificationHandler)
@@ -67,7 +72,6 @@ async def bootstrap_events(container: AsyncContainer):
     EventBus.subscribe(ParticipantAbsenceRecorded, AutomatedViolationHandler)
     EventBus.subscribe(ParticipantLateRecorded, AutomatedViolationHandler)
     EventBus.subscribe(ViolationCreated, ViolationNotificationHandler)
-
 
     # Homework Module
 

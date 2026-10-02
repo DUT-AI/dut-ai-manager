@@ -26,7 +26,9 @@ class UpdateHomeworkUseCase:
 
         effective_link = data.link if data.link is not None else existing.link
         effective_slug = data.slug if data.slug is not None else existing.slug
-        extracted_slug = QuizSubmissionHelper.extract_slug(effective_link, effective_slug)
+        extracted_slug = QuizSubmissionHelper.extract_slug(
+            effective_link, effective_slug
+        )
 
         if not extracted_slug:
             raise BadRequestException(

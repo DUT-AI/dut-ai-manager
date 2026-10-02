@@ -1,13 +1,8 @@
-from typing import Any
 
-try:
-    import aioboto3
-    from botocore.config import Config
-    from botocore.exceptions import ClientError
-except ImportError:
-    aioboto3: Any = None
-    Config: Any = None
-    ClientError: Any = Exception
+
+import aioboto3
+from botocore.config import Config
+from botocore.exceptions import ClientError
 from loguru import logger
 
 from app.core.config import settings
@@ -176,9 +171,7 @@ class MinioService:
         """
         try:
             async with self._get_client() as s3:
-                response = await s3.get_object(
-                    Bucket=self.bucket_name, Key=filename
-                )
+                response = await s3.get_object(Bucket=self.bucket_name, Key=filename)
                 async with response["Body"] as stream:
                     return await stream.read()
         except ClientError as e:
@@ -188,7 +181,5 @@ class MinioService:
             logger.error(f"Failed to get file {filename} from S3/MinIO: {e}")
             return None
         except Exception as e:
-            logger.error(
-                f"Unexpected error getting file {filename} from S3/MinIO: {e}"
-            )
+            logger.error(f"Unexpected error getting file {filename} from S3/MinIO: {e}")
             return None

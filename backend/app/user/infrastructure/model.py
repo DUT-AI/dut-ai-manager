@@ -6,22 +6,22 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Enum as SQLEnum,
+)
+from sqlalchemy import (
     ForeignKey,
     String,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
-from app.user.domain.entity import UserEntity, UserStatus
 
 # Runtime imports to ensure relationships resolve during mapper configuration
 from app.auth.infrastructure.model import AccountModel
 from app.bonus_point.infrastructure.model import BonusPointModel
 from app.meeting.infrastructure.model import MeetingParticipant
 from app.rbac.infrastructure.model import RoleModel
+from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
 from app.team.infrastructure.model import TeamMemberModel
+from app.user.domain.entity import UserEntity, UserStatus
 from app.violation.infrastructure.model import ViolationModel
-
 
 if TYPE_CHECKING:
     from app.auth.infrastructure.model import AccountModel
@@ -123,7 +123,6 @@ class UserModel(SQLAlchemyTimestampMixin, Base):
                         if hasattr(rp, "permission") and rp.permission:
                             code = f"{rp.permission.resource}:{rp.permission.action}"
                             permissions.add(code)
-
 
         return UserEntity(
             id=self.id,

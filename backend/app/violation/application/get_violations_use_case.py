@@ -1,4 +1,5 @@
 from datetime import date, datetime
+
 from fastapi import HTTPException
 
 from app.violation.domain.entity import Violation

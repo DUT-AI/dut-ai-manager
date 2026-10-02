@@ -9,6 +9,7 @@ Create Date: 2026-08-31 21:30:00.000000
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 # revision identifiers, used by Alembic.
@@ -21,7 +22,9 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     """Upgrade schema."""
     op.add_column("homeworks", sa.Column("link", sa.String(length=500), nullable=True))
-    op.add_column("homeworks", sa.Column("game_slug", sa.String(length=255), nullable=True))
+    op.add_column(
+        "homeworks", sa.Column("game_slug", sa.String(length=255), nullable=True)
+    )
     op.add_column(
         "homeworks", sa.Column("homework_slug", sa.String(length=255), nullable=True)
     )

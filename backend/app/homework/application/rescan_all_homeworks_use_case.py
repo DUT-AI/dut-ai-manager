@@ -60,10 +60,16 @@ class RescanAllHomeworksUseCase:
                 legacy_uids: set[int] = set()
 
                 if slug:
-                    coding_uids = await QuizSubmissionHelper.get_coding_completed_user_ids(self.quiz_api, slug)
+                    coding_uids = (
+                        await QuizSubmissionHelper.get_coding_completed_user_ids(
+                            self.quiz_api, slug
+                        )
+                    )
                     if coding_uids:
                         legacy_uids.update(coding_uids)
-                    game_uids = await QuizSubmissionHelper.get_game_completed_user_ids(self.quiz_api, slug)
+                    game_uids = await QuizSubmissionHelper.get_game_completed_user_ids(
+                        self.quiz_api, slug
+                    )
                     if game_uids:
                         legacy_uids.update(game_uids)
 

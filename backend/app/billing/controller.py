@@ -42,7 +42,7 @@ async def create_invoice(
     """
     Admin creates an invoice for one or multiple users.
     """
-    invoices = create_uc.execute(
+    invoices = await create_uc.execute(
         user_id=data.user_id,
         user_ids=data.user_ids,
         team_id=data.team_id,
@@ -91,7 +91,7 @@ async def create_monthly_invoices(
     Admin creates monthly invoices in bulk.
     Can be used for Preview (execute=False) or Execution (execute=True).
     """
-    result = monthly_uc.execute(
+    result = await monthly_uc.execute(
         month=data.month,
         year=data.year,
         team_id=data.team_id,
@@ -209,7 +209,7 @@ async def sepay_webhook(
     if authorization and authorization.startswith("Apikey "):
         auth_token = authorization.split(" ")[1]
 
-    success = handle_uc.execute(payload.model_dump(), auth_token=auth_token)
+    success = await handle_uc.execute(payload.model_dump(), auth_token=auth_token)
 
     if success:
         return {"success": True}

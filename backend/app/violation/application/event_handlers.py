@@ -1,4 +1,3 @@
-from datetime import datetime
 from loguru import logger
 
 from app.homework.domain.value_objects import HomeworkOverdueDetected
@@ -31,7 +30,6 @@ class AutomatedViolationHandler(EventHandler):
         self.create_violation_use_case = create_violation_use_case
         self.permission_repo = permission_repo
         self.participant_repo = participant_repo
-
 
     async def handle(self, event):
         """Điều hướng sự kiện đến phương thức xử lý tương ứng."""
@@ -187,7 +185,9 @@ class AutomatedViolationHandler(EventHandler):
                 if late_req.start_time
                 else "thời gian quy định"
             )
-            reason = f"Đi trễ hơn thời gian xin phép ({limit_str}): {event.meeting_title}"
+            reason = (
+                f"Đi trễ hơn thời gian xin phép ({limit_str}): {event.meeting_title}"
+            )
             await self.create_violation_use_case.execute(
                 user_ids=[event.user_id],
                 reason=reason,

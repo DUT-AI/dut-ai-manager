@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = secrets.token_urlsafe(32)
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
     FRONTEND_HOST: str = "http://localhost:3000"
+    BACKEND_PUBLIC_URL: str = "http://localhost:8000"
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
 
     # MinIO Configuration
@@ -40,7 +41,7 @@ class Settings(BaseSettings):
     MINIO_SECURE: bool = False
 
     # Meeting Configuration
-    MAX_SEATS: int = 30
+    MAX_SEATS: int = 35
 
     # Discord Bot Configuration
     DISCORD_BOT_TOKEN: str = ""

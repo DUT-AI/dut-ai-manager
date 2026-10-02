@@ -143,7 +143,11 @@ class HandleBotWebhookUseCase:
                 elif "text" in body:
                     text = body.get("text")
 
-                if not sender_id and "sender" in body and isinstance(body["sender"], dict):
+                if (
+                    not sender_id
+                    and "sender" in body
+                    and isinstance(body["sender"], dict)
+                ):
                     sender_id = body["sender"].get("id")
 
             logger.info(f"Zalo Bot webhook parsed: sender_id={sender_id}, text={text}")

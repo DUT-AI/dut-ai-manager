@@ -1,6 +1,4 @@
 import asyncio
-from typing import cast
-
 from loguru import logger
 
 from app.bonus_point.domain.events import (
@@ -9,9 +7,12 @@ from app.bonus_point.domain.events import (
     BonusPointUpdated,
 )
 from app.shared.application.event_handler import EventHandler
-from app.shared.infrastructure.discord_service import DiscordService
-from app.user.infrastructure.repository import UserRepository
-from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
+from app.shared.infrastructure.notification_payload import (
+    NotificationCategory,
+    NotificationLevel,
+    NotificationPayload,
+)
+from app.shared.infrastructure.notification_service import NotificationService
 
 
 class BonusPointNotificationHandler(EventHandler):
@@ -19,13 +20,9 @@ class BonusPointNotificationHandler(EventHandler):
 
     def __init__(
         self,
-        discord_service: DiscordService,
-        zalo_bot: ZaloBotClient,
-        user_repo: UserRepository,
+        notification_service: NotificationService,
     ):
-        self.discord_service = discord_service
-        self.zalo_bot = zalo_bot
-        self.user_repo = user_repo
+        self.notification_service = notification_service
 
     async def handle(
         self, event: BonusPointCreated | BonusPointUpdated | BonusPointDeleted
@@ -33,42 +30,23 @@ class BonusPointNotificationHandler(EventHandler):
         """Thông báo cho người dùng trên Discord và Zalo."""
         try:
             logger.info(f"Handling {type(event).__name__} for user_id={event.user_id}")
-
             asyncio.create_task(self._send_notifications_task(event))
-
-            logger.info(
-                f"Triggered background job for BonusPointNotification: user_id={event.user_id}"
-            )
         except Exception as e:
             logger.error(f"Error in BonusPointNotificationHandler: {e}")
 
     async def _send_notifications_task(
         self, event: BonusPointCreated | BonusPointUpdated | BonusPointDeleted
     ) -> None:
-        """Hàm chạy ngầm để gửi thông báo qua Discord và Zalo."""
+        """Hàm chạy ngầm để gửi thông báo qua NotificationService."""
         try:
-            user = self.user_repo.get_by_id(event.user_id)
-            if not user:
-                logger.warning(
-                    f"Background: Could not find user {event.user_id} for bonus point notification"
-                )
-                return
-
-            user_discord_id = user.discord_id
-            user_zalo_bot_id = user.zalo_bot_id
-
             if isinstance(event, BonusPointDeleted):
-                # Xử lý sự kiện xóa
-                embed = {
-                    "title": "ℹ️ THÔNG BÁO HỦY ĐIỂM CỘNG",
-                    "description": f"Chào **{user.name}**, một mục điểm cộng của bạn đã được hủy.",
-                    "color": 0x95A5A6,  # Gray
-                    "footer": {"text": "DUT AI Manager • Hệ thống nhắc nhở tự động"},
-                }
-                zalo_text = (
-                    "ℹ️ THÔNG BÁO HỦY ĐIỂM CỘNG\n\n"
-                    f"Chào {user.name},\n"
-                    "Một mục điểm cộng trước đó của bạn đã được hủy trên hệ thống."
+                payload = NotificationPayload(
+                    user_id=event.user_id,
+                    title="ℹ️ THÔNG BÁO HỦY ĐIỂM CỘNG",
+                    content="Một mục điểm cộng trước đó của bạn đã được hủy trên hệ thống.",
+                    category=NotificationCategory.BONUS_POINT,
+                    level=NotificationLevel.INFO,
+                    image_asset="meme-khoc-2.jpg",
                 )
             else:
                 display_date = event.date
@@ -86,7 +64,7 @@ class BonusPointNotificationHandler(EventHandler):
 
                 is_created = isinstance(event, BonusPointCreated)
                 title = (
-                    "🏆 THÔNG BÁO CỘNG ĐIỂM"
+                    "🏆 THÔNG BÁO CỘNG ĐIỂM THÀNH TÍCH"
                     if is_created
                     else "📝 THÔNG BÁO CẬP NHẬT ĐIỂM CỘNG"
                 )
@@ -96,70 +74,39 @@ class BonusPointNotificationHandler(EventHandler):
                     else getattr(event, "updater_name", "Hệ thống")
                 )
 
-                embed = {
-                    "title": title,
-                    "description": f"Chúc mừng **{event.user_name or user.name}**, bạn vừa được cộng điểm thành tích!",
-                    "color": 0x2ECC71,  # Green
-                    "fields": [
-                        {
-                            "name": "🌟 Số điểm",
-                            "value": f"+{event.points} điểm",
-                            "inline": True,
-                        },
-                        {"name": "📅 Ngày", "value": display_date, "inline": True},
-                        {"name": "📝 Lý do", "value": event.reason, "inline": False},
-                        {
-                            "name": "💁‍♂️ Được thực hiện bởi",
-                            "value": actor or "Hệ thống",
-                            "inline": False,
-                        },
-                    ],
-                    "footer": {
-                        "text": "DUT AI Manager • Hệ thống khen thưởng & nhắc nhở"
-                    },
-                }
+                points_prefix = "+" if event.points > 0 else ""
+                points_str = f"{points_prefix}{event.points} điểm"
 
-                zalo_text = (
-                    f"{title}\n\n"
-                    f"Chào {event.user_name or user.name},\n"
-                    f"Số điểm: +{event.points} điểm\n"
-                    f"Lý do: {event.reason}\n"
-                    f"Ngày: {display_date}\n"
-                    f"Thực hiện bởi: {actor or 'Hệ thống'}\n\n"
-                    "Cùng tiếp tục phát huy nhé!"
+                fields = [
+                    {"name": "🌟 Số điểm", "value": points_str, "inline": True},
+                    {"name": "📅 Ngày", "value": str(display_date), "inline": True},
+                    {"name": "📝 Lý do", "value": event.reason, "inline": False},
+                    {
+                        "name": "💁‍♂️ Người thực hiện",
+                        "value": actor or "Hệ thống",
+                        "inline": False,
+                    },
+                ]
+
+                # Chọn meme tương ứng: Nếu cộng điểm dùng meme ngạc nhiên/vui, nếu trừ điểm dùng meme khóc
+                image_asset = "meme-ngac-nhien.jpeg" if event.points >= 0 else "meme-khoc-2.jpg"
+
+                payload = NotificationPayload(
+                    user_id=event.user_id,
+                    title=title,
+                    content=(
+                        f"Chào **{event.user_name or 'bạn'}**!\n"
+                        f"Bạn vừa có cập nhật điểm rèn luyện ({points_str}): **{event.reason}**.\n"
+                        f"Cùng tiếp tục phát huy nhé!"
+                    ),
+                    category=NotificationCategory.BONUS_POINT,
+                    level=NotificationLevel.SUCCESS if event.points >= 0 else NotificationLevel.WARNING,
+                    image_asset=image_asset,
+                    fields=fields,
                 )
 
-            # --- Gửi Discord ---
-            if user_discord_id:
-                try:
-                    await self.discord_service.send_message_to_user(
-                        user_id=cast(str, user_discord_id),
-                        content=f"Chào <@{user_discord_id}>! Bạn có thông báo điểm cộng mới.",
-                        embed=embed,
-                    )
-                    logger.info(
-                        f"Background: Sent Discord bonus point notification to {user.name}"
-                    )
-                except Exception as e:
-                    logger.error(
-                        f"Background: Failed to send Discord bonus point notification to {user.name}: {e}"
-                    )
-
-            # --- Gửi Zalo ---
-            if user_zalo_bot_id:
-                try:
-                    await self.zalo_bot.send_message(
-                        chat_id=user_zalo_bot_id, text=zalo_text
-                    )
-                    logger.info(
-                        f"Background: Sent Zalo bonus point notification to {user.name}"
-                    )
-                except Exception as e:
-                    logger.error(
-                        f"Background: Failed to send Zalo bonus point notification to {user.name}: {e}"
-                    )
+            await self.notification_service.send_to_user(payload)
+            logger.info(f"Sent bonus point notification for user {event.user_id}")
 
         except Exception as e:
-            logger.error(
-                f"Unexpected error in background bonus point notification task: {e}"
-            )
+            logger.error(f"Unexpected error in bonus point notification task: {e}")

@@ -5,24 +5,23 @@ Revises: c3d4e5f6a7b8
 Create Date: 2026-09-14 12:53:07.668985
 
 """
-from typing import Sequence, Union
+
+from collections.abc import Sequence
+
+import sqlalchemy as sa
 
 from alembic import op
-import sqlalchemy as sa
-import sqlmodel
-
 
 # revision identifiers, used by Alembic.
-revision: str = '02205cd879ae'
-down_revision: Union[str, Sequence[str], None] = 'c3d4e5f6a7b8'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+revision: str = "02205cd879ae"
+down_revision: str | Sequence[str] | None = "c3d4e5f6a7b8"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 import re
+
 import httpx
-from alembic import op
-import sqlalchemy as sa
 
 
 def _extract_slug(link: str | None, slug: str | None) -> str | None:
@@ -33,13 +32,24 @@ def _extract_slug(link: str | None, slug: str | None) -> str | None:
         match = re.search(r"/(?:homeworks|game|lessons)/([^/?#]+)", link_clean)
         if match:
             candidate = match.group(1).strip()
-            if candidate.lower() in ("game", "homeworks", "coding") and "/lessons/" in link_clean:
-                parts = [p for p in link_clean.split("?")[0].split("#")[0].split("/") if p]
+            if (
+                candidate.lower() in ("game", "homeworks", "coding")
+                and "/lessons/" in link_clean
+            ):
+                parts = [
+                    p for p in link_clean.split("?")[0].split("#")[0].split("/") if p
+                ]
                 if len(parts) >= 2:
                     return parts[-2].strip()
             return candidate
         if link_clean.startswith("http://") or link_clean.startswith("https://"):
-            candidate = link_clean.rstrip("/").split("/")[-1].split("?")[0].split("#")[0].strip()
+            candidate = (
+                link_clean.rstrip("/")
+                .split("/")[-1]
+                .split("?")[0]
+                .split("#")[0]
+                .strip()
+            )
             if candidate and len(candidate) > 1 and " " not in candidate:
                 if candidate.lower() in ("game", "homeworks", "coding"):
                     parts = [p for p in link_clean.rstrip("/").split("/") if p]
@@ -78,7 +88,10 @@ def upgrade() -> None:
     # Base URL for Quiz API (read dynamically from app settings)
     try:
         from app.core.config import settings
-        quiz_base_url = (getattr(settings, "QUIZ_API_URL", None) or "https://quiz.dutai.site").rstrip("/")
+
+        quiz_base_url = (
+            getattr(settings, "QUIZ_API_URL", None) or "https://quiz.dutai.site"
+        ).rstrip("/")
     except Exception:
         quiz_base_url = "https://quiz.dutai.site"
 
@@ -150,4 +163,3 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     pass
-

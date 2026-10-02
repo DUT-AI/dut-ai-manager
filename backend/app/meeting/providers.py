@@ -3,28 +3,33 @@ from sqlalchemy.orm import Session
 
 from app.meeting.application import (
     CalculateCurrentCapacityUseCase,
+    CheckEvaluationDeadlineJobUseCase,
     CheckInUseCase,
     CheckInWithCardUseCase,
     CheckMeetingAttendanceUseCase,
     CheckOutUseCase,
     CreateMeetingUseCase,
     DeleteMeetingUseCase,
+    GetMeetingEvaluationSummaryUseCase,
     GetMeetingsUseCase,
+    GetMyEvaluationResultUseCase,
+    SubmitTraineeEvaluationUseCase,
+    SubmitTrainerEvaluationUseCase,
     UpdateMeetingUseCase,
     UpdateParticipantStatusUseCase,
 )
 from app.meeting.application.event_handlers import MeetingNotificationHandler
 from app.meeting.application.sse_handler import MeetingSseHandler
 from app.meeting.infrastructure.repository import (
+    MeetingEvaluationRepository,
     MeetingRepository,
     ParticipantRepository,
 )
-from app.shared.infrastructure.discord_service import DiscordService
 from app.shared.infrastructure.minio_service import MinioService
+from app.shared.infrastructure.notification_service import NotificationService
 from app.shared.infrastructure.tts_service import TTSService
-from app.team.infrastructure.repository import TeamRepository
 from app.user.infrastructure.repository import UserRepository
-from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
+from app.violation.infrastructure.repository import ViolationRepository
 
 
 class MeetingModuleProvider(Provider):
@@ -38,6 +43,12 @@ class MeetingModuleProvider(Provider):
     def get_participant_repo(self, session: Session) -> ParticipantRepository:
         return ParticipantRepository(session)
 
+    @provide
+    def get_meeting_evaluation_repo(
+        self, session: Session
+    ) -> MeetingEvaluationRepository:
+        return MeetingEvaluationRepository(session)
+
     # Use Cases
     @provide
     def get_meetings_uc(self, repo: MeetingRepository) -> GetMeetingsUseCase:
@@ -45,9 +56,9 @@ class MeetingModuleProvider(Provider):
 
     @provide
     def create_meeting_uc(
-        self, repo: MeetingRepository, team_repo: TeamRepository
+        self, repo: MeetingRepository
     ) -> CreateMeetingUseCase:
-        return CreateMeetingUseCase(repo, team_repo)
+        return CreateMeetingUseCase(repo)
 
     @provide
     def check_in_uc(
@@ -85,9 +96,9 @@ class MeetingModuleProvider(Provider):
 
     @provide
     def update_meeting_uc(
-        self, repo: MeetingRepository, team_repo: TeamRepository
+        self, repo: MeetingRepository
     ) -> UpdateMeetingUseCase:
-        return UpdateMeetingUseCase(repo, team_repo)
+        return UpdateMeetingUseCase(repo)
 
     @provide
     def update_participant_status_uc(
@@ -98,9 +109,7 @@ class MeetingModuleProvider(Provider):
         return UpdateParticipantStatusUseCase(meeting_repo, participant_repo)
 
     @provide
-    def delete_meeting_uc(
-        self, repo: MeetingRepository
-    ) -> DeleteMeetingUseCase:
+    def delete_meeting_uc(self, repo: MeetingRepository) -> DeleteMeetingUseCase:
         return DeleteMeetingUseCase(repo)
 
     @provide
@@ -119,13 +128,55 @@ class MeetingModuleProvider(Provider):
         return CalculateCurrentCapacityUseCase(meeting_repo)
 
     @provide
+    def submit_trainer_evaluation_uc(
+        self,
+        meeting_repo: MeetingRepository,
+        evaluation_repo: MeetingEvaluationRepository,
+    ) -> SubmitTrainerEvaluationUseCase:
+        return SubmitTrainerEvaluationUseCase(meeting_repo, evaluation_repo)
+
+    @provide
+    def submit_trainee_evaluation_uc(
+        self,
+        meeting_repo: MeetingRepository,
+        evaluation_repo: MeetingEvaluationRepository,
+    ) -> SubmitTraineeEvaluationUseCase:
+        return SubmitTraineeEvaluationUseCase(meeting_repo, evaluation_repo)
+
+    @provide
+    def get_my_evaluation_result_uc(
+        self,
+        meeting_repo: MeetingRepository,
+        evaluation_repo: MeetingEvaluationRepository,
+    ) -> GetMyEvaluationResultUseCase:
+        return GetMyEvaluationResultUseCase(meeting_repo, evaluation_repo)
+
+    @provide
+    def get_meeting_evaluation_summary_uc(
+        self,
+        meeting_repo: MeetingRepository,
+        evaluation_repo: MeetingEvaluationRepository,
+    ) -> GetMeetingEvaluationSummaryUseCase:
+        return GetMeetingEvaluationSummaryUseCase(meeting_repo, evaluation_repo)
+
+    @provide
+    def check_evaluation_deadline_job_uc(
+        self,
+        meeting_repo: MeetingRepository,
+        evaluation_repo: MeetingEvaluationRepository,
+        violation_repo: ViolationRepository,
+    ) -> CheckEvaluationDeadlineJobUseCase:
+        return CheckEvaluationDeadlineJobUseCase(
+            meeting_repo, evaluation_repo, violation_repo
+        )
+
+    @provide
     def get_meeting_notification_handler(
         self,
-        discord_service: DiscordService,
+        notification_service: NotificationService,
         user_repo: UserRepository,
-        zalo_bot: ZaloBotClient,
     ) -> MeetingNotificationHandler:
-        return MeetingNotificationHandler(discord_service, user_repo, zalo_bot)
+        return MeetingNotificationHandler(notification_service, user_repo)
 
     @provide
     def get_meeting_sse_handler(self) -> MeetingSseHandler:

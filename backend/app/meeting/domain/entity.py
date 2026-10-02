@@ -2,12 +2,12 @@ from datetime import datetime, timedelta
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.meeting.domain.value_objects import ParticipantStatus
+from app.meeting.domain.value_objects import EvaluationType, ParticipantStatus
 from app.shared.domain.base_entity import BaseEntity
 
 
 class UserRef(BaseModel):
-    """Tham chiếu đến User trong Domain (Value Object) — Pydantic để nhúng trong BaseEntity."""
+    """Tham chiếu danh tính User trong Domain (Value Object snapshot)."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -59,15 +59,73 @@ class MeetingParticipant(BaseEntity):
         return True, "Checkout thanh cong"
 
 
+class EvaluationScoreItem(BaseModel):
+    """Điểm của từng tiêu chí đánh giá (Value Object)"""
+
+    criteria_code: str
+    score: int = Field(ge=1, le=5)
+
+
+class MeetingEvaluation(BaseEntity):
+    """Phiếu đánh giá cá nhân 2 chiều giữa Trainer và Trainee (Domain Entity)"""
+
+    meeting_id: int
+    reviewer_id: int
+    target_user_id: int
+    evaluation_type: EvaluationType
+    is_anonymous: bool = False
+    scores: list[EvaluationScoreItem] = Field(default_factory=list)
+    average_score: float = 0.0
+    feedback_text: str | None = None
+    reviewer: UserRef | None = None
+    target_user: UserRef | None = None
+
+    def calculate_average(self) -> float:
+        """Tính điểm trung bình cộng của các tiêu chí."""
+        if not self.scores:
+            self.average_score = 0.0
+            return 0.0
+        self.average_score = round(
+            sum(s.score for s in self.scores) / len(self.scores), 2
+        )
+        return self.average_score
+
+
 class Meeting(BaseEntity):
-    """Buổi họp (Domain Entity)"""
+    """Buổi họp / Lớp học (Domain Entity - Write Aggregate)"""
 
     title: str
     start_time: datetime
     end_time: datetime
     content: str | None = None
     require_check_in: bool = True
+    enable_evaluation: bool = False
     participants: list[MeetingParticipant] = Field(default_factory=list)
+    creator: UserRef | None = None
+
+    @property
+    def evaluation_deadline(self) -> datetime | None:
+        """Hạn chót đánh giá: Single Source of Truth tính động từ end_time + 24h."""
+        if not self.enable_evaluation:
+            return None
+        return self.end_time + timedelta(hours=24)
+
+    def is_evaluation_open(self, current_time: datetime) -> tuple[bool, str]:
+        """Kiểm tra điều kiện mở cổng đánh giá 2 chiều (Domain Business Rule)."""
+        if not self.enable_evaluation:
+            return False, "Buổi học không kích hoạt tính năng đánh giá 2 chiều."
+        if current_time < self.end_time:
+            return False, "Buổi học chưa kết thúc, chưa thể gửi đánh giá."
+        if self.is_evaluation_expired(current_time):
+            return False, "Đã quá thời hạn 24 giờ sau buổi học để gửi đánh giá."
+        return True, "Cổng đánh giá đang mở."
+
+    def is_evaluation_expired(self, current_time: datetime) -> bool:
+        """Kiểm tra xem buổi học đã quá hạn 24h để đánh giá hay chưa."""
+        if not self.enable_evaluation:
+            return False
+        deadline = self.evaluation_deadline
+        return deadline is not None and current_time > deadline
 
     def is_ongoing(self, current_time: datetime) -> bool:
         """Kiểm tra xem buổi họp có đang diễn ra hay không"""
@@ -85,4 +143,6 @@ class Meeting(BaseEntity):
 
 
 MeetingParticipant.model_rebuild()
+EvaluationScoreItem.model_rebuild()
+MeetingEvaluation.model_rebuild()
 Meeting.model_rebuild()

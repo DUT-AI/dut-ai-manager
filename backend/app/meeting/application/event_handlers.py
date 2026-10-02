@@ -1,6 +1,5 @@
 import asyncio
 from datetime import datetime
-from typing import cast
 
 from loguru import logger
 
@@ -10,9 +9,13 @@ from app.meeting.domain.events import (
     ParticipantCheckedIn,
 )
 from app.shared.application.event_handler import EventHandler
-from app.shared.infrastructure.discord_service import DiscordService
+from app.shared.infrastructure.notification_payload import (
+    NotificationCategory,
+    NotificationLevel,
+    NotificationPayload,
+)
+from app.shared.infrastructure.notification_service import NotificationService
 from app.user.infrastructure.repository import UserRepository
-from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
 
 
 class MeetingNotificationHandler(EventHandler):
@@ -20,13 +23,11 @@ class MeetingNotificationHandler(EventHandler):
 
     def __init__(
         self,
-        discord_service: DiscordService,
+        notification_service: NotificationService,
         user_repo: UserRepository,
-        zalo_bot: ZaloBotClient,
     ):
-        self.discord_service = discord_service
+        self.notification_service = notification_service
         self.user_repo = user_repo
-        self.zalo_bot = zalo_bot
 
     async def handle(
         self, event: ParticipantCheckedIn | MeetingCreated | MeetingUpdated
@@ -45,74 +46,36 @@ class MeetingNotificationHandler(EventHandler):
             logger.info(
                 f"Handling ParticipantCheckedIn for user {event.user_id} in meeting {event.meeting_id}"
             )
-
-            user = self.user_repo.get_by_id(event.user_id)
-            if not user:
-                logger.error(f"User {event.user_id} not found in check-in handler")
-                return
-
-            # Gửi thông báo trong background task
-            asyncio.create_task(self._send_check_in_notification_task(user, event))
-
+            asyncio.create_task(self._send_check_in_notification_task(event))
         except Exception as e:
             logger.error(f"Error in MeetingNotificationHandler.handle_check_in: {e}")
 
     async def _send_check_in_notification_task(
-        self, user, event: ParticipantCheckedIn
+        self, event: ParticipantCheckedIn
     ) -> None:
         """Hàm chạy ngầm gửi thông báo check-in."""
         try:
             check_in_time = event.check_in_at.strftime("%H:%M:%S ngày %d/%m/%Y")
             status_text = "🔴 Trễ" if event.is_late else "🟢 Đúng giờ"
 
-            # 1. Discord Notification
-            if user.discord_id and str(user.discord_id).isdigit():
-                embed = {
-                    "title": "✅ ĐIỂM DANH THÀNH CÔNG",
-                    "description": f"Bạn vừa thực hiện điểm danh tại buổi họp: **{event.meeting_title}**",
-                    "color": 0x2ECC71 if not event.is_late else 0xE74C3C,
-                    "fields": [
-                        {
-                            "name": "⏰ Thời gian",
-                            "value": check_in_time,
-                            "inline": True,
-                        },
-                        {"name": "📊 Trạng thái", "value": status_text, "inline": True},
-                    ],
-                    "footer": {"text": "DUT AI Manager • Hệ thống tự động"},
-                }
-                try:
-                    await self.discord_service.send_message_to_user(
-                        user_id=cast(str, user.discord_id),
-                        content=f"Chào <@{user.discord_id}>! Bạn đã điểm danh thành công.",
-                        embed=embed,
-                    )
-                except Exception as e:
-                    logger.error(
-                        f"Background: Failed to send Discord check-in notification to {user.name}: {e}"
-                    )
+            fields = [
+                {"name": "⏰ Thời gian", "value": check_in_time, "inline": True},
+                {"name": "📊 Trạng thái", "value": status_text, "inline": True},
+            ]
 
-            # 2. Zalo Notification
-            if user.zalo_bot_id:
-                zalo_text = (
-                    f"✅ ĐIỂM DANH THÀNH CÔNG\n\n"
-                    f"Chào {user.name},\n"
-                    f"Bạn vừa điểm danh thành công tại: {event.meeting_title}\n"
-                    f"⏰ Thời gian: {check_in_time}\n"
-                    f"📊 Trạng thái: {status_text}"
-                )
-                try:
-                    await self.zalo_bot.send_message(
-                        chat_id=user.zalo_bot_id, text=zalo_text
-                    )
-                    logger.info(
-                        f"Background: Sent Zalo check-in notification to {user.name}"
-                    )
-                except Exception as e:
-                    logger.error(
-                        f"Background: Failed to send Zalo check-in notification to {user.name}: {e}"
-                    )
+            payload = NotificationPayload(
+                user_id=event.user_id,
+                title="✅ ĐIỂM DANH THÀNH CÔNG",
+                content=(
+                    f"Bạn vừa thực hiện điểm danh thành công tại buổi học/họp: **{event.meeting_title}**."
+                ),
+                category=NotificationCategory.MEETING,
+                level=NotificationLevel.SUCCESS if not event.is_late else NotificationLevel.WARNING,
+                image_asset="meme-lam-viec.webp",
+                fields=fields,
+            )
 
+            await self.notification_service.send_to_user(payload)
         except Exception as e:
             logger.error(f"Unexpected error in check-in notification task: {e}")
 
@@ -155,7 +118,6 @@ class MeetingNotificationHandler(EventHandler):
     ) -> None:
         """Hàm chạy ngầm gửi thông báo họp (Tạo mới hoặc Cập nhật)."""
         try:
-            # Parse thời gian (ISO string from event)
             try:
                 start_dt = datetime.fromisoformat(event.start_time)
                 end_dt = datetime.fromisoformat(event.end_time)
@@ -164,63 +126,35 @@ class MeetingNotificationHandler(EventHandler):
                 time_range = f"{event.start_time} - {event.end_time}"
 
             is_new = type == "NEW"
-            title_prefix = "📅 LỊCH HỌP MỚI" if is_new else "🔄 CẬP NHẬT LỊCH HỌP"
+            title_prefix = "📅 LỊCH SINH HOẠT MỚI" if is_new else "🔄 CẬP NHẬT LỊCH SINH HOẠT"
             description = (
-                f"Bạn có một lịch họp mới: **{event.title}**"
+                f"Bạn có lịch sinh hoạt mới: **{event.title}**"
                 if is_new
-                else f"Thông tin buổi họp **{event.title}** đã được cập nhật."
+                else f"Thông tin buổi sinh hoạt **{event.title}** đã được cập nhật."
             )
-            color = 0x3498DB if is_new else 0xF1C40F  # Blue for new, Yellow for update
 
-            # 1. Discord Notification
-            embed = {
-                "title": title_prefix,
-                "description": description,
-                "color": color,
-                "fields": [
-                    {"name": "⏰ Thời gian", "value": time_range, "inline": False},
-                ],
-                "footer": {"text": "DUT AI Manager • Hệ thống tự động"},
-            }
-
-            # 2. Zalo Notification Template
-            zalo_text_template = (
-                f"{title_prefix}\n\n"
-                "Chào {user_name},\n"
-                f"{description}\n"
-                f"⏰ Thời gian: {time_range}\n"
-                "Vui lòng kiểm tra website để xem chi tiết."
-            )
+            fields = [{"name": "⏰ Thời gian", "value": time_range, "inline": False}]
+            image_asset = "anh-nhac-em-meme-9.webp" if is_new else "meme-met-moi-lam-viec.jpg"
 
             for user in users:
-                # --- Discord ---
-                if user.discord_id and str(user.discord_id).isdigit():
-                    try:
-                        await self.discord_service.send_message_to_user(
-                            user_id=cast(str, user.discord_id),
-                            content=f"Chào <@{user.discord_id}>! Bạn có lịch họp.",
-                            embed=embed,
-                        )
-                    except Exception as e:
-                        logger.error(
-                            f"Background: Failed to send Discord meeting notification to {user.name}: {e}"
-                        )
-
-                # --- Zalo ---
-                if user.zalo_bot_id:
-                    try:
-                        zalo_text = zalo_text_template.format(user_name=user.name)
-                        await self.zalo_bot.send_message(
-                            chat_id=user.zalo_bot_id, text=zalo_text
-                        )
-                    except Exception as e:
-                        logger.error(
-                            f"Background: Failed to send Zalo meeting notification to {user.name}: {e}"
-                        )
+                assert user.id is not None
+                payload = NotificationPayload(
+                    user_id=user.id,
+                    title=title_prefix,
+                    content=(
+                        f"Chào **{user.name}**!\n"
+                        f"{description}\n"
+                        f"Vui lòng kiểm tra và sắp xếp tham gia đúng giờ."
+                    ),
+                    category=NotificationCategory.MEETING,
+                    level=NotificationLevel.INFO if is_new else NotificationLevel.WARNING,
+                    image_asset=image_asset,
+                    fields=fields,
+                )
+                await self.notification_service.send_to_user(payload)
 
             logger.info(
-                f"Background: Finished sending meeting {type} notifications for {event.meeting_id}"
+                f"Finished sending meeting {type} notifications for {event.meeting_id}"
             )
-
         except Exception as e:
             logger.error(f"Unexpected error in meeting notification task: {e}")

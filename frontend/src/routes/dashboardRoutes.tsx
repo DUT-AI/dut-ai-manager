@@ -11,7 +11,7 @@ import { AcademicReportPage } from '@/features/academic-report';
 import { ActivityCalendarPage, ActivityReportPage } from '@/features/activity';
 import { AdminBillingPage, InvoicesPage } from '@/features/billing';
 import { HomeworkPage, MyHomeworkPage } from '@/features/homework';
-import { MeetingCalendarPage } from '@/features/meeting';
+import { MeetingCalendarPage, MeetingDetailPage } from '@/features/meeting';
 import { PermissionManagementPage, RoleManagementPage } from '@/features/rbac';
 import { RobotInterfacePage } from '@/features/robot';
 import { TeamManagementPage } from '@/features/teams';
@@ -78,6 +78,10 @@ export const dashboardRoutesConfig: RouteConfig[] = [
     {
         path: 'meetings',
         element: <MeetingCalendarPage />,
+    },
+    {
+        path: 'meetings/:id',
+        element: <MeetingDetailPage />,
     },
     {
         path: 'invoices',

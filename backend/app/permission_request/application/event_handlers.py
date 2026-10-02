@@ -6,7 +6,12 @@ from app.core.config import settings
 from app.permission_request.domain.events import PermissionRequestCreated
 from app.permission_request.domain.value_objects import RequestCategory
 from app.shared.application.event_handler import EventHandler
-from app.shared.infrastructure.discord_service import DiscordService
+from app.shared.infrastructure.notification_payload import (
+    NotificationCategory,
+    NotificationLevel,
+    NotificationPayload,
+)
+from app.shared.infrastructure.notification_service import NotificationService
 from app.user.infrastructure.repository import UserRepository
 
 
@@ -15,10 +20,10 @@ class PermissionRequestNotificationHandler(EventHandler[PermissionRequestCreated
 
     def __init__(
         self,
-        discord_service: DiscordService,
+        notification_service: NotificationService,
         user_repo: UserRepository,
     ):
-        self.discord_service = discord_service
+        self.notification_service = notification_service
         self.user_repo = user_repo
 
     async def handle(self, event: PermissionRequestCreated) -> None:
@@ -46,6 +51,7 @@ class PermissionRequestNotificationHandler(EventHandler[PermissionRequestCreated
             if not room_id:
                 logger.warning("DISCORD_PERMISSION_ROOM_ID is not configured.")
                 return
+
             match event.category:
                 case RequestCategory.ABSENCE:
                     category_text = "Vắng sinh hoạt"
@@ -59,36 +65,40 @@ class PermissionRequestNotificationHandler(EventHandler[PermissionRequestCreated
                     category_text = "Không xác định"
 
             fields = [
-                {"name": "Người yêu cầu", "value": user.name, "inline": False},
+                {"name": "👤 Người yêu cầu", "value": user.name, "inline": True},
             ]
 
             if event.start_time:
                 time_str = event.start_time.strftime("%d/%m/%Y %H:%M")
                 fields.append(
-                    {"name": "Thời gian/Hạn", "value": time_str, "inline": False}
+                    {"name": "⏰ Thời gian/Hạn", "value": time_str, "inline": True}
                 )
 
             fields.append(
                 {
-                    "name": "Lý do",
-                    "value": event.note or "Không có",
+                    "name": "📝 Lý do",
+                    "value": event.note or "Không có lý do cụ thể",
                     "inline": False,
                 }
             )
 
-            embed = {
-                "title": f"📋 YÊU CẦU XIN PHÉP MỚI: {category_text.upper()}",
-                "color": 0xF39C12,  # Orange
-                "fields": fields,
-                "footer": {"text": f"Mã yêu cầu: {event.request_id} • DUT AI Manager"},
-            }
+            payload = NotificationPayload(
+                user_id=event.user_id,
+                title=f"📋 ĐƠN XIN PHÉP MỚI: {category_text.upper()}",
+                content=f"Thành viên **{user.name}** vừa nộp 01 đơn xin phép loại **{category_text}**.",
+                category=NotificationCategory.PERMISSION_REQUEST,
+                level=NotificationLevel.WARNING,
+                image_asset="anh-nhac-em-meme-9.webp",
+                fields=fields,
+            )
 
-            await self.discord_service.send_message_to_room(
-                channel_id=room_id,
-                embed=embed,
+            await self.notification_service.send_to_room(
+                room_id=room_id,
+                payload=payload,
+                channel="discord",
             )
             logger.info(
-                f"Background: Sent Discord room notification for permission request {event.request_id}"
+                f"Sent Discord room notification for permission request {event.request_id}"
             )
 
         except Exception as e:

@@ -79,9 +79,7 @@ class CheckInWithCardUseCase:
             )
             return msg, audio
 
-        meeting = self.meeting_repo.get_domain_for_check_in(
-            participant.meeting_id
-        )
+        meeting = self.meeting_repo.get_domain_for_check_in(participant.meeting_id)
         if not meeting:
             msg = f"Xin chào {user.name}, không tìm thấy thông tin buổi họp"
             audio = await self._synthesize_message(
@@ -144,7 +142,5 @@ class CheckInWithCardUseCase:
                 )
             return await self.tts_service.synthesize(text=text)
         except Exception as exc:
-            logger.error(
-                f"Failed to synthesize speech for message '{text}': {exc}"
-            )
+            logger.error(f"Failed to synthesize speech for message '{text}': {exc}")
             return b""

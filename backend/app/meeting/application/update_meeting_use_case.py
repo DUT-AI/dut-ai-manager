@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import cast
 
 from app.meeting.domain.entity import Meeting, MeetingParticipant
@@ -7,20 +6,15 @@ from app.meeting.infrastructure.repository import MeetingRepository
 from app.meeting.schemas import MeetingUpdate
 from app.shared.application.response import BadRequestException
 from app.shared.domain.event_bus import DomainEvent, EventBus
-from app.team.infrastructure.repository import TeamRepository
-
-
 class UpdateMeetingUseCase:
     """Cập nhật thông tin buổi họp"""
 
     def __init__(
         self,
         repo: MeetingRepository,
-        team_repo: TeamRepository,
         event_bus: type[EventBus] = EventBus,
     ):
         self.repo = repo
-        self.team_repo = team_repo
         self.event_bus = event_bus
 
     async def execute(self, meeting_id: int, data: MeetingUpdate) -> Meeting:
@@ -38,14 +32,11 @@ class UpdateMeetingUseCase:
             meeting.end_time = data.end_time
         if data.require_check_in is not None:
             meeting.require_check_in = data.require_check_in
+        if data.enable_evaluation is not None:
+            meeting.enable_evaluation = data.enable_evaluation
 
-        if data.user_ids is not None or data.team_ids is not None:
-            all_user_ids = set(data.user_ids or [])
-            if data.team_ids:
-                team_user_ids = self.team_repo.get_user_ids_by_teams(data.team_ids)
-                all_user_ids.update(team_user_ids)
-
-            user_ids_list = list(all_user_ids)
+        if data.user_ids is not None:
+            user_ids_list = list(set(data.user_ids))
 
             existing_participants_map = {p.user_id: p for p in meeting.participants}
             new_participants = []

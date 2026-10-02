@@ -1,29 +1,29 @@
 <!--
 Sync Impact Report:
-- Version: v1.0.0 -> v1.1.0
+- Version: v1.1.0 -> v1.2.0
 - Ratification Date: 2026-09-25
-- Last Amended: 2026-09-25
-- Principles established:
-  1. I. Clean Architecture & DDD Boundaries (MUST)
+- Last Amended: 2026-10-02
+- Principles modified:
+  1. I. Clean Architecture & Practical DDD Boundaries (MUST) -> Expanded with Value Object snapshots (e.g. UserRef) for read-write boundary integrity.
+  2. V. API Backward Compatibility & Non-Null Contract DTOs (MUST) -> Added strict Non-null Contract rules for Read Model DTOs to eliminate undefined values on UI.
+- Principles preserved:
   2. II. Dependency Injection with Dishka (MUST)
   3. III. Unified UTC+7 Timezone & DateTime Integrity (MUST)
   4. IV. Event-Driven Decoupling & Asynchronous Handlers (MUST)
-  5. V. API Backward Compatibility & Unified Response Format (MUST)
   6. VI. Idempotency & Network Resilience (MUST)
   7. VII. Single-Responsibility Use Cases (MUST)
-- Sections added: Principle VII
-- Rationale: Chuẩn hóa 1 File / 1 Use Case (`*_use_case.py`) cho toàn bộ các domain, đóng gói module qua `__init__.py`.
+- Rationale: Standardized Practical DDD (embedding UserRef Value Objects for relational snapshots) and strict Non-Null DTO Contracts on Frontend/Backend.
 -->
 
 # DUT AI Manager Constitution
 
 ## Core Principles
 
-### I. Clean Architecture & DDD Boundaries (MUST)
-Every business domain in `dut-ai-manager` (Meeting, Homework, Violation, Report, User, PermissionRequest) MUST strictly follow Clean Architecture / Domain-Driven Design layering:
-- **Domain Layer (`domain/`)**: Pure business logic, Entities, Value Objects, and Domain Events. Must have ZERO dependencies on frameworks, databases, or third-party web APIs.
+### I. Clean Architecture & Practical DDD Boundaries (MUST)
+Every business domain in `dut-ai-manager` (Meeting, Homework, Violation, Report, User, PermissionRequest) MUST strictly follow Clean Architecture / Practical Domain-Driven Design layering:
+- **Domain Layer (`domain/`)**: Pure business logic, Entities, Value Objects, and Domain Events. Must have ZERO dependencies on frameworks, databases, or third-party web APIs. May embed lightweight Value Objects (such as `UserRef(id, name, avatar_url)`) as identity snapshots for domain and use case cohesion.
 - **Application Layer (`application/`)**: Use Cases orchestrating domain logic, repositories, and domain event publishing.
-- **Infrastructure Layer (`infrastructure/`)**: Database models (SQLAlchemy), repositories, external service clients (MinIO, Discord, Zalo).
+- **Infrastructure Layer (`infrastructure/`)**: Database models (SQLAlchemy ORM), repositories, external service clients (MinIO, Discord, Zalo). ORM Models MUST implement `to_entity()` and `from_entity()` methods for clean domain mapping.
 - **Presentation / API Layer (`controller.py`, `schemas.py`)**: FastAPI routers, Pydantic schemas, permission dependencies.
 
 ### II. Dependency Injection with Dishka (MUST)
@@ -35,8 +35,8 @@ All business operations, attendance checks, deadline calculations, and cron jobs
 ### IV. Event-Driven Decoupling & Asynchronous Handlers (MUST)
 Side effects such as third-party notifications (Discord bot webhooks/messages, Zalo Mini App messages), audit logs, and real-time SSE broadcasts MUST be triggered asynchronously via `EventBus` (`DomainEvent` and `EventHandler`). Synchronous blocking calls to external notification APIs inside transaction paths are prohibited.
 
-### V. API Backward Compatibility & Unified Response Format (MUST)
-Existing REST API endpoints consumed by the Web Frontend (`frontend/`) and Zalo Mini App (`zalo-mini-app/`) MUST maintain backward compatibility. All responses MUST follow the standardized envelope `ApiResponse[T]` with appropriate HTTP status codes. Breaking schema changes require explicit versioning or migration plans.
+### V. API Backward Compatibility & Non-Null Contract DTOs (MUST)
+Existing REST API endpoints consumed by the Web Frontend (`frontend/`) and Zalo Mini App (`zalo-mini-app/`) MUST maintain backward compatibility and follow the standardized envelope `ApiResponse[T]`. Read Model DTOs returned to client interfaces MUST enforce **Non-Null Contracts** for known relationships (e.g., `trainer: UserRefDto` must never be `undefined` or partial nulls), preventing fallback glitches on the frontend.
 
 ### VI. Idempotency & Network Resilience (MUST)
 Any endpoint that records transactional state over unreliable networks (such as bulk check-in, card tap, check-out) MUST support idempotency keys (`client_event_id` / `event_id`) to prevent duplicate processing on client retries.
@@ -65,4 +65,4 @@ Each use case in the `application/` layer of every domain MUST be implemented in
    - **MINOR**: Addition of new principles or major workflow standards.
    - **PATCH**: Non-semantic clarifications and wording updates.
 
-**Version**: 1.1.0 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-09-25
+**Version**: 1.2.0 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-10-02

@@ -5,12 +5,11 @@ Usage:
     python -m app.jobs.sync_legacy_homeworks [--dry-run]
 """
 
-import sys
-import asyncio
 import argparse
-from loguru import logger
+import asyncio
 
 from dishka import make_async_container
+from loguru import logger
 
 from app.auth.providers import AuthModuleProvider
 from app.billing.providers import BillingModuleProvider
@@ -53,7 +52,9 @@ def create_app_container():
 
 
 async def run_sync_and_rescan(dry_run: bool = False) -> None:
-    logger.info(f"🔍 [Rescan & Sync Job] Starting homework rescan (dry_run={dry_run})...")
+    logger.info(
+        f"🔍 [Rescan & Sync Job] Starting homework rescan (dry_run={dry_run})..."
+    )
     container = create_app_container()
     try:
         async with container() as request_container:
@@ -61,11 +62,15 @@ async def run_sync_and_rescan(dry_run: bool = False) -> None:
             try:
                 use_case = await request_container.get(RescanAllHomeworksUseCase)
                 if dry_run:
-                    logger.info("ℹ️ Running in DRY-RUN mode. No changes will be committed.")
+                    logger.info(
+                        "ℹ️ Running in DRY-RUN mode. No changes will be committed."
+                    )
                     count = await use_case.execute(auto_sync_legacy=False)
                 else:
                     count = await use_case.execute(auto_sync_legacy=True)
-                logger.info(f"✅ [Rescan & Sync Job] Completed - Violations processed: {count}")
+                logger.info(
+                    f"✅ [Rescan & Sync Job] Completed - Violations processed: {count}"
+                )
             finally:
                 _request_container_context.reset(token)
     except Exception as e:
@@ -74,8 +79,12 @@ async def run_sync_and_rescan(dry_run: bool = False) -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Sync legacy homeworks and rescan overdue violations.")
-    parser.add_argument("--dry-run", action="store_true", help="Run without persisting changes.")
+    parser = argparse.ArgumentParser(
+        description="Sync legacy homeworks and rescan overdue violations."
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Run without persisting changes."
+    )
     args = parser.parse_args()
 
     asyncio.run(run_sync_and_rescan(dry_run=args.dry_run))

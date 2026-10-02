@@ -1,5 +1,4 @@
 import asyncio
-from loguru import logger
 
 from app.homework.application.dtos import HomeworkReportResponse, HomeworkResponse
 from app.homework.application.helpers import QuizSubmissionHelper
@@ -58,18 +57,19 @@ class GetHomeworksUseCase:
         game_cache: dict[str, set[int] | None] = {}
 
         if slugs_set:
+
             async def fetch_coding(slug: str):
-                coding_cache[slug] = (
-                    await QuizSubmissionHelper.get_coding_completed_user_ids(
-                        self.quiz_api, slug
-                    )
+                coding_cache[
+                    slug
+                ] = await QuizSubmissionHelper.get_coding_completed_user_ids(
+                    self.quiz_api, slug
                 )
 
             async def fetch_game(slug: str):
-                game_cache[slug] = (
-                    await QuizSubmissionHelper.get_game_completed_user_ids(
-                        self.quiz_api, slug
-                    )
+                game_cache[
+                    slug
+                ] = await QuizSubmissionHelper.get_game_completed_user_ids(
+                    self.quiz_api, slug
                 )
 
             tasks = []
@@ -90,9 +90,7 @@ class GetHomeworksUseCase:
                 (user_id in coding_uids) if coding_uids is not None else False
             )
             has_game = game_uids is not None
-            game_submitted = (
-                (user_id in game_uids) if game_uids is not None else False
-            )
+            game_submitted = (user_id in game_uids) if game_uids is not None else False
 
             is_submitted = QuizSubmissionHelper.is_user_submitted(
                 user_id, coding_uids, game_uids
@@ -191,7 +189,9 @@ class GetHomeworksUseCase:
                 coding_set = coding_completed_cache.get(slug, set())
                 game_set = game_completed_cache.get(slug, set())
 
-                if not QuizSubmissionHelper.is_user_submitted(user_id, coding_set, game_set):
+                if not QuizSubmissionHelper.is_user_submitted(
+                    user_id, coding_set, game_set
+                ):
                     unsubmitted.append(hw)
             else:
                 if hw.deadline and hw.deadline < now:
@@ -219,11 +219,18 @@ class GetHomeworksUseCase:
         game_cache: dict[str, set[int] | None] = {}
 
         if unique_slugs:
+
             async def fetch_coding(s: str):
-                coding_cache[s] = await QuizSubmissionHelper.get_coding_completed_user_ids(self.quiz_api, s)
+                coding_cache[
+                    s
+                ] = await QuizSubmissionHelper.get_coding_completed_user_ids(
+                    self.quiz_api, s
+                )
 
             async def fetch_game(s: str):
-                game_cache[s] = await QuizSubmissionHelper.get_game_completed_user_ids(self.quiz_api, s)
+                game_cache[s] = await QuizSubmissionHelper.get_game_completed_user_ids(
+                    self.quiz_api, s
+                )
 
             tasks = []
             for s in unique_slugs:
@@ -249,7 +256,9 @@ class GetHomeworksUseCase:
                 if slug:
                     coding_uids = coding_cache.get(slug)
                     game_uids = game_cache.get(slug)
-                    if not QuizSubmissionHelper.is_user_submitted(uid, coding_uids, game_uids):
+                    if not QuizSubmissionHelper.is_user_submitted(
+                        uid, coding_uids, game_uids
+                    ):
                         unsubmitted_count += 1
                 else:
                     # Bài tập thường nếu quá hạn
@@ -271,4 +280,3 @@ class GetHomeworksUseCase:
         # Sắp xếp số bài chưa nộp nhiều nhất lên trước
         reports.sort(key=lambda r: r.unsubmitted_count, reverse=True)
         return reports
-

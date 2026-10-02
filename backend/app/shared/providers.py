@@ -9,7 +9,10 @@ from app.core.config import settings
 from app.shared.infrastructure.discord_service import DiscordService
 from app.shared.infrastructure.email_service import EmailService
 from app.shared.infrastructure.minio_service import MinioService
+from app.shared.infrastructure.notification_service import NotificationService
 from app.shared.infrastructure.tts_service import TTSService
+from app.user.infrastructure.repository import UserRepository
+from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
 
 
 class InfrastructureProvider(Provider):
@@ -45,3 +48,12 @@ class InfrastructureProvider(Provider):
     @provide(scope=Scope.APP)
     def get_tts_service(self) -> TTSService:
         return TTSService()
+
+    @provide(scope=Scope.REQUEST)
+    def get_notification_service(
+        self,
+        discord_service: DiscordService,
+        zalo_bot: ZaloBotClient,
+        user_repo: UserRepository,
+    ) -> NotificationService:
+        return NotificationService(discord_service, zalo_bot, user_repo)

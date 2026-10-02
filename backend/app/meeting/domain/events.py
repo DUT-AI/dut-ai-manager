@@ -68,4 +68,3 @@ class ParticipantLateRecorded(DomainEvent):
     meeting_title: str
     check_in_at: datetime
     start_time: datetime
-

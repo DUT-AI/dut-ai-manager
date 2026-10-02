@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useReducer } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button, Typography, Tooltip, Spin, message } from 'antd';
 import {
     LeftOutlined,
@@ -110,6 +111,7 @@ function meetingModalReducer(state: MeetingModalState, action: MeetingModalActio
 }
 
 const MeetingCalendarPage = () => {
+    const navigate = useNavigate();
     const [currentWeekStart, setCurrentWeekStart] = useState<Dayjs>(() =>
         dayjs().startOf('isoWeek')
     );
@@ -227,9 +229,9 @@ const MeetingCalendarPage = () => {
         []
     );
 
-    // Handle meeting click
+    // Handle meeting click -> Navigate to full Detail Page
     const handleMeetingClick = (meeting: MeetingResponse) => {
-        dispatch({ type: 'OPEN_DRAWER', payload: meeting });
+        navigate(`/dashboard/meetings/${meeting.id}`);
     };
 
     // Handle create

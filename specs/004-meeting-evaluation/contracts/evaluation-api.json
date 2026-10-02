@@ -1,0 +1,130 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Meeting Individual Evaluation API",
+    "version": "1.0.0",
+    "description": "API contracts for 2-way peer evaluation (Trainer <-> Trainee) in a Meeting"
+  },
+  "paths": {
+    "/api/v1/meetings/{meeting_id}/evaluations/trainer": {
+      "post": {
+        "summary": "Trainer evaluates a specific Trainee",
+        "parameters": [
+          {
+            "name": "meeting_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["target_user_id", "scores"],
+                "properties": {
+                  "target_user_id": { "type": "integer", "description": "Trainee User ID" },
+                  "scores": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["criteria_code", "score"],
+                      "properties": {
+                        "criteria_code": { "type": "string", "example": "PRE_CLASS_PREPARATION" },
+                        "score": { "type": "integer", "minimum": 1, "maximum": 5, "example": 5 }
+                      }
+                    }
+                  },
+                  "feedback_text": { "type": "string", "maxLength": 2000 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Evaluation saved successfully" },
+          "400": { "description": "Invalid input or meeting not finished" }
+        }
+      }
+    },
+    "/api/v1/meetings/{meeting_id}/evaluations/trainee": {
+      "post": {
+        "summary": "Trainee evaluates the Trainer (with optional anonymity)",
+        "parameters": [
+          {
+            "name": "meeting_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["target_user_id", "scores"],
+                "properties": {
+                  "target_user_id": { "type": "integer", "description": "Trainer User ID" },
+                  "is_anonymous": { "type": "boolean", "default": false, "description": "Hide identity from Trainer" },
+                  "scores": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["criteria_code", "score"],
+                      "properties": {
+                        "criteria_code": { "type": "string", "example": "TEACHING_METHOD" },
+                        "score": { "type": "integer", "minimum": 1, "maximum": 5, "example": 5 }
+                      }
+                    }
+                  },
+                  "feedback_text": { "type": "string", "maxLength": 2000 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Evaluation saved successfully" },
+          "400": { "description": "Already evaluated or not joined" }
+        }
+      }
+    },
+    "/api/v1/meetings/{meeting_id}/evaluations/summary": {
+      "get": {
+        "summary": "Get evaluation summary for Trainer (anonymous evaluations have reviewer masked)",
+        "parameters": [
+          {
+            "name": "meeting_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Summary with scores and feedback" }
+        }
+      }
+    },
+    "/api/v1/meetings/{meeting_id}/evaluations/my-result": {
+      "get": {
+        "summary": "Trainee views evaluation received from Trainer",
+        "parameters": [
+          {
+            "name": "meeting_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Personal evaluation result" },
+          "403": { "description": "Locked until Trainee evaluates Trainer" }
+        }
+      }
+    }
+  }
+}

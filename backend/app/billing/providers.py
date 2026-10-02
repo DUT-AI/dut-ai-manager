@@ -1,6 +1,7 @@
 from dishka import Provider, Scope, provide
 from sqlalchemy.orm import Session
 
+from app.billing.application.notification_handler import BillingNotificationHandler
 from app.billing.application.use_cases import (
     CreateInvoiceUseCase,
     CreateMonthlyInvoicesUseCase,
@@ -10,6 +11,7 @@ from app.billing.application.use_cases import (
     UpdateInvoiceUseCase,
 )
 from app.billing.infrastructure.repository import InvoiceRepository
+from app.shared.infrastructure.notification_service import NotificationService
 from app.team.infrastructure.repository import TeamRepository
 from app.violation.infrastructure.repository import ViolationRepository
 
@@ -49,3 +51,9 @@ class BillingModuleProvider(Provider):
     @provide
     def delete_invoice_uc(self, repo: InvoiceRepository) -> DeleteInvoiceUseCase:
         return DeleteInvoiceUseCase(repo)
+
+    @provide
+    def get_billing_notification_handler(
+        self, notification_service: NotificationService
+    ) -> BillingNotificationHandler:
+        return BillingNotificationHandler(notification_service)

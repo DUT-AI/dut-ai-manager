@@ -1,4 +1,3 @@
-import asyncio
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 
@@ -58,7 +57,7 @@ async def test_handle_meeting_absence_with_permission_skips_violation():
     create_violation_uc = MagicMock()
     create_violation_uc.execute = AsyncMock()
     permission_repo = MagicMock()
-    
+
     excused_req = PermissionRequest(
         id=1,
         user_id=102,

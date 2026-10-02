@@ -1,4 +1,7 @@
+import importlib
 from contextlib import asynccontextmanager
+
+from pathlib import Path
 
 from dishka import make_async_container
 from dishka.integrations.fastapi import setup_dishka
@@ -6,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from loguru import logger
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -14,6 +18,7 @@ from app.auth.providers import AuthModuleProvider
 from app.billing.providers import BillingModuleProvider
 from app.bonus_point.providers import BonusPointModuleProvider
 from app.core.config import settings
+from app.core.database import create_db_and_tables
 from app.core.events import bootstrap_events
 from app.core.logging_config import setup_logging
 from app.core.scheduler import shutdown_scheduler, start_scheduler
@@ -35,8 +40,6 @@ from app.team.providers import TeamModuleProvider
 from app.user.providers import UserModuleProvider
 from app.violation.providers import ViolationModuleProvider
 from app.zalo.providers import ZaloModuleProvider
-from app.core.database import create_db_and_tables
-import importlib
 
 
 @asynccontextmanager
@@ -137,6 +140,11 @@ def create_app():
 
     # Include API v1 router
     _app.include_router(api_v1_router)
+
+    # Mount static assets directory for memes/notifications
+    assets_dir = Path(__file__).resolve().parent / "assets"
+    if assets_dir.is_dir():
+        _app.mount("/static/assets", StaticFiles(directory=str(assets_dir)), name="static_assets")
 
     @_app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request, exc):

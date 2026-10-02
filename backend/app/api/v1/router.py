@@ -7,7 +7,6 @@ from app.expense.controller import router as expense_router
 from app.homework.controller import (
     router as homework_router,
 )
-
 from app.meeting.controller import router as meeting_router
 from app.permission_request.controller import router as permission_request_router
 from app.rbac.controller import router as rbac_router
@@ -17,6 +16,8 @@ from app.user.controller import router as user_router
 from app.violation.controller import router as violation_router
 from app.zalo.controller import (
     bot_router as zalo_bot_router,
+)
+from app.zalo.controller import (
     router as zalo_router,
 )
 

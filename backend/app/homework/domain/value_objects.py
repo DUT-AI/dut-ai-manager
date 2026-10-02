@@ -46,4 +46,3 @@ class HomeworkOverdueDetected(DomainEvent):
     deadline_date: str
     reason: str = "Không nộp bài tập"
     uncompleted_items: list[str] = []
-

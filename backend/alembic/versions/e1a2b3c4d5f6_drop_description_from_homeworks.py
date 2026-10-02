@@ -5,9 +5,11 @@ Revises: 4790a2b574fc
 Create Date: 2026-09-28 09:44:00.000000
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 # revision identifiers, used by Alembic.
@@ -18,10 +20,18 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    """Upgrade schema - drop description column from homeworks table."""
-    op.drop_column("homeworks", "description")
+    """Upgrade schema - drop description column from homeworks table if exists."""
+    bind = op.get_bind()
+    insp = sa.inspect(bind)
+    columns = [c["name"] for c in insp.get_columns("homeworks")]
+    if "description" in columns:
+        op.drop_column("homeworks", "description")
 
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.add_column("homeworks", sa.Column("description", sa.Text(), nullable=True))
+    bind = op.get_bind()
+    insp = sa.inspect(bind)
+    columns = [c["name"] for c in insp.get_columns("homeworks")]
+    if "description" not in columns:
+        op.add_column("homeworks", sa.Column("description", sa.Text(), nullable=True))

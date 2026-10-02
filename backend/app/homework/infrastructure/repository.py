@@ -47,12 +47,9 @@ class HomeworkRepository:
         return [m.to_entity() for m in models]
 
     def get_by_id(self, homework_id: int) -> HomeworkEntity | None:
-        statement = (
-            select(HomeworkModel)
-            .where(
-                HomeworkModel.id == homework_id,
-                HomeworkModel.is_deleted == False,  # noqa: E712
-            )
+        statement = select(HomeworkModel).where(
+            HomeworkModel.id == homework_id,
+            HomeworkModel.is_deleted == False,  # noqa: E712
         )
         model = self.session.scalars(statement).first()
         return model.to_entity() if model else None
@@ -64,7 +61,9 @@ class HomeworkRepository:
 
         if homework.assignee_ids:
             for uid in homework.assignee_ids:
-                self.session.add(HomeworkAssigneeModel(homework_id=model.id, user_id=uid))
+                self.session.add(
+                    HomeworkAssigneeModel(homework_id=model.id, user_id=uid)
+                )
         self.session.flush()
         return model.to_entity()
 
@@ -82,17 +81,19 @@ class HomeworkRepository:
             return model.to_entity()
         return None
 
-    def sync_assignees(
-        self, homework_id: int, assignee_ids: list[int] | None
-    ) -> None:
+    def sync_assignees(self, homework_id: int, assignee_ids: list[int] | None) -> None:
         if assignee_ids is not None:
             existing_assignees = self.session.scalars(
-                select(HomeworkAssigneeModel).where(HomeworkAssigneeModel.homework_id == homework_id)
+                select(HomeworkAssigneeModel).where(
+                    HomeworkAssigneeModel.homework_id == homework_id
+                )
             ).all()
             for a in existing_assignees:
                 self.session.delete(a)
             for uid in set(assignee_ids):
-                self.session.add(HomeworkAssigneeModel(homework_id=homework_id, user_id=uid))
+                self.session.add(
+                    HomeworkAssigneeModel(homework_id=homework_id, user_id=uid)
+                )
             self.session.flush()
 
     def get_assigned_user_ids(self, homework_id: int) -> set[int]:
@@ -108,12 +109,9 @@ class HomeworkRepository:
         return direct_uids
 
     def get_by_deadline_date(self, target_date: Any) -> list[HomeworkEntity]:
-        statement = (
-            select(HomeworkModel)
-            .where(
-                HomeworkModel.is_deleted == False,  # noqa: E712
-                func.date(HomeworkModel.deadline) == target_date,
-            )
+        statement = select(HomeworkModel).where(
+            HomeworkModel.is_deleted == False,  # noqa: E712
+            func.date(HomeworkModel.deadline) == target_date,
         )
         models = self.session.scalars(statement).all()
         return [m.to_entity() for m in models]

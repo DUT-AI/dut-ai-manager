@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from loguru import logger
 
 from app.shared.domain.event_bus import EventBus

@@ -72,15 +72,25 @@ class CheckOverdueHomeworkUseCase:
                 )
                 continue
 
-            hw_type = QuizSubmissionHelper.detect_homework_type(homework.link, homework.slug)
+            hw_type = QuizSubmissionHelper.detect_homework_type(
+                homework.link, homework.slug
+            )
 
             coding_completed_uids = None
             if hw_type in ("coding", "both"):
-                coding_completed_uids = await QuizSubmissionHelper.get_coding_completed_user_ids(self.quiz_api, slug)
+                coding_completed_uids = (
+                    await QuizSubmissionHelper.get_coding_completed_user_ids(
+                        self.quiz_api, slug
+                    )
+                )
 
             game_completed_uids = None
             if hw_type in ("game", "both"):
-                game_completed_uids = await QuizSubmissionHelper.get_game_completed_user_ids(self.quiz_api, slug)
+                game_completed_uids = (
+                    await QuizSubmissionHelper.get_game_completed_user_ids(
+                        self.quiz_api, slug
+                    )
+                )
 
             # Nếu cả 2 đều là None (404/không tìm thấy trên Quiz API), bỏ qua
             if coding_completed_uids is None and game_completed_uids is None:
@@ -91,7 +101,9 @@ class CheckOverdueHomeworkUseCase:
                 continue
 
             for user_id in assigned_uids:
-                if QuizSubmissionHelper.is_user_submitted(user_id, coding_completed_uids, game_completed_uids):
+                if QuizSubmissionHelper.is_user_submitted(
+                    user_id, coding_completed_uids, game_completed_uids
+                ):
                     continue
 
                 uncompleted_labels = []

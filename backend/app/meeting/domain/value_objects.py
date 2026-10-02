@@ -8,13 +8,36 @@ from pydantic import BaseModel
 class ParticipantStatus(str, Enum):
     """Trạng thái tham dự buổi họp (7 trạng thái)"""
 
-    NOT_JOINED = "NOT_JOINED"        # Chưa checkin
-    JOINED = "JOINED"                # Đã checkin (đúng/trước giờ)
-    LATE_EXCUSED = "LATE_EXCUSED"    # Trễ có phép
-    LATE_UNEXCUSED = "LATE_UNEXCUSED" # Trễ không phép
-    ABSENT_EXCUSED = "ABSENT_EXCUSED" # Vắng có phép
-    ABSENT_UNEXCUSED = "ABSENT_UNEXCUSED" # Vắng không phép
-    COMPLETED = "COMPLETED"          # Đã hoàn thành / Đã checkout
+    NOT_JOINED = "NOT_JOINED"  # Chưa checkin
+    JOINED = "JOINED"  # Đã checkin (đúng/trước giờ)
+    LATE_EXCUSED = "LATE_EXCUSED"  # Trễ có phép
+    LATE_UNEXCUSED = "LATE_UNEXCUSED"  # Trễ không phép
+    ABSENT_EXCUSED = "ABSENT_EXCUSED"  # Vắng có phép
+    ABSENT_UNEXCUSED = "ABSENT_UNEXCUSED"  # Vắng không phép
+    COMPLETED = "COMPLETED"  # Đã hoàn thành / Đã checkout
+
+
+class EvaluationType(str, Enum):
+    """Loại đánh giá cá nhân 2 chiều"""
+
+    TRAINER_TO_TRAINEE = "TRAINER_TO_TRAINEE"
+    TRAINEE_TO_TRAINER = "TRAINEE_TO_TRAINER"
+
+
+class EvaluationCriteriaCode(str, Enum):
+    """Mã tiêu chí đánh giá chuẩn hóa hệ thống"""
+
+    # Trainer evaluates Trainee
+    ATTENDANCE_CONDUCT = "ATTENDANCE_CONDUCT"
+    INTERACTION_CONTRIBUTION = "INTERACTION_CONTRIBUTION"
+    ABSORPTION_COMPREHENSION = "ABSORPTION_COMPREHENSION"
+    PRE_CLASS_PREPARATION = "PRE_CLASS_PREPARATION"
+
+    # Trainee evaluates Trainer
+    CONTENT_QUALITY = "CONTENT_QUALITY"
+    TEACHING_METHOD = "TEACHING_METHOD"
+    CLASS_ATMOSPHERE = "CLASS_ATMOSPHERE"
+    PRACTICAL_VALUE = "PRACTICAL_VALUE"
 
 
 class CapacityStatus(str, Enum):

@@ -3,7 +3,6 @@ from datetime import date
 from app.bonus_point.infrastructure.repository import BonusPointRepository
 from app.homework.application import GetHomeworksUseCase
 from app.homework.application.dtos import HomeworkResponse
-
 from app.meeting.infrastructure.repository import MeetingRepository
 from app.meeting.schemas import MeetingResponse
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
@@ -150,7 +149,11 @@ class GetDashboardOverviewUseCase:
         month_unsubmitted = [
             h
             for h in user_unsubmitted
-            if not h.deadline or (h.deadline.year < year or (h.deadline.year == year and h.deadline.month <= month))
+            if not h.deadline
+            or (
+                h.deadline.year < year
+                or (h.deadline.year == year and h.deadline.month <= month)
+            )
         ]
 
         # 5. Meetings (Lấy các buổi sinh hoạt mà user tham gia trong tháng)

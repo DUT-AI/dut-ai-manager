@@ -24,13 +24,19 @@ class QuizApiClient:
         """
         url = f"{self.base_url}/api/v1/game/{game_slug}/leaderboard"
         try:
-            async with httpx.AsyncClient(timeout=5.0, headers=self._get_headers()) as client:
+            async with httpx.AsyncClient(
+                timeout=5.0, headers=self._get_headers()
+            ) as client:
                 response = await client.get(url)
                 if response.status_code == 200:
                     data = response.json()
                     if isinstance(data, list):
                         return data
-                    elif isinstance(data, dict) and "data" in data and isinstance(data["data"], list):
+                    elif (
+                        isinstance(data, dict)
+                        and "data" in data
+                        and isinstance(data["data"], list)
+                    ):
                         return data["data"]
                     logger.warning(f"Unexpected response structure from {url}: {data}")
                 elif response.status_code == 404:
@@ -55,15 +61,23 @@ class QuizApiClient:
         """
         url = f"{self.base_url}/api/v1/homeworks/{homework_slug}/completed-members"
         try:
-            async with httpx.AsyncClient(timeout=5.0, headers=self._get_headers()) as client:
+            async with httpx.AsyncClient(
+                timeout=5.0, headers=self._get_headers()
+            ) as client:
                 response = await client.get(url)
                 if response.status_code == 200:
                     res_json = response.json()
-                    if isinstance(res_json, dict) and "data" in res_json and isinstance(res_json["data"], list):
+                    if (
+                        isinstance(res_json, dict)
+                        and "data" in res_json
+                        and isinstance(res_json["data"], list)
+                    ):
                         return res_json["data"]
                     elif isinstance(res_json, list):
                         return res_json
-                    logger.warning(f"Unexpected response structure from {url}: {res_json}")
+                    logger.warning(
+                        f"Unexpected response structure from {url}: {res_json}"
+                    )
                 elif response.status_code == 404:
                     return None
                 else:
@@ -82,7 +96,9 @@ class QuizApiClient:
         """
         url = f"{self.base_url}/api/v1/users/{user_id}/quiz-report"
         try:
-            async with httpx.AsyncClient(timeout=30.0, headers=self._get_headers()) as client:
+            async with httpx.AsyncClient(
+                timeout=30.0, headers=self._get_headers()
+            ) as client:
                 response = await client.get(url)
                 if response.status_code == 200:
                     res_json = response.json()

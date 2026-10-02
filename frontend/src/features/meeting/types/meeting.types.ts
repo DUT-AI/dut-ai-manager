@@ -42,6 +42,13 @@ export const participantResponseSchema = z.object({
 });
 export type ParticipantResponse = z.infer<typeof participantResponseSchema>;
 
+export const userRefSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  avatar_url: z.string().nullable().optional(),
+});
+export type UserRef = z.infer<typeof userRefSchema>;
+
 export const meetingResponseSchema = z.object({
   id: z.number(),
   title: z.string(),
@@ -49,6 +56,10 @@ export const meetingResponseSchema = z.object({
   start_time: z.string(),
   end_time: z.string(),
   require_check_in: z.boolean(),
+  enable_evaluation: z.boolean().default(false),
+  evaluation_deadline: z.string().nullable().optional(),
+  created_by: z.number().nullable().optional(),
+  trainer: userRefSchema.default({ id: 0, name: 'Trainer' }),
   participants: z.array(participantResponseSchema).default([]),
   created_at: z.string(),
   updated_at: z.string(),
@@ -61,7 +72,7 @@ export const meetingCreateSchema = z.object({
   start_time: z.string().min(1, 'Vui lòng chọn thời gian bắt đầu'),
   end_time: z.string().min(1, 'Vui lòng chọn thời gian kết thúc'),
   require_check_in: z.boolean().optional(),
-  team_ids: z.array(z.number()).optional(),
+  enable_evaluation: z.boolean().optional(),
   user_ids: z.array(z.number()).optional(),
 });
 export type MeetingCreate = z.infer<typeof meetingCreateSchema>;
@@ -70,3 +81,63 @@ export type CreateMeetingFormValues = MeetingCreate;
 export const meetingUpdateSchema = meetingCreateSchema.partial();
 export type MeetingUpdate = z.infer<typeof meetingUpdateSchema>;
 export type UpdateMeetingFormValues = MeetingUpdate;
+
+// ==========================================
+// EVALUATION TYPES
+// ==========================================
+
+export interface EvaluationScoreItem {
+  criteria_code: string;
+  criteria_name: string;
+  criteria_description: string;
+  score: number;
+}
+
+export interface EvaluationScoreItemSubmit {
+  criteria_code: string;
+  score: number;
+}
+
+export interface TrainerSubmitEvaluationPayload {
+  target_user_id: number;
+  scores: EvaluationScoreItemSubmit[];
+  feedback_text?: string;
+}
+
+export interface TraineeSubmitEvaluationPayload {
+  target_user_id: number;
+  is_anonymous?: boolean;
+  scores: EvaluationScoreItemSubmit[];
+  feedback_text?: string;
+}
+
+export interface EvaluationResponse {
+  id: number;
+  meeting_id: number;
+  reviewer_id?: number | null;
+  target_user_id: number;
+  evaluation_type: 'TRAINER_TO_TRAINEE' | 'TRAINEE_TO_TRAINER';
+  is_anonymous: boolean;
+  scores: EvaluationScoreItem[];
+  average_score: number;
+  feedback_text?: string | null;
+  reviewer?: UserRef | null;
+  target_user?: UserRef | null;
+  created_at: string;
+}
+
+export interface CriteriaBreakdown {
+  criteria_code: string;
+  criteria_name: string;
+  criteria_description: string;
+  average_score: number;
+  count: number;
+}
+
+export interface MeetingEvaluationSummary {
+  meeting_id: number;
+  total_evaluations: number;
+  overall_average_score: number;
+  criteria_breakdown: CriteriaBreakdown[];
+  evaluations: EvaluationResponse[];
+}

@@ -113,7 +113,9 @@ class CheckInUseCase:
                     continue
 
                 is_late = meeting.is_late(check_in_dt)
-                success, msg = participant.check_in(check_in_dt, image_url, status=ParticipantStatus.JOINED)
+                success, msg = participant.check_in(
+                    check_in_dt, image_url, status=ParticipantStatus.JOINED
+                )
                 if not success:
                     messages.append(msg)
                     updated_participants.append(participant)

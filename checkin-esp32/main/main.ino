@@ -64,6 +64,10 @@ void setup() {
 
   // Kết nối WiFi
   Serial.println("Dang ket noi WiFi: " + String(ssid));
+  WiFi.mode(WIFI_STA);
+  WiFi.setAutoReconnect(true);
+  WiFi.persistent(true);
+  WiFi.setSleep(false); // Tắt chế độ tiết kiệm năng lượng của WiFi để giữ kết nối socket HTTPS ổn định
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -194,15 +198,23 @@ void playWavStream(Stream* stream, int totalBytes) {
   uint8_t lastSample = 128;
 
   int remainingBytes = totalBytes > 44 ? totalBytes - 44 : -1;
+  unsigned long lastDataTime = millis();
 
-  while (stream->available() || remainingBytes > 0 || remainingBytes == -1) {
+  while ((remainingBytes > 0 || remainingBytes == -1) && (millis() - lastDataTime < 2000)) {
+    if (stream->available() == 0) {
+      delay(1);
+      continue;
+    }
+
     size_t toRead = sizeof(buffer);
     if (remainingBytes > 0 && (int)toRead > remainingBytes) {
       toRead = remainingBytes;
     }
 
     size_t n = stream->readBytes(buffer, toRead);
-    if (n == 0) break;
+    if (n == 0) continue;
+    
+    lastDataTime = millis();
     if (remainingBytes > 0) remainingBytes -= n;
 
     // Thiết lập mốc thời gian phát cho từng chunk
@@ -245,30 +257,11 @@ void playWavStream(Stream* stream, int totalBytes) {
   dacWrite(SPEAKER_PIN, 0); // Đưa về 0V để chống nóng loa và tiết kiệm năng lượng
 }
 
-// 4. Âm thanh dự phòng nếu không có audio từ server
+// 4. Âm thanh dự phòng nếu không có audio từ server (2 tiếng bíp vui tai)
 void playFallbackSuccessSound() {
-  const unsigned long sampleInterval = 1000000UL / SUCCESS_AUDIO_SAMPLE_RATE;
-  unsigned long nextMicros = micros();
-
-  uint8_t firstSample = pgm_read_byte(&(success_audio_data[0]));
-  for (int v = 0; v <= firstSample; v += 4) {
-    dacWrite(SPEAKER_PIN, v);
-    delayMicroseconds(100);
-  }
-
-  for (uint32_t i = 0; i < SUCCESS_AUDIO_LEN; i++) {
-    dacWrite(SPEAKER_PIN, pgm_read_byte(&(success_audio_data[i])));
-    nextMicros += sampleInterval;
-    while ((long)(micros() - nextMicros) < 0) {
-    }
-  }
-
-  uint8_t lastSample = pgm_read_byte(&(success_audio_data[SUCCESS_AUDIO_LEN - 1]));
-  for (int v = lastSample; v >= 0; v -= 4) {
-    dacWrite(SPEAKER_PIN, v);
-    delayMicroseconds(100);
-  }
-  dacWrite(SPEAKER_PIN, 0);
+  playToneDAC(SPEAKER_PIN, 1200, 120);
+  delay(60);
+  playToneDAC(SPEAKER_PIN, 1800, 180);
 }
 
 // Hàm chuyển về trạng thái chờ quét thẻ
@@ -288,15 +281,24 @@ void setIdleState() {
 void checkCardAPI(String id) {
   if (WiFi.status() == WL_CONNECTED) {
     WiFiClientSecure client;
-    client.setInsecure(); // Cho phép kết nối HTTPS không cần xác thực SSL cert
-    client.setTimeout(15);
+    client.setInsecure(); // Cho phép HTTPS không cần nạp chứng chỉ SSL CA
+    client.setHandshakeTimeout(45); 
+    client.setTimeout(45);
 
     HTTPClient http;
+    http.setTimeout(45000); // 45000ms
+    http.setReuse(false);
+
+    Serial.println("\n--- [START API REQUEST] ---");
+    Serial.printf("Free Heap RAM truoc khi goi API: %u bytes\n", ESP.getFreeHeap());
+    Serial.println("Target URL: " + apiUrl);
+
     if (!http.begin(client, apiUrl)) {
-      Serial.println("Loi: Khong the ket noi HTTP Client");
+      Serial.println("Loi: Khong the khoi tao HTTP Client");
       lcd.clear();
       lcd.print("Loi ket noi!");
       playErrorSound();
+      delay(2000);
       return;
     }
 
@@ -306,20 +308,24 @@ void checkCardAPI(String id) {
     http.addHeader("Content-Type", "application/json");
 
     // Thu thập các Header tùy chỉnh trả về từ Server
-    const char* headerKeys[] = {"X-Message", "x-message", "Content-Type"};
-    http.collectHeaders(headerKeys, 3);
+    const char* headerKeys[] = {"X-Message", "x-message", "Content-Type", "Content-Length"};
+    http.collectHeaders(headerKeys, 4);
     
     String jsonBody = "{\"card_code\":\"" + id + "\"}";
-    Serial.println("Sending Request Body: " + jsonBody);
+    Serial.println("Request Body: " + jsonBody);
     
     int httpResponseCode = http.POST(jsonBody);
-    Serial.printf("HTTP Response Code: %d\n", httpResponseCode);
+    Serial.printf("HTTP Response Code: %d (%s)\n", httpResponseCode, http.errorToString(httpResponseCode).c_str());
 
     String contentType = http.header("Content-Type");
     String serverMessage = http.header("X-Message");
     if (serverMessage.length() == 0) {
       serverMessage = http.header("x-message");
     }
+
+    Serial.println("Content-Type: " + contentType);
+    Serial.println("Header X-Message: " + serverMessage);
+    Serial.printf("Content-Length: %d\n", http.getSize());
 
     lcd.clear();
     lcd.setCursor(0, 0);
@@ -355,7 +361,7 @@ void checkCardAPI(String id) {
       digitalWrite(LED_RED_PIN, HIGH);
       
       if (serverMessage.length() > 0) {
-        Serial.println("Chi tiet loi tu server: " + serverMessage);
+        Serial.println("Chi tiet loi tu server (Header): " + serverMessage);
         lcd.print(serverMessage.substring(0, 16));
         if (serverMessage.length() > 16) {
           lcd.setCursor(0, 1);
@@ -370,6 +376,7 @@ void checkCardAPI(String id) {
         }
       } else {
         String payload = http.getString();
+        Serial.println("Server Response Payload: " + payload);
         JsonDocument doc;
         DeserializationError error = deserializeJson(doc, payload);
         if (!error && doc["message"].is<String>()) {
@@ -391,12 +398,20 @@ void checkCardAPI(String id) {
       lcd.print("Loi Server!");
       lcd.setCursor(0, 1);
       lcd.print("Code: " + String(httpResponseCode));
-      Serial.printf("HTTP Error code: %d\n", httpResponseCode);
+      
+      if (httpResponseCode > 0) {
+        String payload = http.getString();
+        Serial.println("Server Response Payload: " + payload);
+      } else {
+        Serial.printf("HTTP Client Error Detail: %s (Mã lỗi: %d)\n", http.errorToString(httpResponseCode).c_str(), httpResponseCode);
+      }
+      
       playErrorSound();
       delay(3000); 
     }
     
     http.end();
+    Serial.println("--- [END API REQUEST] ---\n");
   } else {
     lcd.clear();
     lcd.print("Loi WiFi!");

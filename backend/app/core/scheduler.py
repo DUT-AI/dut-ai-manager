@@ -16,6 +16,7 @@ from loguru import logger
 from app.jobs.activity_scoring_job import calculate_activity_points
 from app.jobs.homework_checker_job import check_overdue_homework_submissions
 from app.jobs.meeting_checker_job import check_meeting_attendance
+from app.jobs.meeting_evaluation_checker_job import check_meeting_evaluations
 from app.jobs.monthly_title_job import assign_monthly_titles
 
 # Global scheduler instance
@@ -50,6 +51,16 @@ def start_scheduler(dishka_container: AsyncContainer) -> None:
         kwargs={"container": dishka_container},
     )
 
+    # Schedule meeting evaluation deadline check every hour
+    scheduler.add_job(
+        check_meeting_evaluations,
+        CronTrigger(minute=0, timezone="Asia/Ho_Chi_Minh"),
+        id="meeting_evaluation_check",
+        name="Check 24h meeting evaluations deadline",
+        replace_existing=True,
+        kwargs={"container": dishka_container},
+    )
+
     # Schedule activity scoring check every 30 minutes
     scheduler.add_job(
         calculate_activity_points,
@@ -71,7 +82,9 @@ def start_scheduler(dishka_container: AsyncContainer) -> None:
     )
 
     scheduler.start()
-    logger.info("📅 Scheduler started - Homework & Meeting check at 23:59 daily")
+    logger.info(
+        "📅 Scheduler started - Homework & Meeting check at 23:59 daily, Evaluations hourly"
+    )
 
 
 def shutdown_scheduler() -> None:

@@ -1,10 +1,10 @@
 from dishka import Provider, Scope, provide
 from sqlalchemy.orm import Session
 
+from app.meeting.infrastructure.repository import ParticipantRepository
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
-from app.shared.infrastructure.discord_service import DiscordService
+from app.shared.infrastructure.notification_service import NotificationService
 from app.user.infrastructure.repository import UserRepository
-from app.violation.application.event_handlers import AutomatedViolationHandler
 from app.violation.application import (
     CreateViolationUseCase,
     DeleteViolationUseCase,
@@ -12,13 +12,11 @@ from app.violation.application import (
     RestoreViolationUseCase,
     UpdateViolationUseCase,
 )
+from app.violation.application.event_handlers import AutomatedViolationHandler
 from app.violation.infrastructure.repository import ViolationRepository
 from app.violation.notification_handler import ViolationNotificationHandler
 from app.violation.permission_handler import PermissionViolationHandler
 from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
-
-
-from app.meeting.infrastructure.repository import ParticipantRepository
 
 
 class ViolationModuleProvider(Provider):
@@ -69,12 +67,9 @@ class ViolationModuleProvider(Provider):
             create_violation_uc, permission_repo, participant_repo
         )
 
-
     @provide
     def get_violation_notification_handler(
         self,
-        discord_service: DiscordService,
-        zalo_bot: ZaloBotClient,
-        user_repo: UserRepository,
+        notification_service: NotificationService,
     ) -> ViolationNotificationHandler:
-        return ViolationNotificationHandler(discord_service, zalo_bot, user_repo)
+        return ViolationNotificationHandler(notification_service)

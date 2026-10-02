@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Drawer, Table, Avatar, Tag, Typography, Descriptions, Button, Popconfirm, Image, Tooltip } from 'antd';
+import { Drawer, Table, Avatar, Tag, Typography, Descriptions, Button, Popconfirm, Image, Tooltip, Tabs } from 'antd';
 import {
     UserOutlined,
     CheckCircleOutlined,
@@ -8,13 +8,22 @@ import {
     EditOutlined,
     DeleteOutlined,
     SafetyCertificateOutlined,
+    StarOutlined,
+    TrophyOutlined,
+    BarChartOutlined,
+    TeamOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { MeetingResponse, ParticipantResponse, UpdateParticipantStatusPayload } from '@/features/meeting/types/meeting.types';
 import { ParticipantStatus } from '@/features/meeting/types/meeting.types';
 import { useMeetingEvents } from '@/features/meeting/hooks/useMeetingEvents';
 import { useUpdateParticipantStatus } from '@/features/meeting/hooks/useMeetings';
+import { useAuth } from '@/features/auth/context/AuthContext';
 import { EditParticipantStatusModal } from './EditParticipantStatusModal';
+import { TrainerEvaluationModal } from './TrainerEvaluationModal';
+import { TraineeEvaluationModal } from './TraineeEvaluationModal';
+import { MeetingEvaluationSummaryView } from './MeetingEvaluationSummaryView';
+import { MyEvaluationResultModal } from './MyEvaluationResultModal';
 
 const { Text, Title } = Typography;
 
@@ -27,8 +36,15 @@ interface Props {
 }
 
 export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }: Props) => {
+    const { user } = useAuth();
+    const [activeTab, setActiveTab] = useState('participants');
     const [editingParticipant, setEditingParticipant] = useState<ParticipantResponse | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+    // Evaluation modal states
+    const [evaluatingParticipant, setEvaluatingParticipant] = useState<ParticipantResponse | null>(null);
+    const [isTraineeEvalOpen, setIsTraineeEvalOpen] = useState(false);
+    const [isMyResultOpen, setIsMyResultOpen] = useState(false);
 
     // Mutation hook để cập nhật trạng thái participant
     const updateParticipantStatusMutation = useUpdateParticipantStatus();
@@ -37,6 +53,11 @@ export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }
     useMeetingEvents(meeting?.id, open);
 
     if (!meeting) return null;
+
+    const currentUserId = user?.id;
+    const isTrainer = (meeting.created_by ? currentUserId === meeting.created_by : false) || (user?.role_names?.some(r => ['admin', 'leader'].includes(r.toLowerCase())) ?? false);
+    const myParticipantRecord = meeting.participants.find(p => p.user_id === currentUserId);
+    const isTrainee = !!myParticipantRecord;
 
     const checkedIn = meeting.participants.filter(
         p => p.status === ParticipantStatus.JOINED ||
@@ -142,7 +163,6 @@ export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }
             key: 'check_out_at',
             render: (text: string, record: ParticipantResponse) => {
                 if (text) return dayjs(text).format('HH:mm:ss');
-                // Nếu không checkout mà meeting đã kết thúc và thành viên có checkin
                 if (isEnded && record.check_in_at) {
                     return dayjs(meeting.end_time).format('HH:mm:ss');
                 }
@@ -179,17 +199,29 @@ export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }
             title: 'Thao tác',
             key: 'actions',
             render: (_: unknown, record: ParticipantResponse) => (
-                <Tooltip title="Chỉnh sửa trạng thái">
-                    <Button
-                        icon={<EditOutlined />}
-                        size="small"
-                        type="text"
-                        onClick={() => {
-                            setEditingParticipant(record);
-                            setIsEditModalOpen(true);
-                        }}
-                    />
-                </Tooltip>
+                <div className="flex items-center gap-1">
+                    {meeting.enable_evaluation && isTrainer && isEnded && (
+                        <Tooltip title="Đánh giá học viên này">
+                            <Button
+                                icon={<StarOutlined className="text-amber-500" />}
+                                size="small"
+                                type="text"
+                                onClick={() => setEvaluatingParticipant(record)}
+                            />
+                        </Tooltip>
+                    )}
+                    <Tooltip title="Chỉnh sửa trạng thái">
+                        <Button
+                            icon={<EditOutlined />}
+                            size="small"
+                            type="text"
+                            onClick={() => {
+                                setEditingParticipant(record);
+                                setIsEditModalOpen(true);
+                            }}
+                        />
+                    </Tooltip>
+                </div>
             ),
         },
     ];
@@ -199,7 +231,7 @@ export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }
             title={null}
             open={open}
             onClose={onClose}
-            width={720}
+            width={760}
             styles={{ body: { padding: 0 } }}
         >
             {/* Header */}
@@ -232,6 +264,11 @@ export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }
                         {meeting.require_check_in && (
                             <Tag icon={<SafetyCertificateOutlined />} color="orange" className="!m-0 !mt-1">
                                 Kiểm tra checkin
+                            </Tag>
+                        )}
+                        {meeting.enable_evaluation && (
+                            <Tag icon={<StarOutlined />} color="gold" className="!m-0 !mt-1">
+                                Đánh giá 2 chiều (24h)
                             </Tag>
                         )}
                     </div>
@@ -273,6 +310,38 @@ export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }
                     ]}
                 />
 
+                {/* Trainee Action Banner if evaluation enabled */}
+                {meeting.enable_evaluation && isTrainee && isEnded && (
+                    <div className="mb-4 p-3 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200 flex items-center justify-between">
+                        <div>
+                            <Text strong className="text-amber-900 block text-sm">
+                                🌟 Đánh giá buổi học & Giảng viên
+                            </Text>
+                            <Text type="secondary" className="text-xs">
+                                Hãy đánh giá Trainer để mở khóa xem điểm rèn luyện cá nhân của bạn.
+                            </Text>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button
+                                size="small"
+                                icon={<TrophyOutlined />}
+                                onClick={() => setIsMyResultOpen(true)}
+                            >
+                                Điểm của tôi
+                            </Button>
+                            <Button
+                                type="primary"
+                                size="small"
+                                className="bg-amber-600 hover:!bg-amber-500"
+                                icon={<StarOutlined />}
+                                onClick={() => setIsTraineeEvalOpen(true)}
+                            >
+                                Đánh giá Trainer
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Actions */}
                 <div className="flex gap-2 mb-4">
                     {onEdit && (
@@ -299,21 +368,51 @@ export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }
                     )}
                 </div>
 
-                {/* Participants table */}
-                <Text strong className="block mb-2">
-                    Danh sách tham gia ({total})
-                </Text>
-                <Table
-                    dataSource={meeting.participants}
-                    columns={columns}
-                    rowKey="user_id"
-                    pagination={total > 10 ? { pageSize: 10, size: 'small' } : false}
-                    size="small"
-                    className="meeting-detail-table"
+                {/* Tabs: Danh sách & Báo cáo Đánh giá */}
+                <Tabs
+                    activeKey={activeTab}
+                    onChange={setActiveTab}
+                    items={[
+                        {
+                            key: 'participants',
+                            label: (
+                                <span>
+                                    <TeamOutlined />
+                                    Danh sách tham gia ({total})
+                                </span>
+                            ),
+                            children: (
+                                <Table
+                                    dataSource={meeting.participants}
+                                    columns={columns}
+                                    rowKey="user_id"
+                                    pagination={total > 10 ? { pageSize: 10, size: 'small' } : false}
+                                    size="small"
+                                    className="meeting-detail-table"
+                                />
+                            ),
+                        },
+                        ...(meeting.enable_evaluation
+                            ? [
+                                {
+                                    key: 'evaluations',
+                                    label: (
+                                        <span>
+                                            <BarChartOutlined />
+                                            Báo cáo Đánh giá
+                                        </span>
+                                    ),
+                                    children: (
+                                        <MeetingEvaluationSummaryView meetingId={meeting.id} />
+                                    ),
+                                },
+                            ]
+                            : []),
+                    ]}
                 />
             </div>
 
-            {/* Edit Participant Status Modal */}
+            {/* Modals */}
             <EditParticipantStatusModal
                 open={isEditModalOpen}
                 participant={editingParticipant}
@@ -323,6 +422,36 @@ export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }
                 }}
                 onSubmit={handleUpdateStatus}
                 loading={updateParticipantStatusMutation.isPending}
+            />
+
+            {evaluatingParticipant && (
+                <TrainerEvaluationModal
+                    open={!!evaluatingParticipant}
+                    meetingId={meeting.id}
+                    trainee={{
+                        user_id: evaluatingParticipant.user_id,
+                        user_name: evaluatingParticipant.user_name,
+                        user_avatar_url: evaluatingParticipant.user_avatar_url,
+                    }}
+                    onClose={() => setEvaluatingParticipant(null)}
+                    onSuccess={() => setEvaluatingParticipant(null)}
+                />
+            )}
+
+            <TraineeEvaluationModal
+                open={isTraineeEvalOpen}
+                meetingId={meeting.id}
+                trainerId={meeting.trainer?.id || meeting.created_by || undefined}
+                trainerName={meeting.trainer?.name || 'Trainer'}
+                trainerAvatarUrl={meeting.trainer?.avatar_url || undefined}
+                onClose={() => setIsTraineeEvalOpen(false)}
+                onSuccess={() => setIsTraineeEvalOpen(false)}
+            />
+
+            <MyEvaluationResultModal
+                open={isMyResultOpen}
+                meetingId={meeting.id}
+                onClose={() => setIsMyResultOpen(false)}
             />
 
             <style>{`

@@ -13,7 +13,7 @@ from app.permission_request.application.use_cases import (
     UpdatePermissionRequestUseCase,
 )
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
-from app.shared.infrastructure.discord_service import DiscordService
+from app.shared.infrastructure.notification_service import NotificationService
 from app.user.infrastructure.repository import UserRepository
 
 
@@ -61,10 +61,10 @@ class PermissionRequestModuleProvider(Provider):
     @provide
     def get_notification_handler(
         self,
-        discord_service: DiscordService,
+        notification_service: NotificationService,
         user_repo: UserRepository,
     ) -> PermissionRequestNotificationHandler:
         return PermissionRequestNotificationHandler(
-            discord_service=discord_service,
+            notification_service=notification_service,
             user_repo=user_repo,
         )

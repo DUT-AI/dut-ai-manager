@@ -32,18 +32,26 @@ class GetHomeworkSubmissionStatusUseCase:
     def get_by_id(self, homework_id: int) -> HomeworkEntity | None:
         return self.homework_repo.get_by_id(homework_id)
 
-    async def execute(self, homework_id: int) -> HomeworkSubmissionStatusResponse | None:
+    async def execute(
+        self, homework_id: int
+    ) -> HomeworkSubmissionStatusResponse | None:
         return await self.get_submission_status(homework_id)
 
-    async def get_submission_status(self, homework_id: int) -> HomeworkSubmissionStatusResponse | None:
+    async def get_submission_status(
+        self, homework_id: int
+    ) -> HomeworkSubmissionStatusResponse | None:
         """Return submitted/not_submitted separated by Coding and Game, with late detection."""
         homework = self.get_by_id(homework_id)
         if not homework:
             return None
 
         now = get_current_utc7_time().replace(tzinfo=None)
-        hw_deadline = homework.deadline.replace(tzinfo=None) if homework.deadline.tzinfo is not None else homework.deadline
-        is_past_deadline = (now > hw_deadline)
+        hw_deadline = (
+            homework.deadline.replace(tzinfo=None)
+            if homework.deadline.tzinfo is not None
+            else homework.deadline
+        )
+        is_past_deadline = now > hw_deadline
 
         slug = QuizSubmissionHelper.extract_slug_from_entity(homework)
 
@@ -220,8 +228,12 @@ class GetHomeworkSubmissionStatusUseCase:
                     )
 
         return HomeworkSubmissionStatusResponse(
-            coding=CategorySubmissionStatus(submitted=coding_submitted, not_submitted=coding_not_submitted),
-            game=CategorySubmissionStatus(submitted=game_submitted, not_submitted=game_not_submitted),
+            coding=CategorySubmissionStatus(
+                submitted=coding_submitted, not_submitted=coding_not_submitted
+            ),
+            game=CategorySubmissionStatus(
+                submitted=game_submitted, not_submitted=game_not_submitted
+            ),
             submitted=top_submitted,
             not_submitted=top_not_submitted,
         )

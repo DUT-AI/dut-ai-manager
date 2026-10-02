@@ -54,7 +54,11 @@ class HomeworkAssigneeModel(SQLAlchemyTimestampMixin, Base):
     __tablename__ = "homework_assignees"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    homework_id: Mapped[int] = mapped_column(ForeignKey("homeworks.id", ondelete="CASCADE"), index=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    homework_id: Mapped[int] = mapped_column(
+        ForeignKey("homeworks.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
 
     homework: Mapped[HomeworkModel] = relationship(back_populates="assignees")

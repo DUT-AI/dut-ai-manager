@@ -62,5 +62,36 @@ export const meetingService = {
   async deleteMeeting(id: number) {
     const response = await axiosInstance.delete<ApiResponse<boolean>>(`/${this.subPath}/${id}`);
     return response.data;
+  },
+
+  async submitTrainerEvaluation(meetingId: number, payload: import('@/features/meeting/types/meeting.types').TrainerSubmitEvaluationPayload) {
+    const response = await axiosInstance.post<ApiResponse<import('@/features/meeting/types/meeting.types').EvaluationResponse>>(
+      `/${this.subPath}/${meetingId}/evaluations/trainer`,
+      payload
+    );
+    return response.data;
+  },
+
+  async submitTraineeEvaluation(meetingId: number, payload: import('@/features/meeting/types/meeting.types').TraineeSubmitEvaluationPayload) {
+    const response = await axiosInstance.post<ApiResponse<import('@/features/meeting/types/meeting.types').EvaluationResponse>>(
+      `/${this.subPath}/${meetingId}/evaluations/trainee`,
+      payload
+    );
+    return response.data;
+  },
+
+  async getMeetingEvaluationSummary(meetingId: number) {
+    const response = await axiosInstance.get<ApiResponse<import('@/features/meeting/types/meeting.types').MeetingEvaluationSummary>>(
+      `/${this.subPath}/${meetingId}/evaluations/summary`
+    );
+    return response.data;
+  },
+
+  async getMyEvaluationResult(meetingId: number) {
+    const response = await axiosInstance.get<ApiResponse<import('@/features/meeting/types/meeting.types').EvaluationResponse | null>>(
+      `/${this.subPath}/${meetingId}/evaluations/my-result`
+    );
+    return response.data;
   }
 };
+

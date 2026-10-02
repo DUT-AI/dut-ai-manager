@@ -56,15 +56,11 @@ def test_check_in_with_card_use_case_returns_speech_audio():
     meeting_repo = MagicMock()
     tts_service = MagicMock()
     minio_service = MagicMock()
-    tts_service.synthesize_with_cache = AsyncMock(
-        return_value=b"RIFF_FAKE_AUDIO_BYTES"
-    )
+    tts_service.synthesize_with_cache = AsyncMock(return_value=b"RIFF_FAKE_AUDIO_BYTES")
     event_bus = MagicMock()
     event_bus.publish = AsyncMock()
 
-    user = UserEntity(
-        id=1, name="Nguyễn Phước Nguyên", email="nguyen@example.com"
-    )
+    user = UserEntity(id=1, name="Nguyễn Phước Nguyên", email="nguyen@example.com")
     user_repo.get_by_check_in_card_code.return_value = user
 
     now = datetime.now()
@@ -83,9 +79,7 @@ def test_check_in_with_card_use_case_returns_speech_audio():
         user_id=1,
         status=ParticipantStatus.NOT_JOINED,
     )
-    participant_repo.find_participation_in_time_window.return_value = (
-        participant
-    )
+    participant_repo.find_participation_in_time_window.return_value = participant
     participant_repo.save.return_value = participant
 
     use_case = CheckInWithCardUseCase(
@@ -125,9 +119,7 @@ def test_tts_service_synthesize_with_cache_hit():
     )
 
     assert result == b"CACHED_AUDIO_FROM_MINIO"
-    minio_mock.get_file_bytes.assert_called_once_with(
-        "tts/users/user_1_checkin.wav"
-    )
+    minio_mock.get_file_bytes.assert_called_once_with("tts/users/user_1_checkin.wav")
     service.synthesize.assert_not_called()
 
 
@@ -147,9 +139,6 @@ def test_tts_service_synthesize_with_cache_miss():
     )
 
     assert result == b"FRESH_GENERATED_TTS_BYTES"
-    minio_mock.get_file_bytes.assert_called_once_with(
-        "tts/users/user_1_checkin.wav"
-    )
+    minio_mock.get_file_bytes.assert_called_once_with("tts/users/user_1_checkin.wav")
     service.synthesize.assert_called_once_with("Xin chào")
     minio_mock.upload_file.assert_called_once()
-

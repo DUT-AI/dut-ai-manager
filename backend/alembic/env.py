@@ -2,12 +2,6 @@ from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
 
-from alembic import context
-
-# Import settings for database URL
-from app.core.config import settings
-from app.shared.infrastructure.base_model import Base
-
 # Import all models to register them with Base.metadata
 import app.auth.infrastructure.model  # noqa: F401
 import app.billing.infrastructure.model  # noqa: F401
@@ -21,6 +15,11 @@ import app.team.infrastructure.model  # noqa: F401
 import app.user.infrastructure.model  # noqa: F401
 import app.user.infrastructure.monthly_stats_model  # noqa: F401
 import app.violation.infrastructure.model  # noqa: F401
+from alembic import context
+
+# Import settings for database URL
+from app.core.config import settings
+from app.shared.infrastructure.base_model import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

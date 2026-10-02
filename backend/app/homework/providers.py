@@ -11,6 +11,7 @@ from app.homework.application import (
     UpdateHomeworkUseCase,
 )
 from app.homework.application.event_handlers import (
+    HomeworkGradedNotificationHandler,
     HomeworkNotificationHandler,
 )
 from app.homework.infrastructure.quiz_api import QuizApiClient
@@ -18,9 +19,8 @@ from app.homework.infrastructure.repository import (
     HomeworkRepository,
 )
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
-from app.shared.infrastructure.discord_service import DiscordService
+from app.shared.infrastructure.notification_service import NotificationService
 from app.user.infrastructure.repository import UserRepository
-from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
 
 
 class HomeworkModuleProvider(Provider):
@@ -116,11 +116,21 @@ class HomeworkModuleProvider(Provider):
     @provide
     def get_notification_handler(
         self,
-        discord_service: DiscordService,
+        notification_service: NotificationService,
         homework_repo: HomeworkRepository,
         user_repo: UserRepository,
-        zalo_bot: ZaloBotClient,
     ) -> HomeworkNotificationHandler:
         return HomeworkNotificationHandler(
-            discord_service, homework_repo, user_repo, zalo_bot
+            notification_service, homework_repo, user_repo
+        )
+
+    @provide
+    def get_graded_notification_handler(
+        self,
+        notification_service: NotificationService,
+        homework_repo: HomeworkRepository,
+        user_repo: UserRepository,
+    ) -> HomeworkGradedNotificationHandler:
+        return HomeworkGradedNotificationHandler(
+            notification_service, homework_repo, user_repo
         )

@@ -12,9 +12,7 @@ from app.bonus_point.application.use_cases import (
 from app.bonus_point.infrastructure.repository import BonusPointRepository
 from app.bonus_point.notification_handler import BonusPointNotificationHandler
 from app.meeting.infrastructure.repository import ParticipantRepository
-from app.shared.infrastructure.discord_service import DiscordService
-from app.user.infrastructure.repository import UserRepository
-from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
+from app.shared.infrastructure.notification_service import NotificationService
 
 
 class BonusPointModuleProvider(Provider):
@@ -63,8 +61,6 @@ class BonusPointModuleProvider(Provider):
     @provide
     def get_notification_handler(
         self,
-        discord_service: DiscordService,
-        zalo_bot: ZaloBotClient,
-        user_repo: UserRepository,
+        notification_service: NotificationService,
     ) -> BonusPointNotificationHandler:
-        return BonusPointNotificationHandler(discord_service, zalo_bot, user_repo)
+        return BonusPointNotificationHandler(notification_service)

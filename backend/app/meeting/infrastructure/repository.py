@@ -4,14 +4,21 @@ from typing import Any, cast
 from sqlalchemy import and_, case, desc, extract, func, or_, select
 from sqlalchemy.orm import Session, contains_eager, joinedload
 
-from app.shared.domain.query_support import QuerySupport, apply_query_support
+from app.shared.application.query_support_utils import build_query_support
+from app.shared.domain.query_support import (
+    FilterCriterion,
+    FilterOperator,
+    QuerySupport,
+    apply_query_support,
+)
 from app.shared.infrastructure.base_repository import BaseRepository
 
 from ..domain.entity import Meeting as DomainMeeting
+from ..domain.entity import MeetingEvaluation as DomainEvaluation
 from ..domain.entity import MeetingParticipant as DomainParticipant
-from ..domain.entity import UserRef
 from ..domain.value_objects import ParticipantStatus
 from .model import Meeting as ORMMeeting
+from .model import MeetingEvaluation as ORMEvaluation
 from .model import MeetingParticipant as ORMParticipant
 
 
@@ -20,52 +27,7 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         super().__init__(session, ORMMeeting)
 
     def _to_domain(self, orm: ORMMeeting) -> DomainMeeting:
-        from app.utils.datetime import get_current_utc7_time
-
-        participants = []
-        for p in orm.participants:
-            if getattr(p, "is_deleted", False):
-                continue
-            user_ref = None
-            if p.user and p.user.id is not None:
-                user_ref = UserRef(
-                    id=p.user.id, name=p.user.name or "", avatar_url=p.user.avatar_url
-                )
-
-            participants.append(
-                DomainParticipant(
-                    id=p.id,
-                    meeting_id=p.meeting_id,
-                    user_id=p.user_id if p.user_id is not None else 0,
-                    status=p.status or ParticipantStatus.NOT_JOINED,
-                    check_in_at=p.check_in_at,
-                    check_out_at=p.check_out_at,
-                    link_image=p.link_image,
-                    user=user_ref,
-                    created_at=p.created_at or get_current_utc7_time(),
-                    updated_at=p.updated_at or get_current_utc7_time(),
-                    created_by=p.created_by,
-                    updated_by=p.updated_by,
-                )
-            )
-
-        return DomainMeeting(
-            id=orm.id,
-            title=orm.title,
-            start_time=orm.start_time,
-            end_time=orm.end_time,
-            content=orm.content,
-            require_check_in=(
-                orm.require_check_in
-                if orm.require_check_in is not None
-                else True
-            ),
-            participants=participants,
-            created_at=orm.created_at or get_current_utc7_time(),
-            updated_at=orm.updated_at or get_current_utc7_time(),
-            created_by=orm.created_by,
-            updated_by=orm.updated_by,
-        )
+        return orm.to_entity()
 
     def get_with_participants(self, meeting_id: int) -> DomainMeeting | None:
         statement = (
@@ -82,7 +44,8 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
                 ORMMeeting.id == meeting_id,
             )
             .options(
-                contains_eager(ORMMeeting.participants).joinedload(ORMParticipant.user)
+                contains_eager(ORMMeeting.participants).joinedload(ORMParticipant.user),
+                joinedload(ORMMeeting.creator),
             )
         )
         orm = self.session.scalars(statement).unique().first()
@@ -145,9 +108,6 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         self, user_id: int, month: int | None = None, year: int | None = None
     ) -> list[DomainMeeting]:
         """Get meetings where user is a participant, filtered by month/year."""
-        from app.shared.application.query_support_utils import build_query_support
-        from app.shared.domain.query_support import FilterCriterion, FilterOperator
-
         filters = []
         if month:
             filters.append(
@@ -263,6 +223,8 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         orm.start_time = domain.start_time
         orm.end_time = domain.end_time
         orm.require_check_in = domain.require_check_in
+        orm.enable_evaluation = domain.enable_evaluation
+        orm.evaluation_deadline = domain.evaluation_deadline
 
         self.session.add(orm)
         self.session.flush()
@@ -411,22 +373,7 @@ class ParticipantRepository(BaseRepository[ORMParticipant, DomainParticipant]):
         super().__init__(session, ORMParticipant)
 
     def _to_domain(self, orm: ORMParticipant) -> DomainParticipant:
-        user_ref = None
-        if orm.user:
-            user_ref = UserRef(
-                id=orm.user.id, name=orm.user.name, avatar_url=orm.user.avatar_url
-            )
-
-        return DomainParticipant(
-            id=orm.id,
-            meeting_id=orm.meeting_id,
-            user_id=orm.user_id,
-            status=orm.status,
-            check_in_at=orm.check_in_at,
-            check_out_at=orm.check_out_at,
-            link_image=orm.link_image,
-            user=user_ref,
-        )
+        return orm.to_entity()
 
     def find_participation_in_time_window(
         self,
@@ -558,7 +505,9 @@ class ParticipantRepository(BaseRepository[ORMParticipant, DomainParticipant]):
         )
         orm = self.session.scalars(stmt).first()
         if not orm:
-            raise ValueError(f"Không tìm thấy tham gia của user {user_id} trong meeting {meeting_id}")
+            raise ValueError(
+                f"Không tìm thấy tham gia của user {user_id} trong meeting {meeting_id}"
+            )
 
         orm.status = status
         if check_in_at is not None:
@@ -612,3 +561,96 @@ class ParticipantRepository(BaseRepository[ORMParticipant, DomainParticipant]):
             .options(joinedload(ORMParticipant.user))
         )
         return [self._to_domain(orm) for orm in self.session.scalars(stmt).all()]
+
+
+class MeetingEvaluationRepository(BaseRepository[ORMEvaluation, DomainEvaluation]):
+    """Repository quản lý các phiếu đánh giá 2 chiều (MeetingEvaluation)"""
+
+    def __init__(self, session: Session):
+        super().__init__(session, ORMEvaluation)
+
+    def _to_domain(self, orm: ORMEvaluation) -> DomainEvaluation:
+        return orm.to_entity()
+
+    def save(self, entity: DomainEvaluation) -> DomainEvaluation:
+        """Lưu hoặc cập nhật phiếu đánh giá (MeetingEvaluation)."""
+        if entity.id:
+            orm = self.session.get(ORMEvaluation, entity.id)
+            if not orm:
+                orm = ORMEvaluation.from_entity(entity)
+            else:
+                orm.scores = [s.model_dump() for s in entity.scores]
+                orm.average_score = entity.average_score
+                orm.feedback_text = entity.feedback_text
+                orm.is_anonymous = entity.is_anonymous
+        else:
+            orm = ORMEvaluation.from_entity(entity)
+
+        self.session.add(orm)
+        self.session.flush()
+        return orm.to_entity()
+
+    def get_by_meeting_and_users(
+        self, meeting_id: int, reviewer_id: int, target_user_id: int
+    ) -> DomainEvaluation | None:
+        stmt = (
+            select(ORMEvaluation)
+            .where(
+                ORMEvaluation.meeting_id == meeting_id,
+                ORMEvaluation.reviewer_id == reviewer_id,
+                ORMEvaluation.target_user_id == target_user_id,
+                ORMEvaluation.is_deleted.is_(False),
+            )
+            .options(
+                joinedload(ORMEvaluation.reviewer),
+                joinedload(ORMEvaluation.target_user),
+            )
+        )
+        orm = self.session.scalars(stmt).first()
+        return self._to_domain(orm) if orm else None
+
+    def get_evaluations_by_meeting(
+        self, meeting_id: int, evaluation_type: str | None = None
+    ) -> list[DomainEvaluation]:
+        stmt = (
+            select(ORMEvaluation)
+            .where(
+                ORMEvaluation.meeting_id == meeting_id,
+                ORMEvaluation.is_deleted.is_(False),
+            )
+            .options(
+                joinedload(ORMEvaluation.reviewer),
+                joinedload(ORMEvaluation.target_user),
+            )
+            .order_by(desc(ORMEvaluation.created_at))
+        )
+        if evaluation_type:
+            stmt = stmt.where(ORMEvaluation.evaluation_type == evaluation_type)
+        orms = self.session.scalars(stmt).all()
+        return [self._to_domain(orm) for orm in orms]
+
+    def get_evaluations_for_user_in_meeting(
+        self, meeting_id: int, target_user_id: int
+    ) -> list[DomainEvaluation]:
+        stmt = (
+            select(ORMEvaluation)
+            .where(
+                ORMEvaluation.meeting_id == meeting_id,
+                ORMEvaluation.target_user_id == target_user_id,
+                ORMEvaluation.is_deleted.is_(False),
+            )
+            .options(
+                joinedload(ORMEvaluation.reviewer),
+                joinedload(ORMEvaluation.target_user),
+            )
+        )
+        orms = self.session.scalars(stmt).all()
+        return [self._to_domain(orm) for orm in orms]
+
+    def count_evaluations_by_reviewer(self, meeting_id: int, reviewer_id: int) -> int:
+        stmt = select(func.count(ORMEvaluation.id)).where(
+            ORMEvaluation.meeting_id == meeting_id,
+            ORMEvaluation.reviewer_id == reviewer_id,
+            ORMEvaluation.is_deleted.is_(False),
+        )
+        return self.session.scalar(stmt) or 0

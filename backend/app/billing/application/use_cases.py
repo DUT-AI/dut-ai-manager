@@ -10,12 +10,14 @@ from app.billing.domain.entity import (
     InvoiceItemType,
     InvoiceStatus,
 )
+from app.billing.domain.events import InvoiceCreated, InvoicePaid
 from app.billing.infrastructure.repository import InvoiceRepository
 from app.core.config import settings
 from app.shared.application.response import BadRequestException
+from app.shared.domain.event_bus import EventBus
 from app.team.infrastructure.repository import TeamRepository
 from app.violation.infrastructure.repository import ViolationRepository
-
+from datetime import datetime, UTC
 
 class CreateInvoiceUseCase:
     """UseCase for Admin to create an invoice for a user."""
@@ -23,7 +25,7 @@ class CreateInvoiceUseCase:
     def __init__(self, repo: InvoiceRepository):
         self.repo = repo
 
-    def execute(
+    async def execute(
         self,
         items_data: list[dict],
         billing_period: date,
@@ -96,6 +98,19 @@ class CreateInvoiceUseCase:
             saved = self.repo.save_invoice(invoice)
             created_invoices.append(saved)
 
+            # Phát sự kiện InvoiceCreated
+            if saved.id:
+                await EventBus.publish(
+                    InvoiceCreated(
+                        invoice_id=saved.id,
+                        user_id=saved.user_id,
+                        amount=saved.amount,
+                        reference_code=saved.reference_code,
+                        description=saved.description,
+                        billing_period=saved.billing_period,
+                    )
+                )
+
         return created_invoices
 
     def _generate_reference_code(self, length: int = 6) -> str:
@@ -164,7 +179,7 @@ class HandleSePayWebhookUseCase:
     def __init__(self, repo: InvoiceRepository):
         self.repo = repo
 
-    def execute(self, webhook_data: dict, auth_token: str | None = None) -> bool:
+    async def execute(self, webhook_data: dict, auth_token: str | None = None) -> bool:
         # 1. Verify token if configured
         if (
             settings.SEPAY_WEBHOOK_SECRET
@@ -197,6 +212,19 @@ class HandleSePayWebhookUseCase:
         invoice.transaction_id = transaction_id
 
         self.repo.save_invoice(invoice)
+
+        # 5. Phát sự kiện InvoicePaid
+        if invoice.id:
+            await EventBus.publish(
+                InvoicePaid(
+                    invoice_id=invoice.id,
+                    user_id=invoice.user_id,
+                    amount=invoice.amount,
+                    reference_code=invoice.reference_code,
+                    transaction_id=transaction_id,
+                    paid_at=datetime.now(UTC),
+                )
+            )
 
         return True
 
@@ -295,7 +323,7 @@ class CreateMonthlyInvoicesUseCase:
         self.violation_repo = violation_repo
         self.team_repo = team_repo
 
-    def execute(
+    async def execute(
         self,
         month: int,
         year: int,
@@ -314,7 +342,9 @@ class CreateMonthlyInvoicesUseCase:
             raise BadRequestException(f"Không tìm thấy nhóm #{team_id}")
 
         if not user_ids:
-            raise BadRequestException("Vui lòng chọn ít nhất 1 thành viên để tạo hóa đơn")
+            raise BadRequestException(
+                "Vui lòng chọn ít nhất 1 thành viên để tạo hóa đơn"
+            )
 
         team_member_map = {m.user_id: m.user_name for m in team.members}
         target_users = {}
@@ -401,6 +431,19 @@ class CreateMonthlyInvoicesUseCase:
 
                 saved = self.invoice_repo.save_invoice(invoice)
                 created_invoices.append(saved)
+
+                # Phát sự kiện InvoiceCreated
+                if saved.id:
+                    await EventBus.publish(
+                        InvoiceCreated(
+                            invoice_id=saved.id,
+                            user_id=saved.user_id,
+                            amount=saved.amount,
+                            reference_code=saved.reference_code,
+                            description=saved.description,
+                            billing_period=saved.billing_period,
+                        )
+                    )
 
         return {
             "month": month,
