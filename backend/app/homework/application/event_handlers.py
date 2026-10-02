@@ -1,4 +1,5 @@
 import asyncio
+
 from loguru import logger
 
 from app.homework.domain.value_objects import HomeworkAssigned, HomeworkGraded
@@ -81,11 +82,11 @@ class HomeworkNotificationHandler(EventHandler):
                 )
                 await self.notification_service.send_to_user(payload)
 
-            logger.info(
-                f"Finished sending notifications for homework {homework.id}"
-            )
+            logger.info(f"Finished sending notifications for homework {homework.id}")
         except Exception as e:
-            logger.error(f"Unexpected error in background homework notification task: {e}")
+            logger.error(
+                f"Unexpected error in background homework notification task: {e}"
+            )
 
 
 class HomeworkGradedNotificationHandler(EventHandler):
@@ -155,7 +156,9 @@ class HomeworkGradedNotificationHandler(EventHandler):
                     f"Bài tập **{homework.title}** của bạn đã được chấm xong."
                 ),
                 category=NotificationCategory.HOMEWORK,
-                level=NotificationLevel.SUCCESS if event.is_pass else NotificationLevel.WARNING,
+                level=NotificationLevel.SUCCESS
+                if event.is_pass
+                else NotificationLevel.WARNING,
                 image_asset="meme-lam-viec-2.jpeg",
                 fields=fields,
                 action_url=None,

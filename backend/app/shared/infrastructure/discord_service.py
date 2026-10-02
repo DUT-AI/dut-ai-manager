@@ -151,20 +151,36 @@ class DiscordService:
                 filename=Path(file_path).name,
             )
             headers = {"Authorization": f"Bot {self.bot_token}"}
-            async with session.post(send_message_url, data=data, headers=headers) as response:
+            async with session.post(
+                send_message_url, data=data, headers=headers
+            ) as response:
                 if response.status not in [200, 201]:
                     error_text = await response.text()
-                    logger.error(f"Failed to send multipart message to channel {channel_id}: {error_text}")
-                    raise DiscordServiceError(f"Failed to send message: {error_text}", status_code=response.status)
+                    logger.error(
+                        f"Failed to send multipart message to channel {channel_id}: {error_text}"
+                    )
+                    raise DiscordServiceError(
+                        f"Failed to send message: {error_text}",
+                        status_code=response.status,
+                    )
                 result = await response.json()
-                logger.info(f"Successfully sent multipart message to channel {channel_id}")
+                logger.info(
+                    f"Successfully sent multipart message to channel {channel_id}"
+                )
                 return result
         else:
-            async with session.post(send_message_url, json=message_payload, headers=self.headers) as response:
+            async with session.post(
+                send_message_url, json=message_payload, headers=self.headers
+            ) as response:
                 if response.status not in [200, 201]:
                     error_text = await response.text()
-                    logger.error(f"Failed to send message to channel {channel_id}: {error_text}")
-                    raise DiscordServiceError(f"Failed to send message: {error_text}", status_code=response.status)
+                    logger.error(
+                        f"Failed to send message to channel {channel_id}: {error_text}"
+                    )
+                    raise DiscordServiceError(
+                        f"Failed to send message: {error_text}",
+                        status_code=response.status,
+                    )
                 result = await response.json()
                 logger.info(f"Successfully sent message to channel {channel_id}")
                 return result

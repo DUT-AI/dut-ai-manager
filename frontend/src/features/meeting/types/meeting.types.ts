@@ -60,11 +60,15 @@ export const meetingResponseSchema = z.object({
   evaluation_deadline: z.string().nullable().optional(),
   created_by: z.number().nullable().optional(),
   trainer: userRefSchema.default({ id: 0, name: 'Trainer' }),
-  participants: z.array(participantResponseSchema).default([]),
   created_at: z.string(),
   updated_at: z.string(),
 });
 export type MeetingResponse = z.infer<typeof meetingResponseSchema>;
+
+export const meetingDetailResponseSchema = meetingResponseSchema.extend({
+  participants: z.array(participantResponseSchema).default([]),
+});
+export type MeetingDetailResponse = z.infer<typeof meetingDetailResponseSchema>;
 
 export const meetingCreateSchema = z.object({
   title: z.string().min(1, 'Vui lòng nhập tiêu đề cuộc họp'),

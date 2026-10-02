@@ -45,7 +45,7 @@ class GetMeetingsUseCase:
             sort_by="start_time",
             descending=True,
         )
-        return self.repo.get_all_with_participants(query_support=qs, deleted=deleted)
+        return self.repo.get_all(query_support=qs, deleted=deleted)
 
     def get_by_id(self, meeting_id: int) -> Meeting:
         meeting = self.repo.get_with_participants(meeting_id)

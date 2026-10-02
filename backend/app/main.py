@@ -1,6 +1,5 @@
 import importlib
 from contextlib import asynccontextmanager
-
 from pathlib import Path
 
 from dishka import make_async_container
@@ -144,7 +143,11 @@ def create_app():
     # Mount static assets directory for memes/notifications
     assets_dir = Path(__file__).resolve().parent / "assets"
     if assets_dir.is_dir():
-        _app.mount("/static/assets", StaticFiles(directory=str(assets_dir)), name="static_assets")
+        _app.mount(
+            "/static/assets",
+            StaticFiles(directory=str(assets_dir)),
+            name="static_assets",
+        )
 
     @_app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request, exc):

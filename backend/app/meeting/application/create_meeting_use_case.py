@@ -7,6 +7,8 @@ from app.meeting.domain.events import MeetingCreated
 from app.meeting.infrastructure.repository import MeetingRepository
 from app.shared.application.response import BadRequestException
 from app.shared.domain.event_bus import DomainEvent, EventBus
+
+
 class CreateMeetingUseCase:
     """Tạo mới một buổi họp và mời các thành viên tham gia"""
 

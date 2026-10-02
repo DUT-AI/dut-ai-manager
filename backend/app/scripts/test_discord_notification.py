@@ -94,7 +94,11 @@ def build_test_payloads(user_id: int = 1) -> dict[str, NotificationPayload]:
             image_asset="meme-lam-viec.webp",
             fields=[
                 {"name": "Điểm số", "value": "9.5 / 10", "inline": True},
-                {"name": "Nhận xét", "value": "Code clean, kiến trúc rất tốt!", "inline": False},
+                {
+                    "name": "Nhận xét",
+                    "value": "Code clean, kiến trúc rất tốt!",
+                    "inline": False,
+                },
             ],
             action_url=f"{frontend_url}/dashboard/my-homeworks",
         ),
@@ -153,10 +157,20 @@ def build_test_payloads(user_id: int = 1) -> dict[str, NotificationPayload]:
 
 
 async def main():
-    parser = argparse.ArgumentParser(description="Test gửi thông báo Discord với Rich Embed và Meme")
-    parser.add_argument("--discord-id", type=str, help="Discord User ID người nhận (gửi DM trực tiếp)")
-    parser.add_argument("--channel-id", type=str, help="Discord Channel ID (gửi vào kênh/room)")
-    parser.add_argument("--user-id", type=int, help="User ID trong DB hệ thống (gửi qua NotificationService)")
+    parser = argparse.ArgumentParser(
+        description="Test gửi thông báo Discord với Rich Embed và Meme"
+    )
+    parser.add_argument(
+        "--discord-id", type=str, help="Discord User ID người nhận (gửi DM trực tiếp)"
+    )
+    parser.add_argument(
+        "--channel-id", type=str, help="Discord Channel ID (gửi vào kênh/room)"
+    )
+    parser.add_argument(
+        "--user-id",
+        type=int,
+        help="User ID trong DB hệ thống (gửi qua NotificationService)",
+    )
     parser.add_argument(
         "--scenario",
         type=str,
@@ -177,15 +191,23 @@ async def main():
     args = parser.parse_args()
 
     if not args.discord_id and not args.channel_id and not args.user_id:
-        print("❌ Lỗi: Bạn cần cung cấp ít nhất một trong các tham số: --discord-id, --channel-id hoặc --user-id")
+        print(
+            "❌ Lỗi: Bạn cần cung cấp ít nhất một trong các tham số: --discord-id, --channel-id hoặc --user-id"
+        )
         print("\nVí dụ:")
-        print("  uv run python backend/app/scripts/test_discord_notification.py --discord-id 123456789012345678")
-        print("  uv run python backend/app/scripts/test_discord_notification.py --discord-id 123456789012345678 --scenario billing_invoice")
+        print(
+            "  uv run python backend/app/scripts/test_discord_notification.py --discord-id 123456789012345678"
+        )
+        print(
+            "  uv run python backend/app/scripts/test_discord_notification.py --discord-id 123456789012345678 --scenario billing_invoice"
+        )
         sys.exit(1)
 
     print("==================================================")
     print("🚀 DUT-AI Manager - Discord Notification Test Tool")
-    print(f"🔗 Bot Token Configured: {'✅ Yes' if settings.DISCORD_BOT_TOKEN else '❌ Missing'}")
+    print(
+        f"🔗 Bot Token Configured: {'✅ Yes' if settings.DISCORD_BOT_TOKEN else '❌ Missing'}"
+    )
     print(f"🔗 Backend Public URL: {settings.BACKEND_PUBLIC_URL}")
     print("==================================================\n")
 
@@ -193,7 +215,9 @@ async def main():
     scenarios = build_test_payloads()
 
     selected_scenarios = (
-        scenarios.items() if args.scenario == "all" else [(args.scenario, scenarios[args.scenario])]
+        scenarios.items()
+        if args.scenario == "all"
+        else [(args.scenario, scenarios[args.scenario])]
     )
 
     # 1. Gửi qua User ID DB
@@ -206,7 +230,9 @@ async def main():
                 zalo_bot=zalo_bot,
                 user_repo=user_repo,
             )
-            print(f"👤 Gửi thông báo cho User ID: {args.user_id} qua NotificationService...")
+            print(
+                f"👤 Gửi thông báo cho User ID: {args.user_id} qua NotificationService..."
+            )
             for name, payload in selected_scenarios:
                 payload.user_id = args.user_id
                 print(f"  ➡️ Đang gửi kịch bản: [{name}] - '{payload.title}'...")
@@ -229,9 +255,13 @@ async def main():
 
         for name, payload in selected_scenarios:
             print(f"  ➡️ Đang gửi kịch bản: [{name}] - '{payload.title}'...")
-            asset_url = get_asset_url(payload.image_asset) if payload.image_asset else None
+            asset_url = (
+                get_asset_url(payload.image_asset) if payload.image_asset else None
+            )
             print(f"     📸 Image Asset: {payload.image_asset} -> {asset_url}")
-            success = await notification_service._send_discord_with_retry(args.discord_id, payload)
+            success = await notification_service._send_discord_with_retry(
+                args.discord_id, payload
+            )
             if success:
                 print(f"     ✅ Gửi thành công: [{name}]")
             else:
@@ -254,7 +284,9 @@ async def main():
 
         for name, payload in selected_scenarios:
             print(f"  ➡️ Đang gửi kịch bản: [{name}] - '{payload.title}'...")
-            success = await notification_service._send_discord_room_with_retry(args.channel_id, payload)
+            success = await notification_service._send_discord_room_with_retry(
+                args.channel_id, payload
+            )
             if success:
                 print(f"     ✅ Gửi thành công: [{name}]")
             else:

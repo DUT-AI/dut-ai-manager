@@ -1,4 +1,5 @@
 import asyncio
+
 from loguru import logger
 
 from app.shared.application.event_handler import EventHandler

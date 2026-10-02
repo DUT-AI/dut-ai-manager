@@ -28,6 +28,7 @@ from app.meeting.schemas import (
     CheckOutRequest,
     EvaluationResponse,
     MeetingCreate,
+    MeetingDetailResponse,
     MeetingEvaluationSummaryResponse,
     MeetingResponse,
     MeetingUpdate,
@@ -79,7 +80,7 @@ async def get_meetings(
     end_date: date | None = None,
     deleted: bool = False,
 ):
-    """Lấy danh sách các buổi họp"""
+    """Lấy danh sách các buổi họp (metadata rút gọn, không tải participants)"""
     meetings = uc.execute(
         skip=skip,
         limit=limit,
@@ -93,17 +94,17 @@ async def get_meetings(
     )
 
 
-@router.get("/{meeting_id}", response_model=ApiResponse[MeetingResponse])
+@router.get("/{meeting_id}", response_model=ApiResponse[MeetingDetailResponse])
 @inject
 async def get_meeting(
     meeting_id: int,
     uc: FromDishka[GetMeetingsUseCase],
     _: Annotated[CurrentUser, hasPermission(MeetingPermission.READ)],
 ):
-    """Lấy thông tin chi tiết buổi họp"""
+    """Lấy thông tin chi tiết buổi họp kèm danh sách người tham gia"""
     meeting = uc.get_by_id(meeting_id)
     return ApiResponse.success(
-        data=MeetingResponse.from_domain(meeting),
+        data=MeetingDetailResponse.from_domain(meeting),
         message="Meeting retrieved successfully",
     )
 

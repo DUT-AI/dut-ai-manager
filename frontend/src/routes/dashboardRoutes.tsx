@@ -8,7 +8,7 @@ import { SettingsPage } from '@/features/settings';
 import { TrashPage } from '@/features/trash';
 
 import { AcademicReportPage } from '@/features/academic-report';
-import { ActivityCalendarPage, ActivityReportPage } from '@/features/activity';
+import { ActivityReportPage, BonusPointManagementPage } from '@/features/activity';
 import { AdminBillingPage, InvoicesPage } from '@/features/billing';
 import { HomeworkPage, MyHomeworkPage } from '@/features/homework';
 import { MeetingCalendarPage, MeetingDetailPage } from '@/features/meeting';
@@ -52,8 +52,8 @@ export const dashboardRoutesConfig: RouteConfig[] = [
         element: <UserManagementPage />,
     },
     {
-        path: 'activities',
-        element: <ActivityCalendarPage />,
+        path: 'bonus-points',
+        element: <BonusPointManagementPage />,
     },
     {
         path: 'permissions',

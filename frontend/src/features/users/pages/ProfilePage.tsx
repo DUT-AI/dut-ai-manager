@@ -320,9 +320,9 @@ const ProfilePage = () => {
                                                     <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-50">
                                                         <Space>
                                                             <CalendarOutlined className="text-indigo-500" />
-                                                            <Text>Lịch hoạt động</Text>
+                                                            <Text>Lịch Meeting</Text>
                                                         </Space>
-                                                        <Button type="link" onClick={() => navigate('/dashboard/activities')}>Xem ngay</Button>
+                                                        <Button type="link" onClick={() => navigate('/dashboard/meetings')}>Xem ngay</Button>
                                                     </div>
                                                     <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-50">
                                                         <Space>

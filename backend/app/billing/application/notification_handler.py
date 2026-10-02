@@ -1,4 +1,5 @@
 import asyncio
+
 from loguru import logger
 
 from app.billing.domain.events import InvoiceCreated, InvoicePaid
@@ -46,7 +47,11 @@ class BillingNotificationHandler(EventHandler):
                 image_asset="meme-xin-tien.jpeg",
                 fields=[
                     {"name": "Số tiền", "value": formatted_amount, "inline": True},
-                    {"name": "Mã thanh toán", "value": f"`{event.reference_code}`", "inline": True},
+                    {
+                        "name": "Mã thanh toán",
+                        "value": f"`{event.reference_code}`",
+                        "inline": True,
+                    },
                     {
                         "name": "Nội dung chuyển khoản",
                         "value": f"Chuyển chính xác nội dung: **{event.reference_code}**",
@@ -76,9 +81,21 @@ class BillingNotificationHandler(EventHandler):
                 level=NotificationLevel.SUCCESS,
                 image_asset="meme-lam-viec-3.jpeg",
                 fields=[
-                    {"name": "Số tiền đã nộp", "value": formatted_amount, "inline": True},
-                    {"name": "Mã hóa đơn", "value": f"`{event.reference_code}`", "inline": True},
-                    {"name": "Mã giao dịch", "value": str(event.transaction_id), "inline": False},
+                    {
+                        "name": "Số tiền đã nộp",
+                        "value": formatted_amount,
+                        "inline": True,
+                    },
+                    {
+                        "name": "Mã hóa đơn",
+                        "value": f"`{event.reference_code}`",
+                        "inline": True,
+                    },
+                    {
+                        "name": "Mã giao dịch",
+                        "value": str(event.transaction_id),
+                        "inline": False,
+                    },
                 ],
                 action_url=f"{settings.FRONTEND_HOST.rstrip('/')}/dashboard/invoices",
             )

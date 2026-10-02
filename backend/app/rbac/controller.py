@@ -81,7 +81,7 @@ async def delete_role(
     if not success:
         return ApiResponse.error(message="Role not found")
     return ApiResponse.success(message="Role deleted successfully")
-
+                
 
 # --- Permission Endpoints ---
 @router.get("/permissions", response_model=ApiResponse[list[PermissionResponse]])

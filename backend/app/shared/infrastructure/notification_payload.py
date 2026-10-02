@@ -25,7 +25,9 @@ class NotificationPayload:
     content: str
     category: NotificationCategory
     level: NotificationLevel = NotificationLevel.INFO
-    image_asset: str | None = None  # Tên file trong app/assets (ví dụ: 'meme-hoc-bai.webp')
+    image_asset: str | None = (
+        None  # Tên file trong app/assets (ví dụ: 'meme-hoc-bai.webp')
+    )
     image_url: str | None = None  # Custom image URL bên ngoài nếu có
     action_url: str | None = None  # Link điều hướng người dùng (Frontend URL)
     fields: list[dict[str, str]] | None = None  # Danh sách cặp key-value hiển thị

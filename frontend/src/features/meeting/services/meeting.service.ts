@@ -1,6 +1,6 @@
 import axiosInstance from '../../../services/axiosInstance';
 import type { ApiResponse } from '@/types/api.types';
-import type { MeetingCreate, MeetingUpdate, MeetingResponse, ParticipantResponse, UpdateParticipantStatusPayload } from '@/features/meeting/types/meeting.types';
+import type { MeetingCreate, MeetingUpdate, MeetingResponse, MeetingDetailResponse, ParticipantResponse, UpdateParticipantStatusPayload } from '@/features/meeting/types/meeting.types';
 
 export const meetingService = {
   subPath: 'meetings',
@@ -20,7 +20,7 @@ export const meetingService = {
   },
 
   async getMeetingById(id: number) {
-    const response = await axiosInstance.get<ApiResponse<MeetingResponse>>(`/${this.subPath}/${id}`);
+    const response = await axiosInstance.get<ApiResponse<MeetingDetailResponse>>(`/${this.subPath}/${id}`);
     return response.data;
   },
 

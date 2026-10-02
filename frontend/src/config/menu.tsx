@@ -71,10 +71,10 @@ export const sidebarMenuConfig: MenuItemConfig[] = [
         path: '/dashboard/teams',
     },
     {
-        key: 'activities',
-        icon: <CalendarOutlined />,
-        label: 'Lịch Hoạt động',
-        path: '/dashboard/activities',
+        key: 'bonus_points',
+        icon: <TrophyOutlined />,
+        label: 'Quản lý Điểm cộng',
+        path: '/dashboard/bonus-points',
     },
     {
         key: 'meetings',

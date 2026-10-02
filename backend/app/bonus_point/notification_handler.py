@@ -1,4 +1,5 @@
 import asyncio
+
 from loguru import logger
 
 from app.bonus_point.domain.events import (
@@ -89,7 +90,9 @@ class BonusPointNotificationHandler(EventHandler):
                 ]
 
                 # Chọn meme tương ứng: Nếu cộng điểm dùng meme ngạc nhiên/vui, nếu trừ điểm dùng meme khóc
-                image_asset = "meme-ngac-nhien.jpeg" if event.points >= 0 else "meme-khoc-2.jpg"
+                image_asset = (
+                    "meme-ngac-nhien.jpeg" if event.points >= 0 else "meme-khoc-2.jpg"
+                )
 
                 payload = NotificationPayload(
                     user_id=event.user_id,
@@ -100,7 +103,9 @@ class BonusPointNotificationHandler(EventHandler):
                         f"Cùng tiếp tục phát huy nhé!"
                     ),
                     category=NotificationCategory.BONUS_POINT,
-                    level=NotificationLevel.SUCCESS if event.points >= 0 else NotificationLevel.WARNING,
+                    level=NotificationLevel.SUCCESS
+                    if event.points >= 0
+                    else NotificationLevel.WARNING,
                     image_asset=image_asset,
                     fields=fields,
                 )

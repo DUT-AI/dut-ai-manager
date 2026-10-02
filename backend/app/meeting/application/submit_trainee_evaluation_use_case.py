@@ -1,4 +1,3 @@
-
 from app.meeting.domain.entity import EvaluationScoreItem, MeetingEvaluation
 from app.meeting.domain.value_objects import EvaluationType, ParticipantStatus
 from app.meeting.infrastructure.repository import (

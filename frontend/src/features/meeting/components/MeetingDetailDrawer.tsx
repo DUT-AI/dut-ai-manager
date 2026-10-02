@@ -14,10 +14,10 @@ import {
     TeamOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import type { MeetingResponse, ParticipantResponse, UpdateParticipantStatusPayload } from '@/features/meeting/types/meeting.types';
+import type { MeetingResponse, MeetingDetailResponse, ParticipantResponse, UpdateParticipantStatusPayload } from '@/features/meeting/types/meeting.types';
 import { ParticipantStatus } from '@/features/meeting/types/meeting.types';
 import { useMeetingEvents } from '@/features/meeting/hooks/useMeetingEvents';
-import { useUpdateParticipantStatus } from '@/features/meeting/hooks/useMeetings';
+import { useMeetingDetail, useUpdateParticipantStatus } from '@/features/meeting/hooks/useMeetings';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { EditParticipantStatusModal } from './EditParticipantStatusModal';
 import { TrainerEvaluationModal } from './TrainerEvaluationModal';
@@ -29,14 +29,18 @@ const { Text, Title } = Typography;
 
 interface Props {
     open: boolean;
-    meeting: MeetingResponse | null;
+    meeting: MeetingResponse | MeetingDetailResponse | null;
     onClose: () => void;
     onEdit?: (meeting: MeetingResponse) => void;
     onDelete?: (id: number) => void;
 }
 
-export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }: Props) => {
+export const MeetingDetailDrawer = ({ open, meeting: initialMeeting, onClose, onEdit, onDelete }: Props) => {
     const { user } = useAuth();
+    const meetingId = initialMeeting?.id ?? 0;
+    const { data: fetchedDetail } = useMeetingDetail(open && meetingId > 0 ? meetingId : 0);
+    const meeting = fetchedDetail || initialMeeting;
+
     const [activeTab, setActiveTab] = useState('participants');
     const [editingParticipant, setEditingParticipant] = useState<ParticipantResponse | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -54,18 +58,19 @@ export const MeetingDetailDrawer = ({ open, meeting, onClose, onEdit, onDelete }
 
     if (!meeting) return null;
 
+    const participantsList = ('participants' in meeting && meeting.participants) ? meeting.participants : [];
     const currentUserId = user?.id;
     const isTrainer = (meeting.created_by ? currentUserId === meeting.created_by : false) || (user?.role_names?.some(r => ['admin', 'leader'].includes(r.toLowerCase())) ?? false);
-    const myParticipantRecord = meeting.participants.find(p => p.user_id === currentUserId);
+    const myParticipantRecord = participantsList.find(p => p.user_id === currentUserId);
     const isTrainee = !!myParticipantRecord;
 
-    const checkedIn = meeting.participants.filter(
+    const checkedIn = participantsList.filter(
         p => p.status === ParticipantStatus.JOINED ||
              p.status === ParticipantStatus.LATE_EXCUSED ||
              p.status === ParticipantStatus.LATE_UNEXCUSED ||
              p.status === ParticipantStatus.COMPLETED
     ).length;
-    const total = meeting.participants.length;
+    const total = participantsList.length;
     const isOngoing = dayjs().isAfter(dayjs(meeting.start_time)) && dayjs().isBefore(dayjs(meeting.end_time));
     const isEnded = dayjs().isAfter(dayjs(meeting.end_time));
 

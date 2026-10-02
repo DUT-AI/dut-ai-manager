@@ -1,6 +1,6 @@
 import random
 import string
-from datetime import date
+from datetime import UTC, date, datetime
 
 from fastapi import status
 
@@ -17,7 +17,7 @@ from app.shared.application.response import BadRequestException
 from app.shared.domain.event_bus import EventBus
 from app.team.infrastructure.repository import TeamRepository
 from app.violation.infrastructure.repository import ViolationRepository
-from datetime import datetime, UTC
+
 
 class CreateInvoiceUseCase:
     """UseCase for Admin to create an invoice for a user."""

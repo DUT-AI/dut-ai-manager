@@ -25,7 +25,7 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         stmt = select(ORMModel).options(
             joinedload(ORMModel.user),
             joinedload(ORMModel.homework),
-            joinedload(ORMModel.meeting),
+            joinedload(ORMModel.meeting).joinedload(Meeting.creator),
         )
 
         if hasattr(ORMModel, "is_deleted"):
@@ -47,7 +47,7 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
             .options(
                 joinedload(ORMModel.user),
                 joinedload(ORMModel.homework),
-                joinedload(ORMModel.meeting),
+                joinedload(ORMModel.meeting).joinedload(Meeting.creator),
             )
             .where(
                 ORMModel.is_deleted.is_(False),
@@ -70,7 +70,7 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
             .options(
                 joinedload(ORMModel.user),
                 joinedload(ORMModel.homework),
-                joinedload(ORMModel.meeting),
+                joinedload(ORMModel.meeting).joinedload(Meeting.creator),
             )
             .where(
                 ORMModel.is_deleted == deleted,
@@ -95,7 +95,7 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
             .options(
                 joinedload(ORMModel.user),
                 joinedload(ORMModel.homework),
-                joinedload(ORMModel.meeting),
+                joinedload(ORMModel.meeting).joinedload(Meeting.creator),
             )
             .where(
                 ORMModel.created_by == user_id,
@@ -108,7 +108,7 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
             stmt = stmt.where(extract("year", ORMModel.created_at) == year)
 
         stmt = stmt.order_by(desc(ORMModel.created_at))
-        rows = self.session.scalars(stmt).all()
+        rows = self.session.scalars(stmt).unique().all()
         return [r.to_entity() for r in rows]
 
     def count_by_user_category_month(

@@ -151,23 +151,70 @@ class MeetingResponse(BaseModel):
     require_check_in: bool
     enable_evaluation: bool = False
     evaluation_deadline: datetime | None = None
-    created_by: int | None = None
-    trainer: UserRefDto
-    participants: list[ParticipantResponse] = []
+    trainer: UserRefDto | None = None
     created_at: datetime
     updated_at: datetime
 
     @classmethod
     def from_domain(cls, m: "DomainMeeting") -> "MeetingResponse":
-        """Map domain Meeting → schema (user_name, timestamps, participant id)."""
+        """Map domain Meeting → schema (metadata only)."""
         if m.id is None or m.created_at is None or m.updated_at is None:
             raise ValueError("Meeting thiếu id hoặc timestamps sau khi lưu")
 
+        # Enforce Trainer Contract & Read profile from ORM relation if present
+        trainer_dto: UserRefDto | None = None
+        creator_rel = getattr(m, "creator", None)
+        if creator_rel and getattr(creator_rel, "id", None):
+            trainer_dto = UserRefDto(
+                id=creator_rel.id,
+                name=creator_rel.name or f"Trainer #{creator_rel.id}",
+                avatar_url=creator_rel.avatar_url,
+            )
+        elif m.created_by:
+            trainer_dto = UserRefDto(
+                id=m.created_by,
+                name=f"Trainer #{m.created_by}",
+                avatar_url=None,
+            )
+        else:
+            trainer_dto = UserRefDto(
+                id=0,
+                name="Unknown Trainer",
+                avatar_url=None,
+            )
+
+        return cls(
+            id=m.id,
+            title=m.title,
+            content=m.content,
+            start_time=m.start_time,
+            end_time=m.end_time,
+            require_check_in=m.require_check_in,
+            enable_evaluation=m.enable_evaluation
+            if m.enable_evaluation is not None
+            else False,
+            evaluation_deadline=m.evaluation_deadline,
+            trainer=trainer_dto,
+            created_at=m.created_at,
+            updated_at=m.updated_at,
+        )
+
+
+class MeetingDetailResponse(MeetingResponse):
+    """Schema chi tiết của Meeting bao gồm danh sách người tham gia."""
+
+    participants: list[ParticipantResponse] = []
+
+    @classmethod
+    def from_domain(cls, m: "DomainMeeting") -> "MeetingDetailResponse":
+        """Map domain Meeting → detail schema (kèm participants)."""
+        base_res = MeetingResponse.from_domain(m)
         now = get_current_utc7_time()
         is_ended = now > m.end_time
 
+        participants_raw = getattr(m, "participants", []) or []
         participants: list[ParticipantResponse] = []
-        for p in getattr(m, "participants", []) or []:
+        for p in participants_raw:
             check_out_at = p.check_out_at
             status = p.status
 
@@ -205,41 +252,9 @@ class MeetingResponse(BaseModel):
                 )
             )
 
-        # Enforce Trainer Non-Null Contract & Read profile from ORM relation if present
-        creator_rel = getattr(m, "creator", None)
-        if creator_rel and getattr(creator_rel, "id", None):
-            trainer_dto = UserRefDto(
-                id=creator_rel.id,
-                name=creator_rel.name or f"Trainer #{creator_rel.id}",
-                avatar_url=creator_rel.avatar_url,
-            )
-        elif m.created_by:
-            trainer_dto = UserRefDto(
-                id=m.created_by,
-                name=f"Trainer #{m.created_by}",
-                avatar_url=None,
-            )
-        else:
-            raise ValueError(
-                "Buổi học không hợp lệ: thiếu thông tin Trainer (created_by)"
-            )
-
         return cls(
-            id=m.id,
-            title=m.title,
-            content=m.content,
-            start_time=m.start_time,
-            end_time=m.end_time,
-            require_check_in=m.require_check_in,
-            enable_evaluation=m.enable_evaluation
-            if m.enable_evaluation is not None
-            else False,
-            evaluation_deadline=m.evaluation_deadline,
-            created_by=m.created_by,
-            trainer=trainer_dto,
+            **base_res.model_dump(),
             participants=participants,
-            created_at=m.created_at,
-            updated_at=m.updated_at,
         )
 
 

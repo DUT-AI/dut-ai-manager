@@ -1,5 +1,3 @@
-
-
 import aioboto3
 from botocore.config import Config
 from botocore.exceptions import ClientError

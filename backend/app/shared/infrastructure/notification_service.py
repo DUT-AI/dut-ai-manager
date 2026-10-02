@@ -14,7 +14,6 @@ from app.shared.infrastructure.notification_payload import (
 from app.user.infrastructure.repository import UserRepository
 from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
 
-
 # Bảng màu chuẩn hóa cho Discord Embed theo Category / Level
 DEFAULT_CATEGORY_COLORS: dict[NotificationCategory, int] = {
     NotificationCategory.BILLING: 0x9B59B6,  # Tím đậm
@@ -88,7 +87,9 @@ class NotificationService:
         status_dict = {}
         for ch, res in zip(channels, results):
             if isinstance(res, Exception):
-                logger.error(f"NotificationService: Channel {ch} failed with unhandled exception: {res}")
+                logger.error(
+                    f"NotificationService: Channel {ch} failed with unhandled exception: {res}"
+                )
                 status_dict[ch] = False
             else:
                 status_dict[ch] = bool(res)
@@ -161,7 +162,11 @@ class NotificationService:
     ) -> bool:
         """Gửi tin nhắn Discord DM có Retry và Exponential Backoff."""
         embed = self._build_discord_embed(payload)
-        file_path = str(get_asset_path(payload.image_asset)) if payload.image_asset and get_asset_path(payload.image_asset) else None
+        file_path = (
+            str(get_asset_path(payload.image_asset))
+            if payload.image_asset and get_asset_path(payload.image_asset)
+            else None
+        )
         for attempt in range(1, max_retries + 1):
             try:
                 await self.discord_service.send_message_to_user(
@@ -184,13 +189,19 @@ class NotificationService:
     ) -> bool:
         """Gửi tin nhắn vào Discord Room có Retry."""
         embed = self._build_discord_embed(payload)
-        file_path = str(get_asset_path(payload.image_asset)) if payload.image_asset and get_asset_path(payload.image_asset) else None
+        file_path = (
+            str(get_asset_path(payload.image_asset))
+            if payload.image_asset and get_asset_path(payload.image_asset)
+            else None
+        )
         for attempt in range(1, max_retries + 1):
             try:
                 await self.discord_service.send_message_to_room(
                     channel_id=room_id, embed=embed, file_path=file_path
                 )
-                logger.info(f"NotificationService: Sent Discord room message to {room_id}")
+                logger.info(
+                    f"NotificationService: Sent Discord room message to {room_id}"
+                )
                 return True
             except Exception as e:
                 logger.warning(

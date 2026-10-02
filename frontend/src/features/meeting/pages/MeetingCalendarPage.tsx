@@ -8,18 +8,16 @@ import {
     CalendarOutlined,
     ClockCircleOutlined,
     SafetyCertificateOutlined,
-    UserOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
-import type { MeetingResponse } from '@/features/meeting/types/meeting.types';
-import { ParticipantStatus } from '@/features/meeting/types/meeting.types';
 import { useMeetingsByWeek, useCreateMeeting, useUpdateMeeting, useDeleteMeeting } from '@/features/meeting/hooks/useMeetings';
 import { MeetingDetailDrawer } from '@/features/meeting/components/MeetingDetailDrawer';
 import { MeetingModal } from '@/features/meeting/components/MeetingModal';
 import { useUsers } from '@/features/users/hooks/useUsers';
 import { motion, type Variants } from 'motion/react';
+import type { MeetingResponse } from '@/features/meeting/types/meeting.types';
 import { useCapacity } from '@/context/CapacityContext';
 
 dayjs.extend(isoWeek);
@@ -447,13 +445,6 @@ const MeetingCalendarPage = () => {
                                         )}
 
                                         {positioned.map((pm) => {
-                                            const checkedIn = pm.meeting.participants.filter(
-                                                p => p.status === ParticipantStatus.JOINED ||
-                                                     p.status === ParticipantStatus.LATE_EXCUSED ||
-                                                     p.status === ParticipantStatus.LATE_UNEXCUSED ||
-                                                     p.status === ParticipantStatus.COMPLETED
-                                            ).length;
-                                            const total = pm.meeting.participants.length;
                                             const isCompact = pm.height < 50;
 
                                             return (
@@ -465,9 +456,6 @@ const MeetingCalendarPage = () => {
                                                             <div className="text-xs opacity-80">
                                                                 {dayjs(pm.meeting.start_time).format('HH:mm')} –{' '}
                                                                 {dayjs(pm.meeting.end_time).format('HH:mm')}
-                                                            </div>
-                                                            <div className="text-xs opacity-80">
-                                                                Checkin: {checkedIn}/{total}
                                                             </div>
                                                         </div>
                                                     }
@@ -513,21 +501,12 @@ const MeetingCalendarPage = () => {
                                                                     </Text>
                                                                 )}
                                                             </div>
-                                                            {!isCompact && (
-                                                                <div className="flex items-center justify-between mt-1">
-                                                                    <span
-                                                                        className="text-[10px] flex items-center gap-0.5"
-                                                                        style={{ color: pm.color.text }}
-                                                                    >
-                                                                        <UserOutlined />
-                                                                        {checkedIn}/{total}
-                                                                    </span>
-                                                                    {pm.meeting.require_check_in && (
-                                                                        <SafetyCertificateOutlined
-                                                                            className="text-[10px]"
-                                                                            style={{ color: pm.color.border }}
-                                                                        />
-                                                                    )}
+                                                            {!isCompact && pm.meeting.require_check_in && (
+                                                                <div className="flex items-center justify-end mt-1">
+                                                                    <SafetyCertificateOutlined
+                                                                        className="text-[10px]"
+                                                                        style={{ color: pm.color.border }}
+                                                                    />
                                                                 </div>
                                                             )}
                                                         </div>

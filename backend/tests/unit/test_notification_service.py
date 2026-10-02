@@ -1,4 +1,5 @@
 from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 
 from app.shared.infrastructure.notification_payload import (
@@ -52,7 +53,9 @@ async def test_notification_service_send_to_both_channels():
 async def test_notification_service_fault_isolation():
     # When Discord throws exception, Zalo should still succeed
     mock_discord = MagicMock()
-    mock_discord.send_message_to_user = AsyncMock(side_effect=Exception("Discord API error 500"))
+    mock_discord.send_message_to_user = AsyncMock(
+        side_effect=Exception("Discord API error 500")
+    )
 
     mock_zalo = MagicMock()
     mock_zalo.send_message = AsyncMock(return_value={"msg_id": "zalo_123"})

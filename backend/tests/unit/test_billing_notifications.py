@@ -1,5 +1,6 @@
-from datetime import date, datetime, UTC
+from datetime import UTC, date, datetime
 from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 
 from app.billing.application.notification_handler import BillingNotificationHandler
@@ -10,7 +11,9 @@ from app.shared.infrastructure.notification_payload import NotificationCategory
 @pytest.mark.asyncio
 async def test_billing_notification_handler_invoice_created():
     mock_notification_service = MagicMock()
-    mock_notification_service.send_to_user = AsyncMock(return_value={"discord": True, "zalo": True})
+    mock_notification_service.send_to_user = AsyncMock(
+        return_value={"discord": True, "zalo": True}
+    )
 
     handler = BillingNotificationHandler(notification_service=mock_notification_service)
 
@@ -38,7 +41,9 @@ async def test_billing_notification_handler_invoice_created():
 @pytest.mark.asyncio
 async def test_billing_notification_handler_invoice_paid():
     mock_notification_service = MagicMock()
-    mock_notification_service.send_to_user = AsyncMock(return_value={"discord": True, "zalo": True})
+    mock_notification_service.send_to_user = AsyncMock(
+        return_value={"discord": True, "zalo": True}
+    )
 
     handler = BillingNotificationHandler(notification_service=mock_notification_service)
 

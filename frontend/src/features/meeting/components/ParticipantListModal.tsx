@@ -3,6 +3,7 @@ import { UserOutlined, CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutl
 import dayjs from 'dayjs';
 import type { MeetingResponse, ParticipantResponse } from '@/features/meeting/types/meeting.types';
 import { ParticipantStatus } from '@/features/meeting/types/meeting.types';
+import { useMeetingDetail } from '@/features/meeting/hooks/useMeetings';
 
 const { Text } = Typography;
 
@@ -13,6 +14,14 @@ interface Props {
 }
 
 export const ParticipantListModal = ({ open, meeting, onCancel }: Props) => {
+    const meetingId = meeting?.id ?? 0;
+    const shouldFetch = open && meetingId > 0 && (!meeting?.participants || meeting.participants.length === 0);
+    const { data: detailMeeting, isLoading: isDetailLoading } = useMeetingDetail(shouldFetch ? meetingId : 0);
+
+    const activeMeeting = detailMeeting || meeting;
+    const participantsList = activeMeeting?.participants && activeMeeting.participants.length > 0 
+        ? activeMeeting.participants 
+        : (meeting?.participants || []);
     const columns = [
         {
             title: 'Thành viên',
@@ -138,7 +147,8 @@ export const ParticipantListModal = ({ open, meeting, onCancel }: Props) => {
             destroyOnClose
         >
             <Table
-                dataSource={meeting?.participants || []}
+                dataSource={participantsList}
+                loading={isDetailLoading}
                 columns={columns}
                 rowKey="id"
                 pagination={{ pageSize: 10 }}

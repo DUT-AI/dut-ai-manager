@@ -70,7 +70,9 @@ class MeetingNotificationHandler(EventHandler):
                     f"Bạn vừa thực hiện điểm danh thành công tại buổi học/họp: **{event.meeting_title}**."
                 ),
                 category=NotificationCategory.MEETING,
-                level=NotificationLevel.SUCCESS if not event.is_late else NotificationLevel.WARNING,
+                level=NotificationLevel.SUCCESS
+                if not event.is_late
+                else NotificationLevel.WARNING,
                 image_asset="meme-lam-viec.webp",
                 fields=fields,
             )
@@ -126,7 +128,9 @@ class MeetingNotificationHandler(EventHandler):
                 time_range = f"{event.start_time} - {event.end_time}"
 
             is_new = type == "NEW"
-            title_prefix = "📅 LỊCH SINH HOẠT MỚI" if is_new else "🔄 CẬP NHẬT LỊCH SINH HOẠT"
+            title_prefix = (
+                "📅 LỊCH SINH HOẠT MỚI" if is_new else "🔄 CẬP NHẬT LỊCH SINH HOẠT"
+            )
             description = (
                 f"Bạn có lịch sinh hoạt mới: **{event.title}**"
                 if is_new
@@ -134,7 +138,9 @@ class MeetingNotificationHandler(EventHandler):
             )
 
             fields = [{"name": "⏰ Thời gian", "value": time_range, "inline": False}]
-            image_asset = "anh-nhac-em-meme-9.webp" if is_new else "meme-met-moi-lam-viec.jpg"
+            image_asset = (
+                "anh-nhac-em-meme-9.webp" if is_new else "meme-met-moi-lam-viec.jpg"
+            )
 
             for user in users:
                 assert user.id is not None
@@ -147,7 +153,9 @@ class MeetingNotificationHandler(EventHandler):
                         f"Vui lòng kiểm tra và sắp xếp tham gia đúng giờ."
                     ),
                     category=NotificationCategory.MEETING,
-                    level=NotificationLevel.INFO if is_new else NotificationLevel.WARNING,
+                    level=NotificationLevel.INFO
+                    if is_new
+                    else NotificationLevel.WARNING,
                     image_asset=image_asset,
                     fields=fields,
                 )

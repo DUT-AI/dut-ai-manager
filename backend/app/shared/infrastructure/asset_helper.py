@@ -1,14 +1,15 @@
 from pathlib import Path
+
 from app.core.config import settings
 
 
 def get_asset_url(asset_name: str | None) -> str | None:
     """
     Sinh URL công khai tuyệt đối cho một file asset tĩnh nằm trong backend/app/assets.
-    
+
     Args:
         asset_name: Tên file (ví dụ: 'meme-hoc-bai.webp')
-        
+
     Returns:
         URL tuyệt đối (ví dụ: 'http://localhost:8000/static/assets/meme-hoc-bai.webp') hoặc None nếu không tồn tại.
     """

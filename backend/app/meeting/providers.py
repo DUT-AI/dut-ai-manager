@@ -55,9 +55,7 @@ class MeetingModuleProvider(Provider):
         return GetMeetingsUseCase(repo)
 
     @provide
-    def create_meeting_uc(
-        self, repo: MeetingRepository
-    ) -> CreateMeetingUseCase:
+    def create_meeting_uc(self, repo: MeetingRepository) -> CreateMeetingUseCase:
         return CreateMeetingUseCase(repo)
 
     @provide
@@ -95,9 +93,7 @@ class MeetingModuleProvider(Provider):
         return CheckOutUseCase(meeting_repo, participant_repo)
 
     @provide
-    def update_meeting_uc(
-        self, repo: MeetingRepository
-    ) -> UpdateMeetingUseCase:
+    def update_meeting_uc(self, repo: MeetingRepository) -> UpdateMeetingUseCase:
         return UpdateMeetingUseCase(repo)
 
     @provide

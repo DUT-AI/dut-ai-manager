@@ -6,6 +6,8 @@ from app.meeting.infrastructure.repository import MeetingRepository
 from app.meeting.schemas import MeetingUpdate
 from app.shared.application.response import BadRequestException
 from app.shared.domain.event_bus import DomainEvent, EventBus
+
+
 class UpdateMeetingUseCase:
     """Cập nhật thông tin buổi họp"""
 
