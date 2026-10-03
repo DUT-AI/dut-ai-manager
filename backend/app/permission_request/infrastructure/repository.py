@@ -25,7 +25,7 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         stmt = select(ORMModel).options(
             joinedload(ORMModel.user),
             joinedload(ORMModel.homework),
-            joinedload(ORMModel.meeting).joinedload(Meeting.creator),
+            joinedload(ORMModel.meeting),
         )
 
         if hasattr(ORMModel, "is_deleted"):
@@ -47,7 +47,7 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
             .options(
                 joinedload(ORMModel.user),
                 joinedload(ORMModel.homework),
-                joinedload(ORMModel.meeting).joinedload(Meeting.creator),
+                joinedload(ORMModel.meeting),
             )
             .where(
                 ORMModel.is_deleted.is_(False),
@@ -70,7 +70,7 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
             .options(
                 joinedload(ORMModel.user),
                 joinedload(ORMModel.homework),
-                joinedload(ORMModel.meeting).joinedload(Meeting.creator),
+                joinedload(ORMModel.meeting),
             )
             .where(
                 ORMModel.is_deleted == deleted,
@@ -95,7 +95,7 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
             .options(
                 joinedload(ORMModel.user),
                 joinedload(ORMModel.homework),
-                joinedload(ORMModel.meeting).joinedload(Meeting.creator),
+                joinedload(ORMModel.meeting),
             )
             .where(
                 ORMModel.created_by == user_id,
