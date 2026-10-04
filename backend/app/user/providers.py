@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.rbac.infrastructure.repository import RoleRepository
 from app.shared.infrastructure.minio_service import MinioService
-from app.user.application.use_cases import (
+from app.user.application import (
     CreateUserUseCase,
     DeleteUserUseCase,
     GetUserUseCase,
@@ -11,6 +11,7 @@ from app.user.application.use_cases import (
     UpdateAvatarUseCase,
     UpdateUserUseCase,
 )
+from app.user.application.user_import_parser import UserImportParser
 from app.user.infrastructure.monthly_stats_repository import MonthlyUserStatsRepository
 from app.user.infrastructure.repository import UserRepository
 
@@ -29,6 +30,10 @@ class UserModuleProvider(Provider):
     @provide
     def get_role_repo(self, session: Session) -> RoleRepository:
         return RoleRepository(session)
+
+    @provide
+    def get_user_import_parser(self) -> UserImportParser:
+        return UserImportParser()
 
     @provide
     def get_user_uc(self, repo: UserRepository) -> GetUserUseCase:

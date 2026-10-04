@@ -96,3 +96,42 @@ class MonthlyUserStatsRepository(
             self.session.add(model)
             self.session.flush()
             return self.to_entity(model)
+
+    def get_titles_report(self, month: int, year: int) -> list[dict]:
+        """Lấy danh hiệu tháng kèm thông tin cơ bản của user (1 query duy nhất)."""
+        from app.user.infrastructure.model import UserModel
+
+        stmt = (
+            select(
+                MonthlyUserStatsModel.user_id,
+                MonthlyUserStatsModel.assigned_title,
+                MonthlyUserStatsModel.total_bonus_points,
+                MonthlyUserStatsModel.violation_count,
+                MonthlyUserStatsModel.total_activity_hours,
+                UserModel.name,
+                UserModel.email,
+                UserModel.avatar_url,
+            )
+            .join(UserModel, UserModel.id == MonthlyUserStatsModel.user_id)
+            .where(
+                MonthlyUserStatsModel.month == month,
+                MonthlyUserStatsModel.year == year,
+                MonthlyUserStatsModel.is_deleted.is_(False),
+                UserModel.is_deleted.is_(False),
+            )
+            .order_by(MonthlyUserStatsModel.total_bonus_points.desc())
+        )
+        rows = self.session.execute(stmt).all()
+        return [
+            {
+                "user_id": r.user_id,
+                "title": r.assigned_title,
+                "total_points": r.total_bonus_points,
+                "violation_count": r.violation_count,
+                "hours": r.total_activity_hours,
+                "name": r.name,
+                "email": r.email,
+                "avatar_url": r.avatar_url,
+            }
+            for r in rows
+        ]

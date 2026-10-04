@@ -59,6 +59,33 @@ class PermissionRequest(SQLAlchemyTimestampMixin, Base):
         if self.created_by is None:
             raise ValueError("permission request missing created_by")
 
+        owner_ref = None
+
+        if "user" in self.__dict__ and self.user:
+            owner_ref = UserRef(
+                id=self.user.id,
+                name=self.user.name,
+                avatar_url=self.user.avatar_url,
+            )
+
+        creator_ref = None
+        if "creator" in self.__dict__ and self.creator:
+            creator_ref = UserRef(
+                id=self.creator.id,
+                name=self.creator.name,
+                avatar_url=self.creator.avatar_url,
+            )
+        else:
+            creator_ref = owner_ref
+
+        updater_ref = None
+        if "updater" in self.__dict__ and self.updater:
+            updater_ref = UserRef(
+                id=self.updater.id,
+                name=self.updater.name,
+                avatar_url=self.updater.avatar_url,
+            )
+
         return PermissionRequestEntity(
             id=self.id,
             user_id=self.created_by,
@@ -71,33 +98,9 @@ class PermissionRequest(SQLAlchemyTimestampMixin, Base):
             start_time=self.start_time,
             created_at=self.created_at,
             updated_at=self.updated_at,
-            owner=(
-                UserRef(
-                    id=self.user.id,
-                    name=self.user.name,
-                    avatar_url=self.user.avatar_url,
-                )
-                if self.user
-                else None
-            ),
-            creator=(
-                UserRef(
-                    id=self.creator.id,
-                    name=self.creator.name,
-                    avatar_url=self.creator.avatar_url,
-                )
-                if self.creator
-                else None
-            ),
-            updater=(
-                UserRef(
-                    id=self.updater.id,
-                    name=self.updater.name,
-                    avatar_url=self.updater.avatar_url,
-                )
-                if self.updater
-                else None
-            ),
+            owner=owner_ref,
+            creator=creator_ref,
+            updater=updater_ref,
             homework=self.homework.to_entity() if self.homework else None,
             meeting=self.meeting.to_entity() if self.meeting else None,
         )

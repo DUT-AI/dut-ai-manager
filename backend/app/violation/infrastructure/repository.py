@@ -157,3 +157,76 @@ class ViolationRepository(BaseRepository[ViolationModel, Violation]):
         reloaded = self.session.scalars(statement).unique().all()
         # Sort back to match original order if needed, but usually not critical for violations
         return [m.to_entity() for m in reloaded]
+
+    def get_aggregated_report(
+        self,
+        month: int | None = None,
+        year: int | None = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
+        keyword: str | None = None,
+    ) -> list[dict]:
+        """Tổng hợp vi phạm theo user (chỉ tính count)."""
+
+        from sqlalchemy import extract, func, or_
+
+        from app.user.infrastructure.model import UserModel
+
+        stmt = (
+            select(
+                UserModel.id.label("user_id"),
+                UserModel.name.label("name"),
+                UserModel.email.label("email"),
+                UserModel.avatar_url.label("avatar_url"),
+                UserModel.status.label("status"),
+                UserModel.phone_number.label("phone_number"),
+                func.count(ViolationModel.id).label("total_violations"),
+                func.count(ViolationModel.id).label("details_count"),
+            )
+            .join(ViolationModel, ViolationModel.user_id == UserModel.id)
+            .where(
+                ViolationModel.is_deleted.is_(False),
+                UserModel.is_deleted.is_(False),
+            )
+            .group_by(
+                UserModel.id,
+                UserModel.name,
+                UserModel.email,
+                UserModel.avatar_url,
+                UserModel.status,
+                UserModel.phone_number,
+            )
+            .order_by(func.count(ViolationModel.id).desc())
+        )
+
+        if start_date:
+            stmt = stmt.where(ViolationModel.date >= start_date)
+        if end_date:
+            stmt = stmt.where(ViolationModel.date <= end_date)
+        if month:
+            stmt = stmt.where(extract("month", ViolationModel.date) == month)
+        if year:
+            stmt = stmt.where(extract("year", ViolationModel.date) == year)
+        if keyword and keyword.strip():
+            kw = f"%{keyword.strip()}%"
+            stmt = stmt.where(
+                or_(
+                    UserModel.name.ilike(kw),
+                    UserModel.email.ilike(kw),
+                )
+            )
+
+        rows = self.session.execute(stmt).all()
+        return [
+            {
+                "user_id": r.user_id,
+                "name": r.name,
+                "email": r.email,
+                "avatar_url": r.avatar_url,
+                "status": r.status,
+                "phone_number": r.phone_number,
+                "total_violations": int(r.total_violations or 0),
+                "details_count": int(r.details_count or 0),
+            }
+            for r in rows
+        ]

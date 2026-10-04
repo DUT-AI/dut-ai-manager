@@ -56,12 +56,26 @@ class Meeting(SQLAlchemyTimestampMixin, Base):
 
     def to_entity(self) -> MeetingEntity:
         creator_ref = None
-        if self.creator:
+        if "creator" in self.__dict__ and self.creator:
             creator_ref = UserRef(
                 id=self.creator.id,
                 name=self.creator.name or f"Trainer #{self.creator.id}",
                 avatar_url=self.creator.avatar_url,
             )
+        elif self.created_by:
+            creator_ref = UserRef(
+                id=self.created_by,
+                name=f"Trainer #{self.created_by}",
+                avatar_url=None,
+            )
+
+        participants_list = []
+        if "participants" in self.__dict__ and self.participants:
+            participants_list = [
+                p.to_entity()
+                for p in self.participants
+                if not getattr(p, "is_deleted", False)
+            ]
 
         return MeetingEntity(
             id=self.id,
@@ -75,15 +89,7 @@ class Meeting(SQLAlchemyTimestampMixin, Base):
             enable_evaluation=(
                 self.enable_evaluation if self.enable_evaluation is not None else False
             ),
-            participants=(
-                [
-                    p.to_entity()
-                    for p in self.participants
-                    if not getattr(p, "is_deleted", False)
-                ]
-                if self.participants
-                else []
-            ),
+            participants=participants_list,
             creator=creator_ref,
             created_at=self.created_at or get_current_utc7_time(),
             updated_at=self.updated_at or get_current_utc7_time(),

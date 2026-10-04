@@ -12,10 +12,10 @@ class EmailService:
     def __init__(self):
         self.server = settings.SMTP_SERVER
         self.port = settings.SMTP_PORT
-        self.username = settings.SMTP_USER
-        self.password = settings.SMTP_PASSWORD
-        self.from_email = settings.EMAILS_FROM_EMAIL
-        self.from_name = settings.EMAILS_FROM_NAME
+        self.username = (settings.SMTP_USER or "").strip()
+        self.password = (settings.SMTP_PASSWORD or "").replace(" ", "").strip()
+        self.from_email = (settings.EMAILS_FROM_EMAIL or self.username).strip()
+        self.from_name = settings.EMAILS_FROM_NAME or "DUT AI Manager"
 
     def _send_email(
         self,
@@ -45,10 +45,18 @@ class EmailService:
                 for img in images:
                     msg.attach(img)
 
-            with smtplib.SMTP(self.server, self.port) as server:
-                server.starttls()
-                server.login(self.username, self.password)
-                server.sendmail(self.from_email, to_email, msg.as_string())
+            # Support both SSL (port 465) and STARTTLS (port 587 / 25)
+            if self.port == 465:
+                with smtplib.SMTP_SSL(self.server, self.port, timeout=15) as server:
+                    server.login(self.username, self.password)
+                    server.sendmail(self.from_email, to_email, msg.as_string())
+            else:
+                with smtplib.SMTP(self.server, self.port, timeout=15) as server:
+                    server.ehlo()
+                    server.starttls()
+                    server.ehlo()
+                    server.login(self.username, self.password)
+                    server.sendmail(self.from_email, to_email, msg.as_string())
 
             logger.info(f"Email sent to {to_email}")
 

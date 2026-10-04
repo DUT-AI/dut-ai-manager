@@ -104,7 +104,7 @@ class GetMonthlyActivityDatesUseCase:
         for bp in bonus_points:
             activity_dates.add(bp.date.date() if hasattr(bp.date, "date") else bp.date)
 
-        return sorted(list(activity_dates))
+        return sorted(activity_dates)
 
 
 class GetDashboardOverviewUseCase:
@@ -175,15 +175,13 @@ class GetDashboardOverviewUseCase:
 
 
 class GetBonusPointReportUseCase:
-    """Báo cáo xếp hạng điểm cộng trong tháng"""
+    """Báo cáo xếp hạng điểm cộng trong tháng (delegated query xuống Repository)."""
 
     def __init__(
         self,
         bonus_point_repo: BonusPointRepository,
-        user_repo: UserRepository,
     ):
         self.bonus_point_repo = bonus_point_repo
-        self.user_repo = user_repo
 
     def execute(
         self,
@@ -193,61 +191,44 @@ class GetBonusPointReportUseCase:
         end_date: date | None = None,
         keyword: str | None = None,
     ) -> ReportResponse:
-        records = self.bonus_point_repo.get_by_month(
-            month=month, year=year, start_date=start_date, end_date=end_date
-        )[:2000]
-
-        user_stats: dict = {}
-        for record in records:
-            if not record.owner:
-                continue
-
-            if keyword and keyword.lower() not in record.owner.name.lower():
-                continue
-
-            u_id = record.owner.id
-            if u_id not in user_stats:
-                user_stats[u_id] = {
-                    "user_id": u_id,
-                    "total_points": 0,
-                    "count": 0,
-                }
-
-            user_stats[u_id]["total_points"] += record.points
-            user_stats[u_id]["count"] += 1
-
-        sorted_items = sorted(
-            user_stats.values(), key=lambda x: x["total_points"], reverse=True
+        rows = self.bonus_point_repo.get_aggregated_report(
+            month=month,
+            year=year,
+            start_date=start_date,
+            end_date=end_date,
+            keyword=keyword,
         )
 
-        report_items = []
-        for idx, item in enumerate(sorted_items):
-            user_entity = self.user_repo.get_by_id(item["user_id"])
-            if not user_entity:
-                continue
-            report_items.append(
-                ReportItem(
-                    rank=idx + 1,
-                    user=UserResponse.model_validate(user_entity),
-                    total_points=float(item["total_points"]),
-                    total_violations=0,
-                    details_count=item["count"],
-                )
+        report_items = [
+            ReportItem(
+                rank=idx + 1,
+                user=UserResponse(
+                    id=r["user_id"],
+                    name=r["name"],
+                    email=r["email"],
+                    avatar_url=r["avatar_url"],
+                    status=r["status"],
+                    phone_number=r["phone_number"],
+                ),
+                total_points=float(r["total_points"] or 0),
+                total_violations=0,
+                details_count=int(r["details_count"] or 0),
             )
+            for idx, r in enumerate(rows)
+        ]
 
         return ReportResponse(items=report_items, month=month, year=year)
 
 
 class GetViolationReportUseCase:
-    """Báo cáo xếp hạng vi phạm trong tháng"""
+    """Báo cáo xếp hạng vi phạm trong tháng (delegated query xuống Repository)."""
 
     def __init__(
         self,
         violation_repo: ViolationRepository,
-        user_repo: UserRepository,
     ):
         self.violation_repo = violation_repo
-        self.user_repo = user_repo
+
 
     def execute(
         self,
@@ -257,46 +238,30 @@ class GetViolationReportUseCase:
         end_date: date | None = None,
         keyword: str | None = None,
     ) -> ReportResponse:
-        records = self.violation_repo.get_by_month(
-            month=month, year=year, start_date=start_date, end_date=end_date
-        )[:2000]
-
-        user_stats: dict = {}
-        for record in records:
-            if not record.owner:
-                continue
-
-            if keyword and keyword.lower() not in record.owner.name.lower():
-                continue
-
-            u_id = record.user_id
-            if u_id not in user_stats:
-                user_stats[u_id] = {
-                    "user_id": u_id,
-                    "total_violations": 0,
-                    "count": 0,
-                }
-
-            user_stats[u_id]["total_violations"] += 1
-            user_stats[u_id]["count"] += 1
-
-        sorted_items = sorted(
-            user_stats.values(), key=lambda x: x["total_violations"], reverse=True
+        rows = self.violation_repo.get_aggregated_report(
+            month=month,
+            year=year,
+            start_date=start_date,
+            end_date=end_date,
+            keyword=keyword,
         )
 
-        report_items = []
-        for idx, item in enumerate(sorted_items):
-            user_entity = self.user_repo.get_by_id(item["user_id"])
-            if not user_entity:
-                continue
-            report_items.append(
-                ReportItem(
-                    rank=idx + 1,
-                    user=UserResponse.model_validate(user_entity),
-                    total_points=0,
-                    total_violations=item["total_violations"],
-                    details_count=item["count"],
-                )
+        report_items = [
+            ReportItem(
+                rank=idx + 1,
+                user=UserResponse(
+                    id=r["user_id"],
+                    name=r["name"],
+                    email=r["email"],
+                    avatar_url=r["avatar_url"],
+                    status=r["status"],
+                    phone_number=r["phone_number"],
+                ),
+                total_points=0,
+                total_violations=int(r["total_violations"] or 0),
+                details_count=int(r["details_count"] or 0),
             )
+            for idx, r in enumerate(rows)
+        ]
 
         return ReportResponse(items=report_items, month=month, year=year)

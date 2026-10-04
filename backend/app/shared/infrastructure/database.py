@@ -10,10 +10,9 @@ Session lifecycle:
 
 from loguru import logger
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, configure_mappers
+from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.shared.infrastructure.base_model import Base
 
 # Create engine
 engine = create_engine(
@@ -21,20 +20,6 @@ engine = create_engine(
     echo=settings.ENVIRONMENT == "local",
 )
 
-
-def import_all_models():
-    """Import all ORM models to register with Base before configuring mappers."""
-
-
-import_all_models()
-configure_mappers()
-
-
-def create_db_and_tables():
-    """Create all database tables."""
-
-    configure_mappers()
-    Base.metadata.create_all(engine)
 
 
 def get_session():

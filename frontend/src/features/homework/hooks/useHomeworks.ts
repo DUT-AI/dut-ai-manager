@@ -9,13 +9,15 @@ const homeworkKeys = {
 };
 
 // Queries
-export const useHomeworks = () => {
+export const useHomeworks = (options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: homeworkKeys.all,
     queryFn: () => homeworkService.getAll(),
     staleTime: 2 * 60 * 1000, // 2 minutes
+    enabled: options?.enabled,
   });
 };
+
 
 export const useMyHomeworks = () => {
   return useQuery({

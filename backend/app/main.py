@@ -1,4 +1,3 @@
-import importlib
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -17,7 +16,6 @@ from app.auth.providers import AuthModuleProvider
 from app.billing.providers import BillingModuleProvider
 from app.bonus_point.providers import BonusPointModuleProvider
 from app.core.config import settings
-from app.core.database import create_db_and_tables
 from app.core.events import bootstrap_events
 from app.core.logging_config import setup_logging
 from app.core.scheduler import shutdown_scheduler, start_scheduler
@@ -46,14 +44,6 @@ async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown events."""
     # Startup
     logger.info("🚀 Starting application services...")
-
-    try:
-        importlib.import_module("app.user.infrastructure.model")
-        importlib.import_module("app.team.infrastructure.model")
-        importlib.import_module("app.homework.infrastructure.model")
-        create_db_and_tables()
-    except Exception as exc:
-        logger.warning(f"Failed to create database tables on startup: {exc}")
 
     # Event registration using Dishka
     await bootstrap_events(app.state.dishka_container)

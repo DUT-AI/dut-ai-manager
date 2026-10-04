@@ -4,6 +4,7 @@ import {
     CheckCircleOutlined,
     DeleteOutlined,
     DiscordOutlined,
+    DownloadOutlined,
     EditOutlined,
     FileExcelOutlined,
     FilterOutlined,
@@ -17,6 +18,7 @@ import {
     UploadOutlined,
     UserOutlined
 } from '@ant-design/icons';
+import { userService } from '../services/user.service';
 import {
     Alert,
     Avatar,
@@ -593,6 +595,7 @@ const ImportUserModal = ({ open, onCancel }: { open: boolean; onCancel: () => vo
     const importUsers = useImportUsers();
     const [file, setFile] = useState<File | null>(null);
     const [result, setResult] = useState<UserImportResult | null>(null);
+    const [downloadingTemplate, setDownloadingTemplate] = useState(false);
 
     const handleImport = async () => {
         if (!file) return;
@@ -603,6 +606,18 @@ const ImportUserModal = ({ open, onCancel }: { open: boolean; onCancel: () => vo
         } catch (error: unknown) {
             const err = error as { response?: { data?: { message?: string } } };
             message.error(err?.response?.data?.message || 'Import failed');
+        }
+    };
+
+    const handleDownloadTemplate = async () => {
+        try {
+            setDownloadingTemplate(true);
+            await userService.downloadTemplate();
+            message.success('Tải file mẫu thành công');
+        } catch {
+            message.error('Không thể tải file mẫu. Vui lòng thử lại sau.');
+        } finally {
+            setDownloadingTemplate(false);
         }
     };
 
@@ -636,11 +651,24 @@ const ImportUserModal = ({ open, onCancel }: { open: boolean; onCancel: () => vo
             {!result ? (
                 <div className="py-4">
                     <Alert
-                        message="File Format Requirement"
+                        message={
+                            <div className="flex items-center justify-between">
+                                <span>File Format Requirement</span>
+                                <Button
+                                    size="small"
+                                    type="link"
+                                    icon={<DownloadOutlined />}
+                                    onClick={handleDownloadTemplate}
+                                    loading={downloadingTemplate}
+                                >
+                                    Tải file mẫu (.xlsx)
+                                </Button>
+                            </div>
+                        }
                         description={
                             <ul className="list-disc pl-4 mt-2">
-                                <li>Format: .xlsx or .csv</li>
-                                <li>Required Columns: <b>name</b>, <b>email</b>, <b>phone_number</b></li>
+                                <li>Format: .xlsx or .csv (UTF-8)</li>
+                                <li>Required Columns: <b>name</b> (hoặc họ tên), <b>email</b>, <b>phone_number</b> (hoặc sđt)</li>
                                 <li>Default Role: <b>Teammate</b></li>
                             </ul>
                         }

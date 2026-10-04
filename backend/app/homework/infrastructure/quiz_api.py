@@ -46,7 +46,10 @@ class QuizApiClient:
                         f"Quiz game leaderboard request failed: status={response.status_code}, url={url}"
                     )
         except Exception as exc:
-            logger.error(f"Error calling Quiz game leaderboard API ({url}): {exc}")
+            err_msg = str(exc) or repr(exc)
+            logger.error(
+                f"Error calling Quiz game leaderboard ({url}): {type(exc).__name__} - {err_msg}"
+            )
 
         return []
 
@@ -85,7 +88,10 @@ class QuizApiClient:
                         f"Quiz homework completed-members request failed: status={response.status_code}, url={url}"
                     )
         except Exception as exc:
-            logger.error(f"Error calling Quiz completed-members API ({url}): {exc}")
+            err_msg = str(exc) or repr(exc)
+            logger.error(
+                f"Error calling Quiz completed-members ({url}): {type(exc).__name__} - {err_msg}"
+            )
 
         return []
 
@@ -109,6 +115,9 @@ class QuizApiClient:
                         f"Quiz user summary request failed: status={response.status_code}, url={url}"
                     )
         except Exception as exc:
-            logger.error(f"Error calling Quiz user summary API ({url}): {exc}")
+            err_msg = str(exc) or repr(exc)
+            logger.error(
+                f"Error calling Quiz user summary ({url}): {type(exc).__name__} - {err_msg}"
+            )
 
         return {}

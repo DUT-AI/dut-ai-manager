@@ -4,8 +4,11 @@ User Web Controller — provides API routes.
 
 from typing import Annotated
 
+from io import BytesIO
+
 from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import APIRouter, BackgroundTasks, Depends, Query, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Response, UploadFile
+import pandas as pd
 
 from app.core.deps import CurrentUser, PermissionChecker
 from app.core.permissions import UserPermission
@@ -17,7 +20,7 @@ from app.user.application.dtos import (
     UserSettingsUpdate,
     UserUpdate,
 )
-from app.user.application.use_cases import (
+from app.user.application import (
     CreateUserUseCase,
     DeleteUserUseCase,
     GetUserUseCase,
@@ -45,6 +48,40 @@ async def list_users(
     return ApiResponse.success(
         data=[UserResponse.model_validate(u) for u in users],
         message="Fetched users successfully",
+    )
+
+
+@router.get("/template")
+async def download_user_import_template(
+    _: Annotated[CurrentUser, Depends(PermissionChecker(UserPermission.CREATE))],
+):
+    """Download template Excel file for bulk importing users."""
+    df = pd.DataFrame(
+        [
+            {
+                "name": "Nguyễn Văn A",
+                "email": "nguyenvana@gmail.com",
+                "phone_number": "0901234567",
+            },
+            {
+                "name": "Trần Thị B",
+                "email": "tranthib@gmail.com",
+                "phone_number": "0987654321",
+            },
+        ]
+    )
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="Users")
+    output.seek(0)
+
+    headers = {
+        "Content-Disposition": 'attachment; filename="user_import_template.xlsx"'
+    }
+    return Response(
+        content=output.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers=headers,
     )
 
 

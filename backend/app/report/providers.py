@@ -77,15 +77,15 @@ class ReportModuleProvider(Provider):
 
     @provide
     def get_bonus_point_report_uc(
-        self, bonus_point_repo: BonusPointRepository, user_repo: UserRepository
+        self, bonus_point_repo: BonusPointRepository
     ) -> GetBonusPointReportUseCase:
-        return GetBonusPointReportUseCase(bonus_point_repo, user_repo)
+        return GetBonusPointReportUseCase(bonus_point_repo)
 
     @provide
     def get_violation_report_uc(
-        self, violation_repo: ViolationRepository, user_repo: UserRepository
+        self, violation_repo: ViolationRepository
     ) -> GetViolationReportUseCase:
-        return GetViolationReportUseCase(violation_repo, user_repo)
+        return GetViolationReportUseCase(violation_repo)
 
     @provide
     def get_current_title_uc(
@@ -97,9 +97,9 @@ class ReportModuleProvider(Provider):
     def get_monthly_titles_report_uc(
         self,
         stats_repo: MonthlyUserStatsRepository,
-        user_repo: UserRepository,
     ) -> GetMonthlyTitlesReportUseCase:
-        return GetMonthlyTitlesReportUseCase(stats_repo, user_repo)
+        return GetMonthlyTitlesReportUseCase(stats_repo)
+
 
     @provide
     def get_assign_monthly_titles_uc(

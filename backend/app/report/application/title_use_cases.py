@@ -40,26 +40,26 @@ class GetMonthlyTitlesReportUseCase:
     def __init__(
         self,
         stats_repo: MonthlyUserStatsRepository,
-        user_repo: UserRepository,
     ):
         self.stats_repo = stats_repo
-        self.user_repo = user_repo
 
     def execute(self, month: int, year: int) -> list[TitleReportItem]:
-        stats_list = self.stats_repo.get_by_month_year(month, year)
+        rows = self.stats_repo.get_titles_report(month, year)
 
         report_items = []
-        for stats in stats_list:
-            user = self.user_repo.get_by_id(stats.user_id)
-            if not user:
-                continue
+        for r in rows:
             report_items.append(
                 TitleReportItem(
-                    user=UserInfoResponse(**user.model_dump()),
-                    title=stats.assigned_title.value if stats.assigned_title else None,
-                    total_points=stats.total_bonus_points,
-                    violation_count=stats.violation_count,
-                    hours=stats.total_activity_hours,
+                    user=UserInfoResponse(
+                        id=r["user_id"],
+                        name=r["name"],
+                        email=r["email"],
+                        avatar_url=r["avatar_url"],
+                    ),
+                    title=r["title"],
+                    total_points=r["total_points"],
+                    violation_count=r["violation_count"],
+                    hours=r["hours"],
                 )
             )
 

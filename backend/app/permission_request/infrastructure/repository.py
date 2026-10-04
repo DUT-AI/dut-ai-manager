@@ -3,6 +3,7 @@ from datetime import date
 from sqlalchemy import desc, extract, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
+from app.homework.infrastructure.model import HomeworkModel
 from app.meeting.infrastructure.model import Meeting
 from app.permission_request.domain.entity import PermissionRequest as DomainEntity
 from app.permission_request.domain.value_objects import RequestCategory
@@ -24,7 +25,7 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
     ) -> list[DomainEntity]:
         stmt = select(ORMModel).options(
             joinedload(ORMModel.user),
-            joinedload(ORMModel.homework),
+            joinedload(ORMModel.homework).noload(HomeworkModel.assignees),
             joinedload(ORMModel.meeting),
         )
 
@@ -46,7 +47,7 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
             select(ORMModel)
             .options(
                 joinedload(ORMModel.user),
-                joinedload(ORMModel.homework),
+                joinedload(ORMModel.homework).noload(HomeworkModel.assignees),
                 joinedload(ORMModel.meeting),
             )
             .where(
@@ -69,7 +70,7 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
             select(ORMModel)
             .options(
                 joinedload(ORMModel.user),
-                joinedload(ORMModel.homework),
+                joinedload(ORMModel.homework).noload(HomeworkModel.assignees),
                 joinedload(ORMModel.meeting),
             )
             .where(
@@ -94,7 +95,7 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
             select(ORMModel)
             .options(
                 joinedload(ORMModel.user),
-                joinedload(ORMModel.homework),
+                joinedload(ORMModel.homework).noload(HomeworkModel.assignees),
                 joinedload(ORMModel.meeting),
             )
             .where(
@@ -102,6 +103,7 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
                 ORMModel.is_deleted == deleted,
             )
         )
+
         if month is not None:
             stmt = stmt.where(extract("month", ORMModel.created_at) == month)
         if year is not None:
