@@ -6,7 +6,7 @@ from pydantic import BaseModel, field_validator
 
 from app.homework.domain.entity import HomeworkSubmission, SubmissionType
 from app.homework.infrastructure.repository import HomeworkRepository
-from app.utils.datetime import get_current_utc7_time, to_utc7_naive
+from app.utils.datetime import to_utc7_naive
 
 
 class HomeworkSubmissionWebhookIn(BaseModel):
@@ -15,7 +15,7 @@ class HomeworkSubmissionWebhookIn(BaseModel):
     lesson_slug: str
     user_id: int
     type: SubmissionType
-    submitted_at: datetime | None = None
+    submitted_at: datetime
     is_passed: bool = True
     details: dict[str, Any] | None = None
 
@@ -59,10 +59,45 @@ class RecordHomeworkSubmissionUseCase:
                 "reason": f"Homework not found for slug '{payload.lesson_slug}'",
             }
 
-        # 3. Chuẩn hóa submitted_at về naive ICT datetime
-        submitted_at = to_utc7_naive(payload.submitted_at) or get_current_utc7_time()
+        # 3. Chuẩn hóa submitted_at về naive ICT datetime, bỏ qua nếu không hợp lệ
+        submitted_at = to_utc7_naive(payload.submitted_at)
+        if not submitted_at:
+            logger.warning(
+                f"[Webhook] Bỏ qua submission user_id={payload.user_id} cho slug='{payload.lesson_slug}' "
+                f"do mốc thời gian submitted_at không hợp lệ"
+            )
+            return {
+                "status": "ignored",
+                "reason": "Missing or invalid submitted_at timestamp",
+            }
 
-        # 4. Lưu bản ghi lịch sử vào database
+        # 4. Lưu hoặc cập nhật bản ghi lịch sử vào database (Idempotent Upsert)
+        sub_id = payload.details.get("submission_id") if payload.details else None
+        existing = self.homework_repo.find_submission_match(
+            homework.id,
+            payload.user_id,
+            payload.type,
+            quiz_submission_id=sub_id,
+            submitted_at=submitted_at,
+        )
+        if existing:
+            saved = self.homework_repo.update_submission(
+                existing,
+                submitted_at=submitted_at,
+                is_passed=payload.is_passed,
+                details=payload.details or {},
+            )
+            logger.info(
+                f"✅ [Webhook] Cập nhật lịch sử bài nộp: id={saved.id}, hw_id={homework.id}, "
+                f"user_id={payload.user_id}, type={payload.type}, is_passed={payload.is_passed}"
+            )
+            return {
+                "status": "updated",
+                "submission_id": saved.id,
+                "homework_id": homework.id,
+                "user_id": payload.user_id,
+            }
+
         submission = HomeworkSubmission(
             homework_id=homework.id,
             user_id=payload.user_id,
@@ -74,7 +109,7 @@ class RecordHomeworkSubmissionUseCase:
         saved = self.homework_repo.add_submission(submission)
 
         logger.info(
-            f"✅ [Webhook] Ghi nhận lịch sử bài nộp: id={saved.id}, hw_id={homework.id}, "
+            f"✅ [Webhook] Ghi nhận mới lịch sử bài nộp: id={saved.id}, hw_id={homework.id}, "
             f"user_id={payload.user_id}, type={payload.type}, is_passed={payload.is_passed}"
         )
 

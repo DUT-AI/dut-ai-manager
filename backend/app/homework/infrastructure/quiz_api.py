@@ -53,6 +53,86 @@ class QuizApiClient:
 
         return []
 
+    async def get_game_sessions_for_sync(
+        self, game_slug: str
+    ) -> list[dict[str, Any]] | None:
+        """
+        Calls GET /api/v1/game/{game_slug}/sessions-for-sync
+        Returns full list of completed game sessions for sync.
+        Returns None if not found (404).
+        """
+        url = f"{self.base_url}/api/v1/game/{game_slug}/sessions-for-sync"
+        try:
+            async with httpx.AsyncClient(
+                timeout=10.0, headers=self._get_headers()
+            ) as client:
+                response = await client.get(url)
+                if response.status_code == 200:
+                    data = response.json()
+                    if isinstance(data, list):
+                        return data
+                    elif (
+                        isinstance(data, dict)
+                        and "data" in data
+                        and isinstance(data["data"], list)
+                    ):
+                        return data["data"]
+                    logger.warning(f"Unexpected response structure from {url}: {data}")
+                elif response.status_code == 404:
+                    return None
+                else:
+                    logger.warning(
+                        f"Quiz game sessions-for-sync request failed: status={response.status_code}, url={url}"
+                    )
+        except Exception as exc:
+            err_msg = str(exc) or repr(exc)
+            logger.error(
+                f"Error calling Quiz sessions-for-sync ({url}): {type(exc).__name__} - {err_msg}"
+            )
+
+        return []
+
+    async def get_homework_submissions_for_sync(
+        self, homework_slug: str
+    ) -> list[dict[str, Any]] | None:
+        """
+        Calls GET /api/v1/homeworks/{homework_slug}/submissions-for-sync
+        Returns full list of coding submissions for sync.
+        Returns None if not found (404).
+        """
+        url = f"{self.base_url}/api/v1/homeworks/{homework_slug}/submissions-for-sync"
+        try:
+            async with httpx.AsyncClient(
+                timeout=10.0, headers=self._get_headers()
+            ) as client:
+                response = await client.get(url)
+                if response.status_code == 200:
+                    res_json = response.json()
+                    if (
+                        isinstance(res_json, dict)
+                        and "data" in res_json
+                        and isinstance(res_json["data"], list)
+                    ):
+                        return res_json["data"]
+                    elif isinstance(res_json, list):
+                        return res_json
+                    logger.warning(
+                        f"Unexpected response structure from {url}: {res_json}"
+                    )
+                elif response.status_code == 404:
+                    return None
+                else:
+                    logger.warning(
+                        f"Quiz homework submissions-for-sync request failed: status={response.status_code}, url={url}"
+                    )
+        except Exception as exc:
+            err_msg = str(exc) or repr(exc)
+            logger.error(
+                f"Error calling Quiz submissions-for-sync ({url}): {type(exc).__name__} - {err_msg}"
+            )
+
+        return []
+
     async def get_homework_completed_members(
         self, homework_slug: str
     ) -> list[dict[str, Any]] | None:

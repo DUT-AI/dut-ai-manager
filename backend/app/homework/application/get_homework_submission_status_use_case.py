@@ -84,6 +84,18 @@ class GetHomeworkSubmissionStatusUseCase:
             u.id: u for u in self.user_repo.get_active_users() if u.id is not None
         }
 
+        db_submissions = (
+            self.homework_repo.get_submissions_by_homework(homework.id)
+            if self.homework_repo and homework.id
+            else []
+        )
+        db_sub_map: dict[tuple[int, str], Any] = {}
+        for sub in db_submissions:
+            sub_type = str(sub.submission_type).upper() if sub.submission_type else "CODING"
+            key = (sub.user_id, sub_type)
+            if key not in db_sub_map:
+                db_sub_map[key] = sub
+
         coding_submitted: list[UserSubmissionInfo] = []
         coding_not_submitted: list[UserSubmissionInfo] = []
         game_submitted: list[UserSubmissionInfo] = []
@@ -118,6 +130,11 @@ class GetHomeworkSubmissionStatusUseCase:
                     or entry.get("updated_at")
                     or entry.get("created_at")
                 )
+                if not submitted_at_str:
+                    db_sub = db_sub_map.get((uid, "CODING"))
+                    if db_sub and db_sub.submitted_at:
+                        submitted_at_str = db_sub.submitted_at.isoformat()
+
                 is_late = False
                 if submitted_at_str:
                     try:
@@ -166,6 +183,11 @@ class GetHomeworkSubmissionStatusUseCase:
                     or entry.get("updated_at")
                     or entry.get("created_at")
                 )
+                if not submitted_at_str:
+                    db_sub = db_sub_map.get((uid, "GAME"))
+                    if db_sub and db_sub.submitted_at:
+                        submitted_at_str = db_sub.submitted_at.isoformat()
+
                 is_late = False
                 if submitted_at_str:
                     try:

@@ -70,33 +70,13 @@ export const UserSubmissionCategoryView: React.FC<UserSubmissionCategoryViewProp
                 />
             </div>
 
-            {/* Sub-tabs: Đã nộp / Chưa nộp tích hợp bộ lọc đồng nhất */}
+            {/* Sub-tabs: Đã nộp / Chưa nộp */}
             <div className="border-b border-gray-100 dark:border-zinc-800">
                 <Tabs
                     activeKey={subTab}
                     onChange={(val) => setSubTab(val as 'submitted' | 'not_submitted')}
                     size="small"
                     className="submission-subtabs"
-                    tabBarExtraContent={
-                        subTab === 'submitted' && submitted.length > 0 ? (
-                            <div className="flex items-center gap-1.5 pb-1">
-                                <span className="text-[11px] text-gray-400 flex items-center gap-1 font-medium">
-                                    <FilterOutlined className="text-gray-400 text-xs" /> Lọc:
-                                </span>
-                                <Segmented
-                                    size="small"
-                                    value={submittedFilter}
-                                    onChange={(val) => setSubmittedFilter(val as 'all' | 'on_time' | 'late')}
-                                    options={[
-                                        { label: `Tất cả (${submitted.length})`, value: 'all' },
-                                        { label: `Đúng hạn (${onTimeCount})`, value: 'on_time' },
-                                        { label: `Trễ (${lateCount})`, value: 'late' },
-                                    ]}
-                                    className="bg-gray-100 dark:bg-zinc-800 text-xs rounded-md"
-                                />
-                            </div>
-                        ) : null
-                    }
                     items={[
                         {
                             key: 'submitted',
@@ -105,7 +85,7 @@ export const UserSubmissionCategoryView: React.FC<UserSubmissionCategoryViewProp
                                     <CheckCircleOutlined className="text-emerald-500 text-sm" />
                                     <span>Đã nộp</span>
                                     <span className="inline-flex items-center justify-center min-w-[20px] px-1.5 py-0.2 text-[11px] font-semibold rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200/60 dark:bg-emerald-950/60 dark:text-emerald-400 dark:border-emerald-800/60">
-                                        {filteredSubmitted.length}
+                                        {submitted.length}
                                     </span>
                                 </span>
                             ),
@@ -117,7 +97,7 @@ export const UserSubmissionCategoryView: React.FC<UserSubmissionCategoryViewProp
                                     <CloseCircleOutlined className="text-rose-500 text-sm" />
                                     <span>Chưa nộp</span>
                                     <span className="inline-flex items-center justify-center min-w-[20px] px-1.5 py-0.2 text-[11px] font-semibold rounded-full bg-rose-50 text-rose-600 border border-rose-200/60 dark:bg-rose-950/60 dark:text-rose-400 dark:border-rose-800/60">
-                                        {filteredNotSubmitted.length}
+                                        {notSubmitted.length}
                                     </span>
                                 </span>
                             ),
@@ -125,6 +105,26 @@ export const UserSubmissionCategoryView: React.FC<UserSubmissionCategoryViewProp
                     ]}
                 />
             </div>
+
+            {/* Bộ lọc trạng thái (hiển thị hàng dưới tách biệt) */}
+            {subTab === 'submitted' && submitted.length > 0 && (
+                <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 bg-gray-50/70 dark:bg-zinc-800/60 rounded-xl border border-gray-100/80 dark:border-zinc-700/60">
+                    <span className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5 font-medium">
+                        <FilterOutlined className="text-indigo-500 text-xs" /> Trạng thái bài nộp:
+                    </span>
+                    <Segmented
+                        size="small"
+                        value={submittedFilter}
+                        onChange={(val) => setSubmittedFilter(val as 'all' | 'on_time' | 'late')}
+                        options={[
+                            { label: `Tất cả (${submitted.length})`, value: 'all' },
+                            { label: `Đúng hạn (${onTimeCount})`, value: 'on_time' },
+                            { label: `Nộp trễ (${lateCount})`, value: 'late' },
+                        ]}
+                        className="bg-white dark:bg-zinc-700/80 text-xs rounded-lg shadow-2xs"
+                    />
+                </div>
+            )}
 
             {/* Search query tag result notification */}
             {searchQuery.trim() && (

@@ -221,3 +221,68 @@ class HomeworkRepository:
         )
         models = self.session.scalars(statement).all()
         return [m.to_entity() for m in models]
+
+    def find_submission_match(
+        self,
+        homework_id: int,
+        user_id: int,
+        submission_type: Any,
+        quiz_submission_id: str | None = None,
+        submitted_at: datetime | None = None,
+    ) -> HomeworkSubmissionModel | None:
+        """
+        Find an existing submission by quiz_submission_id (in details JSON)
+        or by exact (homework_id, user_id, submission_type, submitted_at).
+        """
+        type_str = str(
+            submission_type.value if hasattr(submission_type, "value") else submission_type
+        ).upper()
+
+        # 1. Tìm theo quiz_submission_id (nếu có)
+        if quiz_submission_id:
+            try:
+                stmt = select(HomeworkSubmissionModel).where(
+                    HomeworkSubmissionModel.homework_id == homework_id,
+                    HomeworkSubmissionModel.user_id == user_id,
+                    func.upper(HomeworkSubmissionModel.submission_type) == type_str,
+                    HomeworkSubmissionModel.details["submission_id"].astext == str(quiz_submission_id),
+                )
+                found = self.session.scalars(stmt).first()
+                if found:
+                    return found
+            except Exception:
+                # Trường hợp DB SQLite/Postgres cấu trúc JSON khác biệt
+                pass
+
+        # 2. Tìm theo submitted_at chính xác
+        if submitted_at:
+            stmt = select(HomeworkSubmissionModel).where(
+                HomeworkSubmissionModel.homework_id == homework_id,
+                HomeworkSubmissionModel.user_id == user_id,
+                func.upper(HomeworkSubmissionModel.submission_type) == type_str,
+                HomeworkSubmissionModel.submitted_at == submitted_at,
+            )
+            found = self.session.scalars(stmt).first()
+            if found:
+                return found
+
+        return None
+
+    def update_submission(
+        self,
+        model: HomeworkSubmissionModel,
+        submitted_at: datetime | None = None,
+        is_passed: bool | None = None,
+        details: dict | None = None,
+    ) -> HomeworkSubmissionEntity:
+        """Update an existing submission model and flush changes."""
+        if submitted_at is not None:
+            model.submitted_at = submitted_at
+        if is_passed is not None:
+            model.is_passed = is_passed
+        if details is not None:
+            current_details = dict(model.details or {})
+            current_details.update(details)
+            model.details = current_details
+        self.session.flush()
+        return model.to_entity()

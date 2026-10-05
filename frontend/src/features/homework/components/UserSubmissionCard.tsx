@@ -4,6 +4,7 @@ import {
     UserOutlined,
     ClockCircleOutlined,
     CloseCircleOutlined,
+    CheckCircleOutlined,
     HistoryOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -55,16 +56,23 @@ export const UserSubmissionCard: React.FC<UserSubmissionCardProps> = ({
                     </div>
 
                     <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                        {isSubmitted && user.submitted_at ? (
-                            <>
-                                <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                                    <ClockCircleOutlined className="text-[11px]" />
-                                    {dayjs(user.submitted_at).format('DD/MM/YYYY HH:mm:ss')}
+                        {isSubmitted ? (
+                            user.submitted_at ? (
+                                <>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                        <ClockCircleOutlined className="text-[11px]" />
+                                        {dayjs(user.submitted_at).format('DD/MM/YYYY HH:mm:ss')}
+                                    </span>
+                                    <span className="text-[11px] text-gray-400">
+                                        ({dayjs(user.submitted_at).fromNow()})
+                                    </span>
+                                </>
+                            ) : (
+                                <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
+                                    <CheckCircleOutlined className="text-[11px]" />
+                                    Đã nộp bài tập
                                 </span>
-                                <span className="text-[11px] text-gray-400">
-                                    ({dayjs(user.submitted_at).fromNow()})
-                                </span>
-                            </>
+                            )
                         ) : (
                             <span className="text-xs text-rose-500 dark:text-rose-400 flex items-center gap-1">
                                 <CloseCircleOutlined className="text-[11px]" />
