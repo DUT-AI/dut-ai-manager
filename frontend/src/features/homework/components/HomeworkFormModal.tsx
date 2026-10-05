@@ -221,15 +221,7 @@ export const HomeworkFormModal = ({
                         name="deadline"
                         label={<span className="font-medium">Hạn nộp</span>}
                         rules={[
-                            { required: true, message: 'Vui lòng chọn hạn nộp' },
-                            {
-                                validator: (_, value) => {
-                                    if (value && !isEditing && value.isBefore(dayjs())) {
-                                        return Promise.reject(new Error('Hạn nộp không được ở trong quá khứ!'));
-                                    }
-                                    return Promise.resolve();
-                                }
-                            }
+                            { required: true, message: 'Vui lòng chọn hạn nộp' }
                         ]}
                     >
                         <DatePicker
@@ -237,7 +229,6 @@ export const HomeworkFormModal = ({
                             className="w-full"
                             format="DD/MM/YYYY HH:mm"
                             placeholder="Chọn ngày và giờ..."
-                            disabledDate={(current) => !isEditing && current && current.isBefore(dayjs().startOf('day'))}
                         />
                     </Form.Item>
 

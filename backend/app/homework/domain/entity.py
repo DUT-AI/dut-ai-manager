@@ -20,7 +20,7 @@ class Homework(BaseEntity):
     deadline: datetime
     link: str | None = None
     slug: str | None = None
-    requires_coding: bool = False
+    requires_coding: bool = True
     requires_game: bool = False
     assignee_ids: list[int] = []
 

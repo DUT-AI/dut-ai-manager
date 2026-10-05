@@ -21,7 +21,7 @@ class HomeworkModel(SQLAlchemyTimestampMixin, Base):
     deadline: Mapped[datetime] = mapped_column(index=True)
     link: Mapped[str | None] = mapped_column(String(500), default=None, nullable=True)
     slug: Mapped[str | None] = mapped_column(String(255), default=None, nullable=True)
-    requires_coding: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
+    requires_coding: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
     requires_game: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
 
     assignees: Mapped[list["HomeworkAssigneeModel"]] = relationship(

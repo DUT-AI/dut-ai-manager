@@ -100,17 +100,6 @@ async def create_homework(
     data: HomeworkCreate,
     create_uc: FromDishka[CreateHomeworkUseCase],
 ):
-    deadline_ts = data.deadline.timestamp()
-    now_ts = (
-        datetime.now(data.deadline.tzinfo).timestamp()
-        if data.deadline.tzinfo
-        else datetime.now().timestamp()
-    )
-    if deadline_ts < now_ts:
-        raise HTTPException(
-            status_code=400, detail="Hạn nộp không được ở trong quá khứ"
-        )
-
     result = await create_uc.execute(data)
     return ApiResponse.success(data=result)
 
@@ -188,18 +177,6 @@ async def update_homework(
     data: HomeworkUpdate,
     update_uc: FromDishka[UpdateHomeworkUseCase],
 ):
-    if data.deadline is not None:
-        deadline_ts = data.deadline.timestamp()
-        now_ts = (
-            datetime.now(data.deadline.tzinfo).timestamp()
-            if data.deadline.tzinfo
-            else datetime.now().timestamp()
-        )
-        if deadline_ts < now_ts:
-            raise HTTPException(
-                status_code=400, detail="Hạn nộp không được ở trong quá khứ"
-            )
-
     result = await update_uc.execute(homework_id, data)
     if not result:
         raise HTTPException(status_code=404, detail="Homework not found")
