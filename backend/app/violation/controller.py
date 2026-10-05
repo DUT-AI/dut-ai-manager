@@ -6,7 +6,7 @@ NO business logic here.
 """
 
 from datetime import date
-from typing import Annotated
+from typing import Annotated, Any
 
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, HTTPException
@@ -16,13 +16,19 @@ from app.core.permissions import ViolationPermission
 from app.shared.application.response import ApiResponse
 from app.user.domain.entity import UserEntity
 from app.violation.application import (
+    BulkDeleteViolationsUseCase,
     CreateViolationUseCase,
     DeleteViolationUseCase,
     GetViolationsUseCase,
     RestoreViolationUseCase,
     UpdateViolationUseCase,
 )
-from app.violation.schemas import ViolationCreate, ViolationResponse, ViolationUpdate
+from app.violation.schemas import (
+    BulkDeleteViolationsIn,
+    ViolationCreate,
+    ViolationResponse,
+    ViolationUpdate,
+)
 
 router = APIRouter(prefix="/violations", tags=["violations"])
 
@@ -79,6 +85,18 @@ async def update_violation(
 ):
     result = uc.execute(item_id=item_id, reason=data.reason, date=data.date)
     return ApiResponse.success(data=result)
+
+
+@router.post("/bulk-delete", response_model=ApiResponse[dict[str, Any]])
+@inject
+async def bulk_delete_violations(
+    data: BulkDeleteViolationsIn,
+    uc: FromDishka[BulkDeleteViolationsUseCase],
+    _: Annotated[UserEntity, hasPermission(ViolationPermission.DELETE)],
+):
+    """Xóa hàng loạt các vi phạm theo danh sách IDs."""
+    deleted_count = uc.execute(data.ids)
+    return ApiResponse.success(data={"deleted_count": deleted_count})
 
 
 @router.delete("/{item_id}", response_model=ApiResponse[bool])

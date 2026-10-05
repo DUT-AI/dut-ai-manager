@@ -1,37 +1,28 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
-    Table,
     Button,
     Card,
     Space,
-    Modal,
     Form,
     Input,
     message,
-    Popconfirm,
     Typography,
-    Select,
-    Tooltip,
-    Avatar,
     Grid,
-    List
+    Tag
 } from 'antd';
 import {
     PlusOutlined,
-    EditOutlined,
-    DeleteOutlined,
     TeamOutlined,
-    UserOutlined
+    SearchOutlined
 } from '@ant-design/icons';
 import { useTeams, useCreateTeam, useUpdateTeam, useDeleteTeam } from '../hooks/useTeams';
 import { useUsers } from '@/features/users';
 import { useAuth } from '@/features/auth';
 import type { TeamResponse, TeamCreate } from '@/features/teams/types/team.types';
-import dayjs from 'dayjs';
 import { motion, type Variants } from 'motion/react';
+import { TeamTable, TeamMobileList, TeamFormModal } from '../components';
 
 const { Title, Text } = Typography;
-const { Option } = Select;
 
 const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -52,76 +43,6 @@ const itemVariants: Variants = {
     }
 };
 
-interface MobileListViewProps {
-    teams: TeamResponse[];
-    isLoading: boolean;
-    onEdit: (item: TeamResponse) => void;
-    onDelete: (id: number) => void;
-}
-
-const MobileListView = ({ teams, isLoading, onEdit, onDelete }: MobileListViewProps) => (
-    <div className="mt-4 px-3">
-        <List
-            dataSource={teams}
-            loading={isLoading}
-            split={false}
-            renderItem={(record) => (
-                <List.Item className="px-2 !mb-4 !border-0">
-                    <Card
-                        className="w-full shadow-sm border-gray-100 overflow-hidden"
-                        styles={{ body: { padding: '16px' } }}
-                        actions={[
-                            <Button
-                                key="edit"
-                                type="text"
-                                icon={<EditOutlined />}
-                                onClick={() => onEdit(record)}
-                            >
-                                Sửa
-                            </Button>,
-                            <Popconfirm
-                                key="delete"
-                                title="Xóa nhóm này?"
-                                description="Hành động này không thể hoàn tác"
-                                onConfirm={() => onDelete(record.id)}
-                                okText="Xóa"
-                                cancelText="Hủy"
-                            >
-                                <Button type="text" danger icon={<DeleteOutlined />}>Xóa</Button>
-                            </Popconfirm>
-                        ]}
-                    >
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500 shrink-0">
-                                <TeamOutlined className="text-xl" />
-                            </div>
-                            <div className="flex flex-col min-w-0 flex-1">
-                                <Text strong className="text-base truncate">{record.team_name}</Text>
-                                <Text type="secondary" className="text-xs">{record.member_count} thành viên</Text>
-                            </div>
-                        </div>
-
-                        <div>
-                            <Text type="secondary" className="block mb-2 text-xs uppercase font-bold tracking-wider">Thành viên</Text>
-                            <Avatar.Group max={{ count: 6, style: { color: '#f56a00', backgroundColor: '#fde3cf' } }}>
-                                {record.members.map(m => (
-                                    <Tooltip title={m.user_name} key={m.user_id}>
-                                        <Avatar src={m.user_avatar_url} icon={<UserOutlined />} />
-                                    </Tooltip>
-                                ))}
-                            </Avatar.Group>
-                        </div>
-
-                        <div className="mt-4 pt-3 border-t border-gray-50 flex justify-between items-center text-gray-400 text-[10px]">
-                            <span>Ngày tạo: {dayjs(record.created_at).format('DD/MM/YYYY')}</span>
-                        </div>
-                    </Card>
-                </List.Item>
-            )}
-        />
-    </div>
-);
-
 const TeamManagementPage = () => {
     useAuth();
     const screens = Grid.useBreakpoint();
@@ -136,6 +57,14 @@ const TeamManagementPage = () => {
     const createTeam = useCreateTeam();
     const updateTeam = useUpdateTeam();
     const deleteTeam = useDeleteTeam();
+
+    const [searchKeyword, setSearchKeyword] = useState('');
+
+    const filteredTeams = useMemo(() => {
+        if (!searchKeyword.trim()) return teams;
+        const lower = searchKeyword.toLowerCase().trim();
+        return teams.filter(t => t.team_name.toLowerCase().includes(lower));
+    }, [teams, searchKeyword]);
 
     const handleCreateOrUpdate = async (values: Record<string, unknown>) => {
         try {
@@ -169,71 +98,14 @@ const TeamManagementPage = () => {
         }
     };
 
-    const columns = [
-        {
-            title: 'Tên nhóm',
-            dataIndex: 'team_name',
-            key: 'team_name',
-            render: (text: string) => (
-                <Space>
-                    <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500">
-                        <TeamOutlined />
-                    </div>
-                    <Text strong>{text}</Text>
-                </Space>
-            )
-        },
-        {
-            title: 'Thành viên',
-            key: 'members',
-            render: (_: unknown, record: TeamResponse) => (
-                <Space direction="vertical" size={4} className="max-w-[300px]">
-                    <Avatar.Group max={{ count: 5, style: { color: '#f56a00', backgroundColor: '#fde3cf' } }} size="small">
-                        {record.members.map(m => (
-                            <Tooltip title={m.user_name} key={m.user_id}>
-                                <Avatar src={m.user_avatar_url} icon={<UserOutlined />} />
-                            </Tooltip>
-                        ))}
-                    </Avatar.Group>
-                    <Text type="secondary" className="text-xs">{record.member_count} thành viên</Text>
-                </Space>
-            )
-        },
-        {
-            title: 'Ngày tạo',
-            dataIndex: 'created_at',
-            key: 'created_at',
-            render: (date: string) => dayjs(date).format('DD/MM/YYYY HH:mm')
-        },
-        {
-            title: 'Thao tác',
-            key: 'actions',
-            render: (_: unknown, record: TeamResponse) => (
-                <Space>
-                    <Button
-                        icon={<EditOutlined />}
-                        onClick={() => {
-                            setEditingItem(record);
-                            form.setFieldsValue({
-                                team_name: record.team_name,
-                                member_ids: record.members.map(m => m.user_id)
-                            });
-                            setIsModalOpen(true);
-                        }}
-                    />
-                    <Popconfirm
-                        title="Xóa nhóm này?"
-                        description="Hành động này không thể hoàn tác"
-                        onConfirm={() => handleDelete(record.id)}
-                        okText="Xóa"
-                        cancelText="Hủy"
-                    >
-                        <Button icon={<DeleteOutlined />} danger />
-                    </Popconfirm>
-                </Space>
-            )
-        }
-    ];
+    const handleEdit = (item: TeamResponse) => {
+        setEditingItem(item);
+        form.setFieldsValue({
+            team_name: item.team_name,
+            member_ids: item.members.map(m => m.user_id)
+        });
+        setIsModalOpen(true);
+    };
 
     return (
         <motion.div
@@ -249,89 +121,68 @@ const TeamManagementPage = () => {
                             <TeamOutlined className="text-2xl" />
                         </div>
                         <div>
-                            <Title level={3} className="text-xl md:text-2xl mt-4 text-indigo-600">Quản lý Nhóm</Title>
+                            <div className="flex items-center gap-2">
+                                <Title level={3} className="!mb-0 text-xl md:text-2xl text-indigo-600">Quản lý Nhóm</Title>
+                                <Tag color="blue" className="font-semibold">{teams.length} nhóm</Tag>
+                            </div>
                             <Text type="secondary" className="text-xs md:text-sm">Tổ chức thành viên vào các nhóm chức năng</Text>
                         </div>
                     </Space>
-                    <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={() => {
-                            setEditingItem(null);
-                            form.resetFields();
-                            setIsModalOpen(true);
-                        }}
-                        className="w-full md:w-auto bg-linear-to-r from-indigo-500 to-purple-600 border-none shadow-md h-10 px-6 font-semibold"
-                    >
-                        Tạo Nhóm mới
-                    </Button>
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+                        <Input
+                            placeholder="Tìm kiếm nhóm..."
+                            prefix={<SearchOutlined className="text-gray-400" />}
+                            value={searchKeyword}
+                            onChange={(e) => setSearchKeyword(e.target.value)}
+                            allowClear
+                            className="w-full sm:w-60"
+                        />
+                        <Button
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            onClick={() => {
+                                setEditingItem(null);
+                                form.resetFields();
+                                setIsModalOpen(true);
+                            }}
+                            className="w-full sm:w-auto bg-linear-to-r from-indigo-500 to-purple-600 border-none shadow-md h-10 px-6 font-semibold"
+                        >
+                            Tạo Nhóm mới
+                        </Button>
+                    </div>
                 </motion.div>
 
                 {!screens.md ? (
                     <motion.div variants={itemVariants}>
-                        <MobileListView
-                            teams={teams}
+                        <TeamMobileList
+                            teams={filteredTeams}
                             isLoading={isLoading}
-                            onEdit={(item) => {
-                                setEditingItem(item);
-                                form.setFieldsValue({
-                                    team_name: item.team_name,
-                                    member_ids: item.members.map(m => m.user_id)
-                                });
-                                setIsModalOpen(true);
-                            }}
+                            onEdit={handleEdit}
                             onDelete={handleDelete}
                         />
                     </motion.div>
                 ) : (
                     <motion.div variants={itemVariants}>
-                        <Table
-                            columns={columns}
-                            dataSource={teams}
-                            rowKey="id"
-                            loading={isLoading}
-                            className="custom-table"
+                        <TeamTable
+                            teams={filteredTeams}
+                            isLoading={isLoading}
+                            onEdit={handleEdit}
+                            onDelete={handleDelete}
                         />
                     </motion.div>
                 )}
             </Card>
 
-            <Modal
-                title={editingItem ? 'Chỉnh sửa Nhóm' : 'Tạo Nhóm mới'}
-                open={isModalOpen}
+            <TeamFormModal
+                isOpen={isModalOpen}
                 onCancel={() => setIsModalOpen(false)}
-                onOk={() => form.submit()}
-                centered
-                confirmLoading={createTeam.isPending || updateTeam.isPending}
-                destroyOnHidden
-            >
-                <Form form={form} layout="vertical" onFinish={handleCreateOrUpdate} className="mt-4">
-                    <Form.Item
-                        name="team_name"
-                        label="Tên nhóm"
-                        rules={[{ required: true, message: 'Vui lòng nhập tên nhóm' }]}
-                    >
-                        <Input placeholder="Ví dụ: Đội AI, Đội Backend..." />
-                    </Form.Item>
-
-                    <Form.Item
-                        name="member_ids"
-                        label="Thành viên"
-                    >
-                        <Select
-                            mode="multiple"
-                            allowClear
-                            style={{ width: '100%' }}
-                            placeholder="Chọn thành viên"
-                            optionFilterProp="children"
-                        >
-                            {users.map(u => (
-                                <Option key={u.id} value={u.id}>{u.name} ({u.email})</Option>
-                            ))}
-                        </Select>
-                    </Form.Item>
-                </Form>
-            </Modal>
+                onFinish={handleCreateOrUpdate}
+                editingItem={editingItem}
+                loading={createTeam.isPending || updateTeam.isPending}
+                users={users}
+                form={form}
+                isMobile={!screens.md}
+            />
         </motion.div>
     );
 };

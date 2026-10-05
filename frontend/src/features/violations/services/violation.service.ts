@@ -25,6 +25,11 @@ export const violationService = {
     return response.data;
   },
 
+  bulkDeleteViolations: async (ids: number[]) => {
+    const response = await axiosInstance.post<ApiResponse<{ deleted_count: number }>>('/violations/bulk-delete', { ids });
+    return response.data;
+  },
+
   restoreViolation: async (id: number) => {
     const response = await axiosInstance.put<ApiResponse<ViolationResponse>>(`/violations/${id}/restore`);
     return response.data;

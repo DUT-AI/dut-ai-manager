@@ -28,6 +28,12 @@ class ViolationUpdate(BaseModel):
     date: datetime | None = None
 
 
+class BulkDeleteViolationsIn(BaseModel):
+    """Request body for bulk deleting violations."""
+
+    ids: list[int]
+
+
 # --- Response DTOs ---
 
 

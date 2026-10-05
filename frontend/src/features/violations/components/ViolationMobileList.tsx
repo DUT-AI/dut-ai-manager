@@ -1,4 +1,4 @@
-import { Card, Space, List, Avatar, Typography, Button, Popconfirm } from 'antd';
+import { Card, Space, List, Avatar, Typography, Button, Popconfirm, Checkbox } from 'antd';
 import { CalendarOutlined, UserOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { ViolationResponse } from '@/features/violations/types/violation.types';
@@ -10,6 +10,8 @@ interface ViolationMobileListProps {
     isLoading: boolean;
     canUpdate: boolean;
     canDelete: boolean;
+    selectedRowKeys?: number[];
+    onSelectionChange?: (keys: number[]) => void;
     onViewDetail: (item: ViolationResponse) => void;
     onEdit: (item: ViolationResponse) => void;
     onDelete: (id: number) => void;
@@ -20,6 +22,8 @@ const ViolationMobileList = ({
     isLoading,
     canUpdate,
     canDelete,
+    selectedRowKeys = [],
+    onSelectionChange,
     onViewDetail,
     onEdit,
     onDelete
@@ -32,7 +36,11 @@ const ViolationMobileList = ({
             renderItem={(record) => (
                 <List.Item className="px-2 !mb-4 !border-0">
                     <Card
-                        className="w-full shadow-sm border-gray-100 overflow-hidden"
+                        className={`w-full shadow-sm border overflow-hidden transition-colors ${
+                            selectedRowKeys.includes(record.id)
+                                ? 'border-red-300 bg-red-50/20'
+                                : 'border-gray-100'
+                        }`}
                         styles={{ body: { padding: '16px' } }}
                         onClick={() => onViewDetail(record)}
                     >
@@ -41,6 +49,19 @@ const ViolationMobileList = ({
                                 <CalendarOutlined />
                                 <span>{dayjs(record.date).format('DD/MM/YYYY HH:mm')}</span>
                             </Space>
+                            {canDelete && onSelectionChange && (
+                                <div onClick={(e) => e.stopPropagation()}>
+                                    <Checkbox
+                                        checked={selectedRowKeys.includes(record.id)}
+                                        onChange={(e) => {
+                                            const next = e.target.checked
+                                                ? [...selectedRowKeys, record.id]
+                                                : selectedRowKeys.filter((k) => k !== record.id);
+                                            onSelectionChange(next);
+                                        }}
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         <div className="flex items-center gap-3 mb-4">

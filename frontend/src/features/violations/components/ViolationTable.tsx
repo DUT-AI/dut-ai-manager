@@ -10,6 +10,8 @@ interface ViolationTableProps {
     isLoading: boolean;
     canUpdate: boolean;
     canDelete: boolean;
+    selectedRowKeys?: number[];
+    onSelectionChange?: (keys: number[]) => void;
     onEdit: (item: ViolationResponse) => void;
     onDelete: (id: number) => void;
     onRowClick: (item: ViolationResponse) => void;
@@ -20,6 +22,8 @@ const ViolationTable = ({
     isLoading,
     canUpdate,
     canDelete,
+    selectedRowKeys = [],
+    onSelectionChange,
     onEdit,
     onDelete,
     onRowClick
@@ -87,12 +91,18 @@ const ViolationTable = ({
         },
     ];
 
+    const rowSelection = canDelete && onSelectionChange ? {
+        selectedRowKeys,
+        onChange: (keys: React.Key[]) => onSelectionChange(keys as number[]),
+    } : undefined;
+
     return (
         <Table
             columns={columns}
             dataSource={violations}
             rowKey="id"
             loading={isLoading}
+            rowSelection={rowSelection}
             className="border border-gray-100 rounded-lg custom-table cursor-pointer"
             pagination={{ pageSize: 10 }}
             onRow={(record) => ({

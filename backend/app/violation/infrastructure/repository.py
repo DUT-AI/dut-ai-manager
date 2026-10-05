@@ -14,7 +14,8 @@ from sqlalchemy.orm import Session, joinedload
 from app.shared.infrastructure.base_repository import BaseRepository
 from app.violation.domain.entity import Violation
 from app.violation.infrastructure.model import ViolationModel
-
+from sqlalchemy import update
+from app.utils.datetime import get_current_utc7_time
 
 class ViolationRepository(BaseRepository[ViolationModel, Violation]):
     """Concrete repository using BaseRepository logic."""
@@ -230,3 +231,17 @@ class ViolationRepository(BaseRepository[ViolationModel, Violation]):
             }
             for r in rows
         ]
+
+    def bulk_delete(self, ids: list[int]) -> int:
+        """Soft delete multiple violations by IDs."""
+        if not ids:
+            return 0
+
+        statement = (
+            update(ViolationModel)
+            .where(ViolationModel.id.in_(ids), ViolationModel.is_deleted == False)  # noqa: E712
+            .values(is_deleted=True, updated_at=get_current_utc7_time())
+        )
+        result = self.session.execute(statement)
+        self.session.flush()
+        return result.rowcount or 0

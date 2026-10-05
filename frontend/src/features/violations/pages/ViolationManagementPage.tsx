@@ -1,7 +1,13 @@
 import { useState } from 'react';
-import { Button, Card, Space, Form, message, Typography, Grid } from 'antd';
-import { PlusOutlined, WarningOutlined } from '@ant-design/icons';
-import { useViolations, useCreateViolation, useUpdateViolation, useDeleteViolation } from '../hooks/useViolations';
+import { Button, Card, Space, Form, message, Typography, Grid, Popconfirm } from 'antd';
+import { PlusOutlined, WarningOutlined, DeleteOutlined } from '@ant-design/icons';
+import {
+    useViolations,
+    useCreateViolation,
+    useUpdateViolation,
+    useDeleteViolation,
+    useBulkDeleteViolations
+} from '../hooks/useViolations';
 import { useUsers } from '@/features/users';
 import { useAuth } from '@/features/auth';
 import { ViolationPermission } from '@/features/rbac/types/rbac.types';
@@ -55,6 +61,10 @@ const ViolationManagementPage = () => {
     const createViolation = useCreateViolation();
     const updateViolation = useUpdateViolation();
     const deleteViolation = useDeleteViolation();
+    const bulkDeleteViolation = useBulkDeleteViolations();
+
+    // Selection for bulk delete
+    const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
 
     // Modal Create/Edit
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -101,9 +111,23 @@ const ViolationManagementPage = () => {
             await deleteViolation.mutateAsync(id);
             message.success('Xóa vi phạm thành công');
             setIsDetailOpen(false);
+            setSelectedRowKeys((prev) => prev.filter((k) => k !== id));
         } catch (error: unknown) {
             const err = error as { response?: { data?: { message?: string } } };
             message.error(err?.response?.data?.message || 'Xóa thất bại');
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedRowKeys.length === 0) return;
+        try {
+            const res = await bulkDeleteViolation.mutateAsync(selectedRowKeys);
+            const count = res?.data?.deleted_count ?? selectedRowKeys.length;
+            message.success(`Đã xóa thành công ${count} vi phạm`);
+            setSelectedRowKeys([]);
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string } } };
+            message.error(err?.response?.data?.message || 'Xóa hàng loạt thất bại');
         }
     };
 
@@ -173,6 +197,53 @@ const ViolationManagementPage = () => {
                     />
                 </motion.div>
 
+                {/* Bulk Action Bar khi có dòng được chọn */}
+                {selectedRowKeys.length > 0 && canDelete && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="my-3 p-3 rounded-xl bg-red-50/90 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 flex items-center justify-between flex-wrap gap-2 shadow-xs"
+                    >
+                        <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-200 text-xs font-bold">
+                                {selectedRowKeys.length}
+                            </span>
+                            <span className="text-sm font-medium text-red-900 dark:text-red-200">
+                                Đã chọn <b>{selectedRowKeys.length}</b> vi phạm
+                            </span>
+                        </div>
+                        <Space size="small">
+                            <Button
+                                size="small"
+                                onClick={() => setSelectedRowKeys([])}
+                                disabled={bulkDeleteViolation.isPending}
+                                className="text-xs rounded-lg"
+                            >
+                                Bỏ chọn
+                            </Button>
+                            <Popconfirm
+                                title="Xóa các vi phạm đã chọn?"
+                                description={`Bạn có chắc chắn muốn xóa ${selectedRowKeys.length} vi phạm này không? Dữ liệu có thể khôi phục từ Thùng rác.`}
+                                onConfirm={handleBulkDelete}
+                                okText="Xóa tất cả"
+                                cancelText="Hủy"
+                                okButtonProps={{ danger: true, loading: bulkDeleteViolation.isPending }}
+                            >
+                                <Button
+                                    type="primary"
+                                    danger
+                                    size="small"
+                                    icon={<DeleteOutlined />}
+                                    loading={bulkDeleteViolation.isPending}
+                                    className="text-xs font-semibold rounded-lg shadow-xs"
+                                >
+                                    Xóa hàng loạt ({selectedRowKeys.length})
+                                </Button>
+                            </Popconfirm>
+                        </Space>
+                    </motion.div>
+                )}
+
                 {/* Content Area */}
                 {!screens.md ? (
                     <motion.div variants={itemVariants}>
@@ -181,6 +252,8 @@ const ViolationManagementPage = () => {
                             isLoading={isLoading}
                             canUpdate={canUpdate}
                             canDelete={canDelete}
+                            selectedRowKeys={selectedRowKeys}
+                            onSelectionChange={setSelectedRowKeys}
                             onViewDetail={handleOpenDetail}
                             onEdit={handleOpenEdit}
                             onDelete={handleDelete}
@@ -193,6 +266,8 @@ const ViolationManagementPage = () => {
                             isLoading={isLoading}
                             canUpdate={canUpdate}
                             canDelete={canDelete}
+                            selectedRowKeys={selectedRowKeys}
+                            onSelectionChange={setSelectedRowKeys}
                             onEdit={handleOpenEdit}
                             onDelete={handleDelete}
                             onRowClick={handleOpenDetail}

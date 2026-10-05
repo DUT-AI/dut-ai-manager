@@ -5,6 +5,7 @@ from app.meeting.infrastructure.repository import ParticipantRepository
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
 from app.shared.infrastructure.notification_service import NotificationService
 from app.violation.application import (
+    BulkDeleteViolationsUseCase,
     CreateViolationUseCase,
     DeleteViolationUseCase,
     GetViolationsUseCase,
@@ -39,6 +40,12 @@ class ViolationModuleProvider(Provider):
     @provide
     def delete_violation_uc(self, repo: ViolationRepository) -> DeleteViolationUseCase:
         return DeleteViolationUseCase(repo)
+
+    @provide
+    def bulk_delete_violations_uc(
+        self, repo: ViolationRepository
+    ) -> BulkDeleteViolationsUseCase:
+        return BulkDeleteViolationsUseCase(repo)
 
     @provide
     def restore_violation_uc(

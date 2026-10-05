@@ -71,3 +71,15 @@ export const useDeleteViolation = () => {
     },
   });
 };
+
+export const useBulkDeleteViolations = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (ids: number[]) => violationService.bulkDeleteViolations(ids),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: violationKeys.all });
+    },
+  });
+};
+
