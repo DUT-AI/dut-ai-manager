@@ -58,4 +58,3 @@ if __name__ == "__main__":
     test_get_by_month_with_user_id_only()
     test_get_by_month_with_no_params()
     print("All violation use case tests passed!")
-

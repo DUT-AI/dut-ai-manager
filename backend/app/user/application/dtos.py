@@ -11,7 +11,6 @@ class UserBase(BaseModel):
     phone_number: str | None = None
     status: UserStatus = UserStatus.ACTIVE
     role_ids: list[int] = []
-    avatar_url: str | None = None
     discord_id: str | None = None
 
 
@@ -25,7 +24,6 @@ class UserUpdate(BaseModel):
     phone_number: str | None = None
     role_ids: list[int] | None = None
     status: UserStatus | None = None
-    avatar_url: str | None = None
     discord_id: str | None = None
     check_in_card_code: str | None = None
 
@@ -34,6 +32,7 @@ class UserResponse(UserBase):
     """API: không trả về giá trị thật của check_in_card_code, chỉ cờ đã cấu hình."""
 
     id: int
+    avatar_url: str | None = None
     zalo_bot_id: str | None = None
     role_names: list[str] = []
     permissions: list[str] = []

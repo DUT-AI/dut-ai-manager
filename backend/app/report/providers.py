@@ -100,7 +100,6 @@ class ReportModuleProvider(Provider):
     ) -> GetMonthlyTitlesReportUseCase:
         return GetMonthlyTitlesReportUseCase(stats_repo)
 
-
     @provide
     def get_assign_monthly_titles_uc(
         self,

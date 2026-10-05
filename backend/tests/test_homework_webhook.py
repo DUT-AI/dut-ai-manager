@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import pytest
@@ -24,7 +24,7 @@ async def test_webhook_ignore_external_user(mock_homework_repo):
         lesson_slug="batch-normalization",
         user_id=1000005,
         type=SubmissionType.CODING,
-        submitted_at=datetime.now(timezone.utc),
+        submitted_at=datetime.now(UTC),
     )
 
     result = await use_case.execute(payload)
@@ -42,7 +42,7 @@ async def test_webhook_ignore_nonexistent_homework(mock_homework_repo):
         lesson_slug="nonexistent-slug",
         user_id=12,
         type=SubmissionType.CODING,
-        submitted_at=datetime.now(timezone.utc),
+        submitted_at=datetime.now(UTC),
     )
 
     result = await use_case.execute(payload)
@@ -58,7 +58,7 @@ async def test_webhook_record_coding_submission_success(mock_homework_repo):
         id=1,
         title="Batch Normalization",
         slug="batch-norm",
-        deadline=datetime.now(timezone.utc),
+        deadline=datetime.now(UTC),
         requires_coding=True,
     )
     mock_homework_repo.get_by_slug = MagicMock(return_value=hw)
@@ -70,7 +70,7 @@ async def test_webhook_record_coding_submission_success(mock_homework_repo):
     mock_homework_repo.add_submission = MagicMock(side_effect=fake_add)
 
     use_case = RecordHomeworkSubmissionUseCase(homework_repo=mock_homework_repo)
-    now_time = datetime.now(timezone.utc)
+    now_time = datetime.now(UTC)
     payload = HomeworkSubmissionWebhookIn(
         lesson_slug="batch-norm",
         user_id=42,
@@ -94,7 +94,7 @@ async def test_webhook_record_game_submission_success(mock_homework_repo):
         id=2,
         title="Game Optimization",
         slug="game-opt",
-        deadline=datetime.now(timezone.utc),
+        deadline=datetime.now(UTC),
         requires_game=True,
     )
     mock_homework_repo.get_by_slug = MagicMock(return_value=hw)
@@ -127,7 +127,7 @@ async def test_get_user_homework_submissions_use_case(mock_homework_repo):
         GetUserHomeworkSubmissionsUseCase,
     )
 
-    now_time = datetime.now(timezone.utc)
+    now_time = datetime.now(UTC)
     mock_homework_repo.get_submissions_by_user.return_value = [
         HomeworkSubmission(
             id=1,

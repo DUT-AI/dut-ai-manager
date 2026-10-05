@@ -6,3 +6,8 @@ export { UserRecordDetailModal } from './UserRecordDetailModal';
 export { UserTitleBadge } from './UserTitleBadge';
 export { ViolationModal } from './ViolationModal';
 export { ViolationSection } from './ViolationSection';
+export { UserFilterBar } from './UserFilterBar';
+export { UserTable } from './UserTable';
+export { UserMobileList } from './UserMobileList';
+export { UserFormModal } from './UserFormModal';
+export { ImportUserModal } from './ImportUserModal';

@@ -5,6 +5,7 @@ import type { RoleCreate, RoleUpdate, PermissionCreate, PermissionUpdate } from 
 // Query Keys
 const rbacKeys = {
   roles: ['roles'] as const,
+  role: (id: number) => ['roles', id] as const,
   permissions: ['permissions'] as const,
 };
 
@@ -20,13 +21,26 @@ export const useRoles = () => {
   });
 };
 
-export const usePermissions = () => {
+export const useRole = (roleId: number | null, enabled: boolean = true) => {
+  return useQuery({
+    queryKey: roleId ? rbacKeys.role(roleId) : ['roles', 'detail'],
+    queryFn: async () => {
+      if (!roleId) return null;
+      const response = await rbacService.getRoleById(roleId);
+      return response.data ?? null;
+    },
+    enabled: enabled && !!roleId,
+  });
+};
+
+export const usePermissions = (enabled: boolean = true) => {
   return useQuery({
     queryKey: rbacKeys.permissions,
     queryFn: async () => {
       const response = await rbacService.getPermissions();
       return response.data ?? [];
     },
+    enabled,
     staleTime: 10 * 60 * 1000, // 10 minutes - rarely changes
   });
 };
@@ -108,8 +122,9 @@ export const useAddPermissionToRole = () => {
   return useMutation({
     mutationFn: ({ roleId, permId }: { roleId: number; permId: number }) =>
       rbacService.addPermissionToRole(roleId, permId),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: rbacKeys.roles });
+      queryClient.invalidateQueries({ queryKey: rbacKeys.role(variables.roleId) });
     },
   });
 };
@@ -120,8 +135,9 @@ export const useRemovePermissionFromRole = () => {
   return useMutation({
     mutationFn: ({ roleId, permId }: { roleId: number; permId: number }) =>
       rbacService.removePermissionFromRole(roleId, permId),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: rbacKeys.roles });
+      queryClient.invalidateQueries({ queryKey: rbacKeys.role(variables.roleId) });
     },
   });
 };

@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 
 from app.homework.domain.entity import (
     Homework as HomeworkEntity,
+)
+from app.homework.domain.entity import (
     HomeworkSubmission as HomeworkSubmissionEntity,
 )
 from app.homework.infrastructure.model import (
@@ -199,7 +201,9 @@ class HomeworkRepository:
         For game: requires is_passed == True.
         """
         type_str = str(
-            submission_type.value if hasattr(submission_type, "value") else submission_type
+            submission_type.value
+            if hasattr(submission_type, "value")
+            else submission_type
         ).upper()
         statement = select(HomeworkSubmissionModel.id).where(
             HomeworkSubmissionModel.homework_id == homework_id,
@@ -235,7 +239,9 @@ class HomeworkRepository:
         or by exact (homework_id, user_id, submission_type, submitted_at).
         """
         type_str = str(
-            submission_type.value if hasattr(submission_type, "value") else submission_type
+            submission_type.value
+            if hasattr(submission_type, "value")
+            else submission_type
         ).upper()
 
         # 1. Tìm theo quiz_submission_id (nếu có)
@@ -245,7 +251,8 @@ class HomeworkRepository:
                     HomeworkSubmissionModel.homework_id == homework_id,
                     HomeworkSubmissionModel.user_id == user_id,
                     func.upper(HomeworkSubmissionModel.submission_type) == type_str,
-                    HomeworkSubmissionModel.details["submission_id"].astext == str(quiz_submission_id),
+                    HomeworkSubmissionModel.details["submission_id"].astext
+                    == str(quiz_submission_id),
                 )
                 found = self.session.scalars(stmt).first()
                 if found:

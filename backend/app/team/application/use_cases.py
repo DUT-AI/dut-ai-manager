@@ -1,3 +1,4 @@
+from app.shared.application.response import BadRequestException
 from app.team.application.dtos import (
     TeamCreate,
     TeamMemberResponse,
@@ -7,7 +8,7 @@ from app.team.application.dtos import (
 from app.team.domain.entity import Team as TeamEntity
 from app.team.infrastructure.repository import TeamRepository
 
-from app.shared.application.response import BadRequestException
+
 class TeamUseCases:
     def __init__(self, repository: TeamRepository):
         self.repository = repository
@@ -75,6 +76,7 @@ class TeamUseCases:
                     self.repository.delete(existing.id)
                 else:
                     from app.shared.application.response import BadRequestException
+
                     raise BadRequestException(f"Tên nhóm '{data.team_name}' đã tồn tại")
             team.team_name = data.team_name
 

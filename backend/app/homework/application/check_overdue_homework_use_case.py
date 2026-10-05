@@ -11,7 +11,8 @@ from typing import cast
 from loguru import logger
 
 from app.homework.application.helpers import QuizSubmissionHelper
-from app.homework.domain.entity import Homework as HomeworkEntity, SubmissionType
+from app.homework.domain.entity import Homework as HomeworkEntity
+from app.homework.domain.entity import SubmissionType
 from app.homework.domain.value_objects import HomeworkOverdueDetected
 from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.homework.infrastructure.repository import HomeworkRepository
@@ -115,7 +116,10 @@ class CheckOverdueHomeworkUseCase:
                     db_coding = False
                     if hasattr(self.homework_repo, "has_valid_submission"):
                         res = self.homework_repo.has_valid_submission(
-                            homework.id, user_id, SubmissionType.CODING, homework.deadline
+                            homework.id,
+                            user_id,
+                            SubmissionType.CODING,
+                            homework.deadline,
                         )
                         db_coding = res is True
                     api_coding = user_id in (coding_completed_uids or set())
@@ -150,7 +154,6 @@ class CheckOverdueHomeworkUseCase:
 
                 if not uncompleted_labels:
                     continue
-
 
                 items_str = " và ".join(uncompleted_labels)
                 reason_msg = f"Chưa hoàn thành {items_str} ({homework.title})"

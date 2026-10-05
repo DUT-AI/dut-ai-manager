@@ -94,4 +94,3 @@ class UpdateHomeworkUseCase:
         )
 
         return self.homework_repo.save(updated)
-

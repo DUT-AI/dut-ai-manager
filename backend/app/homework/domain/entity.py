@@ -24,7 +24,6 @@ class Homework(BaseEntity):
     requires_game: bool = False
     assignee_ids: list[int] = []
 
-
     async def notify_external_homework_api(self) -> None:
         """Fire-and-forget POST to external homework service."""
         try:
@@ -46,9 +45,6 @@ class Homework(BaseEntity):
             )
 
 
-
-
-
 class HomeworkSubmission(BaseEntity):
     """Domain model representing a single student homework submission attempt."""
 
@@ -58,5 +54,3 @@ class HomeworkSubmission(BaseEntity):
     submitted_at: datetime
     is_passed: bool = True
     details: dict | None = None
-
-

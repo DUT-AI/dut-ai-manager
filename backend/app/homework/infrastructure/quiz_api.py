@@ -14,7 +14,7 @@ class QuizApiClient:
 
     def _get_headers(self) -> dict[str, str]:
         return {"Content-Type": "application/json"}
-    
+
     async def get_game_leaderboard(self, game_slug: str) -> list[dict[str, Any]] | None:
         """
         Calls GET /api/v1/game/{game_slug}/leaderboard
@@ -234,4 +234,3 @@ class QuizApiClient:
         except httpx.RequestError as exc:
             logger.exception(f"Connection failure to Quiz service at {url}: {exc}")
             raise RuntimeError(f"Cannot connect to Quiz service at {url}") from exc
-

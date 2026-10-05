@@ -139,7 +139,6 @@ class GetHomeworksUseCase:
 
         return responses
 
-
     def get_by_id(self, homework_id: int) -> HomeworkEntity | None:
         return self.homework_repo.get_by_id(homework_id)
 
@@ -286,7 +285,6 @@ class GetHomeworksUseCase:
                 else:
                     # Bài tập thường nếu quá hạn
                     pass
-
 
             reports.append(
                 HomeworkReportResponse(

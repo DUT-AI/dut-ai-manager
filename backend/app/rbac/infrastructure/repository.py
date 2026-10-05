@@ -19,12 +19,8 @@ class RoleRepository(BaseRepository[RoleModel, Role]):
         super().__init__(session, RoleModel)
 
     def get_all_roles(self, skip: int = 0, limit: int = 100) -> list[Role]:
-        """Get all roles with permissions using QuerySupport."""
-        qs = build_query_support(
-            skip=skip,
-            limit=limit,
-            include=["role_permissions", "role_permissions.permission"],
-        )
+        """Get all roles without permissions using QuerySupport."""
+        qs = build_query_support(skip=skip, limit=limit)
         return self.get_all(qs)
 
     def get_role_with_permissions(self, role_id: int) -> Role | None:

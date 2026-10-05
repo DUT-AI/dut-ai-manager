@@ -1,10 +1,12 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, JSON, String, func
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.homework.domain.entity import (
     Homework as HomeworkEntity,
+)
+from app.homework.domain.entity import (
     HomeworkSubmission as HomeworkSubmissionEntity,
 )
 from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
@@ -21,8 +23,12 @@ class HomeworkModel(SQLAlchemyTimestampMixin, Base):
     deadline: Mapped[datetime] = mapped_column(index=True)
     link: Mapped[str | None] = mapped_column(String(500), default=None, nullable=True)
     slug: Mapped[str | None] = mapped_column(String(255), default=None, nullable=True)
-    requires_coding: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
-    requires_game: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
+    requires_coding: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="true", nullable=False
+    )
+    requires_game: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false", nullable=False
+    )
 
     assignees: Mapped[list["HomeworkAssigneeModel"]] = relationship(
         back_populates="homework", cascade="all, delete-orphan", lazy="selectin"
@@ -65,7 +71,6 @@ class HomeworkModel(SQLAlchemyTimestampMixin, Base):
         )
 
 
-
 class HomeworkAssigneeModel(SQLAlchemyTimestampMixin, Base):
     """Mapping between Homework and direct User assignees"""
 
@@ -80,7 +85,7 @@ class HomeworkAssigneeModel(SQLAlchemyTimestampMixin, Base):
     )
 
     homework: Mapped[HomeworkModel] = relationship(back_populates="assignees")
- 
+
 
 class HomeworkSubmissionModel(Base):
     """Append-only audit log of homework submission events."""
@@ -95,9 +100,15 @@ class HomeworkSubmissionModel(Base):
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
     submission_type: Mapped[str] = mapped_column(String(20), nullable=False)
-    submitted_at: Mapped[datetime] = mapped_column(DateTime, default=get_current_utc7_time, nullable=False)
-    is_passed: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
-    details: Mapped[dict | None] = mapped_column(JSON, default=dict, server_default="{}", nullable=True)
+    submitted_at: Mapped[datetime] = mapped_column(
+        DateTime, default=get_current_utc7_time, nullable=False
+    )
+    is_passed: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="true", nullable=False
+    )
+    details: Mapped[dict | None] = mapped_column(
+        JSON, default=dict, server_default="{}", nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=get_current_utc7_time, nullable=False
     )

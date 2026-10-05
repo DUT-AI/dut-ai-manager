@@ -8,14 +8,14 @@ Mapping delegated to ViolationModel.to_entity() / .from_entity().
 from datetime import date, datetime, time
 from typing import Any
 
-from sqlalchemy import desc, extract, select
+from sqlalchemy import desc, extract, select, update
 from sqlalchemy.orm import Session, joinedload
 
 from app.shared.infrastructure.base_repository import BaseRepository
+from app.utils.datetime import get_current_utc7_time
 from app.violation.domain.entity import Violation
 from app.violation.infrastructure.model import ViolationModel
-from sqlalchemy import update
-from app.utils.datetime import get_current_utc7_time
+
 
 class ViolationRepository(BaseRepository[ViolationModel, Violation]):
     """Concrete repository using BaseRepository logic."""

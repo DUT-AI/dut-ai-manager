@@ -1,46 +1,23 @@
 import { useState } from 'react';
-import {
-    Table,
-    Button,
-    Card,
-    Tag,
-    Space,
-    Modal,
-    Form,
-    Input,
-    message,
-    Popconfirm,
-    Typography,
-    Transfer,
-    Grid,
-    List,
-    Checkbox,
-    Spin
-} from 'antd';
-import type { TransferProps } from 'antd';
-import {
-    PlusOutlined,
-    EditOutlined,
-    DeleteOutlined,
-    SafetyCertificateOutlined,
-    LockOutlined,
-    KeyOutlined
-} from '@ant-design/icons';
-import {
-    useRoles,
-    usePermissions,
-    useCreateRole,
-    useUpdateRole,
-    useDeleteRole,
-    useAddPermissionToRole,
-    useRemovePermissionFromRole
-} from '../hooks/useRbac';
-import { RolePermission } from '@/features/rbac/types/rbac.types';
-import type { RoleResponse } from '@/features/rbac/types/rbac.types';
+import { Button, Card, Grid, message, Space, Typography } from 'antd';
+import { LockOutlined, PlusOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import { motion, type Variants } from 'motion/react';
 import { useAuth } from '@/features/auth';
 import useToggle from '@/hooks/useToggle';
 import ApiKeyModal from '@/features/robot/components/ApiKeyModal';
-import { motion, type Variants } from 'motion/react';
+import {
+    useCreateRole,
+    useDeleteRole,
+    useRoles,
+    useUpdateRole,
+} from '../hooks/useRbac';
+import {
+    RoleFormModal,
+    RoleMobileList,
+    RolePermissionModal,
+    RoleTable,
+} from '../components';
+import { RolePermission, type RoleResponse } from '../types/rbac.types';
 
 const { Title, Text } = Typography;
 
@@ -49,9 +26,9 @@ const containerVariants: Variants = {
     visible: {
         opacity: 1,
         transition: {
-            staggerChildren: 0.1
-        }
-    }
+            staggerChildren: 0.1,
+        },
+    },
 };
 
 const itemVariants: Variants = {
@@ -59,288 +36,76 @@ const itemVariants: Variants = {
     visible: {
         opacity: 1,
         y: 0,
-        transition: { duration: 0.4, ease: "easeOut" }
-    }
+        transition: { duration: 0.4, ease: 'easeOut' },
+    },
 };
-
-interface MobileListViewProps {
-    roles: RoleResponse[];
-    isLoading: boolean;
-    canUpdateRole: boolean;
-    canDeleteRole: boolean;
-    onOpenPerms: (role: RoleResponse) => void;
-    onOpenApiKeys: (role: RoleResponse) => void;
-    onEdit: (role: RoleResponse) => void;
-    onDelete: (id: number) => void;
-}
-
-const MobileListView = ({ roles, isLoading, canUpdateRole, canDeleteRole, onOpenPerms, onOpenApiKeys, onEdit, onDelete }: MobileListViewProps) => (
-    <div className="mt-4 px-3">
-        <List
-            dataSource={roles}
-            loading={isLoading}
-            split={false}
-            renderItem={(role) => (
-                <List.Item className="px-2 !mb-4 !border-0">
-                    <Card
-                        className="w-full shadow-sm border-gray-100 overflow-hidden"
-                        styles={{ body: { padding: '16px' } }}
-                        actions={[
-                            <Button
-                                key="perms"
-                                type="text"
-                                icon={<KeyOutlined />}
-                                onClick={() => onOpenPerms(role)}
-                                disabled={!canUpdateRole}
-                            >
-                                Perms
-                            </Button>,
-                            <Button
-                                key="api-keys"
-                                type="text"
-                                icon={<SafetyCertificateOutlined />}
-                                onClick={() => onOpenApiKeys(role)}
-                                disabled={!canUpdateRole}
-                            >
-                                API Keys
-                            </Button>,
-                            <Button
-                                key="edit"
-                                type="text"
-                                icon={<EditOutlined />}
-                                onClick={() => onEdit(role)}
-                                disabled={!canUpdateRole}
-                            >
-                                Edit
-                            </Button>,
-                            <Popconfirm
-                                key="delete"
-                                title="Delete this role?"
-                                onConfirm={() => onDelete(role.id)}
-                                disabled={!canDeleteRole}
-                            >
-                                <Button type="text" danger icon={<DeleteOutlined />} disabled={!canDeleteRole}>Delete</Button>
-                            </Popconfirm>
-                        ]}
-                    >
-                        <div className="flex items-center justify-between mb-4">
-                            <Tag color={role.name === 'admin' ? 'volcano' : role.name === 'leader' ? 'blue' : 'green'} className="uppercase font-bold m-0 text-base py-1 px-3">
-                                {role.name}
-                            </Tag>
-                        </div>
-
-                        <div className="mb-4">
-                            <Text type="secondary" className="block mb-1 text-xs uppercase font-bold tracking-wider">Description</Text>
-                            <Text>{role.description || 'No description provided.'}</Text>
-                        </div>
-
-                        <div>
-                            <Text type="secondary" className="block mb-2 text-xs uppercase font-bold tracking-wider">Permissions ({role.permissions.length})</Text>
-                            <div className="flex flex-wrap gap-1">
-                                {role.permissions.length > 0 ? (
-                                    role.permissions.slice(0, 5).map(p => (
-                                        <Tag key={p.id} color="blue" className="mr-0 mb-1">
-                                            {p.resource}:{p.action}
-                                        </Tag>
-                                    ))
-                                ) : (
-                                    <Text type="secondary" italic className="text-xs">No permissions assigned</Text>
-                                )}
-                                {role.permissions.length > 5 && (
-                                    <Tag className="mr-0 mb-1">+{role.permissions.length - 5} more</Tag>
-                                )}
-                            </div>
-                        </div>
-                    </Card>
-                </List.Item>
-            )}
-        />
-    </div>
-);
 
 const RoleManagementPage = () => {
     const { hasPermission } = useAuth();
-    const [form] = Form.useForm();
+    const screens = Grid.useBreakpoint();
 
-    // TanStack Query hooks
+    // Query roles without permissions (no heavy table joins)
     const { data: roles = [], isLoading } = useRoles();
-    const { data: permissions = [] } = usePermissions();
     const createRole = useCreateRole();
     const updateRole = useUpdateRole();
     const deleteRole = useDeleteRole();
-    const addPermissionToRole = useAddPermissionToRole();
-    const removePermissionFromRole = useRemovePermissionFromRole();
 
-    // Modal states
-    const [isModalOpen, toggleModal] = useToggle(false);
+    // Role Create/Edit Modal state
+    const [isRoleModalOpen, toggleRoleModal] = useToggle(false);
     const [editingRole, setEditingRole] = useState<RoleResponse | null>(null);
+
+    // Permission Modal state (lazy query role permissions only when opened)
     const [isPermModalOpen, togglePermModal] = useToggle(false);
-    const [currentRoleForPerms, setCurrentRoleForPerms] = useState<RoleResponse | null>(null);
-    const [targetKeys, setTargetKeys] = useState<string[]>([]);
-    const [permLoading, setPermLoading] = useState(false);
+    const [selectedRoleForPerms, setSelectedRoleForPerms] = useState<RoleResponse | null>(null);
 
     // API Key Modal state
     const [isApiKeyModalOpen, toggleApiKeyModal] = useToggle(false);
-    const [currentRoleForApiKeys, setCurrentRoleForApiKeys] = useState<RoleResponse | null>(null);
+    const [selectedRoleForApiKeys, setSelectedRoleForApiKeys] = useState<RoleResponse | null>(null);
 
     const canCreateRole = hasPermission(RolePermission.CREATE);
     const canUpdateRole = hasPermission(RolePermission.UPDATE);
     const canDeleteRole = hasPermission(RolePermission.DELETE);
 
-    const handleCreateOrUpdate = async (values: any) => {
+    const handleCreateOrUpdateRole = async (values: Record<string, unknown>) => {
         try {
             if (editingRole) {
-                await updateRole.mutateAsync({ id: editingRole.id, data: values });
+                await updateRole.mutateAsync({ id: editingRole.id, data: values as any });
                 message.success('Role updated successfully');
             } else {
-                await createRole.mutateAsync(values);
+                await createRole.mutateAsync(values as any);
                 message.success('Role created successfully');
             }
-            toggleModal(false);
-            form.resetFields();
-        } catch (error: any) {
-            message.error(error?.response?.data?.message || 'Operation failed');
+            toggleRoleModal(false);
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string } } };
+            message.error(err?.response?.data?.message || 'Operation failed');
         }
     };
 
-    const handleDelete = async (id: number) => {
+    const handleDeleteRole = async (id: number) => {
         try {
             await deleteRole.mutateAsync(id);
             message.success('Role deleted successfully');
-        } catch (error: any) {
-            message.error(error?.response?.data?.message || 'Delete failed');
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string } } };
+            message.error(err?.response?.data?.message || 'Delete failed');
         }
     };
 
-    const openPermissionModal = (role: RoleResponse) => {
-        setCurrentRoleForPerms(role);
-        const assignedKeys = role.permissions.map(p => p.id.toString());
-        setTargetKeys(assignedKeys);
+    const handleOpenPermModal = (role: RoleResponse) => {
+        setSelectedRoleForPerms(role);
         togglePermModal(true);
     };
 
-    const openApiKeyModal = (role: RoleResponse) => {
-        setCurrentRoleForApiKeys(role);
+    const handleOpenApiKeyModal = (role: RoleResponse) => {
+        setSelectedRoleForApiKeys(role);
         toggleApiKeyModal(true);
     };
 
-    const handlePermTransfer: TransferProps['onChange'] = async (nextTargetKeys, direction, moveKeys) => {
-        if (!currentRoleForPerms) return;
-
-        try {
-            setPermLoading(true);
-            for (const key of moveKeys) {
-                const permId = parseInt(key as string);
-                if (direction === 'right') {
-                    await addPermissionToRole.mutateAsync({ roleId: currentRoleForPerms.id, permId });
-                } else {
-                    await removePermissionFromRole.mutateAsync({ roleId: currentRoleForPerms.id, permId });
-                }
-            }
-            message.success('Permissions updated');
-            setTargetKeys(nextTargetKeys as string[]);
-        } catch (error: any) {
-            message.error(error?.response?.data?.message || 'Failed to update permissions');
-        } finally {
-            setPermLoading(false);
-        }
+    const handleOpenEditModal = (role: RoleResponse) => {
+        setEditingRole(role);
+        toggleRoleModal(true);
     };
-
-    const handleMobilePermToggle = async (permId: number, checked: boolean) => {
-        if (!currentRoleForPerms) return;
-        try {
-            setPermLoading(true);
-            if (checked) {
-                await addPermissionToRole.mutateAsync({ roleId: currentRoleForPerms.id, permId });
-            } else {
-                await removePermissionFromRole.mutateAsync({ roleId: currentRoleForPerms.id, permId });
-            }
-            const newKeys = checked
-                ? [...targetKeys, permId.toString()]
-                : targetKeys.filter(k => k !== permId.toString());
-            setTargetKeys(newKeys);
-            message.success('Permission updated');
-        } catch (error: any) {
-            message.error(error?.response?.data?.message || 'Failed to update permission');
-        } finally {
-            setPermLoading(false);
-        }
-    };
-
-    const columns = [
-        {
-            title: 'Role Name',
-            dataIndex: 'name',
-            key: 'name',
-            render: (name: string) => (
-                <Tag color={name === 'admin' ? 'volcano' : name === 'leader' ? 'blue' : 'green'} className="uppercase font-bold">
-                    {name}
-                </Tag>
-            ),
-        },
-        {
-            title: 'Description',
-            dataIndex: 'description',
-            key: 'description',
-        },
-        {
-            title: 'Permissions',
-            key: 'permissions',
-            render: (_: any, record: RoleResponse) => (
-                <Space wrap>
-                    {record.permissions.length > 0 ? (
-                        record.permissions.map(p => (
-                            <Tag key={p.id} color="blue">
-                                {p.resource}:{p.action}
-                            </Tag>
-                        ))
-                    ) : (
-                        <Text type="secondary" italic>No permissions</Text>
-                    )}
-                </Space>
-            ),
-        },
-        {
-            title: 'Actions',
-            key: 'actions',
-            render: (_: any, record: RoleResponse) => (
-                <Space>
-                    <Button
-                        icon={<KeyOutlined />}
-                        onClick={() => openPermissionModal(record)}
-                        disabled={!canUpdateRole}
-                    >
-                        Manage Perms
-                    </Button>
-                    <Button
-                        icon={<SafetyCertificateOutlined />}
-                        onClick={() => openApiKeyModal(record)}
-                        disabled={!canUpdateRole}
-                    >
-                        API Keys
-                    </Button>
-                    <Button
-                        icon={<EditOutlined />}
-                        onClick={() => {
-                            setEditingRole(record);
-                            form.setFieldsValue(record);
-                            toggleModal(true);
-                        }}
-                        disabled={!canUpdateRole}
-                    />
-                    <Popconfirm
-                        title="Are you sure to delete this role?"
-                        onConfirm={() => handleDelete(record.id)}
-                        disabled={!canDeleteRole}
-                    >
-                        <Button icon={<DeleteOutlined />} danger disabled={!canDeleteRole} />
-                    </Popconfirm>
-                </Space>
-            ),
-        },
-    ];
-
-    const screens = Grid.useBreakpoint();
 
     return (
         <motion.div
@@ -349,15 +114,30 @@ const RoleManagementPage = () => {
             animate="visible"
             className="p-4 md:p-6"
         >
-            <Card className={!screens.md ? "bg-transparent shadow-none border-none" : "shadow-sm border-gray-100 rounded-xl overflow-hidden"} styles={{ body: { padding: !screens.md ? 0 : undefined } }}>
-                <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 px-3 md:px-0">
+            <Card
+                className={
+                    !screens.md
+                        ? 'bg-transparent shadow-none border-none'
+                        : 'shadow-sm border-gray-100 rounded-xl overflow-hidden'
+                }
+                styles={{ body: { padding: !screens.md ? 0 : undefined } }}
+            >
+                {/* Header */}
+                <motion.div
+                    variants={itemVariants}
+                    className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 px-3 md:px-0"
+                >
                     <Space size="middle">
                         <div className="hidden md:flex w-12 h-12 rounded-xl bg-purple-50 items-center justify-center text-purple-600 shadow-sm">
                             <SafetyCertificateOutlined className="text-2xl" />
                         </div>
                         <div>
-                            <Title level={3} className="text-xl md:text-2xl mt-4 text-purple-600">Quản lý Vai trò</Title>
-                            <Text type="secondary" className="text-xs md:text-sm">Phân quyền và quản lý API Keys cho các vai trò</Text>
+                            <Title level={3} className="text-xl md:text-2xl mt-4 text-purple-600">
+                                Quản lý Vai trò
+                            </Title>
+                            <Text type="secondary" className="text-xs md:text-sm">
+                                Phân quyền và quản lý API Keys cho các vai trò
+                            </Text>
                         </div>
                     </Space>
                     {canCreateRole && (
@@ -366,8 +146,7 @@ const RoleManagementPage = () => {
                             icon={<PlusOutlined />}
                             onClick={() => {
                                 setEditingRole(null);
-                                form.resetFields();
-                                toggleModal(true);
+                                toggleRoleModal(true);
                             }}
                             className="w-full md:w-auto bg-linear-to-r from-[#667eea] to-[#764ba2] border-none font-semibold h-10"
                         >
@@ -376,8 +155,12 @@ const RoleManagementPage = () => {
                     )}
                 </motion.div>
 
+                {/* Read-only Alert */}
                 {!canUpdateRole && (
-                    <motion.div variants={itemVariants} className="mb-4 bg-yellow-50 p-4 rounded-lg border border-yellow-100 mx-3 md:mx-0">
+                    <motion.div
+                        variants={itemVariants}
+                        className="mb-4 bg-yellow-50 p-4 rounded-lg border border-yellow-100 mx-3 md:mx-0"
+                    >
                         <Text type="warning" className="flex items-center text-sm">
                             <LockOutlined className="mr-2" />
                             <span>Read-only mode. Contact admin for access.</span>
@@ -385,116 +168,61 @@ const RoleManagementPage = () => {
                     </motion.div>
                 )}
 
+                {/* Role List (Mobile or Desktop Table) */}
                 {!screens.md ? (
                     <motion.div variants={itemVariants}>
-                        <MobileListView
+                        <RoleMobileList
                             roles={roles}
                             isLoading={isLoading}
                             canUpdateRole={canUpdateRole}
                             canDeleteRole={canDeleteRole}
-                            onOpenPerms={openPermissionModal}
-                            onOpenApiKeys={openApiKeyModal}
-                            onEdit={(role) => {
-                                setEditingRole(role);
-                                form.setFieldsValue(role);
-                                toggleModal(true);
-                            }}
-                            onDelete={handleDelete}
+                            onOpenPerms={handleOpenPermModal}
+                            onOpenApiKeys={handleOpenApiKeyModal}
+                            onEdit={handleOpenEditModal}
+                            onDelete={handleDeleteRole}
                         />
                     </motion.div>
                 ) : (
                     <motion.div variants={itemVariants}>
-                        <Table
-                            columns={columns}
-                            dataSource={roles}
-                            rowKey="id"
-                            loading={isLoading}
-                            pagination={false}
-                            className="border border-gray-100 rounded-lg"
+                        <RoleTable
+                            roles={roles}
+                            isLoading={isLoading}
+                            canUpdateRole={canUpdateRole}
+                            canDeleteRole={canDeleteRole}
+                            onOpenPerms={handleOpenPermModal}
+                            onOpenApiKeys={handleOpenApiKeyModal}
+                            onEdit={handleOpenEditModal}
+                            onDelete={handleDeleteRole}
                         />
                     </motion.div>
                 )}
             </Card>
 
-            {/* Role Create/Update Modal */}
-            <Modal
-                title={editingRole ? 'Edit Role' : 'Create Role'}
-                open={isModalOpen}
-                onCancel={() => toggleModal(false)}
-                onOk={() => form.submit()}
-                confirmLoading={createRole.isPending || updateRole.isPending}
-            >
-                <Form form={form} layout="vertical" onFinish={handleCreateOrUpdate} className="mt-4">
-                    <Form.Item name="name" label="Role Name" rules={[{ required: true }]}>
-                        <Input placeholder="e.g. admin, leader, teammate" />
-                    </Form.Item>
-                    <Form.Item name="description" label="Description">
-                        <Input.TextArea placeholder="Describe what this role is for" />
-                    </Form.Item>
-                </Form>
-            </Modal>
+            {/* Role Create/Edit Modal */}
+            <RoleFormModal
+                open={isRoleModalOpen}
+                editingRole={editingRole}
+                isSubmitting={createRole.isPending || updateRole.isPending}
+                onCancel={() => toggleRoleModal(false)}
+                onSubmit={handleCreateOrUpdateRole}
+            />
 
-            {/* Permission Assignment Modal */}
-            <Modal
-                title={`Permissions: ${currentRoleForPerms?.name.toUpperCase()}`}
+            {/* Permission Assignment Modal (Lazy loaded permissions) */}
+            <RolePermissionModal
                 open={isPermModalOpen}
-                onCancel={() => togglePermModal(false)}
-                width={screens.md ? 700 : '95%'}
-                footer={null}
-                centered
-                styles={{ body: { maxHeight: '70vh', overflowY: 'auto', padding: screens.md ? '24px' : '12px' } }}
-            >
-                <div className="mt-2">
-                    {screens.md ? (
-                        <div className="flex justify-center">
-                            <Transfer
-                                dataSource={permissions.map(p => ({
-                                    key: p.id.toString(),
-                                    title: `${p.resource}:${p.action}`,
-                                    description: p.description || '',
-                                }))}
-                                titles={['Available', 'Assigned']}
-                                targetKeys={targetKeys}
-                                onChange={handlePermTransfer}
-                                render={item => item.title}
-                                disabled={permLoading}
-                                listStyle={{
-                                    width: 300,
-                                    height: 400,
-                                }}
-                            />
-                        </div>
-                    ) : (
-                        <Spin spinning={permLoading}>
-                            <List
-                                dataSource={permissions}
-                                renderItem={p => (
-                                    <List.Item className="!px-0">
-                                        <Checkbox
-                                            checked={targetKeys.includes(p.id.toString())}
-                                            onChange={(e) => handleMobilePermToggle(p.id, e.target.checked)}
-                                            className="w-full"
-                                        >
-                                            <div className="flex flex-col ml-2">
-                                                <Text strong>{p.resource}:{p.action}</Text>
-                                                {p.description && <Text type="secondary" className="text-xs">{p.description}</Text>}
-                                            </div>
-                                        </Checkbox>
-                                    </List.Item>
-                                )}
-                            />
-                        </Spin>
-                    )}
-                </div>
-            </Modal>
+                roleId={selectedRoleForPerms?.id ?? null}
+                roleName={selectedRoleForPerms?.name}
+                onClose={() => togglePermModal(false)}
+            />
 
             {/* API Key Management Modal */}
             <ApiKeyModal
-                role={currentRoleForApiKeys}
+                role={selectedRoleForApiKeys}
                 open={isApiKeyModalOpen}
                 onClose={() => toggleApiKeyModal(false)}
             />
         </motion.div>
     );
 };
+
 export default RoleManagementPage;

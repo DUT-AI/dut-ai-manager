@@ -28,7 +28,9 @@ class SyncHomeworkFromQuizUseCase:
 
         slug = QuizSubmissionHelper.extract_slug_from_entity(homework)
         if not slug:
-            raise BadRequestException("Bài tập không có đường dẫn/slug hợp lệ để đồng bộ từ Quiz")
+            raise BadRequestException(
+                "Bài tập không có đường dẫn/slug hợp lệ để đồng bộ từ Quiz"
+            )
 
         now = get_current_utc7_time()
         synced_coding = 0
@@ -40,7 +42,9 @@ class SyncHomeworkFromQuizUseCase:
         if homework.requires_coding:
             try:
                 # 1.1 Thử lấy danh sách đầy đủ tất cả các lần nộp (Full History)
-                submissions = await self.quiz_api.get_homework_submissions_for_sync(slug)
+                submissions = await self.quiz_api.get_homework_submissions_for_sync(
+                    slug
+                )
                 if submissions is not None:
                     for sub in submissions:
                         uid = sub.get("user_id")
@@ -107,7 +111,9 @@ class SyncHomeworkFromQuizUseCase:
                             if uid >= 1_000_000:
                                 continue
 
-                            raw_sub_at = entry.get("submitted_at") or entry.get("completed_at")
+                            raw_sub_at = entry.get("submitted_at") or entry.get(
+                                "completed_at"
+                            )
                             sub_time = to_utc7_naive(raw_sub_at)
                             if not sub_time:
                                 continue
@@ -128,7 +134,9 @@ class SyncHomeworkFromQuizUseCase:
                                         is_passed=True,
                                         details={
                                             "max_score": entry.get("max_score"),
-                                            "submission_count": entry.get("submission_count", 1),
+                                            "submission_count": entry.get(
+                                                "submission_count", 1
+                                            ),
                                             "source": "manual_sync",
                                         },
                                     )
@@ -216,7 +224,9 @@ class SyncHomeworkFromQuizUseCase:
                             ans_q = row.get("answered_questions", 0)
 
                             if is_completed and total_q > 0 and ans_q >= total_q:
-                                raw_sub_at = row.get("completed_at") or row.get("submitted_at")
+                                raw_sub_at = row.get("completed_at") or row.get(
+                                    "submitted_at"
+                                )
                                 sub_time = to_utc7_naive(raw_sub_at)
                                 if not sub_time:
                                     continue
@@ -236,9 +246,13 @@ class SyncHomeworkFromQuizUseCase:
                                             submitted_at=sub_time,
                                             is_passed=True,
                                             details={
-                                                "final_score": row.get("final_score", 0),
+                                                "final_score": row.get(
+                                                    "final_score", 0
+                                                ),
                                                 "gold": row.get("gold", 0),
-                                                "attempt_count": row.get("attempt_count", 1),
+                                                "attempt_count": row.get(
+                                                    "attempt_count", 1
+                                                ),
                                                 "source": "manual_sync",
                                             },
                                         )

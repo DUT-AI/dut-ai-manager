@@ -16,6 +16,11 @@ export const rbacService = {
     return response.data;
   },
 
+  getRoleById: async (id: number): Promise<ApiResponse<RoleResponse>> => {
+    const response = await axiosInstance.get<ApiResponse<RoleResponse>>(`/rbac/roles/${id}`);
+    return response.data;
+  },
+
   createRole: async (data: RoleCreate): Promise<ApiResponse<RoleResponse>> => {
     const response = await axiosInstance.post<ApiResponse<RoleResponse>>('/rbac/roles', data);
     return response.data;

@@ -1,5 +1,5 @@
-from typing import Any
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -28,7 +28,6 @@ class HomeworkUpdate(BaseModel):
     requires_coding: bool | None = None
     requires_game: bool | None = None
     assignee_ids: list[int] | None = None
-
 
 
 class HomeworkResponse(HomeworkBase):

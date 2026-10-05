@@ -71,7 +71,6 @@ class HomeworkModuleProvider(Provider):
             homework_repo=homework_repo,
             quiz_api=quiz_api,
         )
-    
 
     @provide
     def get_delete_homework_use_case(

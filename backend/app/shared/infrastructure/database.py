@@ -21,8 +21,8 @@ engine = create_engine(
 )
 
 
-
 from app.shared.application.response import BadRequestException
+
 
 def get_session():
     """
@@ -41,5 +41,7 @@ def get_session():
             raise
         except Exception:
             session.rollback()
-            logger.error("Session rollback due to unexpected system exception", exc_info=True)
+            logger.error(
+                "Session rollback due to unexpected system exception", exc_info=True
+            )
             raise

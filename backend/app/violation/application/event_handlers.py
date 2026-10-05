@@ -110,7 +110,6 @@ class AutomatedViolationHandler(EventHandler):
         )
 
         if late_req is None:
-            
             try:
                 self.participant_repo.update_participant_status(
                     meeting_id=event.meeting_id,
@@ -166,7 +165,6 @@ class AutomatedViolationHandler(EventHandler):
                 except Exception as e:
                     logger.warning(f"Could not update participant status: {e}")
         else:
-            
             try:
                 self.participant_repo.update_participant_status(
                     meeting_id=event.meeting_id,

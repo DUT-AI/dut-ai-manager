@@ -38,9 +38,13 @@ def mock_quiz_api():
 
 
 @pytest.mark.asyncio
-async def test_create_homework_rejects_when_no_options_selected(mock_homework_repo, mock_quiz_api):
+async def test_create_homework_rejects_when_no_options_selected(
+    mock_homework_repo, mock_quiz_api
+):
     """Bắt lỗi khi không chọn bất kỳ option nào (cả coding và game đều False)."""
-    use_case = CreateHomeworkUseCase(homework_repo=mock_homework_repo, quiz_api=mock_quiz_api)
+    use_case = CreateHomeworkUseCase(
+        homework_repo=mock_homework_repo, quiz_api=mock_quiz_api
+    )
 
     data = HomeworkCreate(
         title="Bài tập mẫu",
@@ -58,10 +62,14 @@ async def test_create_homework_rejects_when_no_options_selected(mock_homework_re
 
 
 @pytest.mark.asyncio
-async def test_create_homework_rejects_when_lesson_not_found_on_quiz(mock_homework_repo, mock_quiz_api):
+async def test_create_homework_rejects_when_lesson_not_found_on_quiz(
+    mock_homework_repo, mock_quiz_api
+):
     """Bắt lỗi khi slug bài học không tồn tại trên hệ thống Quiz (404/None)."""
     mock_quiz_api.get_lesson_metadata = AsyncMock(return_value=None)
-    use_case = CreateHomeworkUseCase(homework_repo=mock_homework_repo, quiz_api=mock_quiz_api)
+    use_case = CreateHomeworkUseCase(
+        homework_repo=mock_homework_repo, quiz_api=mock_quiz_api
+    )
 
     data = HomeworkCreate(
         title="Bài tập mẫu",
@@ -79,7 +87,9 @@ async def test_create_homework_rejects_when_lesson_not_found_on_quiz(mock_homewo
 
 
 @pytest.mark.asyncio
-async def test_create_homework_rejects_when_coding_not_available(mock_homework_repo, mock_quiz_api):
+async def test_create_homework_rejects_when_coding_not_available(
+    mock_homework_repo, mock_quiz_api
+):
     """Bắt lỗi khi chọn 'requires_coding' nhưng Quiz metadata báo chưa có bài tập coding."""
     mock_quiz_api.get_lesson_metadata = AsyncMock(
         return_value={
@@ -92,7 +102,9 @@ async def test_create_homework_rejects_when_coding_not_available(mock_homework_r
             "is_ready": True,
         }
     )
-    use_case = CreateHomeworkUseCase(homework_repo=mock_homework_repo, quiz_api=mock_quiz_api)
+    use_case = CreateHomeworkUseCase(
+        homework_repo=mock_homework_repo, quiz_api=mock_quiz_api
+    )
 
     data = HomeworkCreate(
         title="Batch Norm Coding",
@@ -111,7 +123,9 @@ async def test_create_homework_rejects_when_coding_not_available(mock_homework_r
 
 
 @pytest.mark.asyncio
-async def test_create_homework_rejects_when_game_not_available(mock_homework_repo, mock_quiz_api):
+async def test_create_homework_rejects_when_game_not_available(
+    mock_homework_repo, mock_quiz_api
+):
     """Bắt lỗi khi chọn 'requires_game' nhưng Quiz metadata báo chưa có câu hỏi game."""
     mock_quiz_api.get_lesson_metadata = AsyncMock(
         return_value={
@@ -124,7 +138,9 @@ async def test_create_homework_rejects_when_game_not_available(mock_homework_rep
             "is_ready": True,
         }
     )
-    use_case = CreateHomeworkUseCase(homework_repo=mock_homework_repo, quiz_api=mock_quiz_api)
+    use_case = CreateHomeworkUseCase(
+        homework_repo=mock_homework_repo, quiz_api=mock_quiz_api
+    )
 
     data = HomeworkCreate(
         title="ResNet Quiz Game",
@@ -156,7 +172,9 @@ async def test_create_homework_success(mock_homework_repo, mock_quiz_api):
             "is_ready": True,
         }
     )
-    use_case = CreateHomeworkUseCase(homework_repo=mock_homework_repo, quiz_api=mock_quiz_api)
+    use_case = CreateHomeworkUseCase(
+        homework_repo=mock_homework_repo, quiz_api=mock_quiz_api
+    )
 
     data = HomeworkCreate(
         title="UNet Project",
@@ -200,7 +218,9 @@ async def test_update_homework_validation(mock_homework_repo, mock_quiz_api):
         }
     )
 
-    use_case = UpdateHomeworkUseCase(homework_repo=mock_homework_repo, quiz_api=mock_quiz_api)
+    use_case = UpdateHomeworkUseCase(
+        homework_repo=mock_homework_repo, quiz_api=mock_quiz_api
+    )
 
     # Thử update thành requires_coding=True khi quiz không có coding -> Phải fail
     with pytest.raises(BadRequestException) as exc_info:

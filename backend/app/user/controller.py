@@ -2,24 +2,16 @@
 User Web Controller — provides API routes.
 """
 
+from io import BytesIO
 from typing import Annotated
 
-from io import BytesIO
-
+import pandas as pd
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, BackgroundTasks, Depends, Query, Response, UploadFile
-import pandas as pd
 
 from app.core.deps import CurrentUser, PermissionChecker
 from app.core.permissions import UserPermission
 from app.shared.application.response import ApiResponse
-from app.user.application.dtos import (
-    UserCreate,
-    UserImportResult,
-    UserResponse,
-    UserSettingsUpdate,
-    UserUpdate,
-)
 from app.user.application import (
     CreateUserUseCase,
     DeleteUserUseCase,
@@ -27,6 +19,13 @@ from app.user.application import (
     ImportUsersUseCase,
     UpdateAvatarUseCase,
     UpdateUserUseCase,
+)
+from app.user.application.dtos import (
+    UserCreate,
+    UserImportResult,
+    UserResponse,
+    UserSettingsUpdate,
+    UserUpdate,
 )
 
 router = APIRouter(prefix="/users", tags=["users"])

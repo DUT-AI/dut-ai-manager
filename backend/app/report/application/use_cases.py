@@ -229,7 +229,6 @@ class GetViolationReportUseCase:
     ):
         self.violation_repo = violation_repo
 
-
     def execute(
         self,
         month: int | None = None,

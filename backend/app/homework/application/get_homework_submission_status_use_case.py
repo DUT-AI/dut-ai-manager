@@ -91,7 +91,9 @@ class GetHomeworkSubmissionStatusUseCase:
         )
         db_sub_map: dict[tuple[int, str], Any] = {}
         for sub in db_submissions:
-            sub_type = str(sub.submission_type).upper() if sub.submission_type else "CODING"
+            sub_type = (
+                str(sub.submission_type).upper() if sub.submission_type else "CODING"
+            )
             key = (sub.user_id, sub_type)
             if key not in db_sub_map:
                 db_sub_map[key] = sub

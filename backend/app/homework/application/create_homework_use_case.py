@@ -17,7 +17,6 @@ class CreateHomeworkUseCase:
         self.homework_repo = homework_repo
         self.quiz_api = quiz_api
 
-
     async def execute(self, data: HomeworkCreate) -> HomeworkEntity:
         if not data.requires_coding and not data.requires_game:
             raise BadRequestException(
@@ -61,4 +60,3 @@ class CreateHomeworkUseCase:
         )
 
         return self.homework_repo.save(homework)
-

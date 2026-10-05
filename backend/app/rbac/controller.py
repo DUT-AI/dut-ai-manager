@@ -33,6 +33,22 @@ async def get_roles(
     return ApiResponse.success(data=roles, message="Roles retrieved successfully")
 
 
+@router.get("/roles/{role_id}", response_model=ApiResponse[RoleResponse])
+@inject
+async def get_role_by_id(
+    role_id: int,
+    use_cases: FromDishka[RoleUseCases],
+    _current_user: CurrentUser,
+):
+    """Retrieve a specific role with permissions."""
+    role = use_cases.get_role(role_id)
+    if not role:
+        return ApiResponse.error(
+            message="Role not found", status_code=status.HTTP_404_NOT_FOUND
+        )
+    return ApiResponse.success(data=role, message="Role retrieved successfully")
+
+
 @router.post(
     "/roles",
     response_model=ApiResponse[RoleResponse],
@@ -81,7 +97,7 @@ async def delete_role(
     if not success:
         return ApiResponse.error(message="Role not found")
     return ApiResponse.success(message="Role deleted successfully")
-                
+
 
 # --- Permission Endpoints ---
 @router.get("/permissions", response_model=ApiResponse[list[PermissionResponse]])
