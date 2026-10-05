@@ -1,18 +1,19 @@
 <!--
 Sync Impact Report:
-- Version: v1.1.0 -> v1.2.0
+- Version: v1.2.0 -> v1.3.0
 - Ratification Date: 2026-09-25
-- Last Amended: 2026-10-02
-- Principles modified:
-  1. I. Clean Architecture & Practical DDD Boundaries (MUST) -> Expanded with Value Object snapshots (e.g. UserRef) for read-write boundary integrity.
-  2. V. API Backward Compatibility & Non-Null Contract DTOs (MUST) -> Added strict Non-null Contract rules for Read Model DTOs to eliminate undefined values on UI.
+- Last Amended: 2026-10-05
+- Principles added:
+  - VIII. Frontend Component Modularity & Single-Responsibility UI (MUST) -> Mandates strict separation of subcomponents (Modals, Tables, Mobile Lists, Overview Cards, Timelines) into dedicated files within `components/`, disallowing monolithic multi-component files. Pages/Drawers act purely as Orchestrators. Mandates explicit table pagination configurations (`pageSize >= 20`, `pageSizeOptions`, `showTotal`).
 - Principles preserved:
-  2. II. Dependency Injection with Dishka (MUST)
-  3. III. Unified UTC+7 Timezone & DateTime Integrity (MUST)
-  4. IV. Event-Driven Decoupling & Asynchronous Handlers (MUST)
-  6. VI. Idempotency & Network Resilience (MUST)
-  7. VII. Single-Responsibility Use Cases (MUST)
-- Rationale: Standardized Practical DDD (embedding UserRef Value Objects for relational snapshots) and strict Non-Null DTO Contracts on Frontend/Backend.
+  - I. Clean Architecture & Practical DDD Boundaries (MUST)
+  - II. Dependency Injection with Dishka (MUST)
+  - III. Unified UTC+7 Timezone & DateTime Integrity (MUST)
+  - IV. Event-Driven Decoupling & Asynchronous Handlers (MUST)
+  - V. API Backward Compatibility & Non-Null Contract DTOs (MUST)
+  - VI. Idempotency & Network Resilience (MUST)
+  - VII. Single-Responsibility Use Cases (MUST)
+- Rationale: Codifying project constitution with architectural standards for both backend and frontend modularity, preventing regressions on UI component sprawl and hidden pagination.
 -->
 
 # DUT AI Manager Constitution
@@ -44,6 +45,13 @@ Any endpoint that records transactional state over unreliable networks (such as 
 ### VII. Single-Responsibility Use Cases (MUST)
 Each use case in the `application/` layer of every domain MUST be implemented in its own dedicated Python file with the `*_use_case.py` naming convention (e.g. `create_meeting_use_case.py`, `get_violations_use_case.py`). Grouping multiple use case classes into a monolithic file (such as `use_cases.py`, `crud_use_cases.py`, `checkin_use_cases.py`) is prohibited. The `application/__init__.py` file MUST explicitly re-export all domain use cases via `__all__`.
 
+### VIII. Frontend Component Modularity & Single-Responsibility UI (MUST)
+All frontend features in `frontend/src/features/` MUST adhere to modular component architecture:
+- **Strict Separation of Subcomponents**: Monolithic page or drawer files declaring multiple internal components (such as Modals, Form Modals, Tables, Mobile Lists, Timelines, Overview/Stats Cards) within a single file are strictly prohibited.
+- **Dedicated Components Directory**: Subcomponents MUST be placed into individual files inside the feature's `components/` folder and exported cleanly via `components/index.ts`.
+- **Orchestrator Role for Pages and Drawers**: Page and drawer components MUST act solely as orchestrators (managing query/mutation hooks, routing/modal visibility state, and top-level filter states), delegating presentation and table rendering to dedicated subcomponents.
+- **Transparent Data Presentation & Pagination**: All data tables (`Table`) displaying business records MUST configure explicit pagination with `defaultPageSize >= 20`, `pageSizeOptions: ['10', '20', '50', '100']`, `showSizeChanger: true`, and `showTotal` indicators to guarantee no records are inadvertently clipped or hidden from administrators.
+
 ## Security & Compliance Standards
 
 1. **Zero Secret Leakage**: No hardcoding of passwords, JWT secrets, Discord Bot tokens, MinIO credentials, or Zalo App secrets. All configurations MUST read from environment variables managed via `app.core.config.Settings`.
@@ -55,6 +63,7 @@ Each use case in the `application/` layer of every domain MUST be implemented in
 1. **Test Verification**: Any change to domain entities, use cases, or critical calculations (e.g. Attendance 23:59 check, Capacity Monitor, Violation trigger) MUST be covered by automated unit/integration tests (`pytest`).
 2. **Zero Regression Guarantee**: Changes to existing use cases MUST NOT break previously established test suites.
 3. **Migration Integrity**: Database schema modifications MUST include corresponding Alembic migrations with reliable upgrade and downgrade paths.
+4. **Production Build Validation**: Frontend refactorings MUST be validated via `npm run build` to verify zero TypeScript errors and bundle compilation health.
 
 ## Governance
 
@@ -65,4 +74,4 @@ Each use case in the `application/` layer of every domain MUST be implemented in
    - **MINOR**: Addition of new principles or major workflow standards.
    - **PATCH**: Non-semantic clarifications and wording updates.
 
-**Version**: 1.2.0 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-10-02
+**Version**: 1.3.0 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-10-05
