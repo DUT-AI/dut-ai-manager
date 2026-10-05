@@ -164,6 +164,7 @@ export const HomeworkPage: React.FC = () => {
                     loading={loading}
                     emptyText={emptyText}
                     activeTab={activeTab}
+                    onViewDetail={setDetailHomework}
                     handlers={handlers}
                 />
             );

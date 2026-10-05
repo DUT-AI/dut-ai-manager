@@ -1,6 +1,6 @@
 import React from 'react';
 import { List, Card, Button, Space, Popconfirm, Typography } from 'antd';
-import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import type { Homework } from '@/features/homework/types/homework.types';
 import { HomeworkPermission } from '@/features/rbac/types/rbac.types';
 
@@ -15,6 +15,7 @@ interface HomeworkMobileListProps {
     loading: boolean;
     emptyText?: string;
     activeTab: string;
+    onViewDetail?: (homework: Homework) => void;
     handlers: {
         handleOpenEdit: (homework: Homework) => void;
         handleDelete: (id: number) => void;
@@ -26,6 +27,7 @@ export const HomeworkMobileList: React.FC<HomeworkMobileListProps> = ({
     loading,
     emptyText,
     activeTab,
+    onViewDetail,
     handlers
 }) => {
     const { hasPermission } = useAuth();
@@ -46,7 +48,6 @@ export const HomeworkMobileList: React.FC<HomeworkMobileListProps> = ({
                         >
                             <div className="flex items-center justify-between mb-4">
                                 <Text strong className="text-base truncate max-w-[70%]">{record.title}</Text>
-
                             </div>
 
                             <div className="flex items-center gap-2 mb-4 text-xs">
@@ -56,6 +57,16 @@ export const HomeworkMobileList: React.FC<HomeworkMobileListProps> = ({
 
                             <div className="flex justify-end gap-2 pt-3 border-t border-gray-50 bg-gray-50 -mx-4 -mb-4 px-4 py-3">
                                     <Space size="small">
+                                        {onViewDetail && (
+                                            <Button
+                                                size="small"
+                                                icon={<EyeOutlined />}
+                                                onClick={() => onViewDetail(record)}
+                                                style={{ color: '#6366f1', borderColor: '#6366f1' }}
+                                            >
+                                                Chi tiết
+                                            </Button>
+                                        )}
                                         {hasPermission(HomeworkPermission.UPDATE) && (
                                             <Button size="small" icon={<EditOutlined />} onClick={() => handleOpenEdit(record)} />
                                         )}
