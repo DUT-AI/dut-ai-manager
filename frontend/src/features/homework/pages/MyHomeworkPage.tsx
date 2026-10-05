@@ -15,7 +15,7 @@ import 'dayjs/locale/vi';
 import { useAuth } from '@/features/auth';
 import { useMyHomeworks, useUnsubmittedByUser } from '../hooks/useHomeworks';
 import type { Homework } from '../types/homework.types';
-import { HomeworkDetailDrawer, HomeworkCard } from '../components';
+import { MyHomeworkDetailDrawer, HomeworkCard } from '../components';
 
 dayjs.extend(relativeTime);
 dayjs.locale('vi');
@@ -221,9 +221,10 @@ export const MyHomeworkPage: React.FC = () => {
                 )}
             </motion.div>
 
-            {/* Detail Drawer */}
-            <HomeworkDetailDrawer
-                homework={detailHomework}
+            {/* Detail Drawer for Student */}
+            <MyHomeworkDetailDrawer
+                homeworkId={detailHomework?.id ?? null}
+                open={!!detailHomework}
                 onClose={() => setDetailHomework(null)}
             />
         </motion.div>

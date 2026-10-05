@@ -130,14 +130,27 @@ class QuizSubmissionHelper:
         user_id: int,
         coding_completed_uids: set[int] | None,
         game_completed_uids: set[int] | None,
+        requires_coding: bool | None = None,
+        requires_game: bool | None = None,
     ) -> bool:
         """
-        Kiểm tra xem user_id đã nộp bài tập hay chưa dựa trên kết quả từ Quiz API.
-        - coding_completed_uids is None: không có phần Coding.
-        - game_completed_uids is None: không có phần Game.
-        - Nếu có cả 2: User phải hoàn thành CẢ 2.
-        - Nếu chỉ có 1: User phải hoàn thành phần đó.
+        Kiểm tra xem user_id đã nộp bài tập hay chưa dựa trên kết quả từ Quiz API và yêu cầu của bài tập.
+        - Nếu có requires_coding/requires_game: tuân thủ yêu cầu được chỉ định.
+        - Nếu cả 2 đều không được chỉ định (bài cũ): fallback kiểm tra theo sự tồn tại của phần thi.
         """
+        # 1. Nếu có cấu hình yêu cầu rõ ràng
+        if requires_coding or requires_game:
+            coding_ok = True
+            if requires_coding:
+                coding_ok = user_id in (coding_completed_uids or set())
+
+            game_ok = True
+            if requires_game:
+                game_ok = user_id in (game_completed_uids or set())
+
+            return coding_ok and game_ok
+
+        # 2. Fallback cho dữ liệu cũ chưa có requires_coding / requires_game
         has_coding = coding_completed_uids is not None
         has_game = game_completed_uids is not None
 
@@ -151,3 +164,4 @@ class QuizSubmissionHelper:
             return user_id in (game_completed_uids or set())
         else:
             return False
+

@@ -1,12 +1,17 @@
+from datetime import datetime
 from typing import Any, cast
 
 from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
-from app.homework.domain.entity import Homework as HomeworkEntity
+from app.homework.domain.entity import (
+    Homework as HomeworkEntity,
+    HomeworkSubmission as HomeworkSubmissionEntity,
+)
 from app.homework.infrastructure.model import (
     HomeworkAssigneeModel,
     HomeworkModel,
+    HomeworkSubmissionModel,
 )
 from app.shared.domain.query_support import QuerySupport, apply_query_support
 
@@ -147,3 +152,72 @@ class HomeworkRepository:
             self.session.flush()
             return model.to_entity()
         return None
+
+    def get_by_slug(self, slug: str) -> HomeworkEntity | None:
+        """Find active homework by slug."""
+        statement = select(HomeworkModel).where(
+            HomeworkModel.slug == slug,
+            HomeworkModel.is_deleted == False,
+        )
+        model = self.session.scalars(statement).first()
+        return model.to_entity() if model else None
+
+    def add_submission(
+        self, submission: HomeworkSubmissionEntity
+    ) -> HomeworkSubmissionEntity:
+        """Insert a new submission log into homework_submissions."""
+        model = HomeworkSubmissionModel.from_entity(submission)
+        self.session.add(model)
+        self.session.flush()
+        return model.to_entity()
+
+    def get_submissions_by_user(
+        self, homework_id: int, user_id: int
+    ) -> list[HomeworkSubmissionEntity]:
+        """Get all submission history of a user for a specific homework ordered by time descending."""
+        statement = (
+            select(HomeworkSubmissionModel)
+            .where(
+                HomeworkSubmissionModel.homework_id == homework_id,
+                HomeworkSubmissionModel.user_id == user_id,
+            )
+            .order_by(desc(HomeworkSubmissionModel.submitted_at))
+        )
+        models = self.session.scalars(statement).all()
+        return [m.to_entity() for m in models]
+
+    def has_valid_submission(
+        self,
+        homework_id: int,
+        user_id: int,
+        submission_type: Any,
+        deadline: datetime,
+    ) -> bool:
+        """
+        Check if user has at least one valid submission before or at deadline.
+        For coding: is_passed is always True.
+        For game: requires is_passed == True.
+        """
+        type_str = str(
+            submission_type.value if hasattr(submission_type, "value") else submission_type
+        ).upper()
+        statement = select(HomeworkSubmissionModel.id).where(
+            HomeworkSubmissionModel.homework_id == homework_id,
+            HomeworkSubmissionModel.user_id == user_id,
+            func.upper(HomeworkSubmissionModel.submission_type) == type_str,
+            HomeworkSubmissionModel.is_passed == True,
+            HomeworkSubmissionModel.submitted_at <= deadline,
+        )
+        return self.session.scalars(statement).first() is not None
+
+    def get_submissions_by_homework(
+        self, homework_id: int
+    ) -> list[HomeworkSubmissionEntity]:
+        """Get all submissions for a homework."""
+        statement = (
+            select(HomeworkSubmissionModel)
+            .where(HomeworkSubmissionModel.homework_id == homework_id)
+            .order_by(desc(HomeworkSubmissionModel.submitted_at))
+        )
+        models = self.session.scalars(statement).all()
+        return [m.to_entity() for m in models]

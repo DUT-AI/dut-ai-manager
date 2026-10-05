@@ -9,6 +9,7 @@ import {
     CalendarOutlined,
     CodeOutlined,
     TrophyOutlined,
+    EyeOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -180,6 +181,13 @@ export const HomeworkCard: React.FC<HomeworkCardProps> = ({ homework, onViewDeta
 
                 {/* Right Action Buttons */}
                 <div className="flex items-center gap-2.5 w-full md:w-auto justify-end pt-3 md:pt-0 border-t md:border-t-0 border-gray-100 shrink-0">
+                    <Button
+                        icon={<EyeOutlined />}
+                        onClick={() => onViewDetail && onViewDetail(homework)}
+                        className="h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl font-medium text-xs sm:text-sm border-gray-200 hover:border-indigo-500 hover:text-indigo-600 transition-colors shadow-2xs"
+                    >
+                        Chi tiết
+                    </Button>
                     {homework.link && (
                         <Button
                             type="primary"

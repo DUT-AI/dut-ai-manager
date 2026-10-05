@@ -2,8 +2,9 @@ from datetime import datetime
 from typing import Annotated, Any
 
 from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Header, HTTPException, Query
 
+from app.core.config import settings
 from app.core.deps import CurrentUser, hasPermission
 from app.core.permissions import HomeworkPermission
 from app.homework.application import (
@@ -11,13 +12,18 @@ from app.homework.application import (
     DeleteHomeworkUseCase,
     GetHomeworkSubmissionStatusUseCase,
     GetHomeworksUseCase,
+    GetUserHomeworkSubmissionsUseCase,
+    HomeworkSubmissionWebhookIn,
+    RecordHomeworkSubmissionUseCase,
     RescanAllHomeworksUseCase,
+    SyncHomeworkFromQuizUseCase,
     UpdateHomeworkUseCase,
 )
 from app.homework.application.dtos import (
     HomeworkCreate,
     HomeworkReportResponse,
     HomeworkResponse,
+    HomeworkSubmissionDetailResponse,
     HomeworkSubmissionStatusResponse,
     HomeworkUpdate,
 )
@@ -226,4 +232,76 @@ async def restore_homework(
     result = homework_repo.restore(homework_id)
     if not result:
         raise HTTPException(status_code=404, detail="Homework not found or not deleted")
+    return ApiResponse.success(data=result)
+
+
+@router.post("/webhook/submission", response_model=ApiResponse[dict[str, Any]])
+@inject
+async def receive_submission_webhook(
+    payload: HomeworkSubmissionWebhookIn,
+    record_uc: FromDishka[RecordHomeworkSubmissionUseCase],
+    x_webhook_secret: Annotated[str | None, Header(alias="X-Webhook-Secret")] = None,
+):
+    """
+    Webhook endpoint nhận sự kiện nộp bài (Coding / Game) từ hệ thống Quiz.
+    Yêu cầu bảo mật: Header 'X-Webhook-Secret'.
+    """
+    if not x_webhook_secret or x_webhook_secret != settings.QUIZ_WEBHOOK_SECRET:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or missing X-Webhook-Secret header",
+        )
+
+    res = await record_uc.execute(payload)
+    return ApiResponse.success(data=res)
+
+
+@router.get(
+    "/{homework_id}/my-submissions",
+    response_model=ApiResponse[list[HomeworkSubmissionDetailResponse]],
+    dependencies=[hasPermission(HomeworkPermission.READ)],
+)
+@inject
+async def get_my_homework_submissions(
+    homework_id: int,
+    current_user: CurrentUser,
+    use_case: FromDishka[GetUserHomeworkSubmissionsUseCase],
+):
+    """Lấy danh sách lịch sử tất cả các lần nộp bài (Audit log) của học viên đang đăng nhập."""
+    assert current_user.id is not None
+    submissions = await use_case.execute(homework_id, current_user.id)
+    return ApiResponse.success(data=submissions)
+
+
+@router.get(
+    "/{homework_id}/users/{user_id}/submissions",
+    response_model=ApiResponse[list[HomeworkSubmissionDetailResponse]],
+    dependencies=[hasPermission(HomeworkPermission.READ)],
+)
+@inject
+async def get_user_homework_submissions(
+    homework_id: int,
+    user_id: int,
+    use_case: FromDishka[GetUserHomeworkSubmissionsUseCase],
+):
+    """Lấy danh sách lịch sử tất cả các lần nộp bài (Audit log) của 1 học viên."""
+    submissions = await use_case.execute(homework_id, user_id)
+    return ApiResponse.success(data=submissions)
+
+
+@router.post(
+    "/{homework_id}/sync",
+    response_model=ApiResponse[dict[str, Any]],
+    dependencies=[hasPermission(HomeworkPermission.CREATE)],
+)
+@inject
+async def sync_homework_from_quiz(
+    homework_id: int,
+    sync_uc: FromDishka[SyncHomeworkFromQuizUseCase],
+):
+    """
+    Đồng bộ thủ công từ Quiz API về bảng homework_submissions cho 1 bài tập.
+    Hỗ trợ nút bấm 'Đồng bộ từ Quiz' trên giao diện quản trị.
+    """
+    result = await sync_uc.execute(homework_id)
     return ApiResponse.success(data=result)

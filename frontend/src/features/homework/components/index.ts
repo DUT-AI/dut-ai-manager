@@ -3,5 +3,6 @@ export { HomeworkMobileList } from './HomeworkMobileList';
 export { HomeworkFormModal } from './HomeworkFormModal';
 export { HomeworkReportTab } from './HomeworkReportTab';
 export { HomeworkDetailDrawer } from './HomeworkDetailDrawer';
+export { MyHomeworkDetailDrawer } from './MyHomeworkDetailDrawer';
 export { HomeworkCard } from './HomeworkCard';
 

@@ -174,10 +174,10 @@ def create_app():
         except Exception:
             body = "<Could not read body>"
 
-        logger.error(
-            f"Exception for {request.method} {request.url.path} with body {body}"
+        logger.warning(
+            f"Validation error for {request.method} {request.url.path} with body {body}"
         )
-        logger.error(f"Error details: {exc.message}")
+        logger.warning(f"Error details: {exc.message}")
 
         return JSONResponse(
             status_code=exc.status_code,

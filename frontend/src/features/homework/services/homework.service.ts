@@ -6,6 +6,7 @@ import type {
     HomeworkUpdate,
     HomeworkReportResponse,
     HomeworkSubmissionStatus,
+    SubmissionHistoryItem,
 } from '@/features/homework/types/homework.types';
 
 export const homeworkService = {
@@ -68,5 +69,25 @@ export const homeworkService = {
         return response.data.data;
     },
 
+    async syncFromQuiz(homeworkId: number) {
+        const response = await axiosInstance.post<ApiResponse<{ message: string; synced_coding_count: number; synced_game_count: number }>>(
+            `/${this.baseUrl}/${homeworkId}/sync`
+        );
+        return response.data.data;
+    },
+
+    async getUserSubmissions(homeworkId: number, userId: number) {
+        const response = await axiosInstance.get<ApiResponse<SubmissionHistoryItem[]>>(
+            `/${this.baseUrl}/${homeworkId}/users/${userId}/submissions`
+        );
+        return response.data.data;
+    },
+
+    async getMySubmissions(homeworkId: number) {
+        const response = await axiosInstance.get<ApiResponse<SubmissionHistoryItem[]>>(
+            `/${this.baseUrl}/${homeworkId}/my-submissions`
+        );
+        return response.data.data;
+    },
 };
 

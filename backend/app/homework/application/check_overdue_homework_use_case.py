@@ -11,7 +11,7 @@ from typing import cast
 from loguru import logger
 
 from app.homework.application.helpers import QuizSubmissionHelper
-from app.homework.domain.entity import Homework as HomeworkEntity
+from app.homework.domain.entity import Homework as HomeworkEntity, SubmissionType
 from app.homework.domain.value_objects import HomeworkOverdueDetected
 from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.homework.infrastructure.repository import HomeworkRepository
@@ -72,12 +72,15 @@ class CheckOverdueHomeworkUseCase:
                 )
                 continue
 
-            hw_type = QuizSubmissionHelper.detect_homework_type(
-                homework.link, homework.slug
+            check_coding = homework.requires_coding or (
+                not homework.requires_coding and not homework.requires_game
+            )
+            check_game = homework.requires_game or (
+                not homework.requires_coding and not homework.requires_game
             )
 
             coding_completed_uids = None
-            if hw_type in ("coding", "both"):
+            if check_coding:
                 coding_completed_uids = (
                     await QuizSubmissionHelper.get_coding_completed_user_ids(
                         self.quiz_api, slug
@@ -85,7 +88,7 @@ class CheckOverdueHomeworkUseCase:
                 )
 
             game_completed_uids = None
-            if hw_type in ("game", "both"):
+            if check_game:
                 game_completed_uids = (
                     await QuizSubmissionHelper.get_game_completed_user_ids(
                         self.quiz_api, slug
@@ -101,23 +104,53 @@ class CheckOverdueHomeworkUseCase:
                 continue
 
             for user_id in assigned_uids:
-                if QuizSubmissionHelper.is_user_submitted(
-                    user_id, coding_completed_uids, game_completed_uids
-                ):
+                # 1. Kiểm tra mục Coding (nếu bài yêu cầu)
+                req_coding = (
+                    homework.requires_coding
+                    if (homework.requires_coding or homework.requires_game)
+                    else (coding_completed_uids is not None)
+                )
+                coding_ok = True
+                if req_coding:
+                    db_coding = False
+                    if hasattr(self.homework_repo, "has_valid_submission"):
+                        res = self.homework_repo.has_valid_submission(
+                            homework.id, user_id, SubmissionType.CODING, homework.deadline
+                        )
+                        db_coding = res is True
+                    api_coding = user_id in (coding_completed_uids or set())
+                    coding_ok = db_coding or api_coding
+
+                # 2. Kiểm tra mục Game (nếu bài yêu cầu)
+                req_game = (
+                    homework.requires_game
+                    if (homework.requires_coding or homework.requires_game)
+                    else (game_completed_uids is not None)
+                )
+                game_ok = True
+                if req_game:
+                    db_game = False
+                    if hasattr(self.homework_repo, "has_valid_submission"):
+                        res = self.homework_repo.has_valid_submission(
+                            homework.id, user_id, SubmissionType.GAME, homework.deadline
+                        )
+                        db_game = res is True
+                    api_game = user_id in (game_completed_uids or set())
+                    game_ok = db_game or api_game
+
+                if coding_ok and game_ok:
                     continue
 
                 uncompleted_labels = []
-                has_coding = coding_completed_uids is not None
-                has_game = game_completed_uids is not None
-
-                if has_coding and user_id not in (coding_completed_uids or set()):
+                if req_coding and not coding_ok:
                     uncompleted_labels.append("bài tập coding")
 
-                if has_game and user_id not in (game_completed_uids or set()):
+                if req_game and not game_ok:
                     uncompleted_labels.append("trắc nghiệm game")
 
                 if not uncompleted_labels:
                     continue
+
 
                 items_str = " và ".join(uncompleted_labels)
                 reason_msg = f"Chưa hoàn thành {items_str} ({homework.title})"

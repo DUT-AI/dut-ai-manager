@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Modal, Form, Input, DatePicker, Select, message, Divider, Button, Space, Badge, Tag, Typography } from 'antd';
+import { Modal, Form, Input, DatePicker, Select, Checkbox, message, Divider, Button, Space, Badge, Tag, Typography } from 'antd';
 import { TeamOutlined, UserOutlined, CheckOutlined, ClearOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Homework } from '@/features/homework/types/homework.types';
@@ -68,6 +68,8 @@ export const HomeworkFormModal = ({
                     deadline: dayjs(editingItem.deadline),
                     link: editingItem.link || '',
                     slug: editingItem.slug || '',
+                    requires_coding: editingItem.requires_coding ?? false,
+                    requires_game: editingItem.requires_game ?? false,
                     team_ids: matchedTeams,
                     assignee_ids: initialAssignees,
                 });
@@ -75,9 +77,14 @@ export const HomeworkFormModal = ({
                 setSelectedTeamIds([]);
                 setSelectedAssigneeIds([]);
                 form.resetFields();
+                form.setFieldsValue({
+                    requires_coding: true,
+                    requires_game: false,
+                });
             }
         }
     }, [open, editingItem, detectMatchingTeams, form]);
+
 
     // Handle Team Selection Change (Resolves team members into assignee_ids)
     const handleTeamChange = (newTeamIds: number[]) => {
@@ -152,6 +159,11 @@ export const HomeworkFormModal = ({
     };
 
     const handleFinish = async (values: any) => {
+        if (!values.requires_coding && !values.requires_game) {
+            message.error('Vui lòng chọn ít nhất một yêu cầu: "Làm bài tập coding" hoặc "Làm game"!');
+            return;
+        }
+
         setLoading(true);
         try {
             const payload = {
@@ -159,6 +171,8 @@ export const HomeworkFormModal = ({
                 deadline: values.deadline.format('YYYY-MM-DDTHH:mm:ss'),
                 link: values.link?.trim() || '',
                 slug: values.slug?.trim() || null,
+                requires_coding: !!values.requires_coding,
+                requires_game: !!values.requires_game,
                 assignee_ids: values.assignee_ids || [],
             };
 
@@ -265,6 +279,36 @@ export const HomeworkFormModal = ({
                         }}
                     />
                 </Form.Item>
+
+                <div className="bg-amber-50/70 p-3.5 rounded-xl border border-amber-200/80 mb-4">
+                    <div className="font-semibold text-xs text-amber-900 uppercase tracking-wider mb-2">
+                        Yêu cầu bài tập (Bắt buộc chọn ít nhất 1)
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <Form.Item
+                            name="requires_coding"
+                            valuePropName="checked"
+                            noStyle
+                        >
+                            <Checkbox className="text-sm font-medium text-gray-800">
+                                💻 Làm bài tập coding
+                            </Checkbox>
+                        </Form.Item>
+                        <Form.Item
+                            name="requires_game"
+                            valuePropName="checked"
+                            noStyle
+                        >
+                            <Checkbox className="text-sm font-medium text-gray-800">
+                                🎮 Làm game
+                            </Checkbox>
+                        </Form.Item>
+                    </div>
+                    <p className="text-xs text-amber-700/90 mt-2 mb-0">
+                        💡 Hệ thống sẽ tự động xác thực bài học trên Quiz. Nếu bài học chưa có bài tập coding hoặc câu hỏi game tương ứng, hệ thống sẽ cảnh báo và không cho phép giao bài.
+                    </p>
+                </div>
+
 
                 <Divider className="!my-4">
                     <div className="flex items-center gap-2">

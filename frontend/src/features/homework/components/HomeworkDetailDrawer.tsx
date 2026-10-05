@@ -1,9 +1,16 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Drawer, Tabs, List, Avatar, Badge, Empty, Spin, Tag, Grid, Typography } from 'antd';
-import { UserOutlined, CheckCircleOutlined, CloseCircleOutlined, WarningOutlined } from '@ant-design/icons';
+import { Drawer, Tabs, List, Avatar, Badge, Empty, Spin, Tag, Grid, Typography, Button, Modal, Timeline, Space, message, Tooltip } from 'antd';
+import {
+    UserOutlined, CheckCircleOutlined, CloseCircleOutlined, WarningOutlined,
+    SyncOutlined, HistoryOutlined, CodeOutlined, PlayCircleOutlined
+} from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { useHomeworkSubmissionStatus } from '@/features/homework/hooks/useHomeworks';
-import type { Homework, UserSubmissionInfo } from '@/features/homework/types/homework.types';
+import {
+    useHomeworkSubmissionStatus,
+    useSyncHomeworkFromQuiz,
+    useHomeworkSubmissions
+} from '@/features/homework/hooks/useHomeworks';
+import type { Homework, UserSubmissionInfo, SubmissionHistoryItem } from '@/features/homework/types/homework.types';
 
 const { Text } = Typography;
 const { useBreakpoint } = Grid;
@@ -17,24 +24,129 @@ interface HomeworkDetailDrawerProps {
     onClose: () => void;
 }
 
-const UserListItem: React.FC<{ user: UserSubmissionInfo }> = ({ user }) => (
+const SubmissionHistoryModal: React.FC<{
+    homeworkId: number | null;
+    user: UserSubmissionInfo | null;
+    open: boolean;
+    onClose: () => void;
+}> = ({ homeworkId, user, open, onClose }) => {
+    const { data: submissions = [], isLoading } = useHomeworkSubmissions(
+        open && homeworkId ? homeworkId : null,
+        open && user ? user.user_id : null
+    );
+
+    return (
+        <Modal
+            title={
+                <Space>
+                    <HistoryOutlined className="text-indigo-600" />
+                    <span>Lịch sử nộp bài - {user?.name || `User #${user?.user_id}`}</span>
+                </Space>
+            }
+            open={open}
+            onCancel={onClose}
+            footer={[
+                <Button key="close" onClick={onClose}>
+                    Đóng
+                </Button>
+            ]}
+            width={520}
+        >
+            <div className="py-4 max-h-[60vh] overflow-y-auto">
+                {isLoading ? (
+                    <div className="flex justify-center py-8"><Spin /></div>
+                ) : submissions.length === 0 ? (
+                    <Empty description="Chưa có dữ liệu lịch sử nộp bài" />
+                ) : (
+                    <Timeline
+                        mode="left"
+                        items={submissions.map((sub: SubmissionHistoryItem) => {
+                            const isCoding = sub.submission_type === 'CODING';
+                            return {
+                                color: isCoding ? '#3b82f6' : '#8b5cf6',
+                                label: (
+                                    <Text type="secondary" className="text-xs">
+                                        {dayjs(sub.submitted_at).format('DD/MM/YYYY HH:mm:ss')}
+                                    </Text>
+                                ),
+                                children: (
+                                    <div className="bg-gray-50 dark:bg-zinc-800 p-2.5 rounded-lg border border-gray-100 dark:border-zinc-700 mb-2">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <Tag
+                                                icon={isCoding ? <CodeOutlined /> : <PlayCircleOutlined />}
+                                                color={isCoding ? 'blue' : 'purple'}
+                                                className="m-0 font-medium"
+                                            >
+                                                {isCoding ? 'Coding Homework' : 'Quiz Game'}
+                                            </Tag>
+                                            <Tag color={sub.source === 'WEBHOOK' ? 'cyan' : 'default'} className="m-0 text-xs">
+                                                {sub.source === 'WEBHOOK' ? 'Quiz Realtime' : 'Manual Sync'}
+                                            </Tag>
+                                        </div>
+                                        {sub.metadata && (
+                                            <div className="mt-2 text-xs text-gray-500 bg-white dark:bg-zinc-900 p-1.5 rounded border border-gray-100">
+                                                {sub.metadata.game_mode && (
+                                                    <div>Chế độ: <b>{sub.metadata.game_mode}</b></div>
+                                                )}
+                                                {sub.metadata.commit_sha && (
+                                                    <div>Commit: <code>{sub.metadata.commit_sha.slice(0, 8)}</code></div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                ),
+                            };
+                        })}
+                    />
+                )}
+            </div>
+        </Modal>
+    );
+};
+
+const UserListItem: React.FC<{
+    user: UserSubmissionInfo;
+    onViewHistory?: (user: UserSubmissionInfo) => void;
+}> = ({ user, onViewHistory }) => (
     <List.Item className="!px-0 !py-2">
         <div className="flex items-center gap-3 w-full">
             <Avatar src={user.avatar_url || undefined} icon={<UserOutlined />} size={36} className="flex-shrink-0" />
-            <Text className="font-medium text-sm flex-1 truncate">
-                {user.name || `User #${user.user_id}`}
-            </Text>
+            <div className="flex flex-col flex-1 min-w-0">
+                <Text className="font-medium text-sm truncate">
+                    {user.name || `User #${user.user_id}`}
+                </Text>
+                {user.submitted_at && (
+                    <Text type="secondary" className="text-xs">
+                        Nộp lúc: {dayjs(user.submitted_at).format('DD/MM/YYYY HH:mm')}
+                    </Text>
+                )}
+            </div>
             {user.is_late && (
                 <Tag color="error" className="m-0 font-medium text-xs">
                     Trễ
                 </Tag>
             )}
+            {onViewHistory && (
+                <Tooltip title="Xem lịch sử nộp bài">
+                    <Button
+                        type="text"
+                        size="small"
+                        icon={<HistoryOutlined className="text-indigo-600" />}
+                        onClick={() => onViewHistory(user)}
+                    />
+                </Tooltip>
+            )}
         </div>
     </List.Item>
 );
 
-const UserList: React.FC<{ data: UserSubmissionInfo[]; isLoading: boolean; emptyText: string }> = ({
-    data, isLoading, emptyText,
+const UserList: React.FC<{
+    data: UserSubmissionInfo[];
+    isLoading: boolean;
+    emptyText: string;
+    onViewHistory?: (user: UserSubmissionInfo) => void;
+}> = ({
+    data, isLoading, emptyText, onViewHistory,
 }) => (
     <div className="mt-2">
         {isLoading ? (
@@ -42,7 +154,11 @@ const UserList: React.FC<{ data: UserSubmissionInfo[]; isLoading: boolean; empty
         ) : data.length === 0 ? (
             <Empty description={emptyText} imageStyle={{ height: 60 }} />
         ) : (
-            <List dataSource={data} renderItem={(user) => <UserListItem user={user} />} split={false} />
+            <List
+                dataSource={data}
+                renderItem={(user) => <UserListItem user={user} onViewHistory={onViewHistory} />}
+                split={false}
+            />
         )}
     </div>
 );
@@ -51,7 +167,8 @@ const CategorySubmissionView: React.FC<{
     status?: { submitted: UserSubmissionInfo[]; not_submitted: UserSubmissionInfo[] };
     isLoading: boolean;
     isOverdue: boolean;
-}> = ({ status, isLoading, isOverdue }) => {
+    onViewHistory?: (user: UserSubmissionInfo) => void;
+}> = ({ status, isLoading, isOverdue, onViewHistory }) => {
     const submitted = status?.submitted ?? [];
     const notSubmitted = status?.not_submitted ?? [];
 
@@ -70,6 +187,7 @@ const CategorySubmissionView: React.FC<{
                     data={submitted}
                     isLoading={isLoading}
                     emptyText="Chưa có ai nộp bài"
+                    onViewHistory={onViewHistory}
                 />
             ),
         },
@@ -145,7 +263,24 @@ export const HomeworkDetailDrawer: React.FC<HomeworkDetailDrawerProps> = ({ home
         };
     }, [handleMouseMove, handleMouseUp]);
 
-    const { data: statusData, isLoading } = useHomeworkSubmissionStatus(homework?.id ?? null);
+    const { data: statusData, isLoading, refetch } = useHomeworkSubmissionStatus(homework?.id ?? null);
+    const syncMutation = useSyncHomeworkFromQuiz();
+    const [historyUser, setHistoryUser] = useState<UserSubmissionInfo | null>(null);
+
+    const handleSync = async () => {
+        if (!homework) return;
+        try {
+            const res = await syncMutation.mutateAsync(homework.id);
+            message.success(res?.message || 'Đồng bộ bài tập từ Quiz thành công!');
+            refetch();
+        } catch (error: any) {
+            message.error(error?.response?.data?.message || 'Đồng bộ từ Quiz thất bại');
+        }
+    };
+
+    const handleViewHistory = (user: UserSubmissionInfo) => {
+        setHistoryUser(user);
+    };
 
     const codingStatus = statusData?.coding ?? { submitted: statusData?.submitted ?? [], not_submitted: statusData?.not_submitted ?? [] };
     const gameStatus = statusData?.game ?? { submitted: [], not_submitted: [] };
@@ -172,7 +307,14 @@ export const HomeworkDetailDrawer: React.FC<HomeworkDetailDrawerProps> = ({ home
                     )}
                 </span>
             ),
-            children: <CategorySubmissionView status={codingStatus} isLoading={isLoading} isOverdue={isOverdue} />,
+            children: (
+                <CategorySubmissionView
+                    status={codingStatus}
+                    isLoading={isLoading}
+                    isOverdue={isOverdue}
+                    onViewHistory={handleViewHistory}
+                />
+            ),
         },
         {
             key: 'game',
@@ -186,66 +328,94 @@ export const HomeworkDetailDrawer: React.FC<HomeworkDetailDrawerProps> = ({ home
                     )}
                 </span>
             ),
-            children: <CategorySubmissionView status={gameStatus} isLoading={isLoading} isOverdue={isOverdue} />,
+            children: (
+                <CategorySubmissionView
+                    status={gameStatus}
+                    isLoading={isLoading}
+                    isOverdue={isOverdue}
+                    onViewHistory={handleViewHistory}
+                />
+            ),
         },
     ];
 
     return (
-        <Drawer
-            title={
-                <div className="flex flex-col gap-1">
-                    <span className="font-semibold text-base leading-tight line-clamp-1">
-                        {homework?.title}
-                    </span>
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <Text type="secondary" className="text-xs font-normal">
-                            Hạn nộp: {homework ? dayjs(homework.deadline).format('DD/MM/YYYY HH:mm') : ''}
-                        </Text>
-                        {isOverdue ? (
-                            <Tag color="red" icon={<WarningOutlined />} className="text-xs m-0">Quá hạn</Tag>
-                        ) : (
-                            <Tag color="blue" className="text-xs m-0">Đang mở</Tag>
-                        )}
-                        {!isLoading && totalAssigned > 0 && (
+        <>
+            <Drawer
+                title={
+                    <div className="flex flex-col gap-1">
+                        <span className="font-semibold text-base leading-tight line-clamp-1">
+                            {homework?.title}
+                        </span>
+                        <div className="flex items-center gap-2 flex-wrap">
                             <Text type="secondary" className="text-xs font-normal">
-                                · {totalSubmitted}/{totalAssigned} đã nộp
+                                Hạn nộp: {homework ? dayjs(homework.deadline).format('DD/MM/YYYY HH:mm') : ''}
                             </Text>
-                        )}
+                            {isOverdue ? (
+                                <Tag color="red" icon={<WarningOutlined />} className="text-xs m-0">Quá hạn</Tag>
+                            ) : (
+                                <Tag color="blue" className="text-xs m-0">Đang mở</Tag>
+                            )}
+                            {!isLoading && totalAssigned > 0 && (
+                                <Text type="secondary" className="text-xs font-normal">
+                                    · {totalSubmitted}/{totalAssigned} đã nộp
+                                </Text>
+                            )}
+                        </div>
                     </div>
-                </div>
-            }
-            placement="right"
-            width={screens.md ? drawerWidth : '100%'}
-            onClose={onClose}
-            open={!!homework}
-            styles={{ body: { padding: '8px 16px', position: 'relative' } }}
-        >
-            {/* Resize handle – kéo cạnh trái để thay đổi chiều rộng */}
-            {screens.md && (
-                <div
-                    onMouseDown={handleResizeMouseDown}
-                    title="Kéo để thay đổi kích thước"
-                    style={{
-                        position: 'absolute',
-                        left: 0, top: 0, bottom: 0,
-                        width: '6px',
-                        cursor: 'col-resize',
-                        zIndex: 10,
-                        background: 'transparent',
-                        transition: 'background 0.15s',
-                    }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(99,102,241,0.25)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                />
-            )}
+                }
+                extra={
+                    <Button
+                        type="primary"
+                        icon={<SyncOutlined spin={syncMutation.isPending} />}
+                        loading={syncMutation.isPending}
+                        onClick={handleSync}
+                        size="small"
+                        className="bg-indigo-600 hover:bg-indigo-700"
+                    >
+                        Đồng bộ Quiz
+                    </Button>
+                }
+                placement="right"
+                width={screens.md ? drawerWidth : '100%'}
+                onClose={onClose}
+                open={!!homework}
+                styles={{ body: { padding: '8px 16px', position: 'relative' } }}
+            >
+                {/* Resize handle – kéo cạnh trái để thay đổi chiều rộng */}
+                {screens.md && (
+                    <div
+                        onMouseDown={handleResizeMouseDown}
+                        title="Kéo để thay đổi kích thước"
+                        style={{
+                            position: 'absolute',
+                            left: 0, top: 0, bottom: 0,
+                            width: '6px',
+                            cursor: 'col-resize',
+                            zIndex: 10,
+                            background: 'transparent',
+                            transition: 'background 0.15s',
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(99,102,241,0.25)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    />
+                )}
 
-            {isLoading && !statusData ? (
-                <div className="flex justify-center items-center h-40">
-                    <Spin size="large" />
-                </div>
-            ) : (
-                <Tabs defaultActiveKey="coding" items={mainTabItems} size="middle" />
-            )}
-        </Drawer>
+                {isLoading && !statusData ? (
+                    <div className="flex justify-center items-center h-40">
+                        <Spin size="large" />
+                    </div>
+                ) : (
+                    <Tabs defaultActiveKey="coding" items={mainTabItems} size="middle" />
+                )}
+            </Drawer>
+
+            <SubmissionHistoryModal
+                homeworkId={homework?.id ?? null}
+                user={historyUser}
+                open={!!historyUser}
+                onClose={() => setHistoryUser(null)}
+            />
+        </>
     );
 };

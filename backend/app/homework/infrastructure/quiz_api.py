@@ -14,7 +14,7 @@ class QuizApiClient:
 
     def _get_headers(self) -> dict[str, str]:
         return {"Content-Type": "application/json"}
-
+    
     async def get_game_leaderboard(self, game_slug: str) -> list[dict[str, Any]] | None:
         """
         Calls GET /api/v1/game/{game_slug}/leaderboard
@@ -121,3 +121,37 @@ class QuizApiClient:
             )
 
         return {}
+
+    async def get_lesson_metadata(self, lesson_slug: str) -> dict[str, Any] | None:
+        """
+        Calls GET /api/v1/lessons/{lesson_slug}/metadata
+        Returns lesson readiness metadata:
+        { "slug": "...", "name": "...", "has_coding": bool, "has_game": bool, "coding_count": int, "game_question_count": int, "is_ready": bool }
+        Returns None if lesson not found (404).
+        Raises exception on system/network errors so they can be handled by global 500 handler.
+        """
+        url = f"{self.base_url}/api/v1/lessons/{lesson_slug}/metadata"
+        try:
+            async with httpx.AsyncClient(
+                timeout=5.0, headers=self._get_headers()
+            ) as client:
+                response = await client.get(url)
+                if response.status_code == 200:
+                    data = response.json()
+                    if isinstance(data, dict):
+                        return data.get("data", data)
+                    return data
+                elif response.status_code == 404:
+                    logger.info(f"Quiz lesson '{lesson_slug}' not found (404) at {url}")
+                    return None
+                else:
+                    logger.error(
+                        f"Quiz service returned unexpected status {response.status_code} for URL {url}: {response.text}"
+                    )
+                    raise RuntimeError(
+                        f"Quiz service error: status {response.status_code}"
+                    )
+        except httpx.RequestError as exc:
+            logger.exception(f"Connection failure to Quiz service at {url}: {exc}")
+            raise RuntimeError(f"Cannot connect to Quiz service at {url}") from exc
+

@@ -7,7 +7,10 @@ from app.homework.application import (
     DeleteHomeworkUseCase,
     GetHomeworkSubmissionStatusUseCase,
     GetHomeworksUseCase,
+    GetUserHomeworkSubmissionsUseCase,
+    RecordHomeworkSubmissionUseCase,
     RescanAllHomeworksUseCase,
+    SyncHomeworkFromQuizUseCase,
     UpdateHomeworkUseCase,
 )
 from app.homework.application.event_handlers import (
@@ -51,19 +54,24 @@ class HomeworkModuleProvider(Provider):
     def get_create_homework_use_case(
         self,
         homework_repo: HomeworkRepository,
+        quiz_api: QuizApiClient,
     ) -> CreateHomeworkUseCase:
         return CreateHomeworkUseCase(
             homework_repo=homework_repo,
+            quiz_api=quiz_api,
         )
 
     @provide
     def get_update_homework_use_case(
         self,
         homework_repo: HomeworkRepository,
+        quiz_api: QuizApiClient,
     ) -> UpdateHomeworkUseCase:
         return UpdateHomeworkUseCase(
             homework_repo=homework_repo,
+            quiz_api=quiz_api,
         )
+    
 
     @provide
     def get_delete_homework_use_case(
@@ -71,6 +79,31 @@ class HomeworkModuleProvider(Provider):
         homework_repo: HomeworkRepository,
     ) -> DeleteHomeworkUseCase:
         return DeleteHomeworkUseCase(homework_repo=homework_repo)
+
+    @provide
+    def get_record_submission_use_case(
+        self,
+        homework_repo: HomeworkRepository,
+    ) -> RecordHomeworkSubmissionUseCase:
+        return RecordHomeworkSubmissionUseCase(homework_repo=homework_repo)
+
+    @provide
+    def get_user_submissions_use_case(
+        self,
+        homework_repo: HomeworkRepository,
+    ) -> GetUserHomeworkSubmissionsUseCase:
+        return GetUserHomeworkSubmissionsUseCase(homework_repo=homework_repo)
+
+    @provide
+    def get_sync_homework_use_case(
+        self,
+        homework_repo: HomeworkRepository,
+        quiz_api: QuizApiClient,
+    ) -> SyncHomeworkFromQuizUseCase:
+        return SyncHomeworkFromQuizUseCase(
+            homework_repo=homework_repo,
+            quiz_api=quiz_api,
+        )
 
     @provide
     def get_submission_status_use_case(

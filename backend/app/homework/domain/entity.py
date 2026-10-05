@@ -1,10 +1,16 @@
 from datetime import datetime
+from enum import StrEnum
 
 import httpx
 from loguru import logger
 
 from app.core.config import settings
 from app.shared.domain.base_entity import BaseEntity
+
+
+class SubmissionType(StrEnum):
+    CODING = "CODING"
+    GAME = "GAME"
 
 
 class Homework(BaseEntity):
@@ -14,7 +20,10 @@ class Homework(BaseEntity):
     deadline: datetime
     link: str | None = None
     slug: str | None = None
+    requires_coding: bool = False
+    requires_game: bool = False
     assignee_ids: list[int] = []
+
 
     async def notify_external_homework_api(self) -> None:
         """Fire-and-forget POST to external homework service."""
@@ -37,4 +46,17 @@ class Homework(BaseEntity):
             )
 
 
-Homework.model_rebuild()
+
+
+
+class HomeworkSubmission(BaseEntity):
+    """Domain model representing a single student homework submission attempt."""
+
+    homework_id: int
+    user_id: int
+    submission_type: SubmissionType
+    submitted_at: datetime
+    is_passed: bool = True
+    details: dict | None = None
+
+

@@ -50,6 +50,8 @@ export const homeworkSchema = z.object({
   deadline: z.string(),
   link: z.string().nullable().optional(),
   slug: z.string().nullable().optional(),
+  requires_coding: z.boolean().optional(),
+  requires_game: z.boolean().optional(),
   assignee_ids: z.array(z.number()).optional(),
   created_at: z.string(),
   updated_at: z.string(),
@@ -71,9 +73,12 @@ export const homeworkCreateSchema = z.object({
   deadline: z.string().min(1, 'Vui lòng chọn hạn nộp'),
   link: z.string().optional(),
   slug: z.string().optional(),
+  requires_coding: z.boolean().optional(),
+  requires_game: z.boolean().optional(),
   assignee_ids: z.array(z.number()).optional(),
 });
 export type HomeworkCreate = z.infer<typeof homeworkCreateSchema>;
+
 export type CreateHomeworkFormValues = HomeworkCreate;
 
 export const homeworkUpdateSchema = homeworkCreateSchema.partial();
@@ -130,4 +135,15 @@ export const homeworkSubmissionStatusSchema = z.object({
   not_submitted: z.array(userSubmissionInfoSchema).optional(),
 });
 export type HomeworkSubmissionStatus = z.infer<typeof homeworkSubmissionStatusSchema>;
+
+export interface SubmissionHistoryItem {
+  id: number;
+  homework_id: number;
+  user_id: number;
+  submission_type: 'CODING' | 'GAME';
+  submitted_at: string;
+  source: string;
+  metadata?: Record<string, any> | null;
+  created_at: string;
+}
 

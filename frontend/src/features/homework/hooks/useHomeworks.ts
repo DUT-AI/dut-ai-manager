@@ -28,10 +28,10 @@ export const useMyHomeworks = () => {
   });
 };
 
-export const useHomework = (id: number) => {
+export const useHomework = (id: number | null) => {
   return useQuery({
-    queryKey: homeworkKeys.detail(id),
-    queryFn: () => homeworkService.getById(id),
+    queryKey: homeworkKeys.detail(id!),
+    queryFn: () => homeworkService.getById(id!),
     enabled: !!id,
   });
 };
@@ -96,6 +96,35 @@ export const useDeleteHomework = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: homeworkKeys.all });
     },
+  });
+};
+
+export const useSyncHomeworkFromQuiz = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (homeworkId: number) => homeworkService.syncFromQuiz(homeworkId),
+    onSuccess: (_, homeworkId) => {
+      queryClient.invalidateQueries({ queryKey: ['homeworks', 'submission-status', homeworkId] });
+      queryClient.invalidateQueries({ queryKey: ['homeworks', 'submissions', homeworkId] });
+      queryClient.invalidateQueries({ queryKey: homeworkKeys.all });
+    },
+  });
+};
+
+export const useHomeworkSubmissions = (homeworkId: number | null, userId: number | null) => {
+  return useQuery({
+    queryKey: ['homeworks', 'submissions', homeworkId, userId],
+    queryFn: () => homeworkService.getUserSubmissions(homeworkId!, userId!),
+    enabled: !!homeworkId && !!userId,
+  });
+};
+
+export const useMyHomeworkSubmissions = (homeworkId: number | null) => {
+  return useQuery({
+    queryKey: ['homeworks', 'my-submissions', homeworkId],
+    queryFn: () => homeworkService.getMySubmissions(homeworkId!),
+    enabled: !!homeworkId,
   });
 };
 

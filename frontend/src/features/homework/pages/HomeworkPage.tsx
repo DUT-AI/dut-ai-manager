@@ -1,17 +1,17 @@
 import React, { useState, useMemo } from 'react';
 
 import {
-    Table, Button, Tabs, Space, Popconfirm, Typography, Grid
+    Table, Button, Tabs, Space, Popconfirm, Typography, Grid, Tooltip, message
 } from 'antd';
 import {
-    PlusOutlined, EyeOutlined, EditOutlined, DeleteOutlined, ReadOutlined, ReloadOutlined
+    PlusOutlined, EyeOutlined, EditOutlined, DeleteOutlined, ReadOutlined, ReloadOutlined, SyncOutlined
 } from '@ant-design/icons';
 import { motion, type Variants } from 'motion/react';
 import type { ColumnsType } from 'antd/es/table';
 
 // Hooks & Types
 import { useHomeworkActions } from '../hooks/useHomeworkActions';
-import { useUnsubmittedReport } from '../hooks/useHomeworks';
+import { useUnsubmittedReport, useSyncHomeworkFromQuiz } from '../hooks/useHomeworks';
 import type { Homework } from '@/features/homework/types/homework.types';
 import { HomeworkPermission } from '@/features/rbac/types/rbac.types';
 
@@ -71,9 +71,22 @@ export const HomeworkPage: React.FC = () => {
         handleFormSuccess
     } = handlers;
 
+    const syncMutation = useSyncHomeworkFromQuiz();
+    const [syncingId, setSyncingId] = useState<number | null>(null);
+
+    const handleSyncSingle = async (homeworkId: number) => {
+        try {
+            setSyncingId(homeworkId);
+            const res = await syncMutation.mutateAsync(homeworkId);
+            message.success(res?.message || 'Đồng bộ từ Quiz thành công!');
+        } catch (error: any) {
+            message.error(error?.response?.data?.message || 'Đồng bộ từ Quiz thất bại');
+        } finally {
+            setSyncingId(null);
+        }
+    };
+
     // Table Columns Definitions
-
-
     const adminColumns = useMemo<ColumnsType<Homework>>(() => [
         {
             title: 'Tiêu đề',
@@ -93,17 +106,27 @@ export const HomeworkPage: React.FC = () => {
         {
             title: 'Hành động',
             key: 'detail',
-            width: 100,
+            width: 140,
             align: 'center' as const,
             render: (_: any, record: Homework) => (
-                <Button
-                    icon={<EyeOutlined />}
-                    size="small"
-                    onClick={() => setDetailHomework(record)}
-                    style={{ color: '#6366f1', borderColor: '#6366f1' }}
-                >
-                    Chi tiết
-                </Button>
+                <Space>
+                    <Button
+                        icon={<EyeOutlined />}
+                        size="small"
+                        onClick={() => setDetailHomework(record)}
+                        style={{ color: '#6366f1', borderColor: '#6366f1' }}
+                    >
+                        Chi tiết
+                    </Button>
+                    <Tooltip title="Đồng bộ nộp bài từ Quiz">
+                        <Button
+                            icon={<SyncOutlined spin={syncingId === record.id} />}
+                            size="small"
+                            onClick={() => handleSyncSingle(record.id)}
+                            disabled={syncingId === record.id}
+                        />
+                    </Tooltip>
+                </Space>
             ),
         },
         {
@@ -131,7 +154,7 @@ export const HomeworkPage: React.FC = () => {
                 </Space>
             ),
         },
-    ], [hasPermission, handleOpenEdit, handleDelete, setDetailHomework]);
+    ], [hasPermission, handleOpenEdit, handleDelete, setDetailHomework, syncingId]);
 
     const renderListView = (dataSource: Homework[], loading: boolean, emptyText?: string) => {
         if (!screens.md) {

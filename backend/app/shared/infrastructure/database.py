@@ -22,6 +22,8 @@ engine = create_engine(
 
 
 
+from app.shared.application.response import BadRequestException
+
 def get_session():
     """
     Get database session with auto-commit/rollback.
@@ -33,7 +35,11 @@ def get_session():
         try:
             yield session
             session.commit()
+        except BadRequestException:
+            session.rollback()
+            logger.info("Session rollback due to BadRequest validation failure")
+            raise
         except Exception:
             session.rollback()
-            logger.error("Session rollback due to exception")
+            logger.error("Session rollback due to unexpected system exception", exc_info=True)
             raise

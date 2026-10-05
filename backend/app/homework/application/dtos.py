@@ -1,7 +1,9 @@
+from typing import Any
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
+from app.homework.domain.entity import SubmissionType
 from app.shared.domain.value_objects import UserRef
 
 
@@ -10,6 +12,8 @@ class HomeworkBase(BaseModel):
     deadline: datetime
     link: str | None = None
     slug: str | None = None
+    requires_coding: bool = False
+    requires_game: bool = False
 
 
 class HomeworkCreate(HomeworkBase):
@@ -21,7 +25,10 @@ class HomeworkUpdate(BaseModel):
     deadline: datetime | None = None
     link: str | None = None
     slug: str | None = None
+    requires_coding: bool | None = None
+    requires_game: bool | None = None
     assignee_ids: list[int] | None = None
+
 
 
 class HomeworkResponse(HomeworkBase):
@@ -71,3 +78,16 @@ class HomeworkReportResponse(BaseModel):
     user_id: int
     owner: UserRef | None = None
     unsubmitted_count: int = 0
+
+
+class HomeworkSubmissionDetailResponse(BaseModel):
+    id: int
+    homework_id: int
+    user_id: int
+    submission_type: SubmissionType
+    submitted_at: datetime | None = None
+    is_passed: bool = True
+    details: dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)

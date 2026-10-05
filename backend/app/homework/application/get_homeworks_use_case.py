@@ -85,15 +85,27 @@ class GetHomeworksUseCase:
             coding_uids = coding_cache.get(slug) if slug else None
             game_uids = game_cache.get(slug) if slug else None
 
-            has_coding = coding_uids is not None
+            has_coding = (
+                hw.requires_coding
+                if (hw.requires_coding or hw.requires_game)
+                else (coding_uids is not None)
+            )
             coding_submitted = (
                 (user_id in coding_uids) if coding_uids is not None else False
             )
-            has_game = game_uids is not None
+            has_game = (
+                hw.requires_game
+                if (hw.requires_coding or hw.requires_game)
+                else (game_uids is not None)
+            )
             game_submitted = (user_id in game_uids) if game_uids is not None else False
 
             is_submitted = QuizSubmissionHelper.is_user_submitted(
-                user_id, coding_uids, game_uids
+                user_id,
+                coding_uids,
+                game_uids,
+                requires_coding=hw.requires_coding,
+                requires_game=hw.requires_game,
             )
             is_overdue = not is_submitted and (hw.deadline < now)
 
@@ -109,6 +121,8 @@ class GetHomeworksUseCase:
                 deadline=hw.deadline,
                 link=hw.link,
                 slug=hw.slug,
+                requires_coding=hw.requires_coding,
+                requires_game=hw.requires_game,
                 created_at=hw.created_at,
                 updated_at=hw.updated_at,
                 created_by=hw.created_by,
@@ -124,6 +138,7 @@ class GetHomeworksUseCase:
             responses.append(resp)
 
         return responses
+
 
     def get_by_id(self, homework_id: int) -> HomeworkEntity | None:
         return self.homework_repo.get_by_id(homework_id)
@@ -190,7 +205,11 @@ class GetHomeworksUseCase:
                 game_set = game_completed_cache.get(slug, set())
 
                 if not QuizSubmissionHelper.is_user_submitted(
-                    user_id, coding_set, game_set
+                    user_id,
+                    coding_set,
+                    game_set,
+                    requires_coding=hw.requires_coding,
+                    requires_game=hw.requires_game,
                 ):
                     unsubmitted.append(hw)
             else:
@@ -257,12 +276,17 @@ class GetHomeworksUseCase:
                     coding_uids = coding_cache.get(slug)
                     game_uids = game_cache.get(slug)
                     if not QuizSubmissionHelper.is_user_submitted(
-                        uid, coding_uids, game_uids
+                        uid,
+                        coding_uids,
+                        game_uids,
+                        requires_coding=hw.requires_coding,
+                        requires_game=hw.requires_game,
                     ):
                         unsubmitted_count += 1
                 else:
                     # Bài tập thường nếu quá hạn
                     pass
+
 
             reports.append(
                 HomeworkReportResponse(
