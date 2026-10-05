@@ -1,5 +1,5 @@
 from sqlalchemy import select
-from sqlalchemy.orm import Session, contains_eager
+from sqlalchemy.orm import Session, selectinload
 
 from app.team.domain.entity import Team as TeamEntity
 from app.team.infrastructure.model import TeamMemberModel, TeamModel
@@ -12,39 +12,34 @@ class TeamRepository:
     def get_all_with_members(self, skip: int = 0, limit: int = 100) -> list[TeamEntity]:
         statement = (
             select(TeamModel)
-            .outerjoin(
-                TeamMemberModel,
-                (TeamModel.id == TeamMemberModel.team_id)
-                & (TeamMemberModel.is_deleted == False),
-            )
             .where(TeamModel.is_deleted == False)
             .options(
-                contains_eager(TeamModel.team_members).joinedload(TeamMemberModel.user)
+                selectinload(TeamModel.team_members).joinedload(TeamMemberModel.user)
             )
+            .order_by(TeamModel.id.desc())
             .offset(skip)
             .limit(limit)
         )
-        models = self.session.scalars(statement).unique().all()
+        models = self.session.scalars(statement).all()
         return [model.to_entity() for model in models]
 
     def get_by_id_with_members(self, team_id: int) -> TeamEntity | None:
         statement = (
             select(TeamModel)
-            .outerjoin(
-                TeamMemberModel,
-                (TeamModel.id == TeamMemberModel.team_id)
-                & (TeamMemberModel.is_deleted == False),
-            )
             .where(
                 TeamModel.is_deleted == False,
                 TeamModel.id == team_id,
             )
             .options(
-                contains_eager(TeamModel.team_members).joinedload(TeamMemberModel.user)
+                selectinload(TeamModel.team_members).joinedload(TeamMemberModel.user)
             )
         )
-        model = self.session.scalars(statement).unique().first()
+        model = self.session.scalars(statement).first()
         return model.to_entity() if model else None
+
+    def get_by_name(self, team_name: str) -> TeamModel | None:
+        statement = select(TeamModel).where(TeamModel.team_name == team_name)
+        return self.session.scalars(statement).first()
 
     def get_by_id(self, team_id: int) -> TeamEntity | None:
         statement = select(TeamModel).where(
@@ -70,18 +65,17 @@ class TeamRepository:
         statement = select(TeamModel).where(TeamModel.id == team_id)
         model = self.session.scalars(statement).first()
         if model:
-            model.is_deleted = True
-
-            # also soft delete all team members mapping
+            # Xóa cứng tất cả team_members liên quan
             member_statement = select(TeamMemberModel).where(
                 TeamMemberModel.team_id == team_id
             )
             members = self.session.scalars(member_statement).all()
             for m in members:
-                m.is_deleted = True
-                self.session.add(m)
+                self.session.delete(m)
 
-            self.session.add(model)
+            # Xóa cứng team
+            self.session.delete(model)
+            self.session.flush()
             return True
         return False
 
