@@ -23,6 +23,10 @@ class GetUserHomeworkSubmissionsUseCase:
                 homework_id=s.homework_id,
                 user_id=s.user_id,
                 submission_type=s.submission_type,
+                exercise_id=getattr(s, "exercise_id", None),
+                exercise_title=getattr(s, "exercise_title", None),
+                score=getattr(s, "score", None),
+                attempt_number=getattr(s, "attempt_number", 1) or 1,
                 submitted_at=s.submitted_at,
                 is_passed=s.is_passed,
                 details=s.details or {},
@@ -31,3 +35,4 @@ class GetUserHomeworkSubmissionsUseCase:
             for s in submissions
             if s.id is not None
         ]
+

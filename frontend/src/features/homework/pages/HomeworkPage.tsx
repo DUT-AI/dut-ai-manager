@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import {
     Table, Button, Tabs, Space, Popconfirm, Typography, Grid, Tooltip, message
@@ -21,7 +22,6 @@ import {
     HomeworkMobileList,
     HomeworkFormModal,
     HomeworkReportTab,
-    HomeworkDetailDrawer,
 } from '../components';
 
 const { Title, Text } = Typography;
@@ -38,8 +38,8 @@ const itemVariants: Variants = {
 };
 
 export const HomeworkPage: React.FC = () => {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('2');
-    const [detailHomework, setDetailHomework] = useState<Homework | null>(null);
     const screens = Grid.useBreakpoint();
 
     // Report refetch (lifted here for tabBarExtraContent)
@@ -113,7 +113,7 @@ export const HomeworkPage: React.FC = () => {
                     <Button
                         icon={<EyeOutlined />}
                         size="small"
-                        onClick={() => setDetailHomework(record)}
+                        onClick={() => navigate(`/dashboard/homeworks/${record.id}`)}
                         style={{ color: '#6366f1', borderColor: '#6366f1' }}
                     >
                         Chi tiết
@@ -154,7 +154,7 @@ export const HomeworkPage: React.FC = () => {
                 </Space>
             ),
         },
-    ], [hasPermission, handleOpenEdit, handleDelete, setDetailHomework, syncingId]);
+    ], [hasPermission, handleOpenEdit, handleDelete, syncingId, navigate]);
 
     const renderListView = (dataSource: Homework[], loading: boolean, emptyText?: string) => {
         if (!screens.md) {
@@ -164,7 +164,7 @@ export const HomeworkPage: React.FC = () => {
                     loading={loading}
                     emptyText={emptyText}
                     activeTab={activeTab}
-                    onViewDetail={setDetailHomework}
+                    onViewDetail={(record) => navigate(`/dashboard/homeworks/${record.id}`)}
                     handlers={handlers}
                 />
             );
@@ -238,7 +238,7 @@ export const HomeworkPage: React.FC = () => {
                     ]}
                 />
 
-                {/* Modals & Drawers */}
+                {/* Modals */}
                 <HomeworkFormModal
                     key={`form-${editingHomework?.id ?? 'create'}`}
                     open={isFormModalOpen}
@@ -247,10 +247,6 @@ export const HomeworkPage: React.FC = () => {
                     teams={teams}
                     onSuccess={handleFormSuccess}
                     onCancel={() => dispatch({ type: 'CLOSE_FORM' })}
-                />
-                <HomeworkDetailDrawer
-                    homework={detailHomework}
-                    onClose={() => setDetailHomework(null)}
                 />
             </motion.div>
         </motion.div>

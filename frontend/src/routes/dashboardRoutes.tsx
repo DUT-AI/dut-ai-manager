@@ -10,7 +10,12 @@ import { TrashPage } from '@/features/trash';
 import { AcademicReportPage } from '@/features/academic-report';
 import { ActivityReportPage, BonusPointManagementPage } from '@/features/activity';
 import { AdminBillingPage, InvoicesPage } from '@/features/billing';
-import { HomeworkPage, MyHomeworkPage } from '@/features/homework';
+import {
+    HomeworkPage,
+    MyHomeworkPage,
+    HomeworkDetailPage,
+    MyHomeworkDetailPage
+} from '@/features/homework';
 import { MeetingCalendarPage, MeetingDetailPage } from '@/features/meeting';
 import { PermissionManagementPage, RoleManagementPage } from '@/features/rbac';
 import { RobotInterfacePage } from '@/features/robot';
@@ -68,12 +73,20 @@ export const dashboardRoutesConfig: RouteConfig[] = [
         element: <MyHomeworkPage />,
     },
     {
+        path: 'my-homeworks/:id',
+        element: <MyHomeworkDetailPage />,
+    },
+    {
         path: 'teams',
         element: <TeamManagementPage />,
     },
     {
         path: 'homeworks',
         element: <HomeworkPage />,
+    },
+    {
+        path: 'homeworks/:id',
+        element: <HomeworkDetailPage />,
     },
     {
         path: 'meetings',

@@ -113,12 +113,34 @@ export const homeworkReportResponseSchema = z.object({
 });
 export type HomeworkReportResponse = z.infer<typeof homeworkReportResponseSchema>;
 
+export const exerciseSummarySchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  order_index: z.number().optional(),
+});
+export type ExerciseSummary = z.infer<typeof exerciseSummarySchema>;
+
+export const studentExerciseStatusSchema = z.object({
+  exercise_id: z.string(),
+  exercise_title: z.string().nullable().optional(),
+  is_submitted: z.boolean().default(false),
+  submitted_at: z.string().nullable().optional(),
+  is_late: z.boolean().default(false),
+  score: z.number().nullable().optional(),
+  attempt_number: z.number().default(1),
+});
+export type StudentExerciseStatus = z.infer<typeof studentExerciseStatusSchema>;
+
 export const userSubmissionInfoSchema = z.object({
   user_id: z.number(),
   name: z.string().nullable().optional(),
   avatar_url: z.string().nullable().optional(),
   is_late: z.boolean().optional(),
   submitted_at: z.string().nullable().optional(),
+  total_coding_required: z.number().optional(),
+  total_coding_completed: z.number().optional(),
+  coding_status: z.string().optional(),
+  coding_exercises: z.array(studentExerciseStatusSchema).optional(),
 });
 export type UserSubmissionInfo = z.infer<typeof userSubmissionInfoSchema>;
 
@@ -128,9 +150,27 @@ export const categorySubmissionStatusSchema = z.object({
 });
 export type CategorySubmissionStatus = z.infer<typeof categorySubmissionStatusSchema>;
 
+export const studentHomeworkDetailSchema = z.object({
+  user_id: z.number(),
+  name: z.string().nullable().optional(),
+  avatar_url: z.string().nullable().optional(),
+  total_coding_required: z.number().default(0),
+  total_coding_completed: z.number().default(0),
+  coding_status: z.string().default('NOT_SUBMITTED'),
+  coding_is_late: z.boolean().default(false),
+  coding_exercises: z.array(studentExerciseStatusSchema).default([]),
+  game_is_submitted: z.boolean().default(false),
+  game_is_late: z.boolean().default(false),
+  game_submitted_at: z.string().nullable().optional(),
+  game_score: z.number().nullable().optional(),
+});
+export type StudentHomeworkDetail = z.infer<typeof studentHomeworkDetailSchema>;
+
 export const homeworkSubmissionStatusSchema = z.object({
   coding: categorySubmissionStatusSchema.optional(),
   game: categorySubmissionStatusSchema.optional(),
+  coding_exercises: z.array(exerciseSummarySchema).optional(),
+  students: z.array(studentHomeworkDetailSchema).optional(),
   submitted: z.array(userSubmissionInfoSchema).optional(),
   not_submitted: z.array(userSubmissionInfoSchema).optional(),
 });
@@ -141,9 +181,16 @@ export interface SubmissionHistoryItem {
   homework_id: number;
   user_id: number;
   submission_type: 'CODING' | 'GAME';
+  exercise_id?: string | null;
+  exercise_title?: string | null;
+  score?: number | null;
+  attempt_number?: number;
   submitted_at: string;
-  source: string;
+  source?: string;
+  details?: Record<string, any> | null;
   metadata?: Record<string, any> | null;
-  created_at: string;
+  is_passed?: boolean;
+  created_at?: string;
 }
+
 

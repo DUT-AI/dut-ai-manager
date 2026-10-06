@@ -35,7 +35,8 @@ def test_invoice_entity_requires_team_id():
     assert inv.team_id == 2
 
 
-def test_create_monthly_invoices_requires_team_id():
+@pytest.mark.asyncio
+async def test_create_monthly_invoices_requires_team_id():
     invoice_repo = MagicMock()
     violation_repo = MagicMock()
     team_repo = MagicMock()
@@ -44,11 +45,12 @@ def test_create_monthly_invoices_requires_team_id():
 
     # Missing or 0/None team_id raises BadRequestException
     with pytest.raises(BadRequestException) as exc_info:
-        uc.execute(month=9, year=2026, team_id=None)  # type: ignore
+        await uc.execute(month=9, year=2026, team_id=None)  # type: ignore
     assert "chọn nhóm" in str(exc_info.value.message).lower()
 
 
-def test_create_monthly_invoices_with_team_id():
+@pytest.mark.asyncio
+async def test_create_monthly_invoices_with_team_id():
     invoice_repo = MagicMock()
     violation_repo = MagicMock()
     team_repo = MagicMock()
@@ -66,7 +68,7 @@ def test_create_monthly_invoices_with_team_id():
 
     uc = CreateMonthlyInvoicesUseCase(invoice_repo, violation_repo, team_repo)
 
-    result = uc.execute(
+    result = await uc.execute(
         month=9,
         year=2026,
         team_id=5,
@@ -82,22 +84,24 @@ def test_create_monthly_invoices_with_team_id():
 
     # Also test empty user_ids raises error
     with pytest.raises(BadRequestException) as exc_info:
-        uc.execute(month=9, year=2026, team_id=5, user_ids=[])
+        await uc.execute(month=9, year=2026, team_id=5, user_ids=[])
     assert "chọn ít nhất 1 thành viên" in str(exc_info.value.message).lower()
 
 
-def test_create_invoice_requires_team_id():
+@pytest.mark.asyncio
+async def test_create_invoice_requires_team_id():
     invoice_repo = MagicMock()
     uc = CreateInvoiceUseCase(invoice_repo)
 
     with pytest.raises(BadRequestException) as exc_info:
-        uc.execute(
+        await uc.execute(
             items_data=[{"item_type": "FUND", "amount": 50000}],
             billing_period=date(2026, 9, 1),
             user_id=1,
             team_id=0,  # invalid
         )
     assert "chọn nhóm" in str(exc_info.value.message).lower()
+
 
 
 if __name__ == "__main__":

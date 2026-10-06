@@ -126,6 +126,19 @@ class QuizSubmissionHelper:
         return set(completed_map.keys())
 
     @staticmethod
+    async def get_lesson_exercises(
+        quiz_api: QuizApiClient | None, slug: str
+    ) -> list[dict] | None:
+        """Lấy danh sách các bài tập coding con của bài học từ Quiz API."""
+        if not quiz_api:
+            return None
+        try:
+            return await quiz_api.get_lesson_exercises(slug)
+        except Exception as exc:
+            logger.warning(f"Quiz get_lesson_exercises error for slug={slug}: {exc}")
+            return None
+
+    @staticmethod
     def is_user_submitted(
         user_id: int,
         coding_completed_uids: set[int] | None,
@@ -164,3 +177,4 @@ class QuizSubmissionHelper:
             return user_id in (game_completed_uids or set())
         else:
             return False
+

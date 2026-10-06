@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Button, Tabs, Space, Typography, Input, Row, Col, Empty, Spin
 } from 'antd';
@@ -15,7 +16,7 @@ import 'dayjs/locale/vi';
 import { useAuth } from '@/features/auth';
 import { useMyHomeworks, useUnsubmittedByUser } from '../hooks/useHomeworks';
 import type { Homework } from '../types/homework.types';
-import { MyHomeworkDetailDrawer, HomeworkCard } from '../components';
+import { HomeworkCard } from '../components';
 
 dayjs.extend(relativeTime);
 dayjs.locale('vi');
@@ -33,10 +34,10 @@ const itemVariants: Variants = {
 };
 
 export const MyHomeworkPage: React.FC = () => {
+    const navigate = useNavigate();
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState<string>('all');
     const [searchText, setSearchText] = useState<string>('');
-    const [detailHomework, setDetailHomework] = useState<Homework | null>(null);
 
     const { data: myHomeworksData, isLoading: isMyLoading, refetch: refetchMy } = useMyHomeworks();
     const { data: unsubmittedHomeworksData, isLoading: isUnsubLoading, refetch: refetchUnsub } = useUnsubmittedByUser(user?.id ?? null);
@@ -214,19 +215,12 @@ export const MyHomeworkPage: React.FC = () => {
                             <HomeworkCard
                                 key={hw.id}
                                 homework={hw}
-                                onViewDetail={(item) => setDetailHomework(item)}
+                                onViewDetail={(item) => navigate(`/dashboard/my-homeworks/${item.id}`)}
                             />
                         ))}
                     </div>
                 )}
             </motion.div>
-
-            {/* Detail Drawer for Student */}
-            <MyHomeworkDetailDrawer
-                homeworkId={detailHomework?.id ?? null}
-                open={!!detailHomework}
-                onClose={() => setDetailHomework(null)}
-            />
         </motion.div>
     );
 };

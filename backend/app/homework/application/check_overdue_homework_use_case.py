@@ -73,48 +73,65 @@ class CheckOverdueHomeworkUseCase:
                 )
                 continue
 
-            check_coding = homework.requires_coding or (
-                not homework.requires_coding and not homework.requires_game
+            coding_completed_uids = (
+                await QuizSubmissionHelper.get_coding_completed_user_ids(
+                    self.quiz_api, slug
+                )
             )
-            check_game = homework.requires_game or (
-                not homework.requires_coding and not homework.requires_game
+            exercises = await QuizSubmissionHelper.get_lesson_exercises(
+                self.quiz_api, slug
             )
 
-            coding_completed_uids = None
-            if check_coding:
-                coding_completed_uids = (
-                    await QuizSubmissionHelper.get_coding_completed_user_ids(
-                        self.quiz_api, slug
-                    )
+            game_completed_uids = (
+                await QuizSubmissionHelper.get_game_completed_user_ids(
+                    self.quiz_api, slug
                 )
+            )
 
-            game_completed_uids = None
-            if check_game:
-                game_completed_uids = (
-                    await QuizSubmissionHelper.get_game_completed_user_ids(
-                        self.quiz_api, slug
-                    )
-                )
+            has_coding = coding_completed_uids is not None
+            has_game = game_completed_uids is not None
 
             # Nếu cả 2 đều là None (404/không tìm thấy trên Quiz API), bỏ qua
-            if coding_completed_uids is None and game_completed_uids is None:
+            if not has_coding and not has_game:
                 continue
 
             assigned_uids = self._get_effective_assigned_user_ids(homework)
             if not assigned_uids:
                 continue
 
+            required_exercise_ids = set()
+            if exercises:
+                required_exercise_ids = {
+                    str(ex.get("id"))
+                    for ex in exercises
+                    if isinstance(ex, dict) and ex.get("id")
+                }
+
+            # Xác định yêu cầu coding/game cho bài tập này
+            if homework.requires_game and not homework.requires_coding:
+                req_coding = False
+                req_game = has_game
+            elif homework.requires_coding and homework.requires_game:
+                req_coding = has_coding
+                req_game = has_game
+            else:
+                req_coding = has_coding
+                req_game = has_game
+
             for user_id in assigned_uids:
                 # 1. Kiểm tra mục Coding (nếu bài yêu cầu)
-                req_coding = (
-                    homework.requires_coding
-                    if (homework.requires_coding or homework.requires_game)
-                    else (coding_completed_uids is not None)
-                )
                 coding_ok = True
                 if req_coding:
                     db_coding = False
-                    if hasattr(self.homework_repo, "has_valid_submission"):
+                    if (
+                        hasattr(self.homework_repo, "get_submitted_exercise_ids")
+                        and required_exercise_ids
+                    ):
+                        submitted_ids = self.homework_repo.get_submitted_exercise_ids(
+                            homework.id, user_id, homework.deadline
+                        )
+                        db_coding = required_exercise_ids.issubset(submitted_ids)
+                    elif hasattr(self.homework_repo, "has_valid_submission"):
                         res = self.homework_repo.has_valid_submission(
                             homework.id,
                             user_id,
@@ -126,11 +143,6 @@ class CheckOverdueHomeworkUseCase:
                     coding_ok = db_coding or api_coding
 
                 # 2. Kiểm tra mục Game (nếu bài yêu cầu)
-                req_game = (
-                    homework.requires_game
-                    if (homework.requires_coding or homework.requires_game)
-                    else (game_completed_uids is not None)
-                )
                 game_ok = True
                 if req_game:
                     db_game = False
@@ -141,6 +153,7 @@ class CheckOverdueHomeworkUseCase:
                         db_game = res is True
                     api_game = user_id in (game_completed_uids or set())
                     game_ok = db_game or api_game
+
 
                 if coding_ok and game_ok:
                     continue

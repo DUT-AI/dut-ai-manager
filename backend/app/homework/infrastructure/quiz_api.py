@@ -202,6 +202,52 @@ class QuizApiClient:
 
         return {}
 
+    async def get_lesson_exercises(
+        self, lesson_slug: str
+    ) -> list[dict[str, Any]] | None:
+        """
+        Calls GET /api/v1/lessons/{lesson_slug}/exercises
+        Returns list of coding exercises:
+        [{ "id": "...", "lesson_id": "...", "title": "...", "description": "...", "has_attachment": bool }, ...]
+        Returns None if not found (404).
+        """
+        url = f"{self.base_url}/api/v1/lessons/{lesson_slug}/exercises"
+        try:
+            async with httpx.AsyncClient(
+                timeout=5.0, headers=self._get_headers()
+            ) as client:
+                response = await client.get(url)
+                if response.status_code == 200:
+                    data = response.json()
+                    if isinstance(data, dict):
+                        if "exercises" in data and isinstance(data["exercises"], list):
+                            return data["exercises"]
+                        if "data" in data:
+                            inner = data["data"]
+                            if isinstance(inner, dict) and "exercises" in inner:
+                                return inner["exercises"]
+                            elif isinstance(inner, list):
+                                return inner
+                    elif isinstance(data, list):
+                        return data
+                    return []
+                elif response.status_code == 404:
+                    logger.info(
+                        f"Quiz lesson '{lesson_slug}' exercises not found (404) at {url}"
+                    )
+                    return None
+                else:
+                    logger.warning(
+                        f"Quiz lesson exercises request failed: status={response.status_code}, url={url}"
+                    )
+        except Exception as exc:
+            err_msg = str(exc) or repr(exc)
+            logger.error(
+                f"Error calling Quiz lesson exercises ({url}): {type(exc).__name__} - {err_msg}"
+            )
+
+        return []
+
     async def get_lesson_metadata(self, lesson_slug: str) -> dict[str, Any] | None:
         """
         Calls GET /api/v1/lessons/{lesson_slug}/metadata
@@ -234,3 +280,5 @@ class QuizApiClient:
         except httpx.RequestError as exc:
             logger.exception(f"Connection failure to Quiz service at {url}: {exc}")
             raise RuntimeError(f"Cannot connect to Quiz service at {url}") from exc
+
+

@@ -51,6 +51,45 @@ class HomeworkResponse(HomeworkBase):
         from_attributes = True
 
 
+class ExerciseSummaryDTO(BaseModel):
+    """Thông tin tóm tắt của một bài tập coding con."""
+    exercise_id: str
+    title: str
+    order_index: int = 0
+
+
+class StudentExerciseStatusDTO(BaseModel):
+    """Trạng thái nộp bài của 1 học viên đối với 1 bài tập coding con."""
+    exercise_id: str
+    exercise_title: str
+    is_submitted: bool = False
+    is_passed: bool = False
+    score: float | None = None
+    attempt_number: int = 0
+    submitted_at: str | None = None
+    is_late: bool = False
+
+
+class StudentHomeworkDetailDTO(BaseModel):
+    """Tiến độ nộp bài tổng thể của 1 học viên được phân công."""
+    user_id: int
+    name: str | None = None
+    avatar_url: str | None = None
+
+    # Tiến độ Coding
+    total_coding_required: int = 0
+    total_coding_completed: int = 0
+    coding_status: str = "NOT_SUBMITTED"  # "COMPLETED" | "PARTIALLY_SUBMITTED" | "NOT_SUBMITTED"
+    coding_is_late: bool = False
+    coding_exercises: list[StudentExerciseStatusDTO] = Field(default_factory=list)
+
+    # Tiến độ Game
+    game_is_submitted: bool = False
+    game_is_late: bool = False
+    game_submitted_at: str | None = None
+    game_score: float | None = None
+
+
 class UserSubmissionInfo(BaseModel):
     user_id: int
     name: str | None = None
@@ -68,6 +107,12 @@ class HomeworkSubmissionStatusResponse(BaseModel):
     coding: CategorySubmissionStatus = CategorySubmissionStatus()
     game: CategorySubmissionStatus = CategorySubmissionStatus()
 
+    # Danh sách bài tập con của bài học
+    coding_exercises: list[ExerciseSummaryDTO] = Field(default_factory=list)
+
+    # Chi tiết theo từng học viên
+    students: list[StudentHomeworkDetailDTO] = Field(default_factory=list)
+
     # Top-level combined fields for fallback
     submitted: list[UserSubmissionInfo] = []
     not_submitted: list[UserSubmissionInfo] = []
@@ -84,9 +129,14 @@ class HomeworkSubmissionDetailResponse(BaseModel):
     homework_id: int
     user_id: int
     submission_type: SubmissionType
+    exercise_id: str | None = None
+    exercise_title: str | None = None
+    score: float | None = None
+    attempt_number: int = 1
     submitted_at: datetime | None = None
     is_passed: bool = True
     details: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
+

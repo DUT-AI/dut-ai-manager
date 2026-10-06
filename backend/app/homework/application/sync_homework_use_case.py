@@ -61,11 +61,18 @@ class SyncHomeworkFromQuizUseCase:
                             continue
 
                         sub_id = sub.get("submission_id")
+                        exercise_id = sub.get("exercise_id") or sub.get("homework_id")
+                        exercise_title = sub.get("exercise_title")
+                        score = float(sub["score"]) if sub.get("score") is not None else None
+                        attempt_number = int(sub.get("attempt_number", 1)) if sub.get("attempt_number") is not None else 1
+
                         details = {
                             "submission_id": sub_id,
-                            "attempt_number": sub.get("attempt_number"),
+                            "exercise_id": str(exercise_id) if exercise_id else None,
+                            "exercise_title": exercise_title,
+                            "attempt_number": attempt_number,
                             "original_filename": sub.get("original_filename"),
-                            "score": sub.get("score"),
+                            "score": score,
                             "status": sub.get("status"),
                             "score_details": sub.get("score_details"),
                             "source": "manual_sync",
@@ -76,6 +83,7 @@ class SyncHomeworkFromQuizUseCase:
                             homework.id,
                             uid,
                             SubmissionType.CODING,
+                            exercise_id=str(exercise_id) if exercise_id else None,
                             quiz_submission_id=sub_id,
                             submitted_at=sub_time,
                         )
@@ -85,22 +93,35 @@ class SyncHomeworkFromQuizUseCase:
                                 existing,
                                 submitted_at=sub_time,
                                 is_passed=True,
+                                exercise_id=str(exercise_id) if exercise_id else None,
+                                exercise_title=exercise_title,
+                                score=score,
+                                attempt_number=attempt_number,
                                 details=details,
                             )
                             updated_coding += 1
                         else:
                             # Thêm mới vào lịch sử nộp bài
+                            final_exercise_id = (
+                                str(exercise_id)
+                                if exercise_id
+                                else f"sync-{homework.id}-{sub_id or uid}"
+                            )
                             self.homework_repo.add_submission(
-                                HomeworkSubmission(
+                                HomeworkSubmission.create_coding(
                                     homework_id=homework.id,
                                     user_id=uid,
-                                    submission_type=SubmissionType.CODING,
+                                    exercise_id=final_exercise_id,
+                                    exercise_title=exercise_title,
+                                    score=score,
+                                    attempt_number=attempt_number,
                                     submitted_at=sub_time,
                                     is_passed=True,
                                     details=details,
                                 )
                             )
                             synced_coding += 1
+
                 else:
                     # 1.2 Fallback sang completed-members nếu submissions-for-sync không khả dụng
                     coding_map = await QuizSubmissionHelper.get_coding_completed_map(
@@ -126,10 +147,10 @@ class SyncHomeworkFromQuizUseCase:
                             )
                             if not existing:
                                 self.homework_repo.add_submission(
-                                    HomeworkSubmission(
+                                    HomeworkSubmission.create_coding(
                                         homework_id=homework.id,
                                         user_id=uid,
-                                        submission_type=SubmissionType.CODING,
+                                        exercise_id=f"sync-legacy-{homework.id}-{uid}",
                                         submitted_at=sub_time,
                                         is_passed=True,
                                         details={
@@ -142,6 +163,7 @@ class SyncHomeworkFromQuizUseCase:
                                     )
                                 )
                                 synced_coding += 1
+
             except Exception as e:
                 logger.warning(f"Error syncing coding submissions for slug={slug}: {e}")
 
@@ -200,10 +222,9 @@ class SyncHomeworkFromQuizUseCase:
                         else:
                             # Thêm mới vào lịch sử nộp bài
                             self.homework_repo.add_submission(
-                                HomeworkSubmission(
+                                HomeworkSubmission.create_game(
                                     homework_id=homework.id,
                                     user_id=uid,
-                                    submission_type=SubmissionType.GAME,
                                     submitted_at=sub_time,
                                     is_passed=True,
                                     details=details,
@@ -239,10 +260,9 @@ class SyncHomeworkFromQuizUseCase:
                                 )
                                 if not existing:
                                     self.homework_repo.add_submission(
-                                        HomeworkSubmission(
+                                        HomeworkSubmission.create_game(
                                             homework_id=homework.id,
                                             user_id=uid,
-                                            submission_type=SubmissionType.GAME,
                                             submitted_at=sub_time,
                                             is_passed=True,
                                             details={
@@ -258,6 +278,7 @@ class SyncHomeworkFromQuizUseCase:
                                         )
                                     )
                                     synced_game += 1
+
             except Exception as e:
                 logger.warning(f"Error syncing game leaderboard for slug={slug}: {e}")
 
