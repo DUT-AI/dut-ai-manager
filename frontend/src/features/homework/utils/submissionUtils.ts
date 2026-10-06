@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import type { SubmissionHistoryItem } from '../types/homework.types';
+import type { SubmissionHistoryItem, ExerciseSummary } from '../types/homework.types';
 
 export interface NormalizedSubmission {
   id: number;
@@ -99,9 +99,13 @@ export function normalizeSubmissions(rawList?: SubmissionHistoryItem[] | null): 
 }
 
 /**
- * Groups submissions by exercise_id. Useful for Coding homeworks with multiple exercises.
+ * Groups submissions by exercise_id. If allExercises is provided, ensures all exercises from the lesson
+ * are represented in the resulting array in order, even if the student hasn't submitted them yet.
  */
-export function groupSubmissionsByExercise(submissions: NormalizedSubmission[]): ExerciseGroupSummary[] {
+export function groupSubmissionsByExercise(
+  submissions: NormalizedSubmission[],
+  allExercises?: ExerciseSummary[] | null
+): ExerciseGroupSummary[] {
   const groupMap = new Map<string, NormalizedSubmission[]>();
 
   for (const sub of submissions) {
@@ -113,20 +117,57 @@ export function groupSubmissionsByExercise(submissions: NormalizedSubmission[]):
   }
 
   const summaries: ExerciseGroupSummary[] = [];
+  const processedKeys = new Set<string>();
 
+  // 1. If allExercises is provided, include all exercises from the lesson in order
+  if (allExercises && allExercises.length > 0) {
+    for (const ex of allExercises) {
+      const key = ex.exercise_id || ex.id;
+      if (!key) continue;
+      const strKey = String(key);
+      processedKeys.add(strKey);
+
+      const subs = groupMap.get(strKey) || [];
+      const sortedDesc = [...subs].sort(
+        (a, b) => dayjs(b.submittedAt).valueOf() - dayjs(a.submittedAt).valueOf()
+      );
+      const latest = sortedDesc[0];
+      const scores = subs.map((s) => s.score).filter((s): s is number => s !== null);
+      const bestScore = scores.length > 0 ? Math.max(...scores) : null;
+      const isPassed = subs.some((s) => s.isPassed);
+
+      summaries.push({
+        exerciseId: strKey,
+        exerciseTitle:
+          ex.title ||
+          latest?.exerciseTitle ||
+          `Bài tập #${strKey.slice(0, 8)}`,
+        submissions: sortedDesc,
+        attemptCount: subs.length,
+        bestScore,
+        latestSubmittedAt: latest ? latest.submittedAt : '',
+        isPassed,
+      });
+    }
+  }
+
+  // 2. Include any remaining submission groups not in allExercises
   for (const [key, subs] of groupMap.entries()) {
-    // Sort chronological ascending within group to find best score and stats
-    const sortedDesc = [...subs].sort((a, b) => dayjs(b.submittedAt).valueOf() - dayjs(a.submittedAt).valueOf());
+    if (processedKeys.has(key)) continue;
+
+    const sortedDesc = [...subs].sort(
+      (a, b) => dayjs(b.submittedAt).valueOf() - dayjs(a.submittedAt).valueOf()
+    );
     const latest = sortedDesc[0];
-    
-    // Compute best score
     const scores = subs.map((s) => s.score).filter((s): s is number => s !== null);
     const bestScore = scores.length > 0 ? Math.max(...scores) : null;
     const isPassed = subs.some((s) => s.isPassed);
 
     summaries.push({
       exerciseId: key,
-      exerciseTitle: latest.exerciseTitle || (key === '__general__' ? 'Bài tập chung' : `Bài tập #${key.slice(0, 8)}`),
+      exerciseTitle:
+        latest.exerciseTitle ||
+        (key === '__general__' ? 'Bài tập chung' : `Bài tập #${key.slice(0, 8)}`),
       submissions: sortedDesc,
       attemptCount: subs.length,
       bestScore,
@@ -137,3 +178,4 @@ export function groupSubmissionsByExercise(submissions: NormalizedSubmission[]):
 
   return summaries;
 }
+

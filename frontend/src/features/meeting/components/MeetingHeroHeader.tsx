@@ -1,18 +1,23 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Typography, Tag, Button, Popconfirm, message } from 'antd';
+import { Typography, Tag, Button, Popconfirm, message, Space } from 'antd';
 import {
   CalendarOutlined,
   ClockCircleOutlined,
   SafetyCertificateOutlined,
   EditOutlined,
   DeleteOutlined,
+  StarOutlined,
+  TrophyOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useMeetingDetail, useDeleteMeeting, useUpdateMeeting } from '../hooks/useMeetings';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { useUsers } from '@/features/users/hooks/useUsers';
 import { MeetingModal } from './MeetingModal';
+import { TraineeEvaluationModal } from './TraineeEvaluationModal';
+import { MyEvaluationResultModal } from './MyEvaluationResultModal';
 
 const { Title, Paragraph } = Typography;
 
@@ -27,6 +32,9 @@ export const MeetingHeroHeader: React.FC<Props> = ({ meetingId }) => {
   const { data: users = [] } = useUsers();
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isTraineeEvalOpen, setIsTraineeEvalOpen] = useState(false);
+  const [isMyResultOpen, setIsMyResultOpen] = useState(false);
+  const [isEnabling, setIsEnabling] = useState(false);
 
   const deleteMeetingMutation = useDeleteMeeting();
   const updateMeetingMutation = useUpdateMeeting();
@@ -36,7 +44,11 @@ export const MeetingHeroHeader: React.FC<Props> = ({ meetingId }) => {
   const currentUserId = user?.id;
   const isTrainer =
     (meeting.created_by ? currentUserId === meeting.created_by : false) ||
-    (user?.role_names?.some((r) => ['admin', 'leader'].includes(r.toLowerCase())) ?? false);
+    (meeting.trainer?.id ? currentUserId === meeting.trainer.id : false) ||
+    (user?.role_names?.some((r) => ['admin', 'leader', 'superadmin', 'manager'].includes(r.toLowerCase())) ?? false);
+
+  const myParticipantRecord = meeting.participants.find((p) => p.user_id === currentUserId);
+  const isTrainee = !!myParticipantRecord;
 
   const isOngoing = dayjs().isAfter(dayjs(meeting.start_time)) && dayjs().isBefore(dayjs(meeting.end_time));
   const isEnded = dayjs().isAfter(dayjs(meeting.end_time));
@@ -59,6 +71,22 @@ export const MeetingHeroHeader: React.FC<Props> = ({ meetingId }) => {
       refetch();
     } catch {
       message.error('Không thể cập nhật buổi học');
+    }
+  };
+
+  const handleQuickEnableEvaluation = async () => {
+    try {
+      setIsEnabling(true);
+      await updateMeetingMutation.mutateAsync({
+        id: meeting.id,
+        data: { enable_evaluation: true },
+      });
+      message.success('Đã kích hoạt tính năng Đánh giá 2 chiều');
+      refetch();
+    } catch {
+      message.error('Không thể kích hoạt đánh giá');
+    } finally {
+      setIsEnabling(false);
     }
   };
 
@@ -86,9 +114,13 @@ export const MeetingHeroHeader: React.FC<Props> = ({ meetingId }) => {
                   Đã kết thúc
                 </Tag>
               )}
-              {meeting.enable_evaluation && (
+              {meeting.enable_evaluation ? (
                 <Tag color="warning" className="!bg-amber-500/20 !text-amber-200 border-none">
                   Đánh giá 2 chiều (Hạn 24h)
+                </Tag>
+              ) : (
+                <Tag className="!bg-white/10 !text-white/70 border-none">
+                  Đánh giá: Tắt
                 </Tag>
               )}
             </div>
@@ -118,24 +150,64 @@ export const MeetingHeroHeader: React.FC<Props> = ({ meetingId }) => {
           </div>
 
           {/* Action buttons on header */}
-          {isTrainer && (
-            <div className="flex items-center gap-2 self-start md:self-center shrink-0">
-              <Button ghost icon={<EditOutlined />} onClick={() => setIsEditModalOpen(true)}>
-                Chỉnh sửa
-              </Button>
-              <Popconfirm
-                title="Xác nhận xóa buổi học?"
-                description="Bạn có chắc chắn muốn xóa buổi học này không?"
-                onConfirm={handleDeleteMeeting}
-                okText="Xóa"
-                cancelText="Hủy"
+          <div className="flex items-center gap-2 self-start md:self-center shrink-0 flex-wrap">
+            {/* Quick Enable Evaluation Button */}
+            {!meeting.enable_evaluation && isTrainer && (
+              <Button
+                ghost
+                icon={<ThunderboltOutlined />}
+                loading={isEnabling}
+                onClick={handleQuickEnableEvaluation}
+                className="!text-amber-200 !border-amber-300/60 hover:!bg-amber-500/20"
               >
-                <Button danger type="primary" icon={<DeleteOutlined />}>
-                  Xóa
+                Bật Đánh giá 2 chiều
+              </Button>
+            )}
+
+            {/* Trainee Evaluation Actions */}
+            {meeting.enable_evaluation && (
+              <>
+                {isTrainee && (
+                  <Button
+                    ghost
+                    icon={<TrophyOutlined />}
+                    onClick={() => setIsMyResultOpen(true)}
+                    className="!text-yellow-200 !border-yellow-300/60 hover:!bg-yellow-500/20"
+                  >
+                    Điểm của tôi
+                  </Button>
+                )}
+                <Button
+                  type="primary"
+                  icon={<StarOutlined />}
+                  onClick={() => setIsTraineeEvalOpen(true)}
+                  className="bg-amber-500 hover:!bg-amber-400 !text-white border-none font-medium shadow-sm"
+                >
+                  Đánh giá Trainer
                 </Button>
-              </Popconfirm>
-            </div>
-          )}
+              </>
+            )}
+
+            {/* Trainer Edit/Delete Actions */}
+            {isTrainer && (
+              <Space size="small">
+                <Button ghost icon={<EditOutlined />} onClick={() => setIsEditModalOpen(true)}>
+                  Chỉnh sửa
+                </Button>
+                <Popconfirm
+                  title="Xác nhận xóa buổi học?"
+                  description="Bạn có chắc chắn muốn xóa buổi học này không?"
+                  onConfirm={handleDeleteMeeting}
+                  okText="Xóa"
+                  cancelText="Hủy"
+                >
+                  <Button danger type="primary" icon={<DeleteOutlined />}>
+                    Xóa
+                  </Button>
+                </Popconfirm>
+              </Space>
+            )}
+          </div>
         </div>
       </div>
 
@@ -146,6 +218,27 @@ export const MeetingHeroHeader: React.FC<Props> = ({ meetingId }) => {
         onSubmit={handleEditSubmit}
         onCancel={() => setIsEditModalOpen(false)}
       />
+
+      <TraineeEvaluationModal
+        open={isTraineeEvalOpen}
+        meetingId={meeting.id}
+        trainerId={meeting.trainer?.id || meeting.created_by || undefined}
+        trainerName={meeting.trainer?.name}
+        trainerAvatarUrl={meeting.trainer?.avatar_url}
+        onSuccess={() => {
+          setIsTraineeEvalOpen(false);
+          refetch();
+        }}
+        onClose={() => setIsTraineeEvalOpen(false)}
+        onCancel={() => setIsTraineeEvalOpen(false)}
+      />
+
+      <MyEvaluationResultModal
+        open={isMyResultOpen}
+        meetingId={meeting.id}
+        onClose={() => setIsMyResultOpen(false)}
+      />
     </>
   );
 };
+

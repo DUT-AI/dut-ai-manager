@@ -35,6 +35,7 @@ import {
 } from '../hooks/useHomeworks';
 import type { UserSubmissionInfo } from '../types/homework.types';
 import { HomeworkOverviewStats } from '../components/HomeworkOverviewStats';
+import { ExerciseCompletionStats } from '../components/ExerciseCompletionStats';
 import { UserSubmissionCategoryView } from '../components/UserSubmissionCategoryView';
 import { SubmissionHistoryModal } from '../components/SubmissionHistoryModal';
 import { DeadlineText } from '../components/DeadlineText';
@@ -328,7 +329,7 @@ export const HomeworkDetailPage: React.FC = () => {
         </div>
 
         {/* Overview Stats */}
-        <div className="pt-4">
+        <div className="pt-4 space-y-4">
           <HomeworkOverviewStats
             hasCoding={hasCoding}
             hasGame={hasGame}
@@ -339,6 +340,15 @@ export const HomeworkDetailPage: React.FC = () => {
             totalSubmitted={totalSubmitted}
             totalAssigned={totalAssigned}
             submissionPercent={submissionPercent}
+          />
+
+          {/* Sub-exercise Completion Rates */}
+          <ExerciseCompletionStats
+            exercises={statusData?.coding_exercises}
+            hasGame={hasGame}
+            gameSubmittedCount={gameSubmittedCount}
+            gameTotalCount={gameTotalCount}
+            totalAssigned={totalAssigned}
           />
         </div>
       </div>
@@ -358,6 +368,7 @@ export const HomeworkDetailPage: React.FC = () => {
         user={historyUser}
         open={!!historyUser}
         onClose={() => setHistoryUser(null)}
+        allExercises={statusData?.coding_exercises}
       />
     </div>
   );

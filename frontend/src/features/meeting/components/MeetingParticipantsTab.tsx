@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Table, Avatar, Tag, Typography, Image } from 'antd';
-import { UserOutlined } from '@ant-design/icons';
+import { Table, Avatar, Tag, Typography, Image, Button } from 'antd';
+import { UserOutlined, StarOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { ParticipantResponse, UpdateParticipantStatusPayload } from '../types/meeting.types';
 import { useMeetingDetail, useUpdateParticipantStatus } from '../hooks/useMeetings';
@@ -32,7 +32,8 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
   const currentUserId = user?.id;
   const isTrainer =
     (meeting.created_by ? currentUserId === meeting.created_by : false) ||
-    (user?.role_names?.some((r) => ['admin', 'leader'].includes(r.toLowerCase())) ?? false);
+    (meeting.trainer?.id ? currentUserId === meeting.trainer.id : false) ||
+    (user?.role_names?.some((r) => ['admin', 'leader', 'superadmin', 'manager'].includes(r.toLowerCase())) ?? false);
 
   const isEnded = dayjs().isAfter(dayjs(meeting.end_time));
   const totalParticipants = meeting.participants.length;
@@ -154,6 +155,7 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
       {/* Batch Check-in Banner if unjoined participants exist */}
       <MeetingBatchCheckInBanner meetingId={meetingId} />
 
+
       {/* Participants Table */}
       <Table
         dataSource={meeting.participants}
@@ -181,6 +183,8 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
           open={!!evaluatingParticipant}
           meetingId={meeting.id}
           trainee={evaluatingParticipant}
+          participants={meeting.participants}
+          onSelectTrainee={(p) => setEvaluatingParticipant(p)}
           onSuccess={() => {
             setEvaluatingParticipant(null);
             refetch();

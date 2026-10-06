@@ -206,6 +206,7 @@ export const UserSubmissionCategoryView: React.FC<UserSubmissionCategoryViewProp
                                     key={user.user_id}
                                     user={user}
                                     isSubmitted={false}
+                                    onViewHistory={onViewHistory}
                                 />
                             ))}
                         </div>

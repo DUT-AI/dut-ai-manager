@@ -114,9 +114,13 @@ export const homeworkReportResponseSchema = z.object({
 export type HomeworkReportResponse = z.infer<typeof homeworkReportResponseSchema>;
 
 export const exerciseSummarySchema = z.object({
-  id: z.string(),
+  id: z.string().optional(),
+  exercise_id: z.string().optional(),
   title: z.string(),
   order_index: z.number().optional(),
+  completed_count: z.number().optional().default(0),
+  total_assigned: z.number().optional().default(0),
+  completion_rate: z.number().optional().default(0),
 });
 export type ExerciseSummary = z.infer<typeof exerciseSummarySchema>;
 

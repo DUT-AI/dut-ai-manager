@@ -52,10 +52,13 @@ class HomeworkResponse(HomeworkBase):
 
 
 class ExerciseSummaryDTO(BaseModel):
-    """Thông tin tóm tắt của một bài tập coding con."""
+    """Thông tin tóm tắt của một bài tập coding con kèm số liệu hoàn thành."""
     exercise_id: str
     title: str
     order_index: int = 0
+    completed_count: int = 0
+    total_assigned: int = 0
+    completion_rate: float = 0.0
 
 
 class StudentExerciseStatusDTO(BaseModel):
@@ -96,6 +99,11 @@ class UserSubmissionInfo(BaseModel):
     avatar_url: str | None = None
     is_late: bool = False
     submitted_at: str | None = None
+    total_coding_required: int = 0
+    total_coding_completed: int = 0
+    coding_status: str = "NOT_SUBMITTED"
+    coding_exercises: list[StudentExerciseStatusDTO] = Field(default_factory=list)
+
 
 
 class CategorySubmissionStatus(BaseModel):

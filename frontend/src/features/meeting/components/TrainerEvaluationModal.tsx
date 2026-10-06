@@ -1,16 +1,18 @@
-import React from 'react';
-import { Modal, Form, Rate, Input, message, Typography, Space, Divider } from 'antd';
+import React, { useEffect } from 'react';
+import { Modal, Form, Rate, Input, message, Typography, Space, Divider, Select, Avatar } from 'antd';
 import { UserOutlined, StarFilled } from '@ant-design/icons';
 import { meetingService } from '../services/meeting.service';
 import type { ParticipantResponse } from '../types/meeting.types';
 
 const { TextArea } = Input;
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 interface Props {
   open: boolean;
   meetingId: number;
   trainee: ParticipantResponse | null;
+  participants?: ParticipantResponse[];
+  onSelectTrainee?: (trainee: ParticipantResponse) => void;
   onSuccess: () => void;
   onClose?: () => void;
   onCancel?: () => void;
@@ -43,12 +45,20 @@ export const TrainerEvaluationModal: React.FC<Props> = ({
   open,
   meetingId,
   trainee,
+  participants = [],
+  onSelectTrainee,
   onSuccess,
   onClose,
   onCancel,
 }) => {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = React.useState(false);
+
+  useEffect(() => {
+    if (open) {
+      form.resetFields();
+    }
+  }, [open, trainee?.user_id]);
 
   const handleClose = () => {
     if (onClose) onClose();
@@ -105,11 +115,40 @@ export const TrainerEvaluationModal: React.FC<Props> = ({
       width={560}
     >
       <div style={{ marginBottom: 16 }}>
-        <Text type="secondary">Học viên được đánh giá: </Text>
-        <Text strong style={{ fontSize: 16 }}>
-          <UserOutlined style={{ marginRight: 6 }} />
-          {trainee?.user_name || `User #${trainee?.user_id}`}
+        <Text type="secondary" className="block text-xs uppercase font-semibold text-gray-500 mb-1.5">
+          Học viên được đánh giá:
         </Text>
+        {participants && participants.length > 0 && onSelectTrainee ? (
+          <Select
+            value={trainee?.user_id}
+            onChange={(userId) => {
+              const selected = participants.find((p) => p.user_id === userId);
+              if (selected) onSelectTrainee(selected);
+            }}
+            className="w-full"
+            size="large"
+            placeholder="Chọn học viên..."
+            options={participants.map((p) => ({
+              value: p.user_id,
+              label: (
+                <div className="flex items-center gap-2">
+                  <Avatar src={p.user_avatar_url} icon={<UserOutlined />} size="small" />
+                  <span className="font-medium">{p.user_name || `User #${p.user_id}`}</span>
+                  {p.status === 'ABSENT_EXCUSED' || p.status === 'ABSENT_UNEXCUSED' ? (
+                    <span className="text-xs text-red-500">(Vắng mặt)</span>
+                  ) : null}
+                </div>
+              ),
+            }))}
+          />
+        ) : (
+          <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-100">
+            <Avatar src={trainee?.user_avatar_url} icon={<UserOutlined />} size="default" />
+            <Text strong style={{ fontSize: 16 }}>
+              {trainee?.user_name || `User #${trainee?.user_id}`}
+            </Text>
+          </div>
+        )}
       </div>
       <Divider style={{ margin: '12px 0' }} />
 

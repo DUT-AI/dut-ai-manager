@@ -68,12 +68,17 @@ class BonusPointRepository(BaseRepository[BonusPointModel, BonusPoint]):
 
         if query_support:
             statement = apply_query_support(statement, BonusPointModel, query_support)
+            if not query_support.sorting:
+                sort_field = (
+                    BonusPointModel.updated_at if deleted else BonusPointModel.created_at
+                )
+                statement = statement.order_by(sort_field.desc(), BonusPointModel.id.desc())
         else:
             # Default sorting if no query support provided
             sort_field = (
                 BonusPointModel.updated_at if deleted else BonusPointModel.created_at
             )
-            statement = statement.order_by(sort_field.desc())
+            statement = statement.order_by(sort_field.desc(), BonusPointModel.id.desc())
 
         models = self.session.scalars(statement).all()
         return [self.to_entity(m) for m in models]
@@ -85,7 +90,9 @@ class BonusPointRepository(BaseRepository[BonusPointModel, BonusPoint]):
                 FilterCriterion(
                     field="date", operator=FilterOperator.EQ, value=target_date
                 )
-            ]
+            ],
+            sort_by="created_at",
+            descending=True,
         )
         return self.get_all(query_support=qs)
 
@@ -124,7 +131,12 @@ class BonusPointRepository(BaseRepository[BonusPointModel, BonusPoint]):
                 )
             )
 
-        qs = build_query_support(filters=filters, limit=2000)
+        qs = build_query_support(
+            filters=filters,
+            limit=2000,
+            sort_by="created_at",
+            descending=True,
+        )
         return self.get_all(query_support=qs)
 
     def get_by_user_id(
@@ -148,7 +160,12 @@ class BonusPointRepository(BaseRepository[BonusPointModel, BonusPoint]):
                 )
             )
 
-        qs = build_query_support(filters=filters, limit=1000)
+        qs = build_query_support(
+            filters=filters,
+            limit=1000,
+            sort_by="created_at",
+            descending=True,
+        )
         return self.get_all(query_support=qs)
 
     def get_by_user_and_reason_and_date(

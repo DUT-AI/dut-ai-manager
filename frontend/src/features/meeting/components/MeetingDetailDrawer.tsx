@@ -65,8 +65,10 @@ export const MeetingDetailDrawer = ({ open, meeting: initialMeeting, onClose, on
     if (!meeting) return null;
 
     const participantsList = ('participants' in meeting && meeting.participants) ? meeting.participants : [];
-    const currentUserId = user?.id;
-    const isTrainer = (meeting.created_by ? currentUserId === meeting.created_by : false) || (user?.role_names?.some(r => ['admin', 'leader'].includes(r.toLowerCase())) ?? false);
+    const isTrainer =
+        (meeting.created_by ? currentUserId === meeting.created_by : false) ||
+        (meeting.trainer?.id ? currentUserId === meeting.trainer.id : false) ||
+        (user?.role_names?.some(r => ['admin', 'leader', 'superadmin', 'manager'].includes(r.toLowerCase())) ?? false);
     const myParticipantRecord = participantsList.find(p => p.user_id === currentUserId);
     const isTrainee = !!myParticipantRecord;
 
@@ -267,12 +269,23 @@ export const MeetingDetailDrawer = ({ open, meeting: initialMeeting, onClose, on
                             </>
                         )}
 
-                        {meeting.enable_evaluation && isTrainer && isEnded && (
-                            <Tooltip title="Đánh giá học viên này">
+                        {meeting.enable_evaluation && isTrainer && (
+                            <Tooltip
+                                title={
+                                    record.status === ParticipantStatus.ABSENT_EXCUSED ||
+                                    record.status === ParticipantStatus.ABSENT_UNEXCUSED
+                                        ? 'Học viên vắng mặt không thể đánh giá'
+                                        : 'Đánh giá học viên này'
+                                }
+                            >
                                 <Button
                                     icon={<StarOutlined className="text-amber-500" />}
                                     size="small"
                                     type="text"
+                                    disabled={
+                                        record.status === ParticipantStatus.ABSENT_EXCUSED ||
+                                        record.status === ParticipantStatus.ABSENT_UNEXCUSED
+                                    }
                                     onClick={() => setEvaluatingParticipant(record)}
                                 />
                             </Tooltip>
@@ -381,7 +394,7 @@ export const MeetingDetailDrawer = ({ open, meeting: initialMeeting, onClose, on
                 />
 
                 {/* Trainee Action Banner if evaluation enabled */}
-                {meeting.enable_evaluation && isTrainee && isEnded && (
+                {meeting.enable_evaluation && (isTrainee || isTrainer) && (
                     <div className="mb-4 p-3 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200 flex items-center justify-between">
                         <div>
                             <Text strong className="text-amber-900 block text-sm">

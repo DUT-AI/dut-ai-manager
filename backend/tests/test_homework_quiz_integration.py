@@ -224,3 +224,64 @@ async def test_unassigned_legacy_homework_does_not_penalize_users():
 
     # Exactly 0 tickets! Active users are NOT penalized for unassigned homework
     assert len(published_events) == 0
+
+
+@pytest.mark.asyncio
+async def test_sync_homework_from_quiz_with_string_timestamps():
+    """
+    Test Case 5: Đồng bộ bài tập từ Quiz API khi Quiz trả về submitted_at/completed_at dạng chuỗi ISO.
+    """
+    from app.homework.application.sync_homework_use_case import SyncHomeworkFromQuizUseCase
+
+    mock_homework_repo = MagicMock()
+    mock_quiz_api = MagicMock(spec=QuizApiClient)
+
+    hw = Homework(
+        id=201,
+        title="Representation Learning",
+        deadline=datetime.now(UTC),
+        link="https://quiz.dutai.site/lesson/representation-learning",
+        slug="representation-learning",
+        requires_coding=True,
+        requires_game=True,
+    )
+
+    mock_homework_repo.get_by_id.return_value = hw
+    mock_homework_repo.find_submission_match.return_value = None
+
+    mock_quiz_api.get_homework_submissions_for_sync = AsyncMock(
+        return_value=[
+            {
+                "submission_id": "sub-1",
+                "user_id": 10,
+                "exercise_id": "ex-1",
+                "exercise_title": "Exercise 1",
+                "score": 100,
+                "attempt_number": 1,
+                "submitted_at": "2026-10-06T11:20:00Z",
+            }
+        ]
+    )
+    mock_quiz_api.get_game_sessions_for_sync = AsyncMock(
+        return_value=[
+            {
+                "session_id": "sess-1",
+                "user_id": 10,
+                "is_completed": True,
+                "completed_at": "2026-10-06T11:25:00.000Z",
+                "final_score": 150,
+            }
+        ]
+    )
+
+    use_case = SyncHomeworkFromQuizUseCase(
+        homework_repo=mock_homework_repo,
+        quiz_api=mock_quiz_api,
+    )
+
+    result = await use_case.execute(homework_id=201)
+
+    assert result["synced_coding_count"] == 1
+    assert result["synced_game_count"] == 1
+    assert mock_homework_repo.add_submission.call_count == 2
+

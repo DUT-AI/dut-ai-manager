@@ -62,7 +62,13 @@ class GetBonusPointsUseCase:
                 )
             )
 
-        qs = build_query_support(skip=skip, limit=limit, filters=filters)
+        qs = build_query_support(
+            skip=skip,
+            limit=limit,
+            filters=filters,
+            sort_by="created_at",
+            descending=True,
+        )
         return self.repository.get_all(query_support=qs, deleted=deleted)
 
 

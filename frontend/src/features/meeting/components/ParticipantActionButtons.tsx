@@ -109,18 +109,43 @@ export const ParticipantActionButtons: React.FC<Props> = ({
         </>
       )}
 
-      {enableEvaluation && isTrainer && isEnded && (
-        <Tooltip title="Chấm điểm đánh giá học viên này">
-          <Button
-            icon={<StarOutlined className="text-amber-500" />}
-            size="small"
-            type="dashed"
-            className="hover:!border-amber-400"
-            onClick={() => onEvaluate(record)}
+      {isTrainer && (
+        enableEvaluation ? (
+          <Tooltip
+            title={
+              record.status === ParticipantStatus.ABSENT_EXCUSED ||
+              record.status === ParticipantStatus.ABSENT_UNEXCUSED
+                ? 'Học viên vắng mặt không thể đánh giá'
+                : 'Chấm điểm đánh giá học viên này'
+            }
           >
-            Đánh giá
-          </Button>
-        </Tooltip>
+            <Button
+              icon={<StarOutlined className="text-amber-500" />}
+              size="small"
+              type="dashed"
+              disabled={
+                record.status === ParticipantStatus.ABSENT_EXCUSED ||
+                record.status === ParticipantStatus.ABSENT_UNEXCUSED
+              }
+              className="hover:!border-amber-400 text-amber-700 bg-amber-50/50"
+              onClick={() => onEvaluate(record)}
+            >
+              Đánh giá
+            </Button>
+          </Tooltip>
+        ) : (
+          <Tooltip title="Bật 'Đánh giá 2 chiều' để chấm điểm học viên">
+            <Button
+              icon={<StarOutlined className="text-gray-300" />}
+              size="small"
+              type="dashed"
+              disabled
+              className="opacity-60"
+            >
+              Đánh giá
+            </Button>
+          </Tooltip>
+        )
       )}
 
       {isTrainer && (

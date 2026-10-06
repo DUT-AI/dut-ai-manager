@@ -5,9 +5,11 @@ import {
   ClockCircleOutlined,
   ExportOutlined,
   HistoryOutlined,
+  ExclamationCircleOutlined,
+  CloseCircleOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import type { SubmissionHistoryItem } from '../types/homework.types';
+import type { SubmissionHistoryItem, ExerciseSummary } from '../types/homework.types';
 import {
   normalizeSubmissions,
   groupSubmissionsByExercise,
@@ -25,6 +27,7 @@ export interface UnifiedSubmissionTimelineProps {
   homeworkLink?: string | null;
   emptyDescription?: React.ReactNode;
   showExerciseOverview?: boolean;
+  allExercises?: ExerciseSummary[] | null;
 }
 
 export const UnifiedSubmissionTimeline: React.FC<UnifiedSubmissionTimelineProps> = ({
@@ -34,6 +37,7 @@ export const UnifiedSubmissionTimeline: React.FC<UnifiedSubmissionTimelineProps>
   homeworkLink,
   emptyDescription,
   showExerciseOverview = true,
+  allExercises,
 }) => {
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | 'all'>('all');
 
@@ -44,8 +48,8 @@ export const UnifiedSubmissionTimeline: React.FC<UnifiedSubmissionTimelineProps>
 
   // Group by Exercise for Coding tasks
   const exerciseGroups = useMemo(() => {
-    return groupSubmissionsByExercise(normalizedList);
-  }, [normalizedList]);
+    return groupSubmissionsByExercise(normalizedList, allExercises);
+  }, [normalizedList, allExercises]);
 
   // Filtered submissions based on selected exercise
   const filteredSubmissions = useMemo(() => {
@@ -55,8 +59,19 @@ export const UnifiedSubmissionTimeline: React.FC<UnifiedSubmissionTimelineProps>
 
   const isCoding = type === 'CODING';
   const deadlineObj = deadline ? dayjs(deadline) : null;
+  const hasExercises = exerciseGroups.length > 0;
+  const completedExerciseCount = useMemo(() => {
+    return exerciseGroups.filter((e) => e.isPassed).length;
+  }, [exerciseGroups]);
+  const totalExercisesCount = exerciseGroups.length;
 
-  if (normalizedList.length === 0) {
+  const selectedExercise = useMemo(() => {
+    if (selectedExerciseId === 'all') return null;
+    return exerciseGroups.find((e) => e.exerciseId === selectedExerciseId);
+  }, [exerciseGroups, selectedExerciseId]);
+
+  // Pure empty state when there are NO submissions AND NO exercises structure
+  if (normalizedList.length === 0 && !hasExercises) {
     return (
       <div className="py-8 flex flex-col items-center justify-center">
         <Empty
@@ -93,48 +108,92 @@ export const UnifiedSubmissionTimeline: React.FC<UnifiedSubmissionTimelineProps>
   }
 
   const latest = normalizedList[0];
-  const isLatestLate = deadlineObj ? dayjs(latest.submittedAt).isAfter(deadlineObj) : false;
-  const isAllPassed = normalizedList.some((s) => s.isPassed);
+  const isLatestLate = deadlineObj && latest ? dayjs(latest.submittedAt).isAfter(deadlineObj) : false;
+  const isAllCompleted = totalExercisesCount > 0 && completedExerciseCount === totalExercisesCount;
 
   return (
     <div className="space-y-4 pt-1">
       {/* Overall Status Banner */}
-      <div className="p-3.5 rounded-xl border border-emerald-100 dark:border-emerald-950/60 bg-gradient-to-br from-emerald-50/70 via-teal-50/20 to-white dark:from-emerald-950/30 dark:via-zinc-900 dark:to-zinc-900 shadow-2xs">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-base shadow-2xs">
-              <CheckCircleOutlined />
+      {normalizedList.length === 0 ? (
+        <div className="p-3.5 rounded-xl border border-rose-100 dark:border-rose-950/60 bg-gradient-to-br from-rose-50/60 via-orange-50/20 to-white dark:from-rose-950/30 dark:via-zinc-900 dark:to-zinc-900 shadow-2xs">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-lg bg-rose-100 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 flex items-center justify-center text-base shadow-2xs">
+                <CloseCircleOutlined />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-bold text-sm text-gray-900 dark:text-gray-100">
+                    Chưa có bài nộp nào được ghi nhận
+                  </span>
+                  <Tag color="error" className="m-0 text-xs font-semibold rounded-md">
+                    Chưa nộp
+                  </Tag>
+                </div>
+                <Text type="secondary" className="text-xs block mt-0.5">
+                  Học viên chưa hoàn thành bài tập nào trong số {totalExercisesCount} bài con của bài học này.
+                </Text>
+              </div>
             </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-bold text-sm text-gray-900 dark:text-gray-100">
-                  {isCoding ? 'Đã ghi nhận bài nộp Coding' : 'Đã hoàn thành Game Quiz (100%)'}
-                </span>
-                {deadlineObj && (
-                  isLatestLate ? (
-                    <Tag color="error" className="m-0 text-xs font-semibold rounded-md">
-                      Nộp trễ
-                    </Tag>
-                  ) : (
-                    <Tag color="success" className="m-0 text-xs font-semibold rounded-md">
-                      Đúng hạn
-                    </Tag>
-                  )
+
+            <Tag color="default" className="m-0 font-semibold text-xs px-2.5 py-0.5 rounded-full">
+              0/{totalExercisesCount} bài
+            </Tag>
+          </div>
+        </div>
+      ) : (
+        <div
+          className={`p-3.5 rounded-xl border shadow-2xs ${
+            isAllCompleted
+              ? 'border-emerald-100 dark:border-emerald-950/60 bg-gradient-to-br from-emerald-50/70 via-teal-50/20 to-white dark:from-emerald-950/30 dark:via-zinc-900 dark:to-zinc-900'
+              : 'border-indigo-100 dark:border-indigo-950/60 bg-gradient-to-br from-indigo-50/60 via-purple-50/20 to-white dark:from-indigo-950/30 dark:via-zinc-900 dark:to-zinc-900'
+          }`}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div
+                className={`w-9 h-9 rounded-lg flex items-center justify-center text-base shadow-2xs ${
+                  isAllCompleted
+                    ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400'
+                    : 'bg-indigo-100 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400'
+                }`}
+              >
+                {isAllCompleted ? <CheckCircleOutlined /> : <HistoryOutlined />}
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-bold text-sm text-gray-900 dark:text-gray-100">
+                    {isAllCompleted
+                      ? (isCoding ? 'Đã hoàn thành tất cả bài tập Coding' : 'Đã hoàn thành Game Quiz (100%)')
+                      : (isCoding ? `Đã làm ${completedExerciseCount}/${totalExercisesCount} bài tập con` : 'Đã ghi nhận bài nộp')}
+                  </span>
+                  {deadlineObj &&
+                    (isLatestLate ? (
+                      <Tag color="error" className="m-0 text-xs font-semibold rounded-md">
+                        Nộp trễ
+                      </Tag>
+                    ) : (
+                      <Tag color="success" className="m-0 text-xs font-semibold rounded-md">
+                        Đúng hạn
+                      </Tag>
+                    ))}
+                </div>
+                {latest && (
+                  <Text type="secondary" className="text-xs block mt-0.5">
+                    Gần nhất: {dayjs(latest.submittedAt).format('DD/MM/YYYY HH:mm:ss')} ({dayjs(latest.submittedAt).fromNow()})
+                  </Text>
                 )}
               </div>
-              <Text type="secondary" className="text-xs block mt-0.5">
-                Gần nhất: {dayjs(latest.submittedAt).format('DD/MM/YYYY HH:mm:ss')} ({dayjs(latest.submittedAt).fromNow()})
-              </Text>
             </div>
+
+            <Tag color={isAllCompleted ? 'green' : 'blue'} className="m-0 font-semibold text-xs px-2.5 py-0.5 rounded-full">
+              {normalizedList.length} lần nộp ({completedExerciseCount}/{totalExercisesCount} bài)
+            </Tag>
           </div>
-
-          <Tag color="blue" className="m-0 font-semibold text-xs px-2.5 py-0.5 rounded-full">
-            {normalizedList.length} lần nộp
-          </Tag>
         </div>
-      </div>
+      )}
 
-      {/* Exercise Matrix Overview (if Coding and multiple exercises found) */}
+      {/* Exercise Matrix Overview (Shows ALL sub-exercises of the lesson) */}
       {showExerciseOverview && isCoding && exerciseGroups.length > 0 && (
         <ExerciseProgressOverview
           exercises={exerciseGroups}
@@ -168,37 +227,56 @@ export const UnifiedSubmissionTimeline: React.FC<UnifiedSubmissionTimelineProps>
           )}
         </div>
 
-        {/* Timeline of Submissions */}
-        <Timeline
-          mode="left"
-          items={filteredSubmissions.map((sub: NormalizedSubmission, idx: number) => {
-            const subTime = dayjs(sub.submittedAt);
-            const displayIdx = filteredSubmissions.length - idx;
+        {/* Timeline of Submissions or Missing Exercise Notice */}
+        {filteredSubmissions.length === 0 ? (
+          <div className="p-8 my-3 rounded-2xl border border-dashed border-gray-200 dark:border-zinc-700 bg-gray-50/50 dark:bg-zinc-900/40 text-center space-y-2">
+            <div className="w-10 h-10 mx-auto rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-500 flex items-center justify-center text-lg">
+              <ExclamationCircleOutlined />
+            </div>
+            <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+              {selectedExercise ? 'Học viên chưa nộp bài tập này' : 'Chưa có lịch sử nộp bài'}
+            </div>
+            <div className="text-xs text-gray-400 max-w-md mx-auto">
+              {selectedExercise
+                ? `Học viên chưa gửi bài nộp nào cho "${selectedExercise.exerciseTitle}".`
+                : 'Chưa có bản ghi nộp bài nào được ghi nhận từ hệ thống Quiz.'}
+            </div>
+          </div>
+        ) : (
+          <div className="submission-timeline-wrapper pt-2">
+            <Timeline
+              mode="left"
+              items={filteredSubmissions.map((sub: NormalizedSubmission, idx: number) => {
+                const subTime = dayjs(sub.submittedAt);
+                const displayIdx = filteredSubmissions.length - idx;
 
-            return {
-              color: sub.submissionType === 'CODING' ? '#4f46e5' : '#8b5cf6',
-              label: (
-                <div className="text-right pr-2">
-                  <div className="font-semibold text-xs text-gray-700 dark:text-gray-300">
-                    {subTime.format('DD/MM/YYYY')}
-                  </div>
-                  <div className="text-[11px] text-gray-400">
-                    {subTime.format('HH:mm:ss')}
-                  </div>
-                </div>
-              ),
-              children: (
-                <SubmissionItemCard
-                  submission={sub}
-                  deadline={deadline}
-                  displayIndex={displayIdx}
-                  showExerciseTitle={selectedExerciseId === 'all'}
-                />
-              ),
-            };
-          })}
-        />
+                return {
+                  color: sub.submissionType === 'CODING' ? '#4f46e5' : '#8b5cf6',
+                  label: (
+                    <div className="text-right pr-3 whitespace-nowrap min-w-[105px]">
+                      <div className="font-semibold text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                        {subTime.format('DD/MM/YYYY')}
+                      </div>
+                      <div className="text-[11px] text-gray-400 whitespace-nowrap font-mono">
+                        {subTime.format('HH:mm:ss')}
+                      </div>
+                    </div>
+                  ),
+                  children: (
+                    <SubmissionItemCard
+                      submission={sub}
+                      deadline={deadline}
+                      displayIndex={displayIdx}
+                      showExerciseTitle={selectedExerciseId === 'all'}
+                    />
+                  ),
+                };
+              })}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
 };
+

@@ -51,7 +51,7 @@ export const ExerciseProgressOverview: React.FC<ExerciseProgressOverviewProps> =
       />
 
       {/* Filterable Pills / Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 pt-1">
         {/* 'All' Button Pill */}
         <button
           type="button"
@@ -83,6 +83,8 @@ export const ExerciseProgressOverview: React.FC<ExerciseProgressOverviewProps> =
         {/* Individual Exercise Summary Cards */}
         {exercises.map((ex) => {
           const isSelected = selectedExerciseId === ex.exerciseId;
+          const isNotAttempted = ex.attemptCount === 0;
+
           return (
             <button
               key={ex.exerciseId}
@@ -91,20 +93,35 @@ export const ExerciseProgressOverview: React.FC<ExerciseProgressOverviewProps> =
               className={`flex items-center justify-between p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                 isSelected
                   ? 'bg-indigo-50/90 dark:bg-indigo-950/60 border-indigo-400 dark:border-indigo-600 shadow-xs'
-                  : 'bg-white dark:bg-zinc-800/80 border-gray-200 dark:border-zinc-700/80 hover:border-indigo-200'
+                  : isNotAttempted
+                    ? 'bg-gray-50/40 dark:bg-zinc-900/40 border-dashed border-gray-200 dark:border-zinc-800 hover:border-gray-400 opacity-90'
+                    : 'bg-white dark:bg-zinc-800/80 border-gray-200 dark:border-zinc-700/80 hover:border-indigo-200'
               }`}
             >
               <div className="flex items-center gap-2 min-w-0 flex-1">
-                <div className={`w-6 h-6 rounded-md flex items-center justify-center text-xs flex-shrink-0 ${
-                  ex.isPassed
-                    ? 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400'
-                    : 'bg-amber-100 dark:bg-amber-950/70 text-amber-600 dark:text-amber-400'
-                }`}>
-                  {ex.isPassed ? <CheckCircleFilled /> : <ClockCircleOutlined />}
+                <div
+                  className={`w-6 h-6 rounded-md flex items-center justify-center text-xs flex-shrink-0 ${
+                    ex.isPassed
+                      ? 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400'
+                      : isNotAttempted
+                        ? 'bg-gray-200/80 dark:bg-zinc-800 text-gray-400'
+                        : 'bg-amber-100 dark:bg-amber-950/70 text-amber-600 dark:text-amber-400'
+                  }`}
+                >
+                  {ex.isPassed ? (
+                    <CheckCircleFilled />
+                  ) : isNotAttempted ? (
+                    <ClockCircleOutlined />
+                  ) : (
+                    <ClockCircleOutlined />
+                  )}
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <div className="font-semibold text-xs text-gray-900 dark:text-gray-100 truncate" title={ex.exerciseTitle}>
+                  <div
+                    className="font-semibold text-xs text-gray-900 dark:text-gray-100 truncate"
+                    title={ex.exerciseTitle}
+                  >
                     {ex.exerciseTitle}
                   </div>
                   <div className="text-[11px] text-gray-400 flex items-center gap-1.5">
@@ -112,6 +129,8 @@ export const ExerciseProgressOverview: React.FC<ExerciseProgressOverviewProps> =
                       <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
                         {ex.bestScore}/10
                       </span>
+                    ) : isNotAttempted ? (
+                      <span className="text-gray-400">Chưa nộp bài</span>
                     ) : (
                       <span>Chưa có điểm</span>
                     )}
@@ -120,9 +139,21 @@ export const ExerciseProgressOverview: React.FC<ExerciseProgressOverviewProps> =
                 </div>
               </div>
 
-              {isSelected && (
+              {isSelected ? (
                 <Tag color="indigo" className="m-0 text-[10px] font-medium flex-shrink-0">
                   Đang lọc
+                </Tag>
+              ) : ex.isPassed ? (
+                <Tag color="success" className="m-0 text-[10px] font-medium flex-shrink-0">
+                  Đã xong
+                </Tag>
+              ) : isNotAttempted ? (
+                <Tag color="default" className="m-0 text-[10px] font-normal flex-shrink-0">
+                  Chưa nộp
+                </Tag>
+              ) : (
+                <Tag color="warning" className="m-0 text-[10px] font-medium flex-shrink-0">
+                  Chưa đạt
                 </Tag>
               )}
             </button>

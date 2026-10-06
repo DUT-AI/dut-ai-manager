@@ -11,7 +11,6 @@ import { useMeetingEvents } from '@/features/meeting/hooks/useMeetingEvents';
 import {
   MeetingHeroHeader,
   MeetingStatsRow,
-  MeetingTraineeEvaluationBanner,
   MeetingParticipantsTab,
   MeetingEvaluationSummaryView,
 } from '../components';
@@ -71,8 +70,6 @@ export const MeetingDetailPage: React.FC = () => {
       {/* Hero Header Card */}
       <MeetingHeroHeader meetingId={meetingId} />
 
-      {/* Trainee Action Banner if Evaluation is Enabled */}
-      <MeetingTraineeEvaluationBanner meetingId={meetingId} />
 
       {/* Metrics Row */}
       <MeetingStatsRow meetingId={meetingId} />

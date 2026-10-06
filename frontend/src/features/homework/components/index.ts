@@ -11,3 +11,5 @@ export { MySubmissionTimeline } from './MySubmissionTimeline';
 export { UnifiedSubmissionTimeline } from './UnifiedSubmissionTimeline';
 export { SubmissionItemCard } from './SubmissionItemCard';
 export { ExerciseProgressOverview } from './ExerciseProgressOverview';
+export { ExerciseCompletionStats } from './ExerciseCompletionStats';
+

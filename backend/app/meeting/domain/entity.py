@@ -140,8 +140,8 @@ class Meeting(BaseEntity):
         """Kiểm tra điều kiện mở cổng đánh giá 2 chiều (Domain Business Rule)."""
         if not self.enable_evaluation:
             return False, "Buổi học không kích hoạt tính năng đánh giá 2 chiều."
-        if current_time < self.end_time:
-            return False, "Buổi học chưa kết thúc, chưa thể gửi đánh giá."
+        if current_time < self.start_time:
+            return False, "Buổi học chưa bắt đầu, chưa thể gửi đánh giá."
         if self.is_evaluation_expired(current_time):
             return False, "Đã quá thời hạn 24 giờ sau buổi học để gửi đánh giá."
         return True, "Cổng đánh giá đang mở."

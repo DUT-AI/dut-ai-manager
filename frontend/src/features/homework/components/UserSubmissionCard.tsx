@@ -98,14 +98,20 @@ export const UserSubmissionCard: React.FC<UserSubmissionCardProps> = ({
         {hasCodingProgress && (
           <Tag
             icon={<CodeOutlined />}
-            color={isFullyCompleted ? 'success' : 'processing'}
+            color={
+              isFullyCompleted
+                ? 'success'
+                : (user.total_coding_completed ?? 0) > 0
+                  ? 'warning'
+                  : 'default'
+            }
             className="m-0 text-xs rounded-md font-medium"
           >
             {user.total_coding_completed ?? 0}/{user.total_coding_required} bài
           </Tag>
         )}
 
-        {isSubmitted && (
+        {isSubmitted ? (
           user.is_late ? (
             <Tag color="warning" className="m-0 text-xs rounded-md font-medium">
               Nộp trễ
@@ -115,10 +121,14 @@ export const UserSubmissionCard: React.FC<UserSubmissionCardProps> = ({
               Đúng hạn
             </Tag>
           )
+        ) : (
+          <Tag color="error" className="m-0 text-xs rounded-md font-medium">
+            Chưa nộp đủ
+          </Tag>
         )}
 
-        {onViewHistory && isSubmitted && (
-          <Tooltip title="Xem chi tiết các bài tập con đã nộp">
+        {onViewHistory && (
+          <Tooltip title="Xem chi tiết các bài tập con đã làm & chưa làm">
             <Button
               type="text"
               size="small"

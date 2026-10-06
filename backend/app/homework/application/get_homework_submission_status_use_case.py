@@ -246,6 +246,10 @@ class GetHomeworkSubmissionStatusUseCase:
                         name=user.name,
                         avatar_url=user.avatar_url,
                         is_late=coding_has_late,
+                        total_coding_required=total_req_coding,
+                        total_coding_completed=completed_coding_count,
+                        coding_status=coding_status_str,
+                        coding_exercises=student_exercises,
                     )
                 )
             else:
@@ -260,6 +264,10 @@ class GetHomeworkSubmissionStatusUseCase:
                             and req.start_time
                             and now <= req.start_time.replace(tzinfo=None)
                         ),
+                        total_coding_required=total_req_coding,
+                        total_coding_completed=completed_coding_count,
+                        coding_status=coding_status_str,
+                        coding_exercises=student_exercises,
                     )
                 )
 
@@ -330,6 +338,24 @@ class GetHomeworkSubmissionStatusUseCase:
                     game_submitted_at=game_submitted_at_str,
                     game_score=game_score_val,
                 )
+            )
+
+        # 3.4 Tính toán số liệu hoàn thành cho từng bài tập con
+        total_assigned_count = len(assigned_uids)
+        for ex in coding_exercises_summary:
+            ex.total_assigned = total_assigned_count
+            ex.completed_count = sum(
+                1
+                for s in students_detail
+                if any(
+                    ce.exercise_id == ex.exercise_id and ce.is_passed
+                    for ce in s.coding_exercises
+                )
+            )
+            ex.completion_rate = (
+                round((ex.completed_count / total_assigned_count) * 100, 1)
+                if total_assigned_count > 0
+                else 0.0
             )
 
         # 4. Top-level fallback
