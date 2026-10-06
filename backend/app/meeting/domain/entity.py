@@ -58,6 +58,32 @@ class MeetingParticipant(BaseEntity):
         self.status = ParticipantStatus.COMPLETED
         return True, "Checkout thanh cong"
 
+    def update_attendance_status(
+        self,
+        new_status: ParticipantStatus,
+        check_in_at: datetime | None = None,
+        check_out_at: datetime | None = None,
+        default_start_time: datetime | None = None,
+        default_end_time: datetime | None = None,
+    ):
+        """Logic nghiệp vụ Domain xử lý cập nhật trạng thái điểm danh thủ công."""
+        self.status = new_status
+        if new_status in (
+            ParticipantStatus.NOT_JOINED,
+            ParticipantStatus.ABSENT_EXCUSED,
+            ParticipantStatus.ABSENT_UNEXCUSED,
+        ):
+            self.check_in_at = check_in_at
+            self.check_out_at = check_out_at
+            if new_status == ParticipantStatus.NOT_JOINED:
+                self.link_image = None
+        else:
+            self.check_in_at = check_in_at or self.check_in_at or default_start_time
+            if new_status == ParticipantStatus.COMPLETED:
+                self.check_out_at = check_out_at or self.check_out_at or default_end_time
+            else:
+                self.check_out_at = check_out_at if check_out_at is not None else self.check_out_at
+
 
 class EvaluationScoreItem(BaseModel):
     """Điểm của từng tiêu chí đánh giá (Value Object)"""

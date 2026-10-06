@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Drawer, Table, Avatar, Tag, Typography, Descriptions, Button, Popconfirm, Image, Tooltip, Tabs } from 'antd';
+import { Drawer, Table, Avatar, Tag, Typography, Descriptions, Button, Popconfirm, Image, Tooltip, Tabs, Space, message } from 'antd';
 import {
     UserOutlined,
     CheckCircleOutlined,
+    CheckOutlined,
     CloseCircleOutlined,
     ClockCircleOutlined,
     EditOutlined,
@@ -12,6 +13,7 @@ import {
     TrophyOutlined,
     BarChartOutlined,
     TeamOutlined,
+    ThunderboltOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { MeetingResponse, MeetingDetailResponse, ParticipantResponse, UpdateParticipantStatusPayload } from '@/features/meeting/types/meeting.types';
@@ -19,6 +21,7 @@ import { ParticipantStatus } from '@/features/meeting/types/meeting.types';
 import { useMeetingEvents } from '@/features/meeting/hooks/useMeetingEvents';
 import { useMeetingDetail, useUpdateParticipantStatus } from '@/features/meeting/hooks/useMeetings';
 import { useAuth } from '@/features/auth/context/AuthContext';
+import { ParticipantStatusTag } from './ParticipantStatusTag';
 import { EditParticipantStatusModal } from './EditParticipantStatusModal';
 import { TrainerEvaluationModal } from './TrainerEvaluationModal';
 import { TraineeEvaluationModal } from './TraineeEvaluationModal';
@@ -38,7 +41,7 @@ interface Props {
 export const MeetingDetailDrawer = ({ open, meeting: initialMeeting, onClose, onEdit, onDelete }: Props) => {
     const { user } = useAuth();
     const meetingId = initialMeeting?.id ?? 0;
-    const { data: fetchedDetail } = useMeetingDetail(open && meetingId > 0 ? meetingId : 0);
+    const { data: fetchedDetail, refetch } = useMeetingDetail(open && meetingId > 0 ? meetingId : 0);
     const meeting = fetchedDetail || initialMeeting;
 
     const [activeTab, setActiveTab] = useState('participants');
@@ -49,6 +52,9 @@ export const MeetingDetailDrawer = ({ open, meeting: initialMeeting, onClose, on
     const [evaluatingParticipant, setEvaluatingParticipant] = useState<ParticipantResponse | null>(null);
     const [isTraineeEvalOpen, setIsTraineeEvalOpen] = useState(false);
     const [isMyResultOpen, setIsMyResultOpen] = useState(false);
+
+    const [quickCheckInLoadingId, setQuickCheckInLoadingId] = useState<number | null>(null);
+    const [isCheckingInAll, setIsCheckingInAll] = useState(false);
 
     // Mutation hook để cập nhật trạng thái participant
     const updateParticipantStatusMutation = useUpdateParticipantStatus();
@@ -71,6 +77,11 @@ export const MeetingDetailDrawer = ({ open, meeting: initialMeeting, onClose, on
              p.status === ParticipantStatus.COMPLETED
     ).length;
     const total = participantsList.length;
+    const unjoinedParticipants = participantsList.filter(
+        p => p.status === ParticipantStatus.NOT_JOINED && !p.check_in_at
+    );
+    const unjoinedCount = unjoinedParticipants.length;
+
     const isOngoing = dayjs().isAfter(dayjs(meeting.start_time)) && dayjs().isBefore(dayjs(meeting.end_time));
     const isEnded = dayjs().isAfter(dayjs(meeting.end_time));
 
@@ -81,6 +92,65 @@ export const MeetingDetailDrawer = ({ open, meeting: initialMeeting, onClose, on
             userId: editingParticipant.user_id,
             payload,
         });
+        refetch();
+    };
+
+    const handleQuickCheckIn = async (record: ParticipantResponse, isCheckIn: boolean) => {
+        if (!meeting) return;
+        try {
+            setQuickCheckInLoadingId(record.user_id);
+            if (isCheckIn) {
+                await updateParticipantStatusMutation.mutateAsync({
+                    meetingId: meeting.id,
+                    userId: record.user_id,
+                    payload: {
+                        status: ParticipantStatus.JOINED,
+                        check_in_at: dayjs().format('YYYY-MM-DDTHH:mm:ss'),
+                    },
+                });
+                message.success(`Đã điểm danh cho ${record.user_name || 'học viên'}`);
+            } else {
+                await updateParticipantStatusMutation.mutateAsync({
+                    meetingId: meeting.id,
+                    userId: record.user_id,
+                    payload: {
+                        status: ParticipantStatus.NOT_JOINED,
+                        check_in_at: null,
+                        check_out_at: null,
+                    },
+                });
+                message.success(`Đã hủy điểm danh cho ${record.user_name || 'học viên'}`);
+            }
+            refetch();
+        } catch {
+            message.error(isCheckIn ? 'Điểm danh thất bại' : 'Hủy điểm danh thất bại');
+        } finally {
+            setQuickCheckInLoadingId(null);
+        }
+    };
+
+    const handleQuickCheckInAll = async () => {
+        if (!meeting || unjoinedCount === 0) return;
+        try {
+            setIsCheckingInAll(true);
+            const promises = unjoinedParticipants.map((p) =>
+                updateParticipantStatusMutation.mutateAsync({
+                    meetingId: meeting.id,
+                    userId: p.user_id,
+                    payload: {
+                        status: ParticipantStatus.JOINED,
+                        check_in_at: dayjs().format('YYYY-MM-DDTHH:mm:ss'),
+                    },
+                })
+            );
+            await Promise.all(promises);
+            message.success(`Đã điểm danh thành công cho ${unjoinedCount} học viên`);
+            refetch();
+        } catch {
+            message.error('Có lỗi xảy ra khi điểm danh tất cả');
+        } finally {
+            setIsCheckingInAll(false);
+        }
     };
 
     const columns = [
@@ -99,56 +169,7 @@ export const MeetingDetailDrawer = ({ open, meeting: initialMeeting, onClose, on
             title: 'Trạng thái',
             dataIndex: 'status',
             key: 'status',
-            render: (status: ParticipantStatus) => {
-                let tagColor = 'default';
-                let tagIcon = <CloseCircleOutlined />;
-                let tagText = 'Chưa checkin';
-
-                switch (status) {
-                    case ParticipantStatus.JOINED:
-                        tagColor = 'green';
-                        tagIcon = <CheckCircleOutlined />;
-                        tagText = 'Đã checkin';
-                        break;
-                    case ParticipantStatus.LATE_EXCUSED:
-                        tagColor = 'blue';
-                        tagIcon = <ClockCircleOutlined />;
-                        tagText = 'Trễ (Có phép)';
-                        break;
-                    case ParticipantStatus.LATE_UNEXCUSED:
-                        tagColor = 'orange';
-                        tagIcon = <ClockCircleOutlined />;
-                        tagText = 'Trễ (Không phép)';
-                        break;
-                    case ParticipantStatus.ABSENT_EXCUSED:
-                        tagColor = 'purple';
-                        tagIcon = <CloseCircleOutlined />;
-                        tagText = 'Vắng (Có phép)';
-                        break;
-                    case ParticipantStatus.ABSENT_UNEXCUSED:
-                        tagColor = 'red';
-                        tagIcon = <CloseCircleOutlined />;
-                        tagText = 'Vắng (Không phép)';
-                        break;
-                    case ParticipantStatus.COMPLETED:
-                        tagColor = 'cyan';
-                        tagIcon = <CheckCircleOutlined />;
-                        tagText = 'Hoàn thành';
-                        break;
-                    case ParticipantStatus.NOT_JOINED:
-                    default:
-                        tagColor = 'default';
-                        tagIcon = <CloseCircleOutlined />;
-                        tagText = 'Chưa checkin';
-                        break;
-                }
-
-                return (
-                    <Tag color={tagColor} icon={tagIcon}>
-                        {tagText}
-                    </Tag>
-                );
-            },
+            render: (status: any) => <ParticipantStatusTag status={status} />,
             sorter: (a: ParticipantResponse, b: ParticipantResponse) => (a.status || '').localeCompare(b.status || ''),
         },
         {
@@ -203,31 +224,75 @@ export const MeetingDetailDrawer = ({ open, meeting: initialMeeting, onClose, on
         {
             title: 'Thao tác',
             key: 'actions',
-            render: (_: unknown, record: ParticipantResponse) => (
-                <div className="flex items-center gap-1">
-                    {meeting.enable_evaluation && isTrainer && isEnded && (
-                        <Tooltip title="Đánh giá học viên này">
-                            <Button
-                                icon={<StarOutlined className="text-amber-500" />}
-                                size="small"
-                                type="text"
-                                onClick={() => setEvaluatingParticipant(record)}
-                            />
-                        </Tooltip>
-                    )}
-                    <Tooltip title="Chỉnh sửa trạng thái">
-                        <Button
-                            icon={<EditOutlined />}
-                            size="small"
-                            type="text"
-                            onClick={() => {
-                                setEditingParticipant(record);
-                                setIsEditModalOpen(true);
-                            }}
-                        />
-                    </Tooltip>
-                </div>
-            ),
+            render: (_: unknown, record: ParticipantResponse) => {
+                const isJoined =
+                    record.status === ParticipantStatus.JOINED ||
+                    record.status === ParticipantStatus.LATE_EXCUSED ||
+                    record.status === ParticipantStatus.LATE_UNEXCUSED ||
+                    record.status === ParticipantStatus.COMPLETED;
+
+                return (
+                    <Space size={4}>
+                        {isTrainer && (
+                            <>
+                                {!isJoined ? (
+                                    <Button
+                                        type="primary"
+                                        size="small"
+                                        icon={<ThunderboltOutlined />}
+                                        className="bg-emerald-600 hover:!bg-emerald-500 text-white text-xs px-2"
+                                        loading={quickCheckInLoadingId === record.user_id}
+                                        onClick={() => handleQuickCheckIn(record, true)}
+                                    >
+                                        Check-in
+                                    </Button>
+                                ) : (
+                                    <Popconfirm
+                                        title="Hủy điểm danh?"
+                                        description={`Bạn có chắc muốn hủy điểm danh của ${record.user_name || 'học viên này'}?`}
+                                        onConfirm={() => handleQuickCheckIn(record, false)}
+                                        okText="Hủy check-in"
+                                        cancelText="Đóng"
+                                    >
+                                        <Button
+                                            size="small"
+                                            icon={<CheckOutlined />}
+                                            className="text-emerald-700 bg-emerald-50 border-emerald-300 hover:!bg-emerald-100 text-xs px-2"
+                                            loading={quickCheckInLoadingId === record.user_id}
+                                        >
+                                            Đã Check-in
+                                        </Button>
+                                    </Popconfirm>
+                                )}
+                            </>
+                        )}
+
+                        {meeting.enable_evaluation && isTrainer && isEnded && (
+                            <Tooltip title="Đánh giá học viên này">
+                                <Button
+                                    icon={<StarOutlined className="text-amber-500" />}
+                                    size="small"
+                                    type="text"
+                                    onClick={() => setEvaluatingParticipant(record)}
+                                />
+                            </Tooltip>
+                        )}
+                        {isTrainer && (
+                            <Tooltip title="Chỉnh sửa trạng thái">
+                                <Button
+                                    icon={<EditOutlined />}
+                                    size="small"
+                                    type="text"
+                                    onClick={() => {
+                                        setEditingParticipant(record);
+                                        setIsEditModalOpen(true);
+                                    }}
+                                />
+                            </Tooltip>
+                        )}
+                    </Space>
+                );
+            },
         },
     ];
 
@@ -387,14 +452,44 @@ export const MeetingDetailDrawer = ({ open, meeting: initialMeeting, onClose, on
                                 </span>
                             ),
                             children: (
-                                <Table
-                                    dataSource={meeting.participants}
-                                    columns={columns}
-                                    rowKey="user_id"
-                                    pagination={total > 10 ? { pageSize: 10, size: 'small' } : false}
-                                    size="small"
-                                    className="meeting-detail-table"
-                                />
+                                <div className="space-y-3">
+                                    {isTrainer && unjoinedCount > 0 && (
+                                        <div className="flex items-center justify-between gap-2 bg-emerald-50 border border-emerald-200 rounded-lg p-2.5">
+                                            <div className="flex items-center gap-2">
+                                                <ThunderboltOutlined className="text-emerald-600" />
+                                                <span className="text-xs text-emerald-950">
+                                                    Còn <strong>{unjoinedCount}</strong> học viên chưa check-in.
+                                                </span>
+                                            </div>
+                                            <Popconfirm
+                                                title="Điểm danh tất cả?"
+                                                description={`Điểm danh nhanh cho ${unjoinedCount} học viên?`}
+                                                onConfirm={handleQuickCheckInAll}
+                                                okText="Điểm danh"
+                                                cancelText="Hủy"
+                                                disabled={isCheckingInAll}
+                                            >
+                                                <Button
+                                                    type="primary"
+                                                    size="small"
+                                                    icon={<ThunderboltOutlined />}
+                                                    className="bg-emerald-600 hover:!bg-emerald-500 text-xs"
+                                                    loading={isCheckingInAll}
+                                                >
+                                                    Điểm danh tất cả ({unjoinedCount})
+                                                </Button>
+                                            </Popconfirm>
+                                        </div>
+                                    )}
+                                    <Table
+                                        dataSource={participantsList}
+                                        columns={columns}
+                                        rowKey="user_id"
+                                        pagination={total > 10 ? { pageSize: 10, size: 'small' } : false}
+                                        size="small"
+                                        className="meeting-detail-table"
+                                    />
+                                </div>
                             ),
                         },
                         ...(meeting.enable_evaluation

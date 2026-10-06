@@ -9,6 +9,7 @@ from app.meeting.infrastructure.repository import (
     ParticipantRepository,
 )
 from app.shared.application.response import BadRequestException
+from app.utils.datetime import get_current_utc7_time, to_utc7_naive
 
 
 class UpdateParticipantStatusUseCase:
@@ -36,22 +37,40 @@ class UpdateParticipantStatusUseCase:
                 "Không tìm thấy buổi họp", status_code=status.HTTP_404_NOT_FOUND
             )
 
-        if check_in_at is None and target_status in (
-            ParticipantStatus.JOINED,
-            ParticipantStatus.LATE_EXCUSED,
-            ParticipantStatus.LATE_UNEXCUSED,
-            ParticipantStatus.COMPLETED,
-        ):
-            check_in_at = meeting.start_time
+        participant = self.participant_repo.get_by_meeting_and_user(
+            meeting_id=meeting_id, user_id=user_id
+        )
+        if not participant:
+            raise BadRequestException(
+                f"Không tìm thấy thành viên {user_id} trong buổi họp",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
 
-        if check_out_at is None and target_status == ParticipantStatus.COMPLETED:
-            check_out_at = meeting.end_time
+        # Chuẩn hóa múi giờ sang UTC+7 naive datetime
+        normalized_check_in_at = to_utc7_naive(check_in_at)
+        normalized_check_out_at = to_utc7_naive(check_out_at)
 
+        now_utc7 = get_current_utc7_time()
+        # Default start time khi điểm danh nhanh là giờ hiện tại nếu đang trong buổi học, hoặc start_time
+        default_check_in_time = (
+            now_utc7 if meeting.start_time <= now_utc7 <= meeting.end_time else meeting.start_time
+        )
+
+        # Ủy quyền toàn bộ Business Rules cho Domain Entity
+        participant.update_attendance_status(
+            new_status=target_status,
+            check_in_at=normalized_check_in_at,
+            check_out_at=normalized_check_out_at,
+            default_start_time=default_check_in_time,
+            default_end_time=meeting.end_time,
+        )
+
+        # Lưu Domain Entity vào Repository
         updated = self.participant_repo.update_participant_status(
             meeting_id=meeting_id,
             user_id=user_id,
-            status=target_status,
-            check_in_at=check_in_at,
-            check_out_at=check_out_at,
+            status=participant.status,
+            check_in_at=participant.check_in_at,
+            check_out_at=participant.check_out_at,
         )
         return updated

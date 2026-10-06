@@ -510,10 +510,10 @@ class ParticipantRepository(BaseRepository[ORMParticipant, DomainParticipant]):
             )
 
         orm.status = status
-        if check_in_at is not None:
-            orm.check_in_at = check_in_at
-        if check_out_at is not None:
-            orm.check_out_at = check_out_at
+        orm.check_in_at = check_in_at
+        orm.check_out_at = check_out_at
+        if status == ParticipantStatus.NOT_JOINED:
+            orm.link_image = None
 
         self.session.add(orm)
         self.session.flush()
