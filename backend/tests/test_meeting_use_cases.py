@@ -186,8 +186,109 @@ def test_meeting_mapping_filters_is_deleted_participants():
     assert domain.participants[0].user_id == 101
 
 
+
+def test_update_meeting_preserves_participant_attendance_status():
+    """Kiểm tra UpdateMeetingUseCase không reset trạng thái điểm danh của participant cũ khi cập nhật meeting."""
+    from app.meeting.application.update_meeting_use_case import UpdateMeetingUseCase
+    from app.meeting.schemas import MeetingUpdate
+
+    repo = MagicMock()
+    event_bus = MagicMock()
+    event_bus.publish = AsyncMock()
+
+    check_in_dt = datetime(2026, 9, 10, 18, 5)
+    existing_p = MeetingParticipant(
+        id=1,
+        meeting_id=10,
+        user_id=101,
+        status=ParticipantStatus.JOINED,
+        check_in_at=check_in_dt,
+        link_image="https://example.com/face.jpg",
+    )
+
+    domain_meeting = Meeting(
+        id=10,
+        title="Old Title",
+        start_time=datetime(2026, 9, 10, 18, 0),
+        end_time=datetime(2026, 9, 10, 20, 0),
+        participants=[existing_p],
+    )
+
+    repo.get_with_participants.return_value = domain_meeting
+    # When repo.save is called, return the domain object passed to it
+    repo.save.side_effect = lambda m: m
+
+    use_case = UpdateMeetingUseCase(repo=repo, event_bus=event_bus)
+
+    # Cập nhật danh sách user_ids gồm user 101 (cũ) và 102 (mới)
+    update_data = MeetingUpdate(
+        title="New Title",
+        user_ids=[101, 102],
+    )
+
+    updated_meeting = asyncio.run(use_case.execute(meeting_id=10, data=update_data))
+
+    repo.get_with_participants.assert_called_once_with(10)
+    assert updated_meeting.title == "New Title"
+    assert len(updated_meeting.participants) == 2
+
+    # Tìm participant 101
+    p101 = next(p for p in updated_meeting.participants if p.user_id == 101)
+    assert p101.status == ParticipantStatus.JOINED
+    assert p101.check_in_at == check_in_dt
+    assert p101.link_image == "https://example.com/face.jpg"
+
+    # Tìm participant 102 (mới)
+    p102 = next(p for p in updated_meeting.participants if p.user_id == 102)
+    assert p102.status == ParticipantStatus.NOT_JOINED
+    assert p102.check_in_at is None
+
+
+def test_update_meeting_without_user_ids_preserves_participants():
+    """Kiểm tra UpdateMeetingUseCase không làm mất participants khi không truyền user_ids."""
+    from app.meeting.application.update_meeting_use_case import UpdateMeetingUseCase
+    from app.meeting.schemas import MeetingUpdate
+
+    repo = MagicMock()
+    event_bus = MagicMock()
+    event_bus.publish = AsyncMock()
+
+    existing_p = MeetingParticipant(
+        id=1,
+        meeting_id=10,
+        user_id=101,
+        status=ParticipantStatus.JOINED,
+        check_in_at=datetime(2026, 9, 10, 18, 5),
+    )
+
+    domain_meeting = Meeting(
+        id=10,
+        title="Old Title",
+        start_time=datetime(2026, 9, 10, 18, 0),
+        end_time=datetime(2026, 9, 10, 20, 0),
+        participants=[existing_p],
+    )
+
+    repo.get_with_participants.return_value = domain_meeting
+    repo.save.side_effect = lambda m: m
+
+    use_case = UpdateMeetingUseCase(repo=repo, event_bus=event_bus)
+
+    # Chỉ cập nhật title, user_ids=None
+    update_data = MeetingUpdate(title="Updated Title Only")
+    updated_meeting = asyncio.run(use_case.execute(meeting_id=10, data=update_data))
+
+    assert updated_meeting.title == "Updated Title Only"
+    assert len(updated_meeting.participants) == 1
+    assert updated_meeting.participants[0].user_id == 101
+    assert updated_meeting.participants[0].status == ParticipantStatus.JOINED
+
+
 if __name__ == "__main__":
     test_check_meeting_attendance_decoupled_job()
     test_meeting_repository_save_hard_deletes_removed_participants()
     test_meeting_mapping_filters_is_deleted_participants()
+    test_update_meeting_preserves_participant_attendance_status()
+    test_update_meeting_without_user_ids_preserves_participants()
     print("All Meeting tests PASSED!")
+

@@ -20,7 +20,7 @@ class UpdateMeetingUseCase:
         self.event_bus = event_bus
 
     async def execute(self, meeting_id: int, data: MeetingUpdate) -> Meeting:
-        meeting = self.repo.get_by_id(meeting_id)
+        meeting = self.repo.get_with_participants(meeting_id)
         if not meeting:
             raise BadRequestException("Không tìm thấy buổi họp")
 

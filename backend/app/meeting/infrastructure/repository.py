@@ -285,7 +285,7 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
 
         # Commit is handled by middleware, but we need to refresh to get updated participants for the return
         self.session.refresh(orm)
-        return self._to_domain(orm)
+        return self.get_with_participants(cast(int, orm.id)) or self._to_domain(orm)
 
     def delete(self, meeting_id: int) -> bool:
         orm = self.session.get(ORMMeeting, meeting_id)
