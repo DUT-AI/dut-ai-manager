@@ -2,8 +2,9 @@ from datetime import date, datetime
 from typing import Any, cast
 
 from sqlalchemy import and_, case, desc, extract, func, or_, select
-from sqlalchemy.orm import Session, contains_eager, joinedload
-
+from sqlalchemy.orm import Session, contains_eager, joinedload, selectinload
+from app.shared.application.query_support_utils import build_query_support
+from app.shared.domain.query_support import FilterCriterion, FilterOperator
 from app.shared.application.query_support_utils import build_query_support
 from app.shared.domain.query_support import (
     FilterCriterion,
@@ -29,26 +30,23 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
     def _to_domain(self, orm: ORMMeeting) -> DomainMeeting:
         return orm.to_entity()
 
+    def get_by_id(self, id: int) -> DomainMeeting | None:
+        """Override get_by_id để luôn eager load participants và creator."""
+        return self.get_with_participants(id)
+
     def get_with_participants(self, meeting_id: int) -> DomainMeeting | None:
         statement = (
             select(ORMMeeting)
-            .outerjoin(
-                ORMParticipant,
-                and_(
-                    ORMMeeting.id == ORMParticipant.meeting_id,
-                    ORMParticipant.is_deleted.is_(False),
-                ),
-            )
             .where(
                 ORMMeeting.is_deleted.is_(False),
                 ORMMeeting.id == meeting_id,
             )
             .options(
-                contains_eager(ORMMeeting.participants).joinedload(ORMParticipant.user),
+                selectinload(ORMMeeting.participants).joinedload(ORMParticipant.user),
                 joinedload(ORMMeeting.creator),
             )
         )
-        orm = self.session.scalars(statement).unique().first()
+        orm = self.session.scalars(statement).first()
         return self._to_domain(orm) if orm else None
 
     def get_all_with_participants(
@@ -60,8 +58,7 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         month: int | None = None,
         year: int | None = None,
     ) -> list[DomainMeeting]:
-        from app.shared.application.query_support_utils import build_query_support
-        from app.shared.domain.query_support import FilterCriterion, FilterOperator
+        
 
         if not query_support:
             filters = []

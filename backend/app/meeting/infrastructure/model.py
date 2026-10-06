@@ -70,11 +70,22 @@ class Meeting(SQLAlchemyTimestampMixin, Base):
             )
 
         participants_list = []
-        if "participants" in self.__dict__ and self.participants:
+        raw_participants = getattr(self, "participants", None)
+        if raw_participants:
+            active_participants = [
+                p for p in raw_participants if not getattr(p, "is_deleted", False)
+            ]
+            sorted_participants = sorted(
+                active_participants,
+                key=lambda p: (
+                    getattr(p, "created_at", None) or datetime.min,
+                    getattr(p, "id", None) or 0,
+                ),
+                reverse=True,
+            )
             participants_list = [
                 p.to_entity()
-                for p in self.participants
-                if not getattr(p, "is_deleted", False)
+                for p in sorted_participants
             ]
 
         return MeetingEntity(

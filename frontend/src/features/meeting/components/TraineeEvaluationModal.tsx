@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Modal, Form, Rate, Input, Switch, message, Typography, Space, Divider, Avatar } from 'antd';
 import { HeartFilled, EyeInvisibleOutlined, UserOutlined } from '@ant-design/icons';
 import { meetingService } from '../services/meeting.service';
+import { useQueryClient } from '@tanstack/react-query';
+import type { EvaluationResponse } from '../types/meeting.types';
 
 const { TextArea } = Input;
 const { Text } = Typography;
@@ -12,6 +14,7 @@ interface Props {
   trainerId?: number;
   trainerName?: string;
   trainerAvatarUrl?: string | null;
+  existingEvaluation?: EvaluationResponse | null;
   onSuccess: () => void;
   onClose?: () => void;
   onCancel?: () => void;
@@ -46,12 +49,31 @@ export const TraineeEvaluationModal: React.FC<Props> = ({
   trainerId,
   trainerName,
   trainerAvatarUrl,
+  existingEvaluation,
   onSuccess,
   onClose,
   onCancel,
 }) => {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = React.useState(false);
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (open) {
+      if (existingEvaluation && existingEvaluation.scores?.length > 0) {
+        const vals: Record<string, any> = {
+          is_anonymous: existingEvaluation.is_anonymous ?? false,
+          feedback_text: existingEvaluation.feedback_text || '',
+        };
+        existingEvaluation.scores.forEach((s) => {
+          vals[s.criteria_code] = s.score;
+        });
+        form.setFieldsValue(vals);
+      } else {
+        form.resetFields();
+      }
+    }
+  }, [open, existingEvaluation]);
 
   const handleFinish = async (values: any) => {
     setSubmitting(true);
@@ -73,7 +95,12 @@ export const TraineeEvaluationModal: React.FC<Props> = ({
       const res = await meetingService.submitTraineeEvaluation(meetingId, payload);
 
       if (res.is_success) {
-        message.success('Cảm ơn bạn đã gửi đánh giá cho buổi học & Trainer!');
+        message.success(
+          existingEvaluation
+            ? 'Đã cập nhật đánh giá cho Trainer!'
+            : 'Cảm ơn bạn đã gửi đánh giá cho buổi học & Trainer!'
+        );
+        queryClient.invalidateQueries({ queryKey: ['meetings', meetingId] });
         form.resetFields();
         onSuccess();
       } else {
@@ -104,7 +131,9 @@ export const TraineeEvaluationModal: React.FC<Props> = ({
       title={
         <Space>
           <HeartFilled style={{ color: '#eb2f96' }} />
-          <span>Đánh giá Trainer & Buổi học (Trainee)</span>
+          <span>
+            {existingEvaluation ? 'Cập nhật Đánh giá Trainer (Trainee)' : 'Đánh giá Trainer & Buổi học (Trainee)'}
+          </span>
         </Space>
       }
       open={open}

@@ -58,18 +58,7 @@ class SubmitTrainerEvaluationUseCase:
                 "Không thể đánh giá học viên đã vắng mặt trong buổi học"
             )
 
-        # 3. Chống đánh giá trùng lặp
-        existing = self.evaluation_repo.get_by_meeting_and_users(
-            meeting_id=meeting_id,
-            reviewer_id=reviewer_id,
-            target_user_id=target_user_id,
-        )
-        if existing:
-            raise BadRequestException(
-                "Bạn đã gửi đánh giá cho học viên này trong buổi học"
-            )
-
-        # 4. Khởi tạo Entity và tính điểm trung bình
+        # 3. Tạo mới hoặc Cập nhật đánh giá
         score_items = [
             EvaluationScoreItem(
                 criteria_code=item["criteria_code"],
@@ -78,6 +67,20 @@ class SubmitTrainerEvaluationUseCase:
             for item in scores_data
         ]
 
+        existing = self.evaluation_repo.get_by_meeting_and_users(
+            meeting_id=meeting_id,
+            reviewer_id=reviewer_id,
+            target_user_id=target_user_id,
+        )
+        if existing:
+            existing.scores = score_items
+            existing.feedback_text = feedback_text
+            existing.calculate_average()
+            existing.updated_at = now
+            saved = self.evaluation_repo.save(existing)
+            return saved
+
+        # 4. Khởi tạo Entity và tính điểm trung bình
         eval_entity = MeetingEvaluation(
             meeting_id=meeting_id,
             reviewer_id=reviewer_id,

@@ -65,18 +65,7 @@ class SubmitTraineeEvaluationUseCase:
                 "Bạn chỉ có thể đánh giá khi đã tham gia buổi học thực tế"
             )
 
-        # 3. Chống đánh giá trùng lặp
-        existing = self.evaluation_repo.get_by_meeting_and_users(
-            meeting_id=meeting_id,
-            reviewer_id=reviewer_id,
-            target_user_id=resolved_target_id,
-        )
-        if existing:
-            raise BadRequestException(
-                "Bạn đã gửi đánh giá cho Trainer trong buổi học này rồi"
-            )
-
-        # 4. Tạo entity và tính điểm
+        # 3. Tạo mới hoặc Cập nhật đánh giá
         score_items = [
             EvaluationScoreItem(
                 criteria_code=item["criteria_code"],
@@ -85,6 +74,21 @@ class SubmitTraineeEvaluationUseCase:
             for item in scores_data
         ]
 
+        existing = self.evaluation_repo.get_by_meeting_and_users(
+            meeting_id=meeting_id,
+            reviewer_id=reviewer_id,
+            target_user_id=resolved_target_id,
+        )
+        if existing:
+            existing.scores = score_items
+            existing.feedback_text = feedback_text
+            existing.is_anonymous = is_anonymous
+            existing.calculate_average()
+            existing.updated_at = now
+            saved = self.evaluation_repo.save(existing)
+            return saved
+
+        # 4. Tạo entity và tính điểm
         eval_entity = MeetingEvaluation(
             meeting_id=meeting_id,
             reviewer_id=reviewer_id,
