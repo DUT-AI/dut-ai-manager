@@ -1,6 +1,15 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Index, Integer, String
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.homework.domain.entity import (
@@ -173,7 +182,6 @@ class HomeworkSubmissionModel(Base):
             created_at=self.created_at,
         )
 
-
     @classmethod
     def from_entity(cls, entity: HomeworkSubmissionEntity) -> "HomeworkSubmissionModel":
         sub_type = (
@@ -194,4 +202,3 @@ class HomeworkSubmissionModel(Base):
             is_passed=entity.is_passed,
             details=entity.details or {},
         )
-

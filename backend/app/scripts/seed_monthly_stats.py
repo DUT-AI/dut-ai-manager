@@ -6,14 +6,15 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 
 from sqlalchemy import delete
 
-from app.shared.infrastructure.database import create_db_and_tables, get_session
+from app.shared.infrastructure.base_model import Base
+from app.shared.infrastructure.database import engine, get_session
 from app.user.domain.monthly_stats import UserTitle
 from app.user.infrastructure.monthly_stats_model import MonthlyUserStatsModel
 
 
 def seed_monthly_stats():
     # Tạo bảng nếu chưa có
-    create_db_and_tables()
+    Base.metadata.create_all(bind=engine)
 
     # get_session returns a generator, so we use next() to get the session
     session_generator = get_session()

@@ -33,4 +33,3 @@ class NotificationPayload:
     action_url: str | None = None  # Link điều hướng người dùng (Frontend URL)
     fields: list[dict[str, Any]] | None = None  # Danh sách cặp key-value hiển thị
     color_hex: int | None = None  # Màu viền Discord Embed
-

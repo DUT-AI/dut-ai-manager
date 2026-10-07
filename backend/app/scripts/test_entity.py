@@ -1,17 +1,15 @@
-import asyncio
-
 from sqlalchemy import select
 
-from app.core.database import get_db
 from app.permission_request.infrastructure.model import PermissionRequest
+from app.shared.infrastructure.database import get_session
 
 
-async def main():
-    async for session in get_db():
+def main():
+    for session in get_session():
         stmt = select(PermissionRequest).where(
             PermissionRequest.id.in_([127, 128, 130])
         )
-        rows = session.exec(stmt).all()
+        rows = session.scalars(stmt).all()
         for r in rows:
             print(
                 f"Row {r.id}: hw={r.homework_id}, category={r.category}, created_by={r.created_by}"
@@ -24,4 +22,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

@@ -151,4 +151,3 @@ async def test_check_overdue_multi_exercise_full_submission_passes():
 
     assert count == 0
     assert not event_bus.publish.called
-

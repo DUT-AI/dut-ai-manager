@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
     Button,
     Card,
@@ -22,6 +22,9 @@ import {
     EditOutlined,
     DeleteOutlined,
     CalendarOutlined,
+    TeamOutlined,
+    ClockCircleOutlined,
+    AppstoreOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
@@ -36,7 +39,11 @@ import {
 } from '@/features/activity';
 import { useUsers } from '@/features/users';
 import { BonusPointModal } from '@/features/users/components/BonusPointModal';
-import type { BonusPointResponse } from '@/features/activity/types/activity.types';
+import {
+    BonusPointType,
+    BONUS_POINT_TYPE_LABELS,
+    type BonusPointResponse,
+} from '@/features/activity/types/activity.types';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -66,11 +73,13 @@ export const BonusPointManagementPage = () => {
 
     // Filters
     const [filterUserId, setFilterUserId] = useState<number | undefined>(undefined);
+    const [filterType, setFilterType] = useState<string | undefined>(undefined);
     const [filterDate, setFilterDate] = useState<Dayjs | null>(null);
 
     // Queries & Mutations
     const { data: bonusPoints = [], isLoading } = useBonusPoints({
         userId: filterUserId,
+        type: filterType,
         month: filterDate ? filterDate.month() + 1 : undefined,
         year: filterDate ? filterDate.year() : undefined,
     });
@@ -88,6 +97,38 @@ export const BonusPointManagementPage = () => {
     const canUpdate = hasPermission(BonusPointPermission.UPDATE);
     const canDelete = hasPermission(BonusPointPermission.DELETE);
 
+    // Summary statistics (2 types: CLUB_ACTIVITY and OTHER)
+    const stats = useMemo(() => {
+        let totalPoints = 0;
+        let clubPoints = 0;
+        let clubCount = 0;
+        let otherPoints = 0;
+        let otherCount = 0;
+
+        bonusPoints.forEach((item) => {
+            const pts = item.points || 0;
+            totalPoints += pts;
+            const t = item.type || (item.reason?.toLowerCase().includes('hoạt động tại clb') || item.reason?.toLowerCase().includes('lab') ? BonusPointType.CLUB_ACTIVITY : BonusPointType.OTHER);
+
+            if (t === BonusPointType.CLUB_ACTIVITY) {
+                clubPoints += pts;
+                clubCount += 1;
+            } else {
+                otherPoints += pts;
+                otherCount += 1;
+            }
+        });
+
+        return {
+            totalPoints,
+            totalCount: bonusPoints.length,
+            clubPoints,
+            clubCount,
+            otherPoints,
+            otherCount,
+        };
+    }, [bonusPoints]);
+
     const handleCreateOrUpdate = async (values: any) => {
         try {
             if (editingItem) {
@@ -95,6 +136,7 @@ export const BonusPointManagementPage = () => {
                     id: editingItem.id,
                     data: {
                         points: values.points,
+                        type: values.type,
                         reason: values.reason,
                         date: values.date,
                     },
@@ -104,6 +146,7 @@ export const BonusPointManagementPage = () => {
                 await createBonusPoint.mutateAsync({
                     user_ids: values.user_ids,
                     points: values.points,
+                    type: values.type,
                     reason: values.reason,
                     date: values.date,
                 });
@@ -131,8 +174,8 @@ export const BonusPointManagementPage = () => {
             key: 'user',
             width: 220,
             render: (_, record) => {
-                const name = record.owner?.name || record.user?.name || `User #${record.user_id}`;
-                const avatar = record.owner?.avatar_url || record.user?.avatar_url;
+                const name = record.owner?.name || (record as any).user?.name || `User #${record.user_id}`;
+                const avatar = record.owner?.avatar_url || (record as any).user?.avatar_url;
                 return (
                     <div className="flex items-center gap-3">
                         <Avatar src={avatar} icon={<UserOutlined />} size="default" className="bg-emerald-500" />
@@ -141,6 +184,29 @@ export const BonusPointManagementPage = () => {
                             <Text type="secondary" className="text-xs">ID: {record.user_id}</Text>
                         </div>
                     </div>
+                );
+            },
+        },
+        {
+            title: 'Phân loại',
+            dataIndex: 'type',
+            key: 'type',
+            width: 170,
+            render: (type: string, record: BonusPointResponse) => {
+                const isClubActivity = type === BonusPointType.CLUB_ACTIVITY || (!type && (record.reason?.toLowerCase().includes('hoạt động tại clb') || record.reason?.toLowerCase().includes('clb:') || record.reason?.toLowerCase().includes('lab')));
+                if (isClubActivity) {
+                    return (
+                        <Tag color="blue" className="px-2.5 py-1 rounded-md text-xs font-medium inline-flex items-center gap-1.5 border-blue-200">
+                            <ClockCircleOutlined />
+                            {BONUS_POINT_TYPE_LABELS[BonusPointType.CLUB_ACTIVITY]?.label || 'Hoạt động CLB'}
+                        </Tag>
+                    );
+                }
+                return (
+                    <Tag color="purple" className="px-2.5 py-1 rounded-md text-xs font-medium inline-flex items-center gap-1.5 border-purple-200">
+                        <TrophyOutlined />
+                        {BONUS_POINT_TYPE_LABELS[BonusPointType.OTHER]?.label || 'Điểm cộng khác'}
+                    </Tag>
                 );
             },
         },
@@ -184,7 +250,7 @@ export const BonusPointManagementPage = () => {
             key: 'creator',
             width: 160,
             render: (_, record) => {
-                const creatorName = record.creator?.name || (record.created_by ? `User #${record.created_by}` : '-');
+                const creatorName = record.creator?.name || ((record as any).created_by ? `User #${(record as any).created_by}` : '-');
                 return (
                     <Text type="secondary" className="text-xs">
                         {creatorName}
@@ -245,6 +311,48 @@ export const BonusPointManagementPage = () => {
             animate="visible"
             className="p-4 md:p-6"
         >
+            {/* Classification Stats Cards (3 Cards) */}
+            <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <Card className="rounded-xl border border-emerald-100 dark:border-emerald-950/40 bg-gradient-to-br from-emerald-50/50 to-white dark:from-emerald-950/20 dark:to-gray-900 shadow-sm">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <Text type="secondary" className="text-xs uppercase tracking-wider font-semibold">Tổng điểm cộng</Text>
+                            <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-400 mt-1">+{stats.totalPoints}</div>
+                            <Text type="secondary" className="text-xs">{stats.totalCount} lượt ghi nhận</Text>
+                        </div>
+                        <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 flex items-center justify-center text-lg">
+                            <TrophyOutlined />
+                        </div>
+                    </div>
+                </Card>
+
+                <Card className="rounded-xl border border-blue-100 dark:border-blue-950/40 bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-950/20 dark:to-gray-900 shadow-sm">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <Text type="secondary" className="text-xs uppercase tracking-wider font-semibold">Hoạt động tại CLB</Text>
+                            <div className="text-2xl font-bold text-blue-700 dark:text-blue-400 mt-1">+{stats.clubPoints}</div>
+                            <Text type="secondary" className="text-xs">{stats.clubCount} lượt rèn luyện</Text>
+                        </div>
+                        <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/50 text-blue-600 flex items-center justify-center text-lg">
+                            <ClockCircleOutlined />
+                        </div>
+                    </div>
+                </Card>
+
+                <Card className="rounded-xl border border-purple-100 dark:border-purple-950/40 bg-gradient-to-br from-purple-50/50 to-white dark:from-purple-950/20 dark:to-gray-900 shadow-sm">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <Text type="secondary" className="text-xs uppercase tracking-wider font-semibold">Điểm cộng khác</Text>
+                            <div className="text-2xl font-bold text-purple-700 dark:text-purple-400 mt-1">+{stats.otherPoints}</div>
+                            <Text type="secondary" className="text-xs">{stats.otherCount} lượt khác (sinh hoạt, thưởng)</Text>
+                        </div>
+                        <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/50 text-purple-600 flex items-center justify-center text-lg">
+                            <TrophyOutlined />
+                        </div>
+                    </div>
+                </Card>
+            </motion.div>
+
             <Card
                 className={!screens.md ? 'bg-transparent shadow-none border-none' : 'shadow-sm border-gray-100 rounded-xl overflow-hidden'}
                 styles={{ body: { padding: !screens.md ? 0 : undefined } }}
@@ -257,7 +365,7 @@ export const BonusPointManagementPage = () => {
                         </div>
                         <div>
                             <Title level={3} className="text-xl md:text-2xl mt-4 text-emerald-700">Quản lý Điểm cộng</Title>
-                            <Text type="secondary" className="text-xs md:text-sm">Danh sách khen thưởng và ghi nhận điểm cộng thành viên</Text>
+                            <Text type="secondary" className="text-xs md:text-sm">Danh sách khen thưởng và phân loại điểm cộng thành viên</Text>
                         </div>
                     </Space>
                     {canCreate && (
@@ -277,7 +385,7 @@ export const BonusPointManagementPage = () => {
 
                 {/* Filters */}
                 <motion.div variants={itemVariants} className="mb-6 p-4 bg-gray-50/70 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-800 flex flex-wrap gap-4 items-center">
-                    <div className="w-full sm:w-64">
+                    <div className="w-full sm:w-60">
                         <Select
                             allowClear
                             showSearch
@@ -297,7 +405,31 @@ export const BonusPointManagementPage = () => {
                             ))}
                         </Select>
                     </div>
-                    <div className="w-full sm:w-48">
+
+                    <div className="w-full sm:w-52">
+                        <Select
+                            allowClear
+                            placeholder="Lọc loại điểm cộng"
+                            className="w-full"
+                            value={filterType}
+                            onChange={(val) => setFilterType(val)}
+                        >
+                            <Option value={BonusPointType.CLUB_ACTIVITY}>
+                                <span className="flex items-center gap-2">
+                                    <ClockCircleOutlined className="text-blue-500" />
+                                    {BONUS_POINT_TYPE_LABELS[BonusPointType.CLUB_ACTIVITY]?.label}
+                                </span>
+                            </Option>
+                            <Option value={BonusPointType.OTHER}>
+                                <span className="flex items-center gap-2">
+                                    <TrophyOutlined className="text-purple-500" />
+                                    {BONUS_POINT_TYPE_LABELS[BonusPointType.OTHER]?.label}
+                                </span>
+                            </Option>
+                        </Select>
+                    </div>
+
+                    <div className="w-full sm:w-44">
                         <DatePicker
                             picker="month"
                             placeholder="Lọc theo Tháng/Năm"
@@ -307,11 +439,13 @@ export const BonusPointManagementPage = () => {
                             format="MM/YYYY"
                         />
                     </div>
-                    {(filterUserId !== undefined || filterDate !== null) && (
+
+                    {(filterUserId !== undefined || filterType !== undefined || filterDate !== null) && (
                         <Button
                             type="link"
                             onClick={() => {
                                 setFilterUserId(undefined);
+                                setFilterType(undefined);
                                 setFilterDate(null);
                             }}
                             className="p-0 text-emerald-600 text-xs"

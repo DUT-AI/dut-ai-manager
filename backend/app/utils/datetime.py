@@ -50,4 +50,3 @@ def to_utc7_naive(dt: datetime | str | None) -> datetime | None:
         return dt
 
     return None
-

@@ -7,6 +7,7 @@ from app.bonus_point.domain.events import (
     BonusPointDeleted,
     BonusPointUpdated,
 )
+from app.bonus_point.domain.value_objects import BonusPointType, infer_bonus_point_type
 from app.bonus_point.infrastructure.repository import BonusPointRepository
 from app.meeting.infrastructure.repository import ParticipantRepository
 from app.shared.application.query_support_utils import build_query_support
@@ -22,6 +23,7 @@ class GetBonusPointsUseCase:
     def execute(
         self,
         user_id: int | None = None,
+        type: BonusPointType | str | None = None,
         month: int | None = None,
         year: int | None = None,
         start_date: date | None = None,
@@ -35,6 +37,13 @@ class GetBonusPointsUseCase:
             filters.append(
                 FilterCriterion(
                     field="user_id", operator=FilterOperator.EQ, value=user_id
+                )
+            )
+        if type:
+            type_val = type.value if hasattr(type, "value") else str(type)
+            filters.append(
+                FilterCriterion(
+                    field="type", operator=FilterOperator.EQ, value=type_val
                 )
             )
         if start_date:
@@ -85,12 +94,14 @@ class CreateBonusPointsUseCase:
         self, data: BonusPointCreate, current_user_name: str | None = None
     ) -> list[BonusPoint]:
         created_items = []
+        resolved_type = data.type or infer_bonus_point_type(data.reason)
 
         for user_id in data.user_ids:
             entity = BonusPoint(
                 points=data.points,
                 reason=data.reason,
                 date=data.date,
+                type=resolved_type,
                 user_id=user_id,
             )
             created = self.repository.add(entity)
@@ -227,6 +238,7 @@ class CalculateActivityPointsUseCase:
                             points=points,
                             reason=f"Hoạt động tại CLB: {hours:.2f} giờ",
                             date=get_current_utc7_time(),
+                            type=BonusPointType.CLUB_ACTIVITY,
                         )
                         self.bonus_point_repo.add(bonus)
                         count += 1

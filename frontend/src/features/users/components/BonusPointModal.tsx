@@ -1,7 +1,7 @@
 import { Modal, Form, Select, DatePicker, InputNumber, Input } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
-import type { BonusPointResponse } from '@/features/activity/types/activity.types';
+import { BonusPointType, BONUS_POINT_TYPE_LABELS, type BonusPointResponse } from '@/features/activity/types/activity.types';
 import type { UserResponse } from '@/features/users/types/user.types';
 
 const { Option } = Select;
@@ -21,10 +21,14 @@ export const BonusPointModal = ({ open, editingItem, initialDate, users, onSubmi
 
     const initialValues = editingItem ? {
         user_id: editingItem.user_id ?? editingItem.owner?.id,
+        type: editingItem.type || BonusPointType.OTHER,
         points: editingItem.points,
         reason: editingItem.reason,
         date: dayjs(editingItem.date),
-    } : { date: initialDate };
+    } : {
+        type: BonusPointType.OTHER,
+        date: initialDate,
+    };
 
     const handleFinish = (values: any) => {
         if (editingItem) {
@@ -36,6 +40,7 @@ export const BonusPointModal = ({ open, editingItem, initialDate, users, onSubmi
         } else {
             const formattedValues = {
                 user_ids: values.user_ids,
+                type: values.type,
                 points: values.points,
                 reason: values.reason,
                 date: values.date.toISOString()
@@ -86,16 +91,26 @@ export const BonusPointModal = ({ open, editingItem, initialDate, users, onSubmi
                         </Select>
                     </Form.Item>
                 )}
-                <div className="grid grid-cols-2 gap-4">
-                    <Form.Item name="date" label="Ngày & Giờ" rules={[{ required: true, message: 'Vui lòng chọn thời gian!' }]}>
-                        <DatePicker showTime format="DD/MM/YYYY HH:mm" className="w-full" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Form.Item name="type" label="Phân loại điểm cộng" rules={[{ required: true, message: 'Vui lòng chọn loại điểm cộng!' }]}>
+                        <Select placeholder="Chọn loại điểm cộng">
+                            <Option value={BonusPointType.CLUB_ACTIVITY}>
+                                {BONUS_POINT_TYPE_LABELS[BonusPointType.CLUB_ACTIVITY].label} (Thời gian tại Lab/CLB)
+                            </Option>
+                            <Option value={BonusPointType.OTHER}>
+                                {BONUS_POINT_TYPE_LABELS[BonusPointType.OTHER].label} (Sinh hoạt, Khen thưởng...)
+                            </Option>
+                        </Select>
                     </Form.Item>
                     <Form.Item name="points" label="Điểm số" rules={[{ required: true, message: 'Vui lòng nhập điểm số!' }]}>
                         <InputNumber min={1} max={100} className="w-full" />
                     </Form.Item>
                 </div>
+                <Form.Item name="date" label="Ngày & Giờ" rules={[{ required: true, message: 'Vui lòng chọn thời gian!' }]}>
+                    <DatePicker showTime format="DD/MM/YYYY HH:mm" className="w-full" />
+                </Form.Item>
                 <Form.Item name="reason" label="Lý do" rules={[{ required: true, message: 'Vui lòng nhập lý do!' }]}>
-                    <TextArea rows={3} />
+                    <TextArea rows={3} placeholder="Nhập lý do ghi nhận điểm cộng..." />
                 </Form.Item>
             </Form>
         </Modal>

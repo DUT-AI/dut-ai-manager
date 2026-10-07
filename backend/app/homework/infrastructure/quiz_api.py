@@ -280,5 +280,3 @@ class QuizApiClient:
         except httpx.RequestError as exc:
             logger.exception(f"Connection failure to Quiz service at {url}: {exc}")
             raise RuntimeError(f"Cannot connect to Quiz service at {url}") from exc
-
-

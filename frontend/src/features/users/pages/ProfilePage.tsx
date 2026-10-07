@@ -36,7 +36,7 @@ import { useBonusPoints } from '@/features/activity';
 import { usePermissionRequests } from '@/features/rbac';
 import { zaloService } from '@/features/robot/services/zalo.service';
 
-import type { BonusPointResponse, PermissionRequestResponse } from '@/features/activity/types/activity.types';
+import { BonusPointType, type BonusPointResponse, type PermissionRequestResponse } from '@/features/activity/types/activity.types';
 import type { ViolationResponse } from '@/features/violations/types/violation.types';
 import type { ColumnsType } from 'antd/es/table';
 import { motion, type Variants } from 'motion/react';
@@ -143,9 +143,22 @@ const ProfilePage = () => {
     );
 
     const bonusColumns: ColumnsType<BonusPointResponse> = [
+        {
+            title: 'Phân loại',
+            dataIndex: 'type',
+            key: 'type',
+            width: 140,
+            render: (type, record) => {
+                const isClub = type === BonusPointType.CLUB_ACTIVITY || (!type && (record.reason?.toLowerCase().includes('hoạt động tại clb') || record.reason?.toLowerCase().includes('lab')));
+                if (isClub) {
+                    return <Tag color="blue">Hoạt động CLB</Tag>;
+                }
+                return <Tag color="purple">Điểm cộng khác</Tag>;
+            }
+        },
         { title: 'Lý do', dataIndex: 'reason', key: 'reason', ellipsis: true },
         { title: 'Điểm', dataIndex: 'points', key: 'points', width: 80, render: (val) => <Tag color="green">+{val}</Tag> },
-        { title: 'Ngày', dataIndex: 'created_at', key: 'created_at', width: 120, render: d => dayjs(d).format('DD/MM/YYYY') }
+        { title: 'Ngày', dataIndex: 'date', key: 'date', width: 120, render: d => dayjs(d).format('DD/MM/YYYY') }
     ];
 
     const violationColumns: ColumnsType<ViolationResponse> = [
@@ -458,6 +471,13 @@ const ProfilePage = () => {
             >
                 {selectedBonus && (
                     <Descriptions column={1} bordered size="small">
+                        <Descriptions.Item label="Phân loại">
+                            {selectedBonus.type === BonusPointType.CLUB_ACTIVITY || (!selectedBonus.type && (selectedBonus.reason?.toLowerCase().includes('hoạt động tại clb') || selectedBonus.reason?.toLowerCase().includes('lab'))) ? (
+                                <Tag color="blue">Hoạt động CLB</Tag>
+                            ) : (
+                                <Tag color="purple">Điểm cộng khác</Tag>
+                            )}
+                        </Descriptions.Item>
                         <Descriptions.Item label="Lý do">{selectedBonus.reason}</Descriptions.Item>
                         <Descriptions.Item label="Điểm cộng">
                             <Tag color="green">+{selectedBonus.points}</Tag>

@@ -103,7 +103,6 @@ async def test_create_invoice_requires_team_id():
     assert "chọn nhóm" in str(exc_info.value.message).lower()
 
 
-
 if __name__ == "__main__":
     test_invoice_entity_requires_team_id()
     test_create_monthly_invoices_requires_team_id()

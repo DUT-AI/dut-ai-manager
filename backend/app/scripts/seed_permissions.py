@@ -48,7 +48,7 @@ def seed_roles():
 
             if existing_role:
                 logger.info(
-                    f"Role '{role_data['name'].value}' already exists, skipping..."
+                    f"Role '{role_data['name']}' already exists, skipping..."
                 )
                 continue
 
@@ -58,7 +58,7 @@ def seed_roles():
                 description=role_data["description"],
             )
             session.add(new_role)
-            logger.success(f"Added role: {role_data['name'].value}")
+            logger.success(f"Added role: {role_data['name']}")
 
         session.commit()
         logger.info("Role seeding completed.")

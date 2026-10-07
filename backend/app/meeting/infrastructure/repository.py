@@ -3,8 +3,7 @@ from typing import Any, cast
 
 from sqlalchemy import and_, case, desc, extract, func, or_, select
 from sqlalchemy.orm import Session, contains_eager, joinedload, selectinload
-from app.shared.application.query_support_utils import build_query_support
-from app.shared.domain.query_support import FilterCriterion, FilterOperator
+
 from app.shared.application.query_support_utils import build_query_support
 from app.shared.domain.query_support import (
     FilterCriterion,
@@ -58,7 +57,6 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         month: int | None = None,
         year: int | None = None,
     ) -> list[DomainMeeting]:
-        
 
         if not query_support:
             filters = []
@@ -282,7 +280,7 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
 
         # Commit is handled by middleware, but we need to refresh to get updated participants for the return
         self.session.refresh(orm)
-        return self.get_with_participants(cast(int, orm.id)) or self._to_domain(orm)
+        return self.get_with_participants(orm.id) or self._to_domain(orm)
 
     def delete(self, meeting_id: int) -> bool:
         orm = self.session.get(ORMMeeting, meeting_id)

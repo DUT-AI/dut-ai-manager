@@ -80,9 +80,13 @@ class MeetingParticipant(BaseEntity):
         else:
             self.check_in_at = check_in_at or self.check_in_at or default_start_time
             if new_status == ParticipantStatus.COMPLETED:
-                self.check_out_at = check_out_at or self.check_out_at or default_end_time
+                self.check_out_at = (
+                    check_out_at or self.check_out_at or default_end_time
+                )
             else:
-                self.check_out_at = check_out_at if check_out_at is not None else self.check_out_at
+                self.check_out_at = (
+                    check_out_at if check_out_at is not None else self.check_out_at
+                )
 
 
 class EvaluationScoreItem(BaseModel):

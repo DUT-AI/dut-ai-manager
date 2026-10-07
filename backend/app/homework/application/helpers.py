@@ -177,4 +177,3 @@ class QuizSubmissionHelper:
             return user_id in (game_completed_uids or set())
         else:
             return False
-

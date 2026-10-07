@@ -231,7 +231,9 @@ async def test_sync_homework_from_quiz_with_string_timestamps():
     """
     Test Case 5: Đồng bộ bài tập từ Quiz API khi Quiz trả về submitted_at/completed_at dạng chuỗi ISO.
     """
-    from app.homework.application.sync_homework_use_case import SyncHomeworkFromQuizUseCase
+    from app.homework.application.sync_homework_use_case import (
+        SyncHomeworkFromQuizUseCase,
+    )
 
     mock_homework_repo = MagicMock()
     mock_quiz_api = MagicMock(spec=QuizApiClient)
@@ -284,4 +286,3 @@ async def test_sync_homework_from_quiz_with_string_timestamps():
     assert result["synced_coding_count"] == 1
     assert result["synced_game_count"] == 1
     assert mock_homework_repo.add_submission.call_count == 2
-

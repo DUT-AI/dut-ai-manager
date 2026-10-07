@@ -35,4 +35,3 @@ class GetUserHomeworkSubmissionsUseCase:
             for s in submissions
             if s.id is not None
         ]
-

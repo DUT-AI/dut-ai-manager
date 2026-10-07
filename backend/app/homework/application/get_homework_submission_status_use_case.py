@@ -119,7 +119,9 @@ class GetHomeworkSubmissionStatusUseCase:
         db_game_map: dict[int, Any] = {}
 
         for sub in db_submissions:
-            stype = str(sub.submission_type).upper() if sub.submission_type else "CODING"
+            stype = (
+                str(sub.submission_type).upper() if sub.submission_type else "CODING"
+            )
             if stype == "CODING":
                 if sub.exercise_id:
                     key = (sub.user_id, str(sub.exercise_id))
@@ -202,13 +204,17 @@ class GetHomeworkSubmissionStatusUseCase:
                                 is_passed=sub.is_passed,
                                 score=sub.score,
                                 attempt_number=sub.attempt_number or 1,
-                                submitted_at=sub.submitted_at.isoformat() if sub.submitted_at else None,
+                                submitted_at=sub.submitted_at.isoformat()
+                                if sub.submitted_at
+                                else None,
                                 is_late=is_late,
                             )
                         )
                     else:
                         is_late = is_past_deadline and not (
-                            req and req.start_time and now <= req.start_time.replace(tzinfo=None)
+                            req
+                            and req.start_time
+                            and now <= req.start_time.replace(tzinfo=None)
                         )
                         student_exercises.append(
                             StudentExerciseStatusDTO(
@@ -236,7 +242,9 @@ class GetHomeworkSubmissionStatusUseCase:
                 else:
                     coding_status_str = "NOT_SUBMITTED"
             else:
-                coding_status_str = "COMPLETED" if completed_coding_count > 0 else "NOT_SUBMITTED"
+                coding_status_str = (
+                    "COMPLETED" if completed_coding_count > 0 else "NOT_SUBMITTED"
+                )
 
             # --- 3.2 Coding Status Categories ---
             if coding_status_str == "COMPLETED":
@@ -284,7 +292,11 @@ class GetHomeworkSubmissionStatusUseCase:
                 sub_at_raw = (
                     entry.get("submitted_at")
                     or entry.get("completed_at")
-                    or (db_sub.submitted_at.isoformat() if db_sub and db_sub.submitted_at else None)
+                    or (
+                        db_sub.submitted_at.isoformat()
+                        if db_sub and db_sub.submitted_at
+                        else None
+                    )
                 )
                 if sub_at_raw:
                     game_submitted_at_str = str(sub_at_raw)
@@ -297,7 +309,9 @@ class GetHomeworkSubmissionStatusUseCase:
                     except Exception:
                         pass
 
-                game_score_val = entry.get("final_score") or (db_sub.score if db_sub else None)
+                game_score_val = entry.get("final_score") or (
+                    db_sub.score if db_sub else None
+                )
 
                 game_submitted.append(
                     UserSubmissionInfo(
@@ -392,4 +406,3 @@ class GetHomeworkSubmissionStatusUseCase:
             submitted=top_submitted,
             not_submitted=top_not_submitted,
         )
-

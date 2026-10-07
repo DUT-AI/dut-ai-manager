@@ -244,4 +244,4 @@ class ViolationRepository(BaseRepository[ViolationModel, Violation]):
         )
         result = self.session.execute(statement)
         self.session.flush()
-        return result.rowcount or 0
+        return getattr(result, "rowcount", 0) or 0

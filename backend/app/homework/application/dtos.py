@@ -53,6 +53,7 @@ class HomeworkResponse(HomeworkBase):
 
 class ExerciseSummaryDTO(BaseModel):
     """Thông tin tóm tắt của một bài tập coding con kèm số liệu hoàn thành."""
+
     exercise_id: str
     title: str
     order_index: int = 0
@@ -63,6 +64,7 @@ class ExerciseSummaryDTO(BaseModel):
 
 class StudentExerciseStatusDTO(BaseModel):
     """Trạng thái nộp bài của 1 học viên đối với 1 bài tập coding con."""
+
     exercise_id: str
     exercise_title: str
     is_submitted: bool = False
@@ -75,6 +77,7 @@ class StudentExerciseStatusDTO(BaseModel):
 
 class StudentHomeworkDetailDTO(BaseModel):
     """Tiến độ nộp bài tổng thể của 1 học viên được phân công."""
+
     user_id: int
     name: str | None = None
     avatar_url: str | None = None
@@ -82,7 +85,9 @@ class StudentHomeworkDetailDTO(BaseModel):
     # Tiến độ Coding
     total_coding_required: int = 0
     total_coding_completed: int = 0
-    coding_status: str = "NOT_SUBMITTED"  # "COMPLETED" | "PARTIALLY_SUBMITTED" | "NOT_SUBMITTED"
+    coding_status: str = (
+        "NOT_SUBMITTED"  # "COMPLETED" | "PARTIALLY_SUBMITTED" | "NOT_SUBMITTED"
+    )
     coding_is_late: bool = False
     coding_exercises: list[StudentExerciseStatusDTO] = Field(default_factory=list)
 
@@ -103,7 +108,6 @@ class UserSubmissionInfo(BaseModel):
     total_coding_completed: int = 0
     coding_status: str = "NOT_SUBMITTED"
     coding_exercises: list[StudentExerciseStatusDTO] = Field(default_factory=list)
-
 
 
 class CategorySubmissionStatus(BaseModel):
@@ -147,4 +151,3 @@ class HomeworkSubmissionDetailResponse(BaseModel):
     created_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
-

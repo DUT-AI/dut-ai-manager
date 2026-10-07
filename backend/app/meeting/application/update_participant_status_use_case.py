@@ -53,7 +53,9 @@ class UpdateParticipantStatusUseCase:
         now_utc7 = get_current_utc7_time()
         # Default start time khi điểm danh nhanh là giờ hiện tại nếu đang trong buổi học, hoặc start_time
         default_check_in_time = (
-            now_utc7 if meeting.start_time <= now_utc7 <= meeting.end_time else meeting.start_time
+            now_utc7
+            if meeting.start_time <= now_utc7 <= meeting.end_time
+            else meeting.start_time
         )
 
         # Ủy quyền toàn bộ Business Rules cho Domain Entity

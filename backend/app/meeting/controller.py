@@ -2,7 +2,7 @@ from datetime import date
 from typing import Annotated
 
 from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import APIRouter, Depends, File, Form, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from fastapi.responses import StreamingResponse
 
 from app.core.deps import CurrentUser, hasPermission
@@ -328,6 +328,8 @@ async def submit_trainer_evaluation(
     current_user: Annotated[CurrentUser, hasPermission(MeetingPermission.CREATE)],
 ):
     """Trainer gửi đánh giá cho 1 Trainee cụ thể trong buổi học."""
+    if current_user.id is None:
+        raise HTTPException(status_code=401, detail="Unauthorized")
     result = await uc.execute(
         meeting_id=meeting_id,
         reviewer_id=current_user.id,
@@ -354,6 +356,8 @@ async def submit_trainee_evaluation(
     current_user: CurrentUser,
 ):
     """Trainee gửi đánh giá cho Trainer của buổi học (hỗ trợ ẩn danh)."""
+    if current_user.id is None:
+        raise HTTPException(status_code=401, detail="Unauthorized")
     result = await uc.execute(
         meeting_id=meeting_id,
         reviewer_id=current_user.id,
@@ -394,6 +398,8 @@ async def get_my_evaluation_result(
     current_user: CurrentUser,
 ):
     """Trainee xem kết quả đánh giá mà Trainer dành cho mình (khóa nếu chưa đánh giá Trainer)."""
+    if current_user.id is None:
+        raise HTTPException(status_code=401, detail="Unauthorized")
     result = await uc.execute(meeting_id=meeting_id, current_user_id=current_user.id)
     data = EvaluationResponse.from_domain(result) if result else None
     return ApiResponse.success(data=data)

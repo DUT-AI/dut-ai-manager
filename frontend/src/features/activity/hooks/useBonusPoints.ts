@@ -5,13 +5,14 @@ import type { BonusPointCreate, BonusPointUpdate } from '@/features/activity/typ
 // Query Keys
 const bonusPointKeys = {
   all: ['bonusPoints'] as const,
-  list: (filters: { userId?: number; month?: number; year?: number; startDate?: string; endDate?: string }) =>
+  list: (filters: { userId?: number; type?: string; month?: number; year?: number; startDate?: string; endDate?: string }) =>
     ['bonusPoints', filters] as const,
 };
 
 // Queries
 export const useBonusPoints = (filters: {
   userId?: number;
+  type?: string;
   month?: number;
   year?: number;
   startDate?: string;
@@ -24,6 +25,7 @@ export const useBonusPoints = (filters: {
     queryFn: async () => {
       const response = await bonusPointService.getBonusPoints(
         rest.userId,
+        rest.type,
         rest.month,
         rest.year,
         undefined,

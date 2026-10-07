@@ -17,7 +17,7 @@ class HomeworkSubmissionWebhookIn(BaseModel):
     type: SubmissionType
     submitted_at: datetime
     is_passed: bool = True
-    
+
     # Chi tiết bài tập con (dành cho CODING)
     exercise_id: str | None = None
     exercise_title: str | None = None
@@ -25,7 +25,7 @@ class HomeworkSubmissionWebhookIn(BaseModel):
     attempt_number: int = 1
     score: float | None = None
     original_filename: str | None = None
-    
+
     details: dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("type", mode="before")
@@ -135,7 +135,11 @@ class RecordHomeworkSubmissionUseCase:
                 details=details,
             )
         else:
-            final_exercise_id = str(exercise_id) if exercise_id else f"legacy-{homework.id}-{sub_id or payload.user_id}"
+            final_exercise_id = (
+                str(exercise_id)
+                if exercise_id
+                else f"legacy-{homework.id}-{sub_id or payload.user_id}"
+            )
             submission = HomeworkSubmission.create_coding(
                 homework_id=homework.id,
                 user_id=payload.user_id,
@@ -154,7 +158,6 @@ class RecordHomeworkSubmissionUseCase:
             f"user_id={payload.user_id}, type={payload.type}, exercise_id={getattr(submission, 'exercise_id', None)}, is_passed={payload.is_passed}"
         )
 
-
         return {
             "status": "recorded",
             "submission_id": saved.id,
@@ -162,4 +165,3 @@ class RecordHomeworkSubmissionUseCase:
             "user_id": payload.user_id,
             "exercise_id": exercise_id,
         }
-

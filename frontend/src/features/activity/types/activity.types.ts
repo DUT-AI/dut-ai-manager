@@ -23,9 +23,26 @@ export const permissionCreateSchema = permissionRequestCreateSchema;
 export type PermissionCreate = PermissionRequestCreate;
 export type PermissionUpdate = PermissionRequestUpdate;
 
+export enum BonusPointType {
+  CLUB_ACTIVITY = 'CLUB_ACTIVITY', // Điểm cộng hoạt động CLB / Lab
+  OTHER = 'OTHER',                 // Điểm cộng khác (sinh hoạt, khen thưởng,...)
+}
+
+export const BONUS_POINT_TYPE_LABELS: Record<string, { label: string; color: string }> = {
+  CLUB_ACTIVITY: {
+    label: 'Hoạt động CLB',
+    color: 'blue',
+  },
+  OTHER: {
+    label: 'Điểm cộng khác',
+    color: 'purple',
+  },
+};
+
 export const bonusPointCreateSchema = z.object({
   user_ids: z.array(z.number()).min(1, 'Vui lòng chọn thành viên'),
   points: z.number().min(1, 'Điểm phải lớn hơn 0'),
+  type: z.nativeEnum(BonusPointType).optional(),
   reason: z.string().min(1, 'Vui lòng nhập lý do'),
   date: z.string(),
 });
@@ -44,6 +61,7 @@ export const bonusPointResponseSchema = z.object({
   id: z.number(),
   user_id: z.number().optional(),
   points: z.number(),
+  type: z.string().optional().nullable(),
   reason: z.string(),
   date: z.string(),
   created_at: z.string(),

@@ -143,5 +143,3 @@ class GameHomeworkSubmission(HomeworkSubmission):
     submission_type: SubmissionType = SubmissionType.GAME
     score: float | None = None
     attempt_number: int = 1
-
-

@@ -63,8 +63,16 @@ class SyncHomeworkFromQuizUseCase:
                         sub_id = sub.get("submission_id")
                         exercise_id = sub.get("exercise_id") or sub.get("homework_id")
                         exercise_title = sub.get("exercise_title")
-                        score = float(sub["score"]) if sub.get("score") is not None else None
-                        attempt_number = int(sub.get("attempt_number", 1)) if sub.get("attempt_number") is not None else 1
+                        score = (
+                            float(sub["score"])
+                            if sub.get("score") is not None
+                            else None
+                        )
+                        attempt_number = (
+                            int(sub.get("attempt_number", 1))
+                            if sub.get("attempt_number") is not None
+                            else 1
+                        )
 
                         details = {
                             "submission_id": sub_id,

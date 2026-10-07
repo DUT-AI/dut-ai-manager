@@ -186,7 +186,6 @@ def test_meeting_mapping_filters_is_deleted_participants():
     assert domain.participants[0].user_id == 101
 
 
-
 def test_update_meeting_preserves_participant_attendance_status():
     """Kiểm tra UpdateMeetingUseCase không reset trạng thái điểm danh của participant cũ khi cập nhật meeting."""
     from app.meeting.application.update_meeting_use_case import UpdateMeetingUseCase
@@ -291,4 +290,3 @@ if __name__ == "__main__":
     test_update_meeting_preserves_participant_attendance_status()
     test_update_meeting_without_user_ids_preserves_participants()
     print("All Meeting tests PASSED!")
-

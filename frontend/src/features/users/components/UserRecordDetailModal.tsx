@@ -3,7 +3,7 @@ import { TrophyOutlined, WarningOutlined, UserOutlined, CalendarOutlined } from 
 import dayjs from 'dayjs';
 import type { ColumnsType } from 'antd/es/table';
 import type { UserResponse } from '@/features/users/types/user.types';
-import type { BonusPointResponse } from '@/features/activity/types/activity.types';
+import { BonusPointType, type BonusPointResponse } from '@/features/activity/types/activity.types';
 import type { ViolationResponse } from '@/features/violations/types/violation.types';
 import { useBonusPoints } from '@/features/activity';
 import { useViolations } from '@/features/violations';
@@ -56,13 +56,26 @@ export const UserRecordDetailModal = ({
       title: 'Thời gian',
       dataIndex: 'date',
       key: 'date',
-      width: 140,
+      width: 120,
       render: (dateStr: string) => (
         <Space size="small">
           <CalendarOutlined className="text-gray-400" />
           <Text className="text-sm">{dayjs(dateStr).format('DD/MM/YYYY')}</Text>
         </Space>
       ),
+    },
+    {
+      title: 'Phân loại',
+      dataIndex: 'type',
+      key: 'type',
+      width: 130,
+      render: (typeVal: string, record: BonusPointResponse) => {
+        const isClub = typeVal === BonusPointType.CLUB_ACTIVITY || (!typeVal && (record.reason?.toLowerCase().includes('hoạt động tại clb') || record.reason?.toLowerCase().includes('lab')));
+        if (isClub) {
+          return <Tag color="blue">Hoạt động CLB</Tag>;
+        }
+        return <Tag color="purple">Điểm cộng khác</Tag>;
+      },
     },
     {
       title: 'Lý do cộng điểm',
@@ -74,7 +87,7 @@ export const UserRecordDetailModal = ({
       title: 'Điểm',
       dataIndex: 'points',
       key: 'points',
-      width: 100,
+      width: 90,
       align: 'right',
       render: (pts: number) => (
         <Tag color="green" className="font-semibold text-sm px-2 py-0.5">

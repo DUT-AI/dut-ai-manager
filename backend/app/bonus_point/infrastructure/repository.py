@@ -70,9 +70,13 @@ class BonusPointRepository(BaseRepository[BonusPointModel, BonusPoint]):
             statement = apply_query_support(statement, BonusPointModel, query_support)
             if not query_support.sorting:
                 sort_field = (
-                    BonusPointModel.updated_at if deleted else BonusPointModel.created_at
+                    BonusPointModel.updated_at
+                    if deleted
+                    else BonusPointModel.created_at
                 )
-                statement = statement.order_by(sort_field.desc(), BonusPointModel.id.desc())
+                statement = statement.order_by(
+                    sort_field.desc(), BonusPointModel.id.desc()
+                )
         else:
             # Default sorting if no query support provided
             sort_field = (

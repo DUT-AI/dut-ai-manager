@@ -1,6 +1,6 @@
 """Discord Bot Service for sending messages."""
 
-from datetime import UTC
+from datetime import UTC, datetime
 from typing import Optional
 
 import aiohttp

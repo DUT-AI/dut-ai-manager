@@ -233,8 +233,10 @@ async def main():
             print(
                 f"👤 Gửi thông báo cho User ID: {args.user_id} qua NotificationService..."
             )
+            import dataclasses
+
             for name, payload in selected_scenarios:
-                payload.user_id = args.user_id
+                payload = dataclasses.replace(payload, user_id=args.user_id)
                 print(f"  ➡️ Đang gửi kịch bản: [{name}] - '{payload.title}'...")
                 res = await notification_service.send_to_user(payload)
                 print(f"     Kết quả: {res}")

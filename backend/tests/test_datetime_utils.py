@@ -1,5 +1,6 @@
-from datetime import UTC, datetime, timezone, timedelta
-from app.utils.datetime import to_utc7_naive, get_current_utc7_time
+from datetime import UTC, datetime
+
+from app.utils.datetime import to_utc7_naive
 
 
 def test_to_utc7_naive_none():

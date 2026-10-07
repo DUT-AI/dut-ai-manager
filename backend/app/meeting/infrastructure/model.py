@@ -83,10 +83,7 @@ class Meeting(SQLAlchemyTimestampMixin, Base):
                 ),
                 reverse=True,
             )
-            participants_list = [
-                p.to_entity()
-                for p in sorted_participants
-            ]
+            participants_list = [p.to_entity() for p in sorted_participants]
 
         return MeetingEntity(
             id=self.id,

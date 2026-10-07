@@ -347,8 +347,8 @@ class HomeworkRepository:
             HomeworkSubmissionModel.exercise_id.is_not(None),
         )
         if deadline is not None:
-            statement = statement.where(HomeworkSubmissionModel.submitted_at <= deadline)
+            statement = statement.where(
+                HomeworkSubmissionModel.submitted_at <= deadline
+            )
         results = self.session.scalars(statement).all()
         return {str(eid) for eid in results if eid}
-
-

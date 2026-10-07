@@ -123,7 +123,6 @@ async def test_webhook_record_game_submission_success(mock_homework_repo):
     mock_homework_repo.add_submission.assert_called_once()
 
 
-
 @pytest.mark.asyncio
 async def test_get_user_homework_submissions_use_case(mock_homework_repo):
     """Kiểm tra lấy danh sách lịch sử bài nộp qua GetUserHomeworkSubmissionsUseCase."""
@@ -258,4 +257,3 @@ async def test_webhook_update_existing_exercise_submission(mock_homework_repo):
     assert result["submission_id"] == 101
     assert result["exercise_id"] == "uuid-ex-1"
     mock_homework_repo.update_submission.assert_called_once()
-

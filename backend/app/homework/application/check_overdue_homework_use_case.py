@@ -154,7 +154,6 @@ class CheckOverdueHomeworkUseCase:
                     api_game = user_id in (game_completed_uids or set())
                     game_ok = db_game or api_game
 
-
                 if coding_ok and game_ok:
                     continue
 

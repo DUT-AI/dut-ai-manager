@@ -21,6 +21,7 @@ from app.bonus_point.application.use_cases import (
     RestoreBonusPointUseCase,
     UpdateBonusPointUseCase,
 )
+from app.bonus_point.domain.value_objects import BonusPointType
 from app.core.deps import CurrentUser, hasPermission, hasTeamLeaderAccess
 from app.core.permissions import BonusPointPermission
 from app.shared.application.response import ApiResponse
@@ -37,6 +38,7 @@ router = APIRouter(prefix="/bonus-points", tags=["bonus-points"])
 async def get_bonus_points(
     uc: FromDishka[GetBonusPointsUseCase],
     user_id: int | None = None,
+    type: BonusPointType | None = None,
     month: int | None = None,
     year: int | None = None,
     start_date: date | None = None,
@@ -48,6 +50,7 @@ async def get_bonus_points(
     """Retrieve bonus points based on filters."""
     result = uc.execute(
         user_id=user_id,
+        type=type,
         month=month,
         year=year,
         start_date=start_date,
