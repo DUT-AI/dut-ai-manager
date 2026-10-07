@@ -205,6 +205,33 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         rows = self.session.scalars(stmt).unique().all()
         return [r.to_entity() for r in rows]
 
+    def get_absence_user_ids_by_meeting(self, meeting_id: int) -> set[int]:
+        """Lấy danh sách các user_id có đơn xin vắng (ABSENCE) hợp lệ của một meeting."""
+        stmt = select(ORMModel.created_by).where(
+            ORMModel.meeting_id == meeting_id,
+            ORMModel.category == RequestCategory.ABSENCE,
+            ORMModel.is_deleted.is_(False),
+        )
+        rows = self.session.scalars(stmt).all()
+        return {r for r in rows if r is not None}
+
+    def cancel_active_requests_by_meeting(self, user_id: int, meeting_id: int) -> int:
+        """Hủy mềm (is_deleted = True) các đơn xin vắng/trễ cũ của user tại meeting_id."""
+        stmt = select(ORMModel).where(
+            ORMModel.created_by == user_id,
+            ORMModel.meeting_id == meeting_id,
+            ORMModel.category.in_([RequestCategory.ABSENCE, RequestCategory.LATE]),
+            ORMModel.is_deleted.is_(False),
+        )
+        rows = self.session.scalars(stmt).all()
+        count = 0
+        for r in rows:
+            r.is_deleted = True
+            count += 1
+        if count > 0:
+            self.session.flush()
+        return count
+
     def update(self, entity: DomainEntity) -> DomainEntity:
         return super().update(entity)
 
@@ -219,3 +246,4 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
             self.soft_delete(entity)
             return True
         return False
+

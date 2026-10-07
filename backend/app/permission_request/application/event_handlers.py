@@ -3,7 +3,11 @@ import asyncio
 from loguru import logger
 
 from app.core.config import settings
-from app.permission_request.domain.events import PermissionRequestCreated
+from app.meeting.infrastructure.repository import MeetingRepository
+from app.permission_request.domain.events import (
+    MeetingParticipantTransferred,
+    PermissionRequestCreated,
+)
 from app.permission_request.domain.value_objects import RequestCategory
 from app.shared.application.event_handler import EventHandler
 from app.shared.infrastructure.notification_payload import (
@@ -16,7 +20,7 @@ from app.user.infrastructure.repository import UserRepository
 
 
 class PermissionRequestNotificationHandler(EventHandler[PermissionRequestCreated]):
-    """Xử lý gửi thông báo vào room Discord khi có yêu cầu xin phép mới."""
+    """Xử lý gửi thông báo vào room Discord/Zalo khi có yêu cầu xin phép mới."""
 
     def __init__(
         self,
@@ -59,6 +63,8 @@ class PermissionRequestNotificationHandler(EventHandler[PermissionRequestCreated
                     category_text = "Tạm hoãn bài tập"
                 case RequestCategory.LATE:
                     category_text = "Xin đi trễ"
+                case RequestCategory.CHANGE_MEETING:
+                    category_text = "Đổi buổi sinh hoạt"
                 case RequestCategory.OTHER:
                     category_text = "Khác"
                 case _:
@@ -104,4 +110,121 @@ class PermissionRequestNotificationHandler(EventHandler[PermissionRequestCreated
         except Exception as e:
             logger.error(
                 f"Unexpected error in background permission notification task: {e}"
+            )
+
+
+class MeetingParticipantTransferredNotificationHandler(
+    EventHandler[MeetingParticipantTransferred]
+):
+    """
+    Xử lý gửi thông báo đa kênh khi học viên đổi buổi sinh hoạt thành công:
+    1. Gửi tin nhắn xác nhận ca học mới cho cá nhân thành viên qua Zalo Bot / Discord DM.
+    2. Gửi tin nhắn thông báo biến động danh sách sĩ số tới room quản lý.
+    """
+
+    def __init__(
+        self,
+        notification_service: NotificationService,
+        user_repo: UserRepository,
+        meeting_repo: MeetingRepository,
+    ):
+        self.notification_service = notification_service
+        self.user_repo = user_repo
+        self.meeting_repo = meeting_repo
+
+    async def handle(self, event: MeetingParticipantTransferred) -> None:
+        try:
+            logger.info(
+                f"Handling MeetingParticipantTransferred notification: User {event.user_id} -> Meeting {event.new_meeting_id}"
+            )
+            user = self.user_repo.get_by_id(event.user_id)
+            if not user:
+                return
+
+            new_meeting = self.meeting_repo.get_by_id(event.new_meeting_id)
+            if not new_meeting:
+                return
+
+            old_meeting = (
+                self.meeting_repo.get_by_id(event.old_meeting_id)
+                if event.old_meeting_id
+                else None
+            )
+
+            asyncio.create_task(
+                self._send_transferred_notifications(
+                    event, user, old_meeting, new_meeting
+                )
+            )
+        except Exception as e:
+            logger.error(
+                f"Error in MeetingParticipantTransferredNotificationHandler: {e}"
+            )
+
+    async def _send_transferred_notifications(
+        self,
+        event: MeetingParticipantTransferred,
+        user,
+        old_meeting,
+        new_meeting,
+    ) -> None:
+        try:
+            time_format = "%d/%m/%Y %H:%M"
+            new_time_str = new_meeting.start_time.strftime(time_format)
+            old_title = (
+                f"{old_meeting.title} ({old_meeting.start_time.strftime(time_format)})"
+                if old_meeting
+                else "Chưa có buổi học (Đăng ký mới)"
+            )
+
+            # 1. Gửi thông báo xác nhận cho cá nhân học viên
+            user_payload = NotificationPayload(
+                user_id=event.user_id,
+                title="✅ XÁC NHẬN ĐỔI CA SINH HOẠT THÀNH CÔNG",
+                content=(
+                    f"Chào **{user.name}**, bạn đã đổi ca sinh hoạt thành công sang **{new_meeting.title}** "
+                    f"diễn ra vào lúc **{new_time_str}**."
+                ),
+                category=NotificationCategory.MEETING,
+                level=NotificationLevel.SUCCESS,
+                fields=[
+                    {"name": "🔄 Ca cũ", "value": old_title, "inline": False},
+                    {
+                        "name": "🎯 Ca mới",
+                        "value": f"{new_meeting.title} ({new_time_str})",
+                        "inline": False,
+                    },
+                ],
+            )
+            await self.notification_service.send_to_user(user_payload)
+
+            # 2. Gửi thông báo đến Room quản lý Discord / Zalo
+            room_id = settings.DISCORD_PERMISSION_ROOM_ID
+            if room_id:
+                room_payload = NotificationPayload(
+                    user_id=event.user_id,
+                    title="🔄 BIẾN ĐỘNG SĨ SỐ: ĐỔI BUỔI SINH HOẠT",
+                    content=(
+                        f"Thành viên **{user.name}** vừa chuyển ca thành công:\n"
+                        f"- **Rút khỏi**: {old_title}\n"
+                        f"- **Tham gia vào**: {new_meeting.title} ({new_time_str})"
+                    ),
+                    category=NotificationCategory.MEETING,
+                    level=NotificationLevel.INFO,
+                    fields=[
+                        {"name": "👤 Học viên", "value": user.name, "inline": True},
+                        {
+                            "name": "📝 Ghi chú",
+                            "value": event.note or "Không có ghi chú",
+                            "inline": True,
+                        },
+                    ],
+                )
+                await self.notification_service.send_to_room(
+                    room_id=room_id, payload=room_payload, channel="discord"
+                )
+
+        except Exception as e:
+            logger.error(
+                f"Error sending transferred background notifications: {e}"
             )

@@ -5,16 +5,18 @@ export const RequestCategory = {
   POSTPONE: 'POSTPONE', // Xin hoãn bài tập
   LATE: 'LATE',         // Xin đi trễ
   OTHER: 'OTHER',       // Khác
+  CHANGE_MEETING: 'CHANGE_MEETING', // Xin đổi buổi sinh hoạt
 } as const;
 
 export type RequestCategory = (typeof RequestCategory)[keyof typeof RequestCategory];
-export const requestCategorySchema = z.enum(['ABSENCE', 'POSTPONE', 'LATE', 'OTHER']);
+export const requestCategorySchema = z.enum(['ABSENCE', 'POSTPONE', 'LATE', 'OTHER', 'CHANGE_MEETING']);
 
 export const CATEGORY_LABELS: Record<RequestCategory, { label: string; color: string; bg: string }> = {
   ABSENCE: { label: 'Vắng sinh hoạt', color: 'text-rose-600', bg: 'bg-rose-50 border-rose-200' },
   POSTPONE: { label: 'Hoãn bài tập', color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200' },
   LATE: { label: 'Đi trễ', color: 'text-orange-600', bg: 'bg-orange-50 border-orange-200' },
   OTHER: { label: 'Lý do khác', color: 'text-blue-600', bg: 'bg-blue-50 border-blue-200' },
+  CHANGE_MEETING: { label: 'Đổi buổi sinh hoạt', color: 'text-purple-600', bg: 'bg-purple-50 border-purple-200' },
 };
 
 export const userRefSchema = z.object({
@@ -44,6 +46,7 @@ export const permissionRequestCreateSchema = z.object({
   start_time: z.string().optional(),
   homework_id: z.number().nullable().optional(),
   meeting_id: z.number().nullable().optional(),
+  old_meeting_id: z.number().nullable().optional(),
 });
 export type PermissionRequestCreate = z.infer<typeof permissionRequestCreateSchema>;
 
@@ -57,6 +60,7 @@ export const permissionRequestResponseSchema = z.object({
   start_time: z.string().nullable().optional(),
   homework_id: z.number().nullable().optional(),
   meeting_id: z.number().nullable().optional(),
+  old_meeting_id: z.number().nullable().optional(),
   created_by: z.number().nullable().optional(),
   updated_by: z.number().nullable().optional(),
   owner: userRefSchema.nullable().optional(),
@@ -66,5 +70,7 @@ export const permissionRequestResponseSchema = z.object({
   updater: userRefSchema.nullable().optional(),
   homework: permissionHomeworkRefSchema.nullable().optional(),
   meeting: permissionMeetingRefSchema.nullable().optional(),
+  old_meeting: permissionMeetingRefSchema.nullable().optional(),
 });
 export type PermissionRequestResponse = z.infer<typeof permissionRequestResponseSchema>;
+

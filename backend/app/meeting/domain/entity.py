@@ -169,6 +169,24 @@ class Meeting(BaseEntity):
             return False
         return check_in_time > (self.start_time + timedelta(minutes=5))
 
+    def calculate_available_seats(
+        self,
+        max_seats: int,
+        absence_user_ids: set[int] | None = None,
+    ) -> int:
+        """
+        Tính số ghế khả dụng còn lại của buổi họp:
+        Ghế khả dụng = MAX_SEATS - (Số participant active không có đơn ABSENCE hợp lệ)
+        """
+        valid_absence_ids = absence_user_ids or set()
+        active_participants = [
+            p
+            for p in self.participants
+            if not p.is_deleted and p.user_id not in valid_absence_ids
+        ]
+        occupied_count = len(active_participants)
+        return max(0, max_seats - occupied_count)
+
 
 MeetingParticipant.model_rebuild()
 EvaluationScoreItem.model_rebuild()

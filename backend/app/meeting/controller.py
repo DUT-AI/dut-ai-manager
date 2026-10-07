@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Annotated
 
 from dishka.integrations.fastapi import FromDishka, inject
@@ -17,6 +17,7 @@ from app.meeting.application import (
     GetMeetingEvaluationSummaryUseCase,
     GetMeetingsUseCase,
     GetMyEvaluationResultUseCase,
+    GetUpcomingMeetingsWithSeatsUseCase,
     SubmitTraineeEvaluationUseCase,
     SubmitTrainerEvaluationUseCase,
     UpdateMeetingUseCase,
@@ -31,6 +32,7 @@ from app.meeting.schemas import (
     MeetingDetailResponse,
     MeetingEvaluationSummaryResponse,
     MeetingResponse,
+    MeetingSeatAvailabilityDto,
     MeetingUpdate,
     ParticipantResponse,
     TraineeSubmitEvaluationRequest,
@@ -42,6 +44,19 @@ from app.shared.infrastructure.sse import sse_broadcaster
 from app.utils.text import remove_vietnamese_tones
 
 router = APIRouter(prefix="/meetings", tags=["Meetings"])
+
+
+@router.get("/available-seats", response_model=ApiResponse[list[MeetingSeatAvailabilityDto]])
+@inject
+async def get_upcoming_meetings_with_seats(
+    uc: FromDishka[GetUpcomingMeetingsWithSeatsUseCase],
+    _current_user: CurrentUser,
+    from_date: datetime | None = None,
+):
+    """Lấy danh sách các buổi họp sắp tới kèm số lượng ghế khả dụng"""
+    results = uc.execute(from_date=from_date)
+    return ApiResponse.success(data=results)
+
 
 
 @router.post(

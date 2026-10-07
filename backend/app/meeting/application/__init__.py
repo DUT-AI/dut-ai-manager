@@ -19,6 +19,9 @@ from app.meeting.application.get_meetings_use_case import GetMeetingsUseCase
 from app.meeting.application.get_my_evaluation_result_use_case import (
     GetMyEvaluationResultUseCase,
 )
+from app.meeting.application.get_upcoming_meetings_with_seats_use_case import (
+    GetUpcomingMeetingsWithSeatsUseCase,
+)
 from app.meeting.application.submit_trainee_evaluation_use_case import (
     SubmitTraineeEvaluationUseCase,
 )
@@ -33,6 +36,7 @@ from app.meeting.application.update_participant_status_use_case import (
 __all__ = [
     "CreateMeetingUseCase",
     "GetMeetingsUseCase",
+    "GetUpcomingMeetingsWithSeatsUseCase",
     "UpdateMeetingUseCase",
     "DeleteMeetingUseCase",
     "CheckInUseCase",
@@ -47,3 +51,4 @@ __all__ = [
     "GetMeetingEvaluationSummaryUseCase",
     "CheckEvaluationDeadlineJobUseCase",
 ]
+

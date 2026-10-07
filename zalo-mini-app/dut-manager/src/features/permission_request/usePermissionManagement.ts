@@ -29,6 +29,7 @@ export const usePermissionManagement = (isAuthenticated: boolean) => {
   // Form State
   const [formCategory, setFormCategory] = useState<RequestCategory>(RequestCategory.ABSENCE);
   const [formMeetingId, setFormMeetingId] = useState<number | undefined>(undefined);
+  const [formOldMeetingId, setFormOldMeetingId] = useState<number | undefined>(undefined);
   const [formHomeworkId, setFormHomeworkId] = useState<number | undefined>(undefined);
   const [formStartTime, setFormStartTime] = useState<string>('');
   const [formLateTime, setFormLateTime] = useState<string>('19:30');
@@ -70,7 +71,7 @@ export const usePermissionManagement = (isAuthenticated: boolean) => {
     mutationFn: (data: PermissionRequestCreate) => permissionService.createPermission(data),
     onSuccess: (res) => {
       if (res.is_success) {
-        openSnackbar({ text: 'Tạo đơn xin phép thành công!', type: 'success' });
+        openSnackbar({ text: res.message || 'Tạo đơn xin phép thành công!', type: 'success' });
         closeModal();
         queryClient.invalidateQueries({ queryKey: ['permissions'] });
       } else {
@@ -127,6 +128,7 @@ export const usePermissionManagement = (isAuthenticated: boolean) => {
     setEditingItem(null);
     setFormCategory(RequestCategory.ABSENCE);
     setFormMeetingId(meetings.length > 0 ? meetings[0].id : undefined);
+    setFormOldMeetingId(undefined);
     setFormHomeworkId(homeworks.length > 0 ? homeworks[0].id : undefined);
     setFormStartTime('');
     setFormLateTime('19:30');
@@ -138,6 +140,7 @@ export const usePermissionManagement = (isAuthenticated: boolean) => {
     setEditingItem(item);
     setFormCategory(item.category as RequestCategory);
     setFormMeetingId(item.meeting_id || (item.meeting?.id ?? undefined));
+    setFormOldMeetingId(item.old_meeting_id || (item.old_meeting?.id ?? undefined));
     setFormHomeworkId(item.homework_id || (item.homework?.id ?? undefined));
     setFormNote(item.note || '');
 
@@ -228,16 +231,31 @@ export const usePermissionManagement = (isAuthenticated: boolean) => {
       }
       const selectedMeet = meetings.find((m) => m.id === formMeetingId);
       finalStartTime = selectedMeet?.start_time || undefined;
+    } else if (formCategory === RequestCategory.CHANGE_MEETING) {
+      if (!formMeetingId) {
+        openSnackbar({ text: 'Vui lòng chọn buổi sinh hoạt đích muốn chuyển đến!', type: 'warning' });
+        return;
+      }
+      if (formOldMeetingId && formOldMeetingId === formMeetingId) {
+        openSnackbar({ text: 'Không thể đổi sang cùng một buổi họp!', type: 'warning' });
+        return;
+      }
+      const selectedMeet = meetings.find((m) => m.id === formMeetingId);
+      finalStartTime = selectedMeet?.start_time || undefined;
     }
 
-    const payload = {
+    const payload: PermissionRequestCreate = {
       category: formCategory,
       note: formNote.trim(),
       start_time: finalStartTime,
       meeting_id:
-        formCategory === RequestCategory.ABSENCE || formCategory === RequestCategory.LATE
+        formCategory === RequestCategory.ABSENCE ||
+        formCategory === RequestCategory.LATE ||
+        formCategory === RequestCategory.CHANGE_MEETING
           ? formMeetingId
           : undefined,
+      old_meeting_id:
+        formCategory === RequestCategory.CHANGE_MEETING ? formOldMeetingId || undefined : undefined,
       homework_id: formCategory === RequestCategory.POSTPONE ? formHomeworkId : undefined,
     };
 
@@ -270,6 +288,8 @@ export const usePermissionManagement = (isAuthenticated: boolean) => {
     setFormCategory,
     formMeetingId,
     setFormMeetingId,
+    formOldMeetingId,
+    setFormOldMeetingId,
     formHomeworkId,
     setFormHomeworkId,
     formStartTime,
@@ -287,3 +307,4 @@ export const usePermissionManagement = (isAuthenticated: boolean) => {
     confirmDelete: () => deletingId && deleteMutation.mutate(deletingId),
   };
 };
+

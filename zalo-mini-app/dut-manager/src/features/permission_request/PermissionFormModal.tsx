@@ -13,6 +13,7 @@ interface PermissionFormModalProps {
   editingItem: PermissionRequestResponse | null;
   formCategory: RequestCategory;
   formMeetingId: number | undefined;
+  formOldMeetingId?: number | undefined;
   formHomeworkId: number | undefined;
   formStartTime: string;
   formLateTime: string;
@@ -24,6 +25,7 @@ interface PermissionFormModalProps {
   onSubmit: (e: React.FormEvent) => void;
   setFormCategory: (cat: RequestCategory) => void;
   setFormMeetingId: (id: number | undefined) => void;
+  setFormOldMeetingId?: (id: number | undefined) => void;
   setFormHomeworkId: (id: number | undefined) => void;
   setFormStartTime: (time: string) => void;
   setFormLateTime: (time: string) => void;
@@ -36,6 +38,7 @@ export const PermissionFormModal: React.FC<PermissionFormModalProps> = ({
   editingItem,
   formCategory,
   formMeetingId,
+  formOldMeetingId,
   formHomeworkId,
   formStartTime,
   formLateTime,
@@ -47,6 +50,7 @@ export const PermissionFormModal: React.FC<PermissionFormModalProps> = ({
   onSubmit,
   setFormCategory,
   setFormMeetingId,
+  setFormOldMeetingId,
   setFormHomeworkId,
   setFormStartTime,
   setFormLateTime,
@@ -83,7 +87,7 @@ export const PermissionFormModal: React.FC<PermissionFormModalProps> = ({
           </div>
         </div>
 
-        {/* Meeting selector */}
+        {/* Meeting selector for ABSENCE and LATE */}
         {(formCategory === RequestCategory.ABSENCE || formCategory === RequestCategory.LATE) && (
           <div className="flex flex-col gap-1">
             <label className="text-xs font-bold text-gray-700">Buổi sinh hoạt / Họp *</label>
@@ -104,6 +108,46 @@ export const PermissionFormModal: React.FC<PermissionFormModalProps> = ({
             </select>
           </div>
         )}
+
+        {/* Change Meeting Selectors */}
+        {formCategory === RequestCategory.CHANGE_MEETING && (
+          <>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-bold text-gray-700">Buổi sinh hoạt hiện tại (đổi đi)</label>
+              <select
+                value={formOldMeetingId || ''}
+                onChange={(e) =>
+                  setFormOldMeetingId?.(e.target.value ? Number(e.target.value) : undefined)
+                }
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-xs outline-none focus:border-blue-500 bg-white"
+              >
+                <option value="">Chưa có buổi học nào (Đăng ký mới)</option>
+                {meetings.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.title} ({formatDate(m.start_time)})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-bold text-purple-700">Buổi sinh hoạt mới muốn chuyển đến *</label>
+              <select
+                value={formMeetingId || ''}
+                onChange={(e) => setFormMeetingId(Number(e.target.value))}
+                className="w-full border border-purple-300 rounded-xl px-3 py-2.5 text-xs outline-none focus:border-purple-500 bg-purple-50/40 font-medium"
+              >
+                <option value="">-- Chọn buổi sinh hoạt đích --</option>
+                {meetings.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.title} ({formatDate(m.start_time)})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
+
 
         {/* Homework selector */}
         {formCategory === RequestCategory.POSTPONE && (

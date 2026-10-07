@@ -39,6 +39,7 @@ dev = [
     "ipykernel>=7.2.0",
     "jupyterlab>=4.5.6",
     "pip>=26.0.1",
+    "pytest-cov>=7.1.0",
     "ruff>=0.15.12",
     "selenium>=4.43.0",
     "ty>=0.0.29",
@@ -73,4 +74,25 @@ line-ending = "auto"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
+markers = [
+    "unit: Unit tests (fast, isolated, mocked)",
+    "integration: Integration tests (services, webhooks, databases)",
+    "api: End-to-end API tests via TestClient",
+]
+
+[tool.coverage.run]
+source = ["app"]
+omit = [
+    "app/scripts/*",
+    "app/main.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]
 

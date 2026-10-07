@@ -11,8 +11,10 @@ export const CATEGORIES_FILTER: CategoryFilterItem[] = [
   { key: RequestCategory.ABSENCE, label: 'Vắng sinh hoạt' },
   { key: RequestCategory.LATE, label: 'Đi trễ' },
   { key: RequestCategory.POSTPONE, label: 'Hoãn bài tập' },
+  { key: RequestCategory.CHANGE_MEETING, label: 'Đổi buổi sinh hoạt' },
   { key: RequestCategory.OTHER, label: 'Khác' },
 ];
+
 
 interface PermissionFiltersProps {
   selectedCategory: string;

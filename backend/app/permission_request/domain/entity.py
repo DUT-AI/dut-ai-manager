@@ -17,6 +17,7 @@ class PermissionRequest(BaseEntity):
     # Specific metadata based on category
     homework_id: int | None = None
     meeting_id: int | None = None
+    old_meeting_id: int | None = None
 
     # Target time (arrival time or deadline time)
     start_time: datetime | None = None
@@ -27,6 +28,7 @@ class PermissionRequest(BaseEntity):
     updater: UserRef | None = None
     homework: Homework | None = None
     meeting: Meeting | None = None
+    old_meeting: Meeting | None = None
 
     def validate_postpone(self, homework: Homework) -> None:
         """Kiểm tra tính hợp lệ của đơn xin hoãn bài tập (tối đa 4 ngày)."""

@@ -5,6 +5,9 @@ from fastapi import APIRouter, HTTPException
 
 from app.core.deps import CurrentUser, hasPermission
 from app.core.permissions import PermissionRequestPermission
+from app.permission_request.application.create_change_meeting_request_use_case import (
+    CreateChangeMeetingRequestUseCase,
+)
 from app.permission_request.application.use_cases import (
     CreatePermissionRequestUseCase,
     DeletePermissionRequestUseCase,
@@ -56,17 +59,34 @@ async def get_permission_requests(
 async def create_permission_request(
     data: PermissionRequestCreate,
     uc: FromDishka[CreatePermissionRequestUseCase],
+    change_meeting_uc: FromDishka[CreateChangeMeetingRequestUseCase],
     _current_user: CurrentUser,
 ):
-    """Tạo yêu cầu xin phép mới"""
+    """Tạo yêu cầu xin phép mới (bao gồm đổi ca CHANGE_MEETING)"""
+    if data.category == RequestCategory.CHANGE_MEETING:
+        if not data.meeting_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Vui lòng chọn buổi họp đích muốn chuyển đến",
+            )
+        result = await change_meeting_uc.execute(
+            note=data.note,
+            meeting_id=data.meeting_id,
+            old_meeting_id=data.old_meeting_id,
+            user_id=_current_user.id,
+        )
+        return ApiResponse.success(data=result, message="Đổi buổi sinh hoạt thành công")
+
     result = await uc.execute(
         category=data.category,
         note=data.note,
         homework_id=data.homework_id,
         meeting_id=data.meeting_id,
         start_time=data.start_time,
+        user_id=_current_user.id,
     )
     return ApiResponse.success(data=result)
+
 
 
 @router.put("/{request_id}", response_model=ApiResponse[PermissionRequestResponse])

@@ -55,14 +55,36 @@ export const PermissionDetailModal: React.FC<PermissionDetailModalProps> = ({
           </span>
         </div>
 
-        {item.meeting && (
+        {item.category === RequestCategory.CHANGE_MEETING ? (
+          <div className="flex flex-col gap-2 text-xs">
+            <div className="flex flex-col gap-1">
+              <span className="text-gray-400">Buổi sinh hoạt cũ:</span>
+              <span className="font-semibold text-gray-700 bg-gray-50 p-2 rounded-xl border border-gray-200">
+                {item.old_meeting
+                  ? `${item.old_meeting.title} (${formatDate(item.old_meeting.start_time)})`
+                  : 'Chưa có buổi học nào (Đăng ký mới)'}
+              </span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-purple-700 font-bold">Chuyển sang buổi sinh hoạt mới:</span>
+              <span className="font-bold text-purple-700 bg-purple-50 p-2.5 rounded-xl border border-purple-200">
+                {item.meeting
+                  ? `${item.meeting.title} (${formatDate(item.meeting.start_time)})`
+                  : item.meeting_id
+                  ? `Buổi #${item.meeting_id}`
+                  : 'Chưa xác định'}
+              </span>
+            </div>
+          </div>
+        ) : item.meeting ? (
           <div className="flex flex-col gap-1 text-xs">
             <span className="text-gray-400">Buổi họp / sinh hoạt:</span>
             <span className="font-bold text-blue-700 bg-blue-50 p-2.5 rounded-xl border border-blue-100">
               {item.meeting.title} ({formatDate(item.meeting.start_time)})
             </span>
           </div>
-        )}
+        ) : null}
+
 
         {item.homework && (
           <div className="flex flex-col gap-1 text-xs">

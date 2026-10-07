@@ -55,7 +55,10 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
   const relatedTitle =
     item.category === RequestCategory.POSTPONE
       ? item.homework?.title || (item.homework_id ? `Bài tập #${item.homework_id}` : null)
+      : item.category === RequestCategory.CHANGE_MEETING
+      ? `Đổi sang: ${item.meeting?.title || (item.meeting_id ? `Buổi #${item.meeting_id}` : 'Chưa rõ')}`
       : item.meeting?.title || (item.meeting_id ? `Buổi họp #${item.meeting_id}` : null);
+
 
   return (
     <div

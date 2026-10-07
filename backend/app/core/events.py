@@ -31,15 +31,20 @@ from app.meeting.domain.events import (
     ParticipantLateRecorded,
 )
 from app.permission_request.application.event_handlers import (
+    MeetingParticipantTransferredNotificationHandler,
     PermissionRequestNotificationHandler,
 )
-from app.permission_request.domain.events import PermissionRequestCreated
+from app.permission_request.domain.events import (
+    MeetingParticipantTransferred,
+    PermissionRequestCreated,
+)
 from app.shared.domain.event_bus import EventBus
 from app.user.domain.events import UserCreated
 from app.violation.application.event_handlers import AutomatedViolationHandler
 from app.violation.domain.events import ViolationCreated
 from app.violation.notification_handler import ViolationNotificationHandler
 from app.violation.permission_handler import PermissionViolationHandler
+
 
 
 async def bootstrap_events(container: AsyncContainer):
@@ -63,10 +68,15 @@ async def bootstrap_events(container: AsyncContainer):
     EventBus.subscribe(InvoiceCreated, BillingNotificationHandler)
     EventBus.subscribe(InvoicePaid, BillingNotificationHandler)
 
-    # Violation Module
+    # Violation & Permission Module
     EventBus.subscribe(PermissionRequestCreated, PermissionViolationHandler)
     EventBus.subscribe(PermissionRequestCreated, PermissionRequestNotificationHandler)
+    EventBus.subscribe(
+        MeetingParticipantTransferred,
+        MeetingParticipantTransferredNotificationHandler,
+    )
     EventBus.subscribe(HomeworkOverdueDetected, AutomatedViolationHandler)
+
     EventBus.subscribe(MeetingAbsenceDetected, AutomatedViolationHandler)
     EventBus.subscribe(ParticipantAbsenceRecorded, AutomatedViolationHandler)
     EventBus.subscribe(ParticipantLateRecorded, AutomatedViolationHandler)

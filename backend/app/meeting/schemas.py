@@ -418,3 +418,17 @@ class MeetingEvaluationSummaryResponse(BaseModel):
     trainer_average_score: float | None = None
     trainee_average_score: float | None = None
 
+
+class MeetingSeatAvailabilityDto(BaseModel):
+    id: int
+    title: str
+    start_time: datetime
+    end_time: datetime
+    max_seats: int
+    occupied_seats: int
+    available_seats: int
+    is_full: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+

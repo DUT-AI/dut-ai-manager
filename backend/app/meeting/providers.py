@@ -13,6 +13,7 @@ from app.meeting.application import (
     GetMeetingEvaluationSummaryUseCase,
     GetMeetingsUseCase,
     GetMyEvaluationResultUseCase,
+    GetUpcomingMeetingsWithSeatsUseCase,
     SubmitTraineeEvaluationUseCase,
     SubmitTrainerEvaluationUseCase,
     UpdateMeetingUseCase,
@@ -24,6 +25,9 @@ from app.meeting.infrastructure.repository import (
     MeetingEvaluationRepository,
     MeetingRepository,
     ParticipantRepository,
+)
+from app.permission_request.infrastructure.repository import (
+    PermissionRequestRepository,
 )
 from app.shared.infrastructure.minio_service import MinioService
 from app.shared.infrastructure.notification_service import NotificationService
@@ -55,8 +59,17 @@ class MeetingModuleProvider(Provider):
         return GetMeetingsUseCase(repo)
 
     @provide
+    def get_upcoming_meetings_with_seats_uc(
+        self,
+        meeting_repo: MeetingRepository,
+        permission_repo: PermissionRequestRepository,
+    ) -> GetUpcomingMeetingsWithSeatsUseCase:
+        return GetUpcomingMeetingsWithSeatsUseCase(meeting_repo, permission_repo)
+
+    @provide
     def create_meeting_uc(self, repo: MeetingRepository) -> CreateMeetingUseCase:
         return CreateMeetingUseCase(repo)
+
 
     @provide
     def check_in_uc(

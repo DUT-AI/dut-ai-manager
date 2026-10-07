@@ -8,3 +8,4 @@ class RequestCategory(str, Enum):
     POSTPONE = "POSTPONE"  # Xin hoãn bài tập
     LATE = "LATE"  # Xin đi trễ
     OTHER = "OTHER"  # Khác
+    CHANGE_MEETING = "CHANGE_MEETING"  # Xin đổi buổi sinh hoạt

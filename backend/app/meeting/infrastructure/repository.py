@@ -48,6 +48,24 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         orm = self.session.scalars(statement).first()
         return self._to_domain(orm) if orm else None
 
+    def get_meeting_with_lock(self, meeting_id: int) -> DomainMeeting | None:
+        """Lấy Meeting và khóa dòng (Pessimistic Lock with_for_update) chống race condition."""
+        statement = (
+            select(ORMMeeting)
+            .where(
+                ORMMeeting.is_deleted.is_(False),
+                ORMMeeting.id == meeting_id,
+            )
+            .with_for_update(of=ORMMeeting)
+            .options(
+                selectinload(ORMMeeting.participants).joinedload(ORMParticipant.user),
+                selectinload(ORMMeeting.creator),
+            )
+        )
+        orm = self.session.scalars(statement).first()
+        return self._to_domain(orm) if orm else None
+
+
     def get_all_with_participants(
         self,
         query_support: QuerySupport | None = None,

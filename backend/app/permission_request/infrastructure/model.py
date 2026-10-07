@@ -39,6 +39,9 @@ class PermissionRequest(SQLAlchemyTimestampMixin, Base):
     meeting_id: Mapped[int | None] = mapped_column(
         ForeignKey("meetings.id"), default=None, index=True
     )
+    old_meeting_id: Mapped[int | None] = mapped_column(
+        ForeignKey("meetings.id"), default=None, index=True
+    )
 
     # Relationships
     user: Mapped["UserModel"] = relationship(
@@ -46,7 +49,8 @@ class PermissionRequest(SQLAlchemyTimestampMixin, Base):
         overlaps="creator",
     )
     homework: Mapped["HomeworkModel | None"] = relationship()
-    meeting: Mapped["Meeting | None"] = relationship()
+    meeting: Mapped["Meeting | None"] = relationship(foreign_keys=[meeting_id])
+    old_meeting: Mapped["Meeting | None"] = relationship(foreign_keys=[old_meeting_id])
     creator: Mapped["UserModel | None"] = relationship(
         foreign_keys="PermissionRequest.created_by",
         overlaps="user",
@@ -95,6 +99,7 @@ class PermissionRequest(SQLAlchemyTimestampMixin, Base):
             note=self.note,
             homework_id=self.homework_id,
             meeting_id=self.meeting_id,
+            old_meeting_id=self.old_meeting_id,
             start_time=self.start_time,
             created_at=self.created_at,
             updated_at=self.updated_at,
@@ -103,6 +108,7 @@ class PermissionRequest(SQLAlchemyTimestampMixin, Base):
             updater=updater_ref,
             homework=self.homework.to_entity() if self.homework else None,
             meeting=self.meeting.to_entity() if self.meeting else None,
+            old_meeting=self.old_meeting.to_entity() if self.old_meeting else None,
         )
 
     @classmethod
@@ -120,9 +126,11 @@ class PermissionRequest(SQLAlchemyTimestampMixin, Base):
             start_time=e.start_time if e.start_time else None,
             homework_id=e.homework_id,
             meeting_id=e.meeting_id,
-            created_by=e.created_by,
+            old_meeting_id=e.old_meeting_id,
+            created_by=e.created_by if e.created_by is not None else e.user_id,
             updated_by=e.updated_by,
             created_at=e.created_at,
             updated_at=e.updated_at,
             is_deleted=e.is_deleted,
         )
+

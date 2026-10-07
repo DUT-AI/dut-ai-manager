@@ -41,6 +41,9 @@ backend-dev: ## Backend dev server — Postgres lấy từ .env (dùng tunnel: �
 backend-test: ## Run backend tests
 	cd backend && uv run pytest
 
+backend-test-cov: ## Run backend tests with code coverage report
+	cd backend && uv run pytest --cov=app --cov-report=term-missing
+
 backend-lint: ## Lint backend code
 	cd backend && uv run ruff check . --fix
 

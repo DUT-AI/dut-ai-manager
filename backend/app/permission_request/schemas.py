@@ -13,6 +13,7 @@ class PermissionRequestBase(BaseModel):
     note: str
     homework_id: int | None = None
     meeting_id: int | None = None
+    old_meeting_id: int | None = None
     start_time: datetime | None = None
 
 
@@ -25,6 +26,7 @@ class PermissionRequestUpdate(BaseModel):
     note: str | None = None
     homework_id: int | None = None
     meeting_id: int | None = None
+    old_meeting_id: int | None = None
     start_time: datetime | None = None
 
 
@@ -39,5 +41,7 @@ class PermissionRequestResponse(PermissionRequestBase):
     updater: UserRef | None = None
     homework: HomeworkResponse | None = None
     meeting: MeetingResponse | None = None
+    old_meeting: MeetingResponse | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
