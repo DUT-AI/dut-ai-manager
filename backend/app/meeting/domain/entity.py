@@ -146,8 +146,6 @@ class Meeting(BaseEntity):
             return False, "Buổi học không kích hoạt tính năng đánh giá 2 chiều."
         if current_time < self.start_time:
             return False, "Buổi học chưa bắt đầu, chưa thể gửi đánh giá."
-        if self.is_evaluation_expired(current_time):
-            return False, "Đã quá thời hạn 24 giờ sau buổi học để gửi đánh giá."
         return True, "Cổng đánh giá đang mở."
 
     def is_evaluation_expired(self, current_time: datetime) -> bool:
