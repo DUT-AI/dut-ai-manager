@@ -1,12 +1,12 @@
-from collections import defaultdict
-
+from app.meeting.domain.value_objects import (
+    EvaluationType,
+    EvaluationGroupSummary,
+)
 from app.meeting.infrastructure.repository import (
     MeetingEvaluationRepository,
     MeetingRepository,
 )
 from app.meeting.schemas import (
-    CRITERIA_DESC_MAP,
-    CRITERIA_NAME_MAP,
     CriteriaAverageScoreDto,
     EvaluationResponse,
     MeetingEvaluationSummaryResponse,
@@ -32,38 +32,30 @@ class GetMeetingEvaluationSummaryUseCase:
 
         all_evaluations = self.evaluation_repo.get_evaluations_by_meeting(meeting_id)
 
-        if not all_evaluations:
-            return MeetingEvaluationSummaryResponse(
-                meeting_id=meeting_id,
-                total_evaluations=0,
-                overall_average_score=0.0,
-                criteria_breakdown=[],
-                evaluations=[],
-            )
-
-        total_count = len(all_evaluations)
-        overall_avg = round(
-            sum(e.average_score for e in all_evaluations) / total_count, 2
+        # Tính toán phân nhóm thông qua Domain Value Object EvaluationGroupSummary
+        trainer_summary = EvaluationGroupSummary.from_evaluations(
+            EvaluationType.TRAINER_TO_TRAINEE, all_evaluations
+        )
+        trainee_summary = EvaluationGroupSummary.from_evaluations(
+            EvaluationType.TRAINEE_TO_TRAINER, all_evaluations
         )
 
-        # Tính trung bình theo từng tiêu chí
-        criteria_scores = defaultdict(list)
-        for e in all_evaluations:
-            for s in e.scores:
-                criteria_scores[s.criteria_code].append(s.score)
+        total_count = len(all_evaluations)
+        overall_avg = (
+            round(sum(e.average_score for e in all_evaluations) / total_count, 2)
+            if total_count > 0
+            else 0.0
+        )
 
-        criteria_breakdown = [
-            CriteriaAverageScoreDto(
-                criteria_code=code,
-                criteria_name=CRITERIA_NAME_MAP.get(code, code),
-                criteria_description=CRITERIA_DESC_MAP.get(code, ""),
-                average_score=round(sum(scores) / len(scores), 2),
-                count=len(scores),
+        # Chuyển đổi CriteriaBreakdownSummary sang DTO
+        all_criteria_breakdown = [
+            CriteriaAverageScoreDto.from_summary(cb)
+            for cb in (
+                trainer_summary.criteria_breakdown + trainee_summary.criteria_breakdown
             )
-            for code, scores in criteria_scores.items()
         ]
 
-        # Chuẩn hóa danh sách đánh giá trả về (dùng EvaluationResponse.from_domain chuẩn hóa)
+        # Chuẩn hóa danh sách đánh giá trả về
         evaluation_responses = [
             EvaluationResponse.from_domain(e) for e in all_evaluations
         ]
@@ -72,6 +64,11 @@ class GetMeetingEvaluationSummaryUseCase:
             meeting_id=meeting_id,
             total_evaluations=total_count,
             overall_average_score=overall_avg,
-            criteria_breakdown=criteria_breakdown,
+            criteria_breakdown=all_criteria_breakdown,
             evaluations=evaluation_responses,
+            total_trainer_evaluations=trainer_summary.total_evaluations,
+            total_trainee_evaluations=trainee_summary.total_evaluations,
+            trainer_average_score=trainer_summary.average_score,
+            trainee_average_score=trainee_summary.average_score,
         )
+

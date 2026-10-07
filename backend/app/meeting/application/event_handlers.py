@@ -5,7 +5,6 @@ from loguru import logger
 
 from app.meeting.domain.events import (
     MeetingCreated,
-    MeetingUpdated,
     ParticipantCheckedIn,
 )
 from app.shared.application.event_handler import EventHandler
@@ -30,15 +29,13 @@ class MeetingNotificationHandler(EventHandler):
         self.user_repo = user_repo
 
     async def handle(
-        self, event: ParticipantCheckedIn | MeetingCreated | MeetingUpdated
+        self, event: ParticipantCheckedIn | MeetingCreated
     ) -> None:
         """EntryPoint cho EventBus, điều hướng tới các hàm xử lý cụ thể."""
         if isinstance(event, ParticipantCheckedIn):
             await self._handle_check_in(event)
         elif isinstance(event, MeetingCreated):
             await self._handle_meeting_created(event)
-        elif isinstance(event, MeetingUpdated):
-            await self._handle_meeting_updated(event)
 
     async def _handle_check_in(self, event: ParticipantCheckedIn) -> None:
         """Thông báo cho người dùng khi họ check-in thành công."""
@@ -91,34 +88,17 @@ class MeetingNotificationHandler(EventHandler):
                 return
 
             asyncio.create_task(
-                self._send_meeting_notification_task(users, event, "NEW")
+                self._send_meeting_notification_task(users, event)
             )
         except Exception as e:
             logger.error(
                 f"Error in MeetingNotificationHandler._handle_meeting_created: {e}"
             )
 
-    async def _handle_meeting_updated(self, event: MeetingUpdated) -> None:
-        """Thông báo cho tất cả người dùng khi thông tin buổi họp bị thay đổi."""
-        try:
-            logger.info(f"Handling MeetingUpdated for meeting {event.meeting_id}")
-            users = self.user_repo.get_by_ids(event.user_ids)
-            if not users:
-                logger.warning(f"No users found for meeting {event.meeting_id}")
-                return
-
-            asyncio.create_task(
-                self._send_meeting_notification_task(users, event, "UPDATE")
-            )
-        except Exception as e:
-            logger.error(
-                f"Error in MeetingNotificationHandler._handle_meeting_updated: {e}"
-            )
-
     async def _send_meeting_notification_task(
-        self, users, event: MeetingCreated | MeetingUpdated, type: str
+        self, users, event: MeetingCreated
     ) -> None:
-        """Hàm chạy ngầm gửi thông báo họp (Tạo mới hoặc Cập nhật)."""
+        """Hàm chạy ngầm gửi thông báo khi có buổi họp mới được tạo."""
         try:
             try:
                 start_dt = datetime.fromisoformat(event.start_time)
@@ -127,20 +107,11 @@ class MeetingNotificationHandler(EventHandler):
             except Exception:
                 time_range = f"{event.start_time} - {event.end_time}"
 
-            is_new = type == "NEW"
-            title_prefix = (
-                "📅 LỊCH SINH HOẠT MỚI" if is_new else "🔄 CẬP NHẬT LỊCH SINH HOẠT"
-            )
-            description = (
-                f"Bạn có lịch sinh hoạt mới: **{event.title}**"
-                if is_new
-                else f"Thông tin buổi sinh hoạt **{event.title}** đã được cập nhật."
-            )
+            title_prefix = "📅 LỊCH SINH HOẠT MỚI"
+            description = f"Bạn có lịch sinh hoạt mới: **{event.title}**"
 
             fields = [{"name": "⏰ Thời gian", "value": time_range, "inline": False}]
-            image_asset = (
-                "anh-nhac-em-meme-9.webp" if is_new else "meme-met-moi-lam-viec.jpg"
-            )
+            image_asset = "anh-nhac-em-meme-9.webp"
 
             for user in users:
                 assert user.id is not None
@@ -153,16 +124,14 @@ class MeetingNotificationHandler(EventHandler):
                         f"Vui lòng kiểm tra và sắp xếp tham gia đúng giờ."
                     ),
                     category=NotificationCategory.MEETING,
-                    level=NotificationLevel.INFO
-                    if is_new
-                    else NotificationLevel.WARNING,
+                    level=NotificationLevel.INFO,
                     image_asset=image_asset,
                     fields=fields,
                 )
                 await self.notification_service.send_to_user(payload)
 
             logger.info(
-                f"Finished sending meeting {type} notifications for {event.meeting_id}"
+                f"Finished sending meeting notification for {event.meeting_id}"
             )
         except Exception as e:
             logger.error(f"Unexpected error in meeting notification task: {e}")

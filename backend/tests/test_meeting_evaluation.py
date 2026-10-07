@@ -131,3 +131,95 @@ async def test_get_my_evaluation_result_locked_until_evaluated():
         await use_case.execute(meeting_id=1, current_user_id=20)
 
     assert exc_info.value.status_code == 403
+
+
+def test_evaluation_criterion_value_object():
+    from app.meeting.domain.value_objects import (
+        EvaluationCriteriaCode,
+        EvaluationCriterion,
+        EvaluationType,
+    )
+
+    # 1. Mã chuẩn
+    c1 = EvaluationCriterion.from_code(EvaluationCriteriaCode.ATTENDANCE_CONDUCT)
+    assert c1.code == "ATTENDANCE_CONDUCT"
+    assert c1.name == "Chuyên cần & Tác phong"
+    assert c1.evaluation_type == EvaluationType.TRAINER_TO_TRAINEE
+
+    # 2. Mã có prefix cũ
+    c2 = EvaluationCriterion.from_code("TRAINEE_TO_TRAINER_CONTENT")
+    assert c2.code == "TRAINEE_TO_TRAINER_CONTENT"
+    assert c2.name == "Chất lượng Nội dung bài học"
+    assert c2.evaluation_type == EvaluationType.TRAINEE_TO_TRAINER
+
+
+@pytest.mark.asyncio
+async def test_get_meeting_evaluation_summary_use_case():
+    from app.meeting.application.get_meeting_evaluation_summary_use_case import (
+        GetMeetingEvaluationSummaryUseCase,
+    )
+    from app.meeting.domain.entity import EvaluationScoreItem, MeetingEvaluation
+
+    meeting_repo = MagicMock()
+    eval_repo = MagicMock()
+
+    mock_meeting = Meeting(
+        id=10,
+        title="Architecture Workshop",
+        start_time=datetime.now() - timedelta(hours=3),
+        end_time=datetime.now() - timedelta(hours=1),
+        enable_evaluation=True,
+    )
+    meeting_repo.get_by_id.return_value = mock_meeting
+
+    # 1 phiếu Trainer -> Trainee
+    trainer_eval = MeetingEvaluation(
+        id=1,
+        meeting_id=10,
+        reviewer_id=1,
+        target_user_id=2,
+        evaluation_type=EvaluationType.TRAINER_TO_TRAINEE,
+        average_score=4.0,
+        scores=[
+            EvaluationScoreItem(criteria_code="ATTENDANCE_CONDUCT", score=4),
+            EvaluationScoreItem(criteria_code="INTERACTION_CONTRIBUTION", score=4),
+        ],
+    )
+
+    # 1 phiếu Trainee -> Trainer
+    trainee_eval = MeetingEvaluation(
+        id=2,
+        meeting_id=10,
+        reviewer_id=2,
+        target_user_id=1,
+        evaluation_type=EvaluationType.TRAINEE_TO_TRAINER,
+        average_score=5.0,
+        scores=[
+            EvaluationScoreItem(criteria_code="CONTENT_QUALITY", score=5),
+            EvaluationScoreItem(criteria_code="TEACHING_METHOD", score=5),
+        ],
+    )
+
+    eval_repo.get_evaluations_by_meeting.return_value = [trainer_eval, trainee_eval]
+
+    use_case = GetMeetingEvaluationSummaryUseCase(meeting_repo, eval_repo)
+    result = await use_case.execute(meeting_id=10)
+
+    assert result.total_evaluations == 2
+    assert result.overall_average_score == 4.5
+    assert result.total_trainer_evaluations == 1
+    assert result.total_trainee_evaluations == 1
+    assert result.trainer_average_score == 4.0
+    assert result.trainee_average_score == 5.0
+    assert len(result.criteria_breakdown) == 4
+
+    # Kiểm tra phân loại evaluation_type trong criteria_breakdown
+    trainer_breakdowns = [
+        c for c in result.criteria_breakdown if c.evaluation_type == "TRAINER_TO_TRAINEE"
+    ]
+    trainee_breakdowns = [
+        c for c in result.criteria_breakdown if c.evaluation_type == "TRAINEE_TO_TRAINER"
+    ]
+    assert len(trainer_breakdowns) == 2
+    assert len(trainee_breakdowns) == 2
+

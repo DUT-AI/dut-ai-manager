@@ -136,6 +136,7 @@ export interface CriteriaBreakdown {
   criteria_description: string;
   average_score: number;
   count: number;
+  evaluation_type?: 'TRAINER_TO_TRAINEE' | 'TRAINEE_TO_TRAINER' | string;
 }
 
 export interface MeetingEvaluationSummary {
@@ -144,4 +145,9 @@ export interface MeetingEvaluationSummary {
   overall_average_score: number;
   criteria_breakdown: CriteriaBreakdown[];
   evaluations: EvaluationResponse[];
+  total_trainer_evaluations?: number;
+  total_trainee_evaluations?: number;
+  trainer_average_score?: number | null;
+  trainee_average_score?: number | null;
 }
+

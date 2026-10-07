@@ -5,7 +5,11 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.utils.datetime import get_current_utc7_time
 
-from .domain.value_objects import ParticipantStatus
+from .domain.value_objects import (
+    CriteriaBreakdownSummary,
+    EvaluationCriterion,
+    ParticipantStatus,
+)
 
 if TYPE_CHECKING:
     from app.meeting.domain.entity import Meeting as DomainMeeting
@@ -262,28 +266,6 @@ class MeetingDetailResponse(MeetingResponse):
 # EVALUATION SCHEMAS
 # ==========================================
 
-CRITERIA_NAME_MAP: dict[str, str] = {
-    "ATTENDANCE_CONDUCT": "Chuyên cần & Tác phong",
-    "INTERACTION_CONTRIBUTION": "Mức độ Tương tác & Đóng góp",
-    "ABSORPTION_COMPREHENSION": "Mức độ Tiếp thu & Hiểu bài",
-    "PRE_CLASS_PREPARATION": "Mức độ Chuẩn bị bài trước buổi học",
-    "CONTENT_QUALITY": "Chất lượng Nội dung bài học",
-    "TEACHING_METHOD": "Phương pháp Giảng dạy & Hỗ trợ",
-    "CLASS_ATMOSPHERE": "Không khí Lớp học & Sự tương tác",
-    "PRACTICAL_VALUE": "Giá trị Thu nhận & Tính ứng dụng",
-}
-
-CRITERIA_DESC_MAP: dict[str, str] = {
-    "ATTENDANCE_CONDUCT": "Đúng giờ, tuân thủ nội quy và kỷ luật lớp học",
-    "INTERACTION_CONTRIBUTION": "Tích cực phát biểu, đặt câu hỏi, thảo luận sôi nổi",
-    "ABSORPTION_COMPREHENSION": "Nắm bắt tốt kiến thức cốt lõi truyền đạt trong buổi học",
-    "PRE_CLASS_PREPARATION": "Đọc trước tài liệu, chuẩn bị bài tập / môi trường trước khi lên lớp",
-    "CONTENT_QUALITY": "Rõ ràng, thực tế, bố cục bài giảng hợp lý và dễ theo dõi",
-    "TEACHING_METHOD": "Trainer truyền đạt dễ hiểu, nhiệt tình giải đáp các thắc mắc",
-    "CLASS_ATMOSPHERE": "Lôi cuốn, truyền cảm hứng và tạo động lực học tập tốt",
-    "PRACTICAL_VALUE": "Kiến thức thu nhận bổ ích, có thể ứng dụng trực tiếp vào thực tế",
-}
-
 
 class EvaluationScoreItemDto(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -354,13 +336,12 @@ class EvaluationResponse(BaseModel):
         scores_dtos = []
         for s in getattr(e, "scores", []) or []:
             code = getattr(s, "criteria_code", "")
-            name = CRITERIA_NAME_MAP.get(code, code)
-            desc = CRITERIA_DESC_MAP.get(code, "")
+            criterion = EvaluationCriterion.from_code(code)
             scores_dtos.append(
                 EvaluationScoreItemDto(
                     criteria_code=code,
-                    criteria_name=name,
-                    criteria_description=desc,
+                    criteria_name=criterion.name,
+                    criteria_description=criterion.description,
                     score=getattr(s, "score", 0),
                 )
             )
@@ -409,6 +390,21 @@ class CriteriaAverageScoreDto(BaseModel):
     criteria_description: str
     average_score: float
     count: int
+    evaluation_type: str | None = None
+
+    @classmethod
+    def from_summary(cls, summary: CriteriaBreakdownSummary) -> "CriteriaAverageScoreDto":
+        """Khởi tạo DTO trực tiếp từ Domain Value Object CriteriaBreakdownSummary."""
+        etype = summary.evaluation_type
+        etype_str = etype.value if hasattr(etype, "value") else str(etype)
+        return cls(
+            criteria_code=summary.criteria_code,
+            criteria_name=summary.criteria_name,
+            criteria_description=summary.criteria_description,
+            average_score=summary.average_score,
+            count=summary.count,
+            evaluation_type=etype_str,
+        )
 
 
 class MeetingEvaluationSummaryResponse(BaseModel):
@@ -417,3 +413,8 @@ class MeetingEvaluationSummaryResponse(BaseModel):
     overall_average_score: float
     criteria_breakdown: list[CriteriaAverageScoreDto]
     evaluations: list[EvaluationResponse]
+    total_trainer_evaluations: int = 0
+    total_trainee_evaluations: int = 0
+    trainer_average_score: float | None = None
+    trainee_average_score: float | None = None
+

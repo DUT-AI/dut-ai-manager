@@ -25,7 +25,6 @@ from app.meeting.application.sse_handler import MeetingSseHandler
 from app.meeting.domain.events import (
     MeetingAbsenceDetected,
     MeetingCreated,
-    MeetingUpdated,
     ParticipantAbsenceRecorded,
     ParticipantCheckedIn,
     ParticipantCheckedOut,
@@ -83,7 +82,6 @@ async def bootstrap_events(container: AsyncContainer):
     EventBus.subscribe(ParticipantCheckedIn, MeetingSseHandler)
     EventBus.subscribe(ParticipantCheckedOut, MeetingSseHandler)
     EventBus.subscribe(MeetingCreated, MeetingNotificationHandler)
-    EventBus.subscribe(MeetingUpdated, MeetingNotificationHandler)
 
     # print all handlers for verification
     EventBus.print_handlers()
