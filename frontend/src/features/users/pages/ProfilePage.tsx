@@ -33,7 +33,7 @@ import type { Dayjs } from 'dayjs';
 import { useUsers } from '../hooks/useUsers';
 import { useViolations } from '@/features/violations';
 import { useBonusPoints } from '@/features/activity';
-import { usePermissionRequests } from '@/features/rbac';
+import { usePermissionRequests, CATEGORY_COLORS, CATEGORY_LABELS } from '@/features/rbac';
 import { zaloService } from '@/features/robot/services/zalo.service';
 
 import { BonusPointType, type BonusPointResponse, type PermissionRequestResponse } from '@/features/activity/types/activity.types';
@@ -168,7 +168,17 @@ const ProfilePage = () => {
     ];
 
     const permissionColumns: ColumnsType<PermissionRequestResponse> = [
-        { title: 'Loại', dataIndex: 'category', key: 'category', width: 120 },
+        {
+            title: 'Loại',
+            dataIndex: 'category',
+            key: 'category',
+            width: 140,
+            render: (cat: string) => (
+                <Tag color={CATEGORY_COLORS[cat.toLowerCase()] || 'default'} className="rounded-full px-2 font-medium">
+                    {CATEGORY_LABELS[cat.toLowerCase()] || cat}
+                </Tag>
+            ),
+        },
         { title: 'Nội dung', dataIndex: 'note', key: 'note', ellipsis: true },
         { title: 'Thời gian', key: 'time', width: 140, render: (_, r) => r.start_time || '--' },
         { title: 'Ngày', dataIndex: 'date', key: 'date', width: 120, render: d => dayjs(d).format('DD/MM/YYYY') }

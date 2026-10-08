@@ -4,6 +4,7 @@ import {
     UserOutlined,
     FileTextOutlined,
     ClockCircleOutlined,
+    SwapOutlined,
     EditOutlined,
     DeleteOutlined,
 } from '@ant-design/icons';
@@ -78,6 +79,20 @@ export const PermissionTable: React.FC<PermissionTableProps> = ({
                         <Space>
                             <ClockCircleOutlined className="text-purple-400" />
                             <Text strong className="text-purple-600">{record.meeting.title}</Text>
+                        </Space>
+                    );
+                }
+                if (record.category === 'CHANGE_MEETING') {
+                    return (
+                        <Space size="small">
+                            <SwapOutlined className="text-purple-500" />
+                            <Text className="text-xs text-gray-600">
+                                {record.old_meeting?.title || (record.old_meeting_id ? `#${record.old_meeting_id}` : 'Đăng ký mới')}
+                            </Text>
+                            <Text type="secondary" className="text-xs">→</Text>
+                            <Text strong className="text-purple-600 text-xs">
+                                {record.meeting?.title || (record.meeting_id ? `#${record.meeting_id}` : '--')}
+                            </Text>
                         </Space>
                     );
                 }

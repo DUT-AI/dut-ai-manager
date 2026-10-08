@@ -1,6 +1,14 @@
 import axiosInstance from '../../../services/axiosInstance';
 import type { ApiResponse } from '@/types/api.types';
-import type { MeetingCreate, MeetingUpdate, MeetingResponse, MeetingDetailResponse, ParticipantResponse, UpdateParticipantStatusPayload } from '@/features/meeting/types/meeting.types';
+import type {
+  MeetingCreate,
+  MeetingUpdate,
+  MeetingResponse,
+  MeetingDetailResponse,
+  ParticipantResponse,
+  UpdateParticipantStatusPayload,
+  MeetingSeatAvailabilityDto,
+} from '@/features/meeting/types/meeting.types';
 
 export const meetingService = {
   subPath: 'meetings',
@@ -90,6 +98,14 @@ export const meetingService = {
   async getMyEvaluationResult(meetingId: number) {
     const response = await axiosInstance.get<ApiResponse<import('@/features/meeting/types/meeting.types').EvaluationResponse | null>>(
       `/${this.subPath}/${meetingId}/evaluations/my-result`
+    );
+    return response.data;
+  },
+
+  async getAvailableSeats(fromDate?: string) {
+    const response = await axiosInstance.get<ApiResponse<MeetingSeatAvailabilityDto[]>>(
+      `/${this.subPath}/available-seats`,
+      { params: fromDate ? { from_date: fromDate } : undefined }
     );
     return response.data;
   }

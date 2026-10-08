@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
-import { Modal, Form, Select, DatePicker, TimePicker, Input, Grid } from 'antd';
+import { Modal, Form, Select, DatePicker, TimePicker, Input, Grid, Tag } from 'antd';
 import dayjs from 'dayjs';
 import { useHomeworks } from '@/features/homework/hooks/useHomeworks';
-import { useMeetings } from '@/features/meeting';
+import { useMeetings, useUpcomingMeetingsWithSeats } from '@/features/meeting';
 import type { PermissionRequestResponse } from '@/features/activity/types/activity.types';
 
 const { Option } = Select;
@@ -30,6 +30,7 @@ export const PermissionFormModal: React.FC<PermissionFormModalProps> = ({
     const { data: homeworksData } = useHomeworks({ enabled: isOpen });
     const homeworks = homeworksData || [];
     const { data: meetings = [] } = useMeetings({ enabled: isOpen });
+    const { data: upcomingMeetings = [] } = useUpcomingMeetingsWithSeats(undefined, isOpen);
 
     useEffect(() => {
         if (isOpen) {
@@ -52,6 +53,18 @@ export const PermissionFormModal: React.FC<PermissionFormModalProps> = ({
         try {
             const values = await form.validateFields();
 
+            if (values.category === 'CHANGE_MEETING') {
+                if (values.old_meeting_id && values.old_meeting_id === values.meeting_id) {
+                    form.setFields([
+                        {
+                            name: 'meeting_id',
+                            errors: ['Không thể đổi sang cùng một buổi họp!'],
+                        },
+                    ]);
+                    return;
+                }
+            }
+
             let finalStartTime: string | undefined = undefined;
             if (values.start_time) {
                 if (values.category === 'POSTPONE') {
@@ -72,7 +85,9 @@ export const PermissionFormModal: React.FC<PermissionFormModalProps> = ({
 
             const formattedValues = {
                 ...values,
-                start_time: finalStartTime,
+                start_time: values.category === 'CHANGE_MEETING' ? undefined : finalStartTime,
+                old_meeting_id: values.category === 'CHANGE_MEETING' ? (values.old_meeting_id ? Number(values.old_meeting_id) : undefined) : undefined,
+                meeting_id: values.meeting_id ? Number(values.meeting_id) : undefined,
             };
 
             await onSubmit(formattedValues);
@@ -97,10 +112,11 @@ export const PermissionFormModal: React.FC<PermissionFormModalProps> = ({
         >
             <Form form={form} layout="vertical" className="mt-6">
                 <Form.Item name="category" label="Loại đơn" rules={[{ required: true }]}>
-                    <Select onChange={() => form.setFieldsValue({ homework_id: undefined, meeting_id: undefined })}>
+                    <Select onChange={() => form.setFieldsValue({ homework_id: undefined, meeting_id: undefined, old_meeting_id: undefined, start_time: undefined })}>
                         <Option value="ABSENCE">Vắng sinh hoạt</Option>
                         <Option value="LATE">Đi trễ sinh hoạt</Option>
                         <Option value="POSTPONE">Tạm hoãn bài tập</Option>
+                        <Option value="CHANGE_MEETING">Đổi buổi sinh hoạt</Option>
                         <Option value="OTHER">Khác</Option>
                     </Select>
                 </Form.Item>
@@ -143,6 +159,44 @@ export const PermissionFormModal: React.FC<PermissionFormModalProps> = ({
                                 </Form.Item>
                             );
                         }
+                        if (category === 'CHANGE_MEETING') {
+                            return (
+                                <>
+                                    <Form.Item
+                                        name="old_meeting_id"
+                                        label="Buổi sinh hoạt hiện tại"
+                                        tooltip="Chọn buổi sinh hoạt bạn đang tham gia, hoặc để trống nếu bạn chưa có lịch (đăng ký mới)"
+                                    >
+                                        <Select placeholder="Chọn buổi sinh hoạt hiện tại (để trống nếu đăng ký mới)" allowClear>
+                                            {(meetings || []).map((m: any) => (
+                                                <Option key={m.id} value={m.id}>
+                                                    {m.title} ({dayjs(m.start_time).format('DD/MM/YYYY')})
+                                                </Option>
+                                            ))}
+                                        </Select>
+                                    </Form.Item>
+
+                                    <Form.Item
+                                        name="meeting_id"
+                                        label="Buổi sinh hoạt đích (chuyển đến)"
+                                        rules={[{ required: true, message: 'Vui lòng chọn buổi sinh hoạt đích!' }]}
+                                    >
+                                        <Select placeholder="Chọn buổi sinh hoạt sắp tới">
+                                            {(upcomingMeetings || []).map((m: any) => (
+                                                <Option key={m.id} value={m.id} disabled={m.is_full}>
+                                                    <div className="flex items-center justify-between">
+                                                        <span>{m.title} ({dayjs(m.start_time).format('DD/MM/YYYY HH:mm')})</span>
+                                                        <Tag color={m.is_full ? 'error' : 'success'} className="ml-2 mr-0 font-medium text-xs">
+                                                            {m.is_full ? 'Hết chỗ' : `Còn ${m.available_seats}/${m.max_seats} chỗ`}
+                                                        </Tag>
+                                                    </div>
+                                                </Option>
+                                            ))}
+                                        </Select>
+                                    </Form.Item>
+                                </>
+                            );
+                        }
                         return null;
                     }}
                 </Form.Item>
@@ -153,7 +207,7 @@ export const PermissionFormModal: React.FC<PermissionFormModalProps> = ({
                 >
                     {({ getFieldValue }) => {
                         const category = getFieldValue('category');
-                        if (category === 'ABSENCE' || category === 'OTHER') return null;
+                        if (category === 'ABSENCE' || category === 'OTHER' || category === 'CHANGE_MEETING') return null;
 
                         if (category === 'POSTPONE') {
                             return (

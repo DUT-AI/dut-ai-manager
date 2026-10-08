@@ -49,8 +49,12 @@ export const PermissionMobileList: React.FC<PermissionMobileListProps> = ({
                                 </Tag>
                                 <Space className="text-gray-400 text-xs">
                                     <InfoCircleOutlined />
-                                    <span className="max-w-[120px] truncate">
-                                        {record.category === 'POSTPONE' ? record.homework?.title : record.meeting?.title || '--'}
+                                    <span className="max-w-[140px] truncate">
+                                        {record.category === 'POSTPONE'
+                                            ? record.homework?.title
+                                            : record.category === 'CHANGE_MEETING'
+                                            ? `${record.old_meeting?.title || 'Mới'} ➔ ${record.meeting?.title || '--'}`
+                                            : record.meeting?.title || '--'}
                                     </span>
                                 </Space>
                             </div>

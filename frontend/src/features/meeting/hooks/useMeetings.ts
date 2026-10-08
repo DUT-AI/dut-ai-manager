@@ -125,3 +125,16 @@ export const useMyEvaluationResult = (meetingId: number, enabled: boolean = true
   });
 };
 
+export const useUpcomingMeetingsWithSeats = (fromDate?: string, enabled: boolean = true) => {
+  return useQuery({
+    queryKey: ['meetings', 'available-seats', fromDate],
+    queryFn: async () => {
+      const response = await meetingService.getAvailableSeats(fromDate);
+      return response.data ?? [];
+    },
+    staleTime: 30 * 1000,
+    enabled,
+  });
+};
+
+

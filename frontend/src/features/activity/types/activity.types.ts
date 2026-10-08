@@ -14,6 +14,7 @@ export const permissionRequestCreateSchema = z.object({
   start_time: z.string().optional(),
   homework_id: z.number().optional(),
   meeting_id: z.number().optional(),
+  old_meeting_id: z.number().nullable().optional(),
 });
 export type PermissionRequestCreate = z.infer<typeof permissionRequestCreateSchema>;
 export type PermissionRequestUpdate = Partial<PermissionRequestCreate>;
@@ -79,6 +80,7 @@ export const permissionRequestResponseSchema = z.object({
   start_time: z.string().optional(),
   homework_id: z.number().nullable().optional(),
   meeting_id: z.number().nullable().optional(),
+  old_meeting_id: z.number().nullable().optional(),
   created_by: z.number().nullable().optional(),
   updated_by: z.number().nullable().optional(),
   owner: userRefSchema.nullable().optional(),
@@ -88,6 +90,7 @@ export const permissionRequestResponseSchema = z.object({
   updater: userRefSchema.nullable().optional(),
   homework: z.any().optional(),
   meeting: z.any().optional(),
+  old_meeting: z.any().optional(),
 });
 export type PermissionRequestResponse = z.infer<typeof permissionRequestResponseSchema>;
 

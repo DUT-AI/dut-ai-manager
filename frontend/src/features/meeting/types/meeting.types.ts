@@ -151,3 +151,15 @@ export interface MeetingEvaluationSummary {
   trainee_average_score?: number | null;
 }
 
+export interface MeetingSeatAvailabilityDto {
+  id: number;
+  title: string;
+  start_time: string;
+  end_time: string;
+  max_seats: number;
+  occupied_seats: number;
+  available_seats: number;
+  is_full: boolean;
+}
+
+

@@ -6,6 +6,7 @@ import {
     DeleteOutlined,
     FileTextOutlined,
     ClockCircleOutlined,
+    SwapOutlined,
     InfoCircleOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -71,7 +72,46 @@ export const PermissionDetailDrawer: React.FC<PermissionDetailDrawerProps> = ({
                         )}
                     </Descriptions>
 
-                    {(item.homework || item.meeting) && (
+                    {item.category === 'CHANGE_MEETING' ? (
+                        <>
+                            <Divider style={{ textAlign: 'left' }} className="mb-4!">Chuyển ca sinh hoạt</Divider>
+                            <div className="mb-6 space-y-3">
+                                <Card size="small" className="bg-gray-50/50 border-gray-200 rounded-lg">
+                                    <Text type="secondary" className="text-xs block mb-1">Ca hiện tại:</Text>
+                                    {item.old_meeting ? (
+                                        <>
+                                            <Title level={5} className="mb-1! text-gray-700">
+                                                <Space><ClockCircleOutlined /> {item.old_meeting.title}</Space>
+                                            </Title>
+                                            <Text type="secondary" className="text-xs">
+                                                Thời gian: {dayjs(item.old_meeting.start_time).format('DD/MM/YYYY HH:mm')}
+                                            </Text>
+                                        </>
+                                    ) : (
+                                        <Text strong className="text-gray-500">Chưa có ca (Đăng ký mới)</Text>
+                                    )}
+                                </Card>
+                                <div className="flex justify-center text-purple-600">
+                                    <SwapOutlined className="text-lg rotate-90 my-1" />
+                                </div>
+                                <Card size="small" className="bg-purple-50/40 border-purple-200 rounded-lg">
+                                    <Text type="secondary" className="text-xs block mb-1">Ca chuyển đến:</Text>
+                                    {item.meeting ? (
+                                        <>
+                                            <Title level={5} className="mb-1! text-purple-700">
+                                                <Space><ClockCircleOutlined /> {item.meeting.title}</Space>
+                                            </Title>
+                                            <Text type="secondary" className="text-xs">
+                                                Thời gian: {dayjs(item.meeting.start_time).format('DD/MM/YYYY HH:mm')}
+                                            </Text>
+                                        </>
+                                    ) : (
+                                        <Text strong className="text-purple-600">#{item.meeting_id}</Text>
+                                    )}
+                                </Card>
+                            </div>
+                        </>
+                    ) : (item.homework || item.meeting) && (
                         <>
                             <Divider style={{ textAlign: 'left' }} className="mb-4!">Liên quan</Divider>
                             <div className="mb-6">

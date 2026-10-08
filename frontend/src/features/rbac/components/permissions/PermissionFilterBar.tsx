@@ -54,6 +54,7 @@ export const PermissionFilterBar: React.FC<PermissionFilterBarProps> = ({
                         <Option value="ABSENCE">Vắng sinh hoạt</Option>
                         <Option value="LATE">Đi trễ sinh hoạt</Option>
                         <Option value="POSTPONE">Tạm hoãn bài tập</Option>
+                        <Option value="CHANGE_MEETING">Đổi buổi sinh hoạt</Option>
                         <Option value="OTHER">Khác</Option>
                     </Select>
                 </Col>
