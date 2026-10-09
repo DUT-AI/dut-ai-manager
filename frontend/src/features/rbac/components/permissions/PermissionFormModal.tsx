@@ -180,8 +180,16 @@ export const PermissionFormModal: React.FC<PermissionFormModalProps> = ({
                                         name="meeting_id"
                                         label="Buổi sinh hoạt đích (chuyển đến)"
                                         rules={[{ required: true, message: 'Vui lòng chọn buổi sinh hoạt đích!' }]}
+                                        extra="Chỉ có thể đổi sang các buổi sinh hoạt diễn ra trong tương lai (chưa bắt đầu)."
                                     >
-                                        <Select placeholder="Chọn buổi sinh hoạt sắp tới">
+                                        <Select
+                                            placeholder="Chọn buổi sinh hoạt sắp tới"
+                                            notFoundContent={
+                                                <div className="py-3 text-center text-gray-400 text-xs">
+                                                    Không có buổi sinh hoạt nào sắp tới (chưa bắt đầu).
+                                                </div>
+                                            }
+                                        >
                                             {(upcomingMeetings || []).map((m: any) => (
                                                 <Option key={m.id} value={m.id} disabled={m.is_full}>
                                                     <div className="flex items-center justify-between">

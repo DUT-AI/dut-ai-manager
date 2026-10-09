@@ -65,6 +65,25 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         orm = self.session.scalars(statement).first()
         return self._to_domain(orm) if orm else None
 
+    def get_upcoming_meetings(
+        self, start_threshold: datetime, limit: int = 50
+    ) -> list[DomainMeeting]:
+        """Lấy danh sách các buổi họp sắp tới từ mốc start_threshold, sắp xếp theo start_time tăng dần."""
+        statement = (
+            select(ORMMeeting)
+            .where(
+                ORMMeeting.is_deleted.is_(False),
+                ORMMeeting.start_time >= start_threshold,
+            )
+            .order_by(ORMMeeting.start_time.asc())
+            .limit(limit)
+            .options(
+                selectinload(ORMMeeting.participants).joinedload(ORMParticipant.user),
+                joinedload(ORMMeeting.creator),
+            )
+        )
+        orms = self.session.scalars(statement).all()
+        return [self._to_domain(orm) for orm in orms]
 
     def get_all_with_participants(
         self,

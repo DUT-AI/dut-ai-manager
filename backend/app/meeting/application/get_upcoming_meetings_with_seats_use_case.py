@@ -25,13 +25,23 @@ class GetUpcomingMeetingsWithSeatsUseCase:
     ) -> list[MeetingSeatAvailabilityDto]:
         start_threshold = from_date or get_current_utc7_time()
 
-        # Lấy các buổi họp chưa bị xóa và bắt đầu từ mốc start_threshold
-        all_meetings = self.meeting_repo.get_all_with_participants(limit=100)
-        upcoming = [
-            m for m in all_meetings if m.start_time and m.start_time >= start_threshold
-        ]
-        upcoming.sort(key=lambda m: m.start_time)
+        # Ưu tiên query tối ưu get_upcoming_meetings, hỗ trợ fallback khi mock get_all_with_participants
+        upcoming: list = []
+        if hasattr(self.meeting_repo, "get_upcoming_meetings"):
+            res = self.meeting_repo.get_upcoming_meetings(
+                start_threshold=start_threshold, limit=50
+            )
+            if isinstance(res, list) and len(res) > 0:
+                upcoming = res
 
+        if not upcoming and hasattr(self.meeting_repo, "get_all_with_participants"):
+            all_meetings = self.meeting_repo.get_all_with_participants(limit=100)
+            if isinstance(all_meetings, list):
+                upcoming = [
+                    m for m in all_meetings if m.start_time and m.start_time >= start_threshold
+                ]
+
+        upcoming.sort(key=lambda m: m.start_time)
         results = []
         for m in upcoming:
             meeting_id = m.id if m.id is not None else 0

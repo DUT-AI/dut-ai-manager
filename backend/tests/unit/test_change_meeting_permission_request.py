@@ -325,6 +325,7 @@ def test_get_upcoming_meetings_with_seats():
     )
 
     meeting_repo.get_all_with_participants.return_value = [m1, m2]
+    meeting_repo.get_upcoming_meetings.return_value = [m1, m2]
     permission_repo.get_absence_user_ids_by_meeting.return_value = set()
 
     use_case = GetUpcomingMeetingsWithSeatsUseCase(
