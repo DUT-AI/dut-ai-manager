@@ -26,36 +26,37 @@ export const MeetingStatsRow: React.FC<Props> = ({ meetingId }) => {
     totalParticipants > 0 ? Math.round((checkedInCount / totalParticipants) * 100) : 0;
 
   return (
-    <div style={{ marginBottom: 24 }}>
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={8}>
-          <Card size="small" className="shadow-sm border-gray-100">
+    <div className="mb-4 sm:mb-6">
+      <Row gutter={[8, 8]}>
+        <Col xs={8} sm={8}>
+          <Card size="small" className="shadow-sm border-gray-100 rounded-xl text-center sm:text-left h-full">
             <Statistic
-              title="Tổng số thành viên"
+              title={<span className="text-[11px] sm:text-xs">Tổng thành viên</span>}
               value={totalParticipants}
-              prefix={<TeamOutlined className="text-indigo-500" />}
-              suffix="học viên"
+              prefix={<TeamOutlined className="text-indigo-500 hidden sm:inline" />}
+              suffix={<span className="text-[10px] sm:text-xs text-gray-400">học viên</span>}
+              valueStyle={{ fontSize: '1.25rem', fontWeight: 600 }}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={8}>
-          <Card size="small" className="shadow-sm border-gray-100">
+        <Col xs={8} sm={8}>
+          <Card size="small" className="shadow-sm border-gray-100 rounded-xl text-center sm:text-left h-full">
             <Statistic
-              title="Đã check-in"
+              title={<span className="text-[11px] sm:text-xs">Đã check-in</span>}
               value={checkedInCount}
-              valueStyle={{ color: '#10b981' }}
-              prefix={<CheckCircleOutlined />}
-              suffix={`/ ${totalParticipants}`}
+              valueStyle={{ color: '#10b981', fontSize: '1.25rem', fontWeight: 600 }}
+              prefix={<CheckCircleOutlined className="hidden sm:inline" />}
+              suffix={<span className="text-[10px] sm:text-xs text-gray-400">/{totalParticipants}</span>}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={8}>
-          <Card size="small" className="shadow-sm border-gray-100">
+        <Col xs={8} sm={8}>
+          <Card size="small" className="shadow-sm border-gray-100 rounded-xl text-center sm:text-left h-full">
             <Statistic
-              title="Tỷ lệ tham gia"
+              title={<span className="text-[11px] sm:text-xs">Tỷ lệ tham gia</span>}
               value={participationRate}
               suffix="%"
-              valueStyle={{ color: '#4f46e5' }}
+              valueStyle={{ color: '#4f46e5', fontSize: '1.25rem', fontWeight: 600 }}
             />
           </Card>
         </Col>

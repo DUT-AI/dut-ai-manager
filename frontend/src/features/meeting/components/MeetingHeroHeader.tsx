@@ -120,7 +120,7 @@ export const MeetingHeroHeader: React.FC<Props> = ({ meetingId }) => {
   return (
     <>
       <div
-        className="rounded-2xl p-6 text-white shadow-lg relative overflow-hidden"
+        className="rounded-2xl p-4 sm:p-6 text-white shadow-lg relative overflow-hidden"
         style={{
           background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
         }}
@@ -128,7 +128,7 @@ export const MeetingHeroHeader: React.FC<Props> = ({ meetingId }) => {
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="space-y-2">
             <div className="flex items-center gap-2 flex-wrap">
-              <Title level={3} className="!text-white !mb-0">
+              <Title level={3} className="!text-white !mb-0 text-lg sm:text-2xl">
                 {meeting.title}
               </Title>
               {isOngoing && (
@@ -177,7 +177,7 @@ export const MeetingHeroHeader: React.FC<Props> = ({ meetingId }) => {
           </div>
 
           {/* Action buttons on header */}
-          <div className="flex items-center gap-2 self-start md:self-center shrink-0 flex-wrap">
+          <div className="flex items-center gap-2 self-stretch md:self-center shrink-0 flex-wrap pt-2 md:pt-0">
             {/* Quick Enable Evaluation Button */}
             {!meeting.enable_evaluation && isTrainer && (
               <Button

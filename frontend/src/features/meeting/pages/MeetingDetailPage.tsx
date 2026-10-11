@@ -53,40 +53,46 @@ export const MeetingDetailPage: React.FC = () => {
   const totalParticipants = meeting.participants.length;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-3 sm:p-6 w-full max-w-7xl mx-auto space-y-4 sm:space-y-6">
       {/* Breadcrumb & Navigation */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <Breadcrumb
+          className="truncate text-xs sm:text-sm"
           items={[
             { title: <a onClick={() => navigate('/dashboard/meetings')}>Lịch Buổi Học</a> },
-            { title: meeting.title },
+            { title: <span className="truncate max-w-[150px] sm:max-w-xs inline-block align-bottom">{meeting.title}</span> },
           ]}
         />
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/dashboard/meetings')}>
-          Quay lại Lịch
+        <Button
+          icon={<ArrowLeftOutlined />}
+          onClick={() => navigate('/dashboard/meetings')}
+          size="middle"
+          className="shrink-0 text-xs sm:text-sm"
+        >
+          <span className="hidden sm:inline">Quay lại Lịch</span>
+          <span className="sm:hidden">Lịch</span>
         </Button>
       </div>
 
       {/* Hero Header Card */}
       <MeetingHeroHeader meetingId={meetingId} />
 
-
       {/* Metrics Row */}
       <MeetingStatsRow meetingId={meetingId} />
 
       {/* Main Content Tabs */}
-      <Card className="shadow-sm border-gray-100">
+      <Card className="shadow-sm border-gray-100 rounded-xl" bodyStyle={{ padding: '12px 16px' }}>
         <Tabs
           activeKey={activeTab}
           onChange={setActiveTab}
-          size="large"
+          className="meeting-detail-tabs"
           items={[
             {
               key: 'participants',
               label: (
-                <span className="flex items-center gap-2">
+                <span className="flex items-center gap-1.5 text-xs sm:text-sm">
                   <TeamOutlined />
-                  Danh sách tham gia ({totalParticipants})
+                  Tham gia ({totalParticipants})
                 </span>
               ),
               children: <MeetingParticipantsTab meetingId={meetingId} />,
@@ -96,9 +102,9 @@ export const MeetingDetailPage: React.FC = () => {
                   {
                     key: 'evaluations',
                     label: (
-                      <span className="flex items-center gap-2">
+                      <span className="flex items-center gap-1.5 text-xs sm:text-sm">
                         <BarChartOutlined />
-                        Báo cáo Đánh giá Buổi học
+                        Báo cáo Đánh giá
                       </span>
                     ),
                     children: (

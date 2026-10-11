@@ -72,20 +72,23 @@ export const EvaluationProgressFilterBar: React.FC<Props> = ({
         </div>
 
         {/* Filter */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-gray-200/60">
           <Text type="secondary" className="text-xs">
-            Lọc danh sách:
+            Lọc theo trạng thái chấm:
           </Text>
-          <Segmented
-            size="small"
-            value={evalFilter}
-            onChange={(val) => onFilterChange(val as any)}
-            options={[
-              { label: `Tất cả (${totalParticipants})`, value: 'all' },
-              { label: `Chưa đánh giá (${unratedCount})`, value: 'unrated' },
-              { label: `Đã đánh giá (${trainerEvaluatedCount})`, value: 'rated' },
-            ]}
-          />
+          <div className="overflow-x-auto no-scrollbar -mx-1 px-1">
+            <Segmented
+              size="small"
+              value={evalFilter}
+              onChange={(val) => onFilterChange(val as any)}
+              className="text-xs"
+              options={[
+                { label: `Tất cả (${totalParticipants})`, value: 'all' },
+                { label: `Chưa chấm (${unratedCount})`, value: 'unrated' },
+                { label: `Đã chấm (${trainerEvaluatedCount})`, value: 'rated' },
+              ]}
+            />
+          </div>
         </div>
       </div>
     </Card>

@@ -168,6 +168,7 @@ export const ParticipantListTable: React.FC<Props> = ({
       columns={columns}
       rowKey="user_id"
       pagination={participants.length > 10 ? { pageSize: 10 } : false}
+      scroll={{ x: 800 }}
       className="mt-2 shadow-sm rounded-lg overflow-hidden border border-gray-100"
     />
   );

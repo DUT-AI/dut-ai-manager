@@ -21,6 +21,7 @@ import {
   EvaluationProgressFilterBar,
   TraineeEvaluationCard,
   ParticipantListTable,
+  ParticipantMobileList,
 } from './participants';
 
 interface Props {
@@ -164,21 +165,40 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
         />
       )}
 
-      {/* Participants Table */}
-      <ParticipantListTable
-        meeting={meeting}
-        participants={filteredParticipants}
-        currentUserId={currentUserId}
-        isTrainer={isTrainer}
-        isEnded={isEnded}
-        trainerEvalsByTraineeId={trainerEvalsByTraineeId}
-        traineeEvalsByReviewerId={traineeEvalsByReviewerId}
-        onEditStatus={(p) => {
-          setEditingParticipant(p);
-          setIsEditStatusModalOpen(true);
-        }}
-        onEvaluate={(p) => setEvaluatingParticipant(p)}
-      />
+      {/* Participants Content: Mobile List vs Desktop Table */}
+      <div className="block md:hidden">
+        <ParticipantMobileList
+          meeting={meeting}
+          participants={filteredParticipants}
+          currentUserId={currentUserId}
+          isTrainer={isTrainer}
+          isEnded={isEnded}
+          trainerEvalsByTraineeId={trainerEvalsByTraineeId}
+          traineeEvalsByReviewerId={traineeEvalsByReviewerId}
+          onEditStatus={(p) => {
+            setEditingParticipant(p);
+            setIsEditStatusModalOpen(true);
+          }}
+          onEvaluate={(p) => setEvaluatingParticipant(p)}
+        />
+      </div>
+
+      <div className="hidden md:block">
+        <ParticipantListTable
+          meeting={meeting}
+          participants={filteredParticipants}
+          currentUserId={currentUserId}
+          isTrainer={isTrainer}
+          isEnded={isEnded}
+          trainerEvalsByTraineeId={trainerEvalsByTraineeId}
+          traineeEvalsByReviewerId={traineeEvalsByReviewerId}
+          onEditStatus={(p) => {
+            setEditingParticipant(p);
+            setIsEditStatusModalOpen(true);
+          }}
+          onEvaluate={(p) => setEvaluatingParticipant(p)}
+        />
+      </div>
 
       {/* Modals with isolated open states */}
       <EditParticipantStatusModal

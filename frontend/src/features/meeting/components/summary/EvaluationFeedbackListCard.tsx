@@ -21,24 +21,28 @@ export const EvaluationFeedbackListCard: React.FC<Props> = ({ evaluations }) => 
   return (
     <Card
       title={
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-1">
+          <span className="text-sm font-semibold">
             <MessageOutlined style={{ marginRight: 8, color: '#722ed1' }} />
             Ý kiến đóng góp & Nhận xét
           </span>
-          <Segmented
-            size="small"
-            value={feedbackFilter}
-            onChange={(val) => setFeedbackFilter(val as any)}
-            options={[
-              { label: 'Tất cả', value: 'ALL' },
-              { label: 'Trainer ➜ Trainee', value: 'TRAINER_TO_TRAINEE' },
-              { label: 'Trainee ➜ Trainer', value: 'TRAINEE_TO_TRAINER' },
-            ]}
-          />
+          <div className="overflow-x-auto no-scrollbar -mx-1 px-1">
+            <Segmented
+              size="small"
+              value={feedbackFilter}
+              onChange={(val) => setFeedbackFilter(val as any)}
+              className="text-xs"
+              options={[
+                { label: 'Tất cả', value: 'ALL' },
+                { label: 'Trainer ➜ Trainee', value: 'TRAINER_TO_TRAINEE' },
+                { label: 'Trainee ➜ Trainer', value: 'TRAINEE_TO_TRAINER' },
+              ]}
+            />
+          </div>
         </div>
       }
       size="small"
+      className="shadow-sm border-gray-100 rounded-xl"
     >
       {filteredFeedback.length === 0 ? (
         <Empty
