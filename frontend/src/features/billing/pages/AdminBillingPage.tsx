@@ -374,7 +374,6 @@ const AdminBillingPage = () => {
         onCancel={() => setIsCreateModalOpen(false)}
         onFinish={handleCreate}
         loading={createInvoice.isPending}
-        users={users}
         form={form}
       />
 

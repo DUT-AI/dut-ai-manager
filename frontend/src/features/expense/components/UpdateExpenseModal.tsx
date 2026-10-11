@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Modal, Form, DatePicker, InputNumber, Input, Select, Radio } from 'antd';
 import dayjs from 'dayjs';
-import { useUsers } from '@/features/users';
+import { useUserOptions } from '@/features/users';
 import { useTeams } from '@/features/teams';
 import { useUpdateExpense } from '@/features/expense/hooks/useExpense';
 import { ExpenseStatus, type ExpenseInvoice } from '@/features/expense/types/expense.types';
@@ -14,7 +14,7 @@ interface UpdateExpenseModalProps {
 
 export const UpdateExpenseModal: React.FC<UpdateExpenseModalProps> = ({ open, expense, onClose }) => {
   const [form] = Form.useForm();
-  const { data: usersData, isLoading: isLoadingUsers } = useUsers();
+  const { data: usersData, isLoading: isLoadingUsers } = useUserOptions();
   const { data: teamsData, isLoading: isLoadingTeams } = useTeams();
   const users = usersData || [];
   const teams = teamsData || [];

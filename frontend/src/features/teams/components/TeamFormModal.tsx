@@ -1,6 +1,6 @@
 import { Modal, Form, Input, Select, type FormInstance } from 'antd';
 import type { TeamResponse } from '../types/team.types';
-import type { UserResponse } from '@/features/users/types/user.types';
+import { useUserOptions } from '@/features/users';
 
 const { Option } = Select;
 
@@ -10,7 +10,6 @@ interface TeamFormModalProps {
     onFinish: (values: Record<string, unknown>) => void;
     editingItem: TeamResponse | null;
     loading: boolean;
-    users: UserResponse[];
     form: FormInstance;
     isMobile?: boolean;
 }
@@ -21,10 +20,10 @@ export const TeamFormModal = ({
     onFinish,
     editingItem,
     loading,
-    users,
     form,
     isMobile
 }: TeamFormModalProps) => {
+    const { data: users = [] } = useUserOptions();
     return (
         <Modal
             title={editingItem ? 'Chỉnh sửa Nhóm' : 'Tạo Nhóm mới'}

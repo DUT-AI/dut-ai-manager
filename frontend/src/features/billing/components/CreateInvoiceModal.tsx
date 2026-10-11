@@ -1,8 +1,8 @@
 import { Modal, Form, Select, Input, Divider, Space, InputNumber, Button, DatePicker, type FormInstance } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { InvoiceItemType } from '@/features/billing/types/billing.types';
-import type { UserResponse } from '@/features/users/types/user.types';
 import { useTeams } from '@/features/teams/hooks/useTeams';
+import { useUserOptions } from '@/features/users';
 import type { CreateInvoiceFormValues } from '@/features/billing/types/billing.types';
 
 const { Option } = Select;
@@ -12,7 +12,6 @@ interface CreateInvoiceModalProps {
   onCancel: () => void;
   onFinish: (values: CreateInvoiceFormValues) => void;
   loading: boolean;
-  users: UserResponse[];
   form: FormInstance;
 }
 
@@ -21,9 +20,9 @@ const CreateInvoiceModal = ({
   onCancel,
   onFinish,
   loading,
-  users,
   form
 }: CreateInvoiceModalProps) => {
+  const { data: users = [] } = useUserOptions();
   const { data: teams = [], isLoading: isLoadingTeams } = useTeams();
   const selectedTeamId = Form.useWatch('team_id', form);
   const selectedUserIds: number[] = Form.useWatch('user_ids', form) || [];

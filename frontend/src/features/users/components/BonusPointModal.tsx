@@ -2,7 +2,7 @@ import { Modal, Form, Select, DatePicker, InputNumber, Input } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { BonusPointType, BONUS_POINT_TYPE_LABELS, type BonusPointResponse } from '@/features/activity/types/activity.types';
-import type { UserResponse } from '@/features/users/types/user.types';
+import { useUserOptions } from '@/features/users';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -11,13 +11,13 @@ interface Props {
     open: boolean;
     editingItem: BonusPointResponse | null;
     initialDate: Dayjs;
-    users: UserResponse[];
     onSubmit: (values: any) => void;
     onCancel: () => void;
 }
 
-export const BonusPointModal = ({ open, editingItem, initialDate, users, onSubmit, onCancel }: Props) => {
+export const BonusPointModal = ({ open, editingItem, initialDate, onSubmit, onCancel }: Props) => {
     const [form] = Form.useForm();
+    const { data: users = [] } = useUserOptions();
 
     const initialValues = editingItem ? {
         user_id: editingItem.user_id ?? editingItem.owner?.id,

@@ -1,14 +1,14 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Meeting Individual Evaluation API",
-    "version": "1.0.0",
-    "description": "API contracts for 2-way peer evaluation (Trainer <-> Trainee) in a Meeting"
+    "title": "Meeting Evaluation API",
+    "version": "2.0.0",
+    "description": "API contracts for 1-1 Meeting Overall Evaluation (Trainer -> Meeting) and Individual Evaluation (Trainee -> Trainer)"
   },
   "paths": {
-    "/api/v1/meetings/{meeting_id}/evaluations/trainer": {
+    "/api/v1/meetings/{meeting_id}/evaluations/overall": {
       "post": {
-        "summary": "Trainer evaluates a specific Trainee",
+        "summary": "Trainer submits overall evaluation for the meeting (1 - 1 relationship)",
         "parameters": [
           {
             "name": "meeting_id",
@@ -23,29 +23,43 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["target_user_id", "scores"],
+                "required": ["scores"],
                 "properties": {
-                  "target_user_id": { "type": "integer", "description": "Trainee User ID" },
                   "scores": {
                     "type": "array",
                     "items": {
                       "type": "object",
                       "required": ["criteria_code", "score"],
                       "properties": {
-                        "criteria_code": { "type": "string", "example": "PRE_CLASS_PREPARATION" },
+                        "criteria_code": { "type": "string", "example": "ATTENDANCE_CONDUCT" },
                         "score": { "type": "integer", "minimum": 1, "maximum": 5, "example": 5 }
                       }
                     }
                   },
-                  "feedback_text": { "type": "string", "maxLength": 2000 }
+                  "general_feedback": { "type": "string", "maxLength": 2000 }
                 }
               }
             }
           }
         },
         "responses": {
-          "200": { "description": "Evaluation saved successfully" },
-          "400": { "description": "Invalid input or meeting not finished" }
+          "200": { "description": "Meeting overall evaluation saved successfully" },
+          "400": { "description": "Meeting already evaluated or not ended" }
+        }
+      },
+      "get": {
+        "summary": "Get overall meeting evaluation (public for all joined attendees)",
+        "parameters": [
+          {
+            "name": "meeting_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Meeting overall evaluation details" },
+          "404": { "description": "Evaluation not found or not submitted yet" }
         }
       }
     },
@@ -95,7 +109,7 @@
     },
     "/api/v1/meetings/{meeting_id}/evaluations/summary": {
       "get": {
-        "summary": "Get evaluation summary for Trainer (anonymous evaluations have reviewer masked)",
+        "summary": "Get evaluation summary for Meeting (Overall evaluation + Aggregated Trainer evaluations)",
         "parameters": [
           {
             "name": "meeting_id",
@@ -105,24 +119,7 @@
           }
         ],
         "responses": {
-          "200": { "description": "Summary with scores and feedback" }
-        }
-      }
-    },
-    "/api/v1/meetings/{meeting_id}/evaluations/my-result": {
-      "get": {
-        "summary": "Trainee views evaluation received from Trainer",
-        "parameters": [
-          {
-            "name": "meeting_id",
-            "in": "path",
-            "required": true,
-            "schema": { "type": "integer" }
-          }
-        ],
-        "responses": {
-          "200": { "description": "Personal evaluation result" },
-          "403": { "description": "Locked until Trainee evaluates Trainer" }
+          "200": { "description": "Detailed evaluation summary" }
         }
       }
     }

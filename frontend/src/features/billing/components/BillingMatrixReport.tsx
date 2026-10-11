@@ -4,11 +4,10 @@ import { SearchOutlined, ImportOutlined, ExportOutlined, WalletOutlined, CheckCi
 import dayjs, { Dayjs } from 'dayjs';
 import { useMatrixReport, useAllInvoices } from '@/features/billing/hooks/useBilling';
 import { useExpenses } from '@/features/expense/hooks/useExpense';
-import { useUsers } from '@/features/users';
+import { useUserOptions } from '@/features/users';
 import { useTeams } from '@/features/teams';
 import { InvoiceItemType } from '@/features/billing/types/billing.types';
 import { ExpenseStatus } from '@/features/expense/types/expense.types';
-import type { UserResponse } from '@/features/users/types/user.types';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -40,7 +39,7 @@ const BillingMatrixReport = () => {
     team_id?: number;
   } | null>(null);
 
-  const { data: users = [] } = useUsers();
+  const { data: users = [] } = useUserOptions();
   const { data: teams = [] } = useTeams();
   const { data: invoices = [], isFetching } = useMatrixReport(queryParams!, !!queryParams);
 

@@ -490,7 +490,6 @@ export const BonusPointManagementPage = () => {
                     open={isModalOpen}
                     editingItem={editingItem}
                     initialDate={dayjs()}
-                    users={users}
                     onSubmit={handleCreateOrUpdate}
                     onCancel={() => {
                         setIsModalOpen(false);

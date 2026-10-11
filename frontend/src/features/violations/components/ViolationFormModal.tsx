@@ -1,6 +1,6 @@
 import { Modal, Form, Select, DatePicker, Input, type FormInstance } from 'antd';
 import type { ViolationResponse } from '@/features/violations/types/violation.types';
-import type { UserResponse } from '@/features/users/types/user.types';
+import { useUserOptions } from '@/features/users';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -11,7 +11,6 @@ interface ViolationFormModalProps {
     onFinish: (values: Record<string, unknown>) => void;
     editingItem: ViolationResponse | null;
     loading: boolean;
-    users: UserResponse[];
     form: FormInstance;
     isMobile?: boolean;
 }
@@ -22,10 +21,10 @@ const ViolationFormModal = ({
     onFinish,
     editingItem,
     loading,
-    users,
     form,
     isMobile
 }: ViolationFormModalProps) => {
+    const { data: users = [] } = useUserOptions();
     return (
         <Modal
             title={editingItem ? 'Chỉnh sửa Vi phạm' : 'Ghi nhận Vi phạm mới'}

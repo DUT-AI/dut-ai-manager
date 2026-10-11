@@ -3,17 +3,19 @@ import { Modal, Form, Input, DatePicker, Select, Checkbox, message, Divider, But
 import { TeamOutlined, UserOutlined, CheckOutlined, ClearOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Homework } from '@/features/homework/types/homework.types';
-import type { UserResponse } from '@/features/users/types/user.types';
+import type { UserOptionDto, UserResponse } from '@/features/users/types/user.types';
 import type { TeamResponse } from '@/features/teams/types/team.types';
 import { homeworkService } from '@/features/homework/services/homework.service';
+import { useUserOptions } from '@/features/users';
+import { useTeams } from '@/features/teams';
 
 const { Text } = Typography;
 
 interface Props {
     open: boolean;
     editingItem: Homework | null;
-    users: UserResponse[];
-    teams: TeamResponse[];
+    users?: (UserOptionDto | UserResponse)[];
+    teams?: TeamResponse[];
     onSuccess: () => void;
     onCancel: () => void;
 }
@@ -21,12 +23,16 @@ interface Props {
 export const HomeworkFormModal = ({
     open,
     editingItem,
-    users,
-    teams,
+    users: propsUsers,
+    teams: propsTeams,
     onSuccess,
     onCancel
 }: Props) => {
     const [form] = Form.useForm();
+    const { data: userOptions = [] } = useUserOptions();
+    const { data: teamsData = [] } = useTeams();
+    const users = propsUsers || userOptions;
+    const teams = propsTeams || teamsData;
     const [loading, setLoading] = useState(false);
     const [selectedTeamIds, setSelectedTeamIds] = useState<number[]>([]);
     const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<number[]>([]);

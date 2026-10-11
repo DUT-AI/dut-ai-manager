@@ -18,7 +18,7 @@ class PaginationParams(BaseModel):
 
     page: int = Field(default=1, ge=1, description="Page number (1-indexed)")
     page_size: int = Field(
-        default=20,
+        default=100,
         ge=1,
         le=100,
         description="Items per page (default 20, max 100)",

@@ -2,7 +2,7 @@ import { Modal, Form, Select, DatePicker, Input } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import type { ViolationResponse } from '@/features/violations/types/violation.types';
-import type { UserResponse } from '@/features/users/types/user.types';
+import { useUserOptions } from '@/features/users';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -11,13 +11,13 @@ interface Props {
     open: boolean;
     editingItem: ViolationResponse | null;
     initialDate: Dayjs;
-    users: UserResponse[];
     onSubmit: (values: any) => void;
     onCancel: () => void;
 }
 
-export const ViolationModal = ({ open, editingItem, initialDate, users, onSubmit, onCancel }: Props) => {
+export const ViolationModal = ({ open, editingItem, initialDate, onSubmit, onCancel }: Props) => {
     const [form] = Form.useForm();
+    const { data: users = [] } = useUserOptions();
 
     const initialValues = editingItem ? {
         user_id: editingItem.user_id,

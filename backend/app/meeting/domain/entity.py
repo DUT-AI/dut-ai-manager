@@ -96,6 +96,27 @@ class EvaluationScoreItem(BaseModel):
     score: int = Field(ge=1, le=5)
 
 
+class MeetingOverallEvaluation(BaseEntity):
+    """Phiếu đánh giá tổng thể buổi học do Trainer thực hiện (Domain Entity - Quan hệ 1 - 1 với Meeting)"""
+
+    meeting_id: int
+    trainer_id: int
+    scores: list[EvaluationScoreItem] = Field(default_factory=list)
+    average_score: float = 0.0
+    general_feedback: str | None = None
+    trainer: UserRef | None = None
+
+    def calculate_average(self) -> float:
+        """Tính điểm trung bình cộng của các tiêu chí đánh giá buổi học."""
+        if not self.scores:
+            self.average_score = 0.0
+            return 0.0
+        self.average_score = round(
+            sum(s.score for s in self.scores) / len(self.scores), 2
+        )
+        return self.average_score
+
+
 class MeetingEvaluation(BaseEntity):
     """Phiếu đánh giá cá nhân 2 chiều giữa Trainer và Trainee (Domain Entity)"""
 
@@ -190,5 +211,6 @@ class Meeting(BaseEntity):
 
 MeetingParticipant.model_rebuild()
 EvaluationScoreItem.model_rebuild()
+MeetingOverallEvaluation.model_rebuild()
 MeetingEvaluation.model_rebuild()
 Meeting.model_rebuild()

@@ -22,7 +22,7 @@ import {
   CheckCircleOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { useUsers } from '@/features/users';
+import { useUserOptions } from '@/features/users';
 import { useTeams } from '@/features/teams';
 import { useCreateMonthlyInvoices } from '@/features/billing/hooks/useBilling';
 import { InvoiceItemType } from '@/features/billing/types/billing.types';
@@ -39,7 +39,7 @@ interface CreateMonthlyInvoiceModalProps {
 
 const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyInvoiceModalProps) => {
   const [form] = Form.useForm();
-  const { data: users = [] } = useUsers();
+  const { data: users = [] } = useUserOptions();
   const { data: teams = [] } = useTeams();
   const createMonthly = useCreateMonthlyInvoices();
 

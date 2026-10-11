@@ -33,3 +33,4 @@
 
 - Đã cập nhật tiêu chí mới: **Mức độ Chuẩn bị bài trước buổi học (Pre-class Preparation)** thay thế cho kỹ năng thực hành.
 - Đã đồng bộ toàn bộ tài liệu theo quy tắc: **Hạn chót 24h & tự động tạo biên bản vi phạm (`Violation`) cho Trainer/Trainee nếu chưa hoàn thành đánh giá**.
+- Đã cập nhật mô hình quan hệ: **Trainer chỉ đánh giá tổng thể meeting (quan hệ 1 - 1, lưu bảng `MeetingOverallEvaluation`) thay vì đánh giá từng Trainee**. Kết quả công khai ngay cho Trainee tham gia.

@@ -8,7 +8,6 @@ import {
     useDeleteViolation,
     useBulkDeleteViolations
 } from '../hooks/useViolations';
-import { useUsers } from '@/features/users';
 import { useAuth } from '@/features/auth';
 import { ViolationPermission } from '@/features/rbac/types/rbac.types';
 import type { ViolationResponse, ViolationCreate } from '@/types';
@@ -76,8 +75,6 @@ const ViolationManagementPage = () => {
     const violations = violationsResult?.data ?? [];
     const paginationMeta = violationsResult?.pagination;
 
-    const { data: usersData } = useUsers();
-    const users = (usersData as any)?.data ?? usersData ?? [];
     const createViolation = useCreateViolation();
     const updateViolation = useUpdateViolation();
     const deleteViolation = useDeleteViolation();
@@ -213,7 +210,6 @@ const ViolationManagementPage = () => {
                         setFilterUserId={handleFilterUserChange}
                         filterDate={filterDate}
                         setFilterDate={handleFilterDateChange}
-                        users={users}
                     />
                 </motion.div>
 
@@ -304,7 +300,6 @@ const ViolationManagementPage = () => {
                 onFinish={handleCreateOrUpdate}
                 editingItem={editingItem}
                 loading={createViolation.isPending || updateViolation.isPending}
-                users={users}
                 form={form}
                 isMobile={!screens.md}
             />

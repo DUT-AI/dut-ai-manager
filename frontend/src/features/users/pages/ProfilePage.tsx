@@ -30,7 +30,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
-import { useUsers } from '../hooks/useUsers';
+import { useUser } from '../hooks/useUsers';
 import { useViolations } from '@/features/violations';
 import { useBonusPoints } from '@/features/activity';
 import { usePermissionRequests, CATEGORY_COLORS, CATEGORY_LABELS } from '@/features/rbac';
@@ -102,9 +102,8 @@ const ProfilePage = () => {
     const [botModalVisible, setBotModalVisible] = useState(false);
     const [botBindCode, setBotBindCode] = useState('');
 
-    // Get user from cached users list
-    const { data: users = [], isLoading: usersLoading } = useUsers();
-    const user = useMemo(() => users.find(u => u.id === uid), [users, uid]);
+    // Get user directly by ID
+    const { data: user, isLoading: usersLoading } = useUser(uid ?? 0);
 
     // Lazy load data - only fetch when tab is active
     const { data: violationsResult, isLoading: violationsLoading } = useViolations({

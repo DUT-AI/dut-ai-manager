@@ -1,19 +1,14 @@
 import React from 'react';
 import { Row, Col, DatePicker, Select, Button } from 'antd';
 import type dayjs from 'dayjs';
+import { useUserOptions } from '@/features/users';
 
 const { Option } = Select;
-
-interface UserOption {
-    id: number;
-    name: string;
-}
 
 interface PermissionFilterBarProps {
     filterDate: dayjs.Dayjs | null;
     filterCategory: string | undefined;
     filterUserId: number | undefined;
-    users: UserOption[];
     onDateChange: (date: dayjs.Dayjs | null) => void;
     onCategoryChange: (category: string | undefined) => void;
     onUserChange: (userId: number | undefined) => void;
@@ -24,12 +19,12 @@ export const PermissionFilterBar: React.FC<PermissionFilterBarProps> = ({
     filterDate,
     filterCategory,
     filterUserId,
-    users,
     onDateChange,
     onCategoryChange,
     onUserChange,
     onReset,
 }) => {
+    const { data: users = [] } = useUserOptions();
     return (
         <div className="bg-gray-50/50 p-4 rounded-xl mb-6 border border-gray-100">
             <Row gutter={[16, 16]} align="middle">

@@ -16,7 +16,6 @@ import {
     SearchOutlined
 } from '@ant-design/icons';
 import { useTeams, useCreateTeam, useUpdateTeam, useDeleteTeam } from '../hooks/useTeams';
-import { useUsers } from '@/features/users';
 import { useAuth } from '@/features/auth';
 import type { TeamResponse, TeamCreate } from '@/features/teams/types/team.types';
 import { motion, type Variants } from 'motion/react';
@@ -53,7 +52,6 @@ const TeamManagementPage = () => {
     // TanStack Query hooks
     const { data, isLoading } = useTeams();
     const teams = data || [];
-    const { data: users = [] } = useUsers();
     const createTeam = useCreateTeam();
     const updateTeam = useUpdateTeam();
     const deleteTeam = useDeleteTeam();
@@ -179,7 +177,6 @@ const TeamManagementPage = () => {
                 onFinish={handleCreateOrUpdate}
                 editingItem={editingItem}
                 loading={createTeam.isPending || updateTeam.isPending}
-                users={users}
                 form={form}
                 isMobile={!screens.md}
             />

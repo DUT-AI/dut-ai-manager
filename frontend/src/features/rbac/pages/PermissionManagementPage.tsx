@@ -5,7 +5,6 @@ import type dayjs from 'dayjs';
 import { motion, type Variants } from 'motion/react';
 
 import { useAuth } from '@/features/auth';
-import { useUsers } from '@/features/users';
 import { PermissionRequestPermission } from '@/features/rbac/types/rbac.types';
 import type { PermissionRequestResponse } from '@/features/activity/types/activity.types';
 
@@ -76,8 +75,6 @@ const PermissionManagementPage: React.FC = () => {
         pageSize,
     });
     const totalCount = (permissions as any)?.pagination?.total ?? permissions.length;
-    const { data: usersData = [] } = useUsers();
-    const users = Array.isArray(usersData) ? usersData : (usersData as any)?.data || [];
 
     const createPermission = useCreatePermissionRequest();
     const updatePermission = useUpdatePermissionRequest();
@@ -177,7 +174,6 @@ const PermissionManagementPage: React.FC = () => {
                         filterDate={filterDate}
                         filterCategory={filterCategory}
                         filterUserId={filterUserId}
-                        users={users}
                         onDateChange={(date) => {
                             setFilterDate(date);
                             setFilterMonth(date ? date.month() + 1 : undefined);

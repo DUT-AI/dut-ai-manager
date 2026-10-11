@@ -60,7 +60,7 @@ async def list_users(
 @router.get("/options", response_model=ApiResponse[list[UserOptionDto]])
 @inject
 async def get_user_options(
-    _: Annotated[CurrentUser, Depends(PermissionChecker(UserPermission.READ))],
+    _: CurrentUser,
     uc: FromDishka[GetUserUseCase],
 ):
     """Get lightweight list of active users for dropdowns."""

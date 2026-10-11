@@ -24,7 +24,7 @@ import {
   DollarOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { useUsers } from '@/features/users';
+import { useUserOptions } from '@/features/users';
 import { useTeams } from '@/features/teams';
 import {
   useExpenses,
@@ -49,7 +49,7 @@ const ExpenseManagementPage: React.FC = () => {
   const selectedMonth = selectedPeriod ? selectedPeriod.month() + 1 : undefined;
   const selectedYear = selectedPeriod ? selectedPeriod.year() : undefined;
 
-  const { data: usersData } = useUsers();
+  const { data: usersData } = useUserOptions();
   const { data: teamsData } = useTeams();
   const users = usersData || [];
   const teams = teamsData || [];

@@ -1,7 +1,7 @@
 import { Select, DatePicker, Button } from 'antd';
 import { UserOutlined, CalendarOutlined } from '@ant-design/icons';
 import type { Dayjs } from 'dayjs';
-import type { UserResponse } from '@/features/users/types/user.types';
+import { useUserOptions } from '@/features/users';
 
 const { Option } = Select;
 
@@ -10,7 +10,6 @@ interface ViolationFilterProps {
     setFilterUserId: (id: number | undefined) => void;
     filterDate: Dayjs | null;
     setFilterDate: (date: Dayjs | null) => void;
-    users: UserResponse[];
 }
 
 const ViolationFilter = ({
@@ -18,8 +17,8 @@ const ViolationFilter = ({
     setFilterUserId,
     filterDate,
     setFilterDate,
-    users
 }: ViolationFilterProps) => {
+    const { data: users = [] } = useUserOptions();
     return (
         <div className="flex flex-wrap items-center gap-4 mb-6 mx-3 md:mx-0 bg-gray-50/50 p-4 rounded-lg border border-gray-100">
             <div className="flex flex-col gap-1.5 min-w-[200px] w-full md:w-auto">
