@@ -128,6 +128,18 @@ export const useMyEvaluationResult = (meetingId: number, enabled: boolean = true
   });
 };
 
+export const useMeetingOverallEvaluation = (meetingId: number, enabled: boolean = true) => {
+  return useQuery({
+    queryKey: ['meeting-overall-evaluation', meetingId],
+    queryFn: async () => {
+      const response = await meetingService.getMeetingOverallEvaluation(meetingId);
+      return response.data;
+    },
+    staleTime: 30 * 1000,
+    enabled: meetingId > 0 && enabled,
+  });
+};
+
 export const useUpcomingMeetingsWithSeats = (fromDate?: string, enabled: boolean = true) => {
   return useQuery({
     queryKey: ['meetings', 'available-seats', fromDate],

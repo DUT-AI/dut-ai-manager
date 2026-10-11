@@ -4,12 +4,14 @@ from app.meeting.domain.value_objects import (
 )
 from app.meeting.infrastructure.repository import (
     MeetingEvaluationRepository,
+    MeetingOverallEvaluationRepository,
     MeetingRepository,
 )
 from app.meeting.schemas import (
     CriteriaAverageScoreDto,
     EvaluationResponse,
     MeetingEvaluationSummaryResponse,
+    MeetingOverallEvaluationResponse,
 )
 from app.shared.application.response import BadRequestException
 
@@ -21,9 +23,11 @@ class GetMeetingEvaluationSummaryUseCase:
         self,
         meeting_repo: MeetingRepository,
         evaluation_repo: MeetingEvaluationRepository,
+        overall_eval_repo: MeetingOverallEvaluationRepository | None = None,
     ):
         self.meeting_repo = meeting_repo
         self.evaluation_repo = evaluation_repo
+        self.overall_eval_repo = overall_eval_repo
 
     async def execute(
         self, meeting_id: int, current_user_id: int | None = None
@@ -85,6 +89,12 @@ class GetMeetingEvaluationSummaryUseCase:
             else None
         )
 
+        overall_eval_dto = None
+        if self.overall_eval_repo:
+            overall_entity = self.overall_eval_repo.get_by_meeting_id(meeting_id)
+            if overall_entity:
+                overall_eval_dto = MeetingOverallEvaluationResponse.from_domain(overall_entity)
+
         return MeetingEvaluationSummaryResponse(
             meeting_id=meeting_id,
             total_evaluations=total_count,
@@ -96,5 +106,6 @@ class GetMeetingEvaluationSummaryUseCase:
             trainer_average_score=trainer_summary.average_score,
             trainee_average_score=trainee_summary.average_score,
             my_evaluation=my_eval_dto,
+            overall_evaluation=overall_eval_dto,
         )
 

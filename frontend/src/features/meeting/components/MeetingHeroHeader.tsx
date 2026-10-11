@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Typography, Tag, Button, Popconfirm, message, Space } from 'antd';
 import {
@@ -12,11 +12,18 @@ import {
   ThunderboltOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { useMeetingDetail, useDeleteMeeting, useUpdateMeeting, useMeetingEvaluationSummary } from '../hooks/useMeetings';
+import {
+  useMeetingDetail,
+  useDeleteMeeting,
+  useUpdateMeeting,
+  useMeetingEvaluationSummary,
+  useMeetingOverallEvaluation,
+} from '../hooks/useMeetings';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { MeetingModal } from './MeetingModal';
 import { TraineeEvaluationModal } from './TraineeEvaluationModal';
 import { MyEvaluationResultModal } from './MyEvaluationResultModal';
+import { MeetingOverallEvaluationModal } from './MeetingOverallEvaluationModal';
 
 const { Title, Paragraph } = Typography;
 
@@ -32,11 +39,16 @@ export const MeetingHeroHeader: React.FC<Props> = ({ meetingId }) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isTraineeEvalOpen, setIsTraineeEvalOpen] = useState(false);
   const [isMyResultOpen, setIsMyResultOpen] = useState(false);
+  const [isOverallEvalOpen, setIsOverallEvalOpen] = useState(false);
   const [isEnabling, setIsEnabling] = useState(false);
 
   const deleteMeetingMutation = useDeleteMeeting();
   const updateMeetingMutation = useUpdateMeeting();
   const { data: evalSummary, refetch: refetchEvalSummary } = useMeetingEvaluationSummary(
+    meetingId,
+    Boolean(meeting?.enable_evaluation)
+  );
+  const { data: overallEval, refetch: refetchOverallEval } = useMeetingOverallEvaluation(
     meetingId,
     Boolean(meeting?.enable_evaluation)
   );
@@ -209,9 +221,23 @@ export const MeetingHeroHeader: React.FC<Props> = ({ meetingId }) => {
               </>
             )}
 
-            {/* Trainer Edit/Delete Actions */}
+            {/* Trainer Actions */}
             {isTrainer && (
               <Space size="small">
+                {meeting.enable_evaluation && isEnded && (
+                  <Button
+                    type="primary"
+                    icon={<StarOutlined />}
+                    onClick={() => setIsOverallEvalOpen(true)}
+                    className={
+                      overallEval
+                        ? "!bg-emerald-600 hover:!bg-emerald-500 !text-white border-none font-medium shadow-sm"
+                        : "!bg-amber-500 hover:!bg-amber-400 !text-white border-none font-medium shadow-sm"
+                    }
+                  >
+                    {overallEval ? '✓ Đã đánh giá buổi học' : 'Trainer đánh giá buổi học'}
+                  </Button>
+                )}
                 <Button ghost icon={<EditOutlined />} onClick={() => setIsEditModalOpen(true)}>
                   Chỉnh sửa
                 </Button>
@@ -259,6 +285,21 @@ export const MeetingHeroHeader: React.FC<Props> = ({ meetingId }) => {
         open={isMyResultOpen}
         meetingId={meeting.id}
         onClose={() => setIsMyResultOpen(false)}
+      />
+
+      <MeetingOverallEvaluationModal
+        open={isOverallEvalOpen}
+        meetingId={meeting.id}
+        meetingTitle={meeting.title}
+        existingEvaluation={overallEval}
+        onSuccess={() => {
+          setIsOverallEvalOpen(false);
+          refetch();
+          refetchOverallEval();
+          refetchEvalSummary();
+        }}
+        onClose={() => setIsOverallEvalOpen(false)}
+        onCancel={() => setIsOverallEvalOpen(false)}
       />
     </>
   );

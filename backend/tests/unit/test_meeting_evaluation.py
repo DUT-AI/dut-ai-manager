@@ -223,3 +223,109 @@ async def test_get_meeting_evaluation_summary_use_case():
     assert len(trainer_breakdowns) == 2
     assert len(trainee_breakdowns) == 2
 
+
+@pytest.mark.asyncio
+async def test_submit_meeting_overall_evaluation_success():
+    from app.meeting.application.submit_meeting_overall_evaluation_use_case import (
+        SubmitMeetingOverallEvaluationUseCase,
+    )
+    from app.meeting.application.get_meeting_overall_evaluation_use_case import (
+        GetMeetingOverallEvaluationUseCase,
+    )
+    from app.meeting.domain.entity import MeetingOverallEvaluation
+
+    meeting_repo = MagicMock()
+    overall_repo = MagicMock()
+
+    past_start = datetime.now() - timedelta(hours=3)
+    past_end = datetime.now() - timedelta(hours=1)
+
+    mock_meeting = Meeting(
+        id=1,
+        title="Python 101",
+        start_time=past_start,
+        end_time=past_end,
+        enable_evaluation=True,
+        created_by=10,
+    )
+    meeting_repo.get_by_id.return_value = mock_meeting
+    overall_repo.get_by_meeting_id.return_value = None
+    overall_repo.exists_for_meeting.return_value = False
+    overall_repo.save.side_effect = lambda x: x
+
+    use_case = SubmitMeetingOverallEvaluationUseCase(meeting_repo, overall_repo)
+    scores = [
+        {"criteria_code": "ATTENDANCE_CONDUCT", "score": 5},
+        {"criteria_code": "INTERACTION_CONTRIBUTION", "score": 4},
+        {"criteria_code": "ABSORPTION_COMPREHENSION", "score": 5},
+        {"criteria_code": "PRE_CLASS_PREPARATION", "score": 4},
+    ]
+
+    result = await use_case.execute(
+        meeting_id=1,
+        trainer_id=10,
+        scores_data=scores,
+        general_feedback="Lớp học hoàn thành tốt.",
+    )
+
+    assert result.meeting_id == 1
+    assert result.trainer_id == 10
+    assert result.average_score == 4.5
+    assert result.general_feedback == "Lớp học hoàn thành tốt."
+
+    # Test GetMeetingOverallEvaluationUseCase
+    overall_repo.get_by_meeting_id.return_value = MeetingOverallEvaluation(
+        id=1,
+        meeting_id=1,
+        trainer_id=10,
+        average_score=4.5,
+        scores=result.scores,
+        general_feedback="Lớp học hoàn thành tốt.",
+    )
+    get_uc = GetMeetingOverallEvaluationUseCase(meeting_repo, overall_repo)
+    get_res = await get_uc.execute(meeting_id=1)
+    assert get_res.meeting_id == 1
+    assert get_res.average_score == 4.5
+
+
+@pytest.mark.asyncio
+async def test_check_evaluation_deadline_creates_violation_when_trainer_missing():
+    from app.meeting.application.check_evaluation_deadline_job_use_case import (
+        CheckEvaluationDeadlineJobUseCase,
+    )
+
+    meeting_repo = MagicMock()
+    eval_repo = MagicMock()
+    overall_repo = MagicMock()
+    violation_repo = MagicMock()
+
+    # Giả lập meeting đã kết thúc > 24h
+    orm_meeting = MagicMock()
+    orm_meeting.id = 1
+    meeting_repo.session.scalars.return_value.all.return_value = [orm_meeting]
+
+    mock_meeting = Meeting(
+        id=1,
+        title="Python 101",
+        start_time=datetime.now() - timedelta(hours=30),
+        end_time=datetime.now() - timedelta(hours=28),
+        enable_evaluation=True,
+        created_by=10,
+        participants=[],
+    )
+    meeting_repo._to_domain.return_value = mock_meeting
+    eval_repo.get_evaluations_by_meeting.return_value = []
+    overall_repo.exists_for_meeting.return_value = False  # Trainer chưa đánh giá
+
+    # Mock _has_existing_violation
+    violation_repo.session.scalars.return_value.first.return_value = None
+
+    job = CheckEvaluationDeadlineJobUseCase(
+        meeting_repo, eval_repo, overall_repo, violation_repo
+    )
+    res = await job.execute()
+
+    assert res["meetings_scanned"] == 1
+    assert res["trainer_violations_created"] == 1
+    violation_repo.save.assert_called_once()
+

@@ -72,6 +72,21 @@ export const meetingService = {
     return response.data;
   },
 
+  async submitMeetingOverallEvaluation(meetingId: number, payload: import('@/features/meeting/types/meeting.types').SubmitMeetingOverallEvaluationPayload) {
+    const response = await axiosInstance.post<ApiResponse<import('@/features/meeting/types/meeting.types').MeetingOverallEvaluationResponse>>(
+      `/${this.subPath}/${meetingId}/evaluations/overall`,
+      payload
+    );
+    return response.data;
+  },
+
+  async getMeetingOverallEvaluation(meetingId: number) {
+    const response = await axiosInstance.get<ApiResponse<import('@/features/meeting/types/meeting.types').MeetingOverallEvaluationResponse | null>>(
+      `/${this.subPath}/${meetingId}/evaluations/overall`
+    );
+    return response.data;
+  },
+
   async submitTrainerEvaluation(meetingId: number, payload: import('@/features/meeting/types/meeting.types').TrainerSubmitEvaluationPayload) {
     const response = await axiosInstance.post<ApiResponse<import('@/features/meeting/types/meeting.types').EvaluationResponse>>(
       `/${this.subPath}/${meetingId}/evaluations/trainer`,

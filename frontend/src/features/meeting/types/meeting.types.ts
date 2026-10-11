@@ -102,6 +102,22 @@ export interface EvaluationScoreItemSubmit {
   score: number;
 }
 
+export interface SubmitMeetingOverallEvaluationPayload {
+  scores: EvaluationScoreItemSubmit[];
+  general_feedback?: string;
+}
+
+export interface MeetingOverallEvaluationResponse {
+  id: number;
+  meeting_id: number;
+  trainer_id: number;
+  scores: EvaluationScoreItem[];
+  average_score: number;
+  general_feedback?: string | null;
+  trainer?: UserRef | null;
+  created_at: string;
+}
+
 export interface TrainerSubmitEvaluationPayload {
   target_user_id: number;
   scores: EvaluationScoreItemSubmit[];
@@ -150,6 +166,7 @@ export interface MeetingEvaluationSummary {
   trainer_average_score?: number | null;
   trainee_average_score?: number | null;
   my_evaluation?: EvaluationResponse | null;
+  overall_evaluation?: MeetingOverallEvaluationResponse | null;
 }
 
 export interface MeetingSeatAvailabilityDto {

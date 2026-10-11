@@ -3,6 +3,7 @@ from datetime import timedelta
 from app.meeting.domain.value_objects import EvaluationType, ParticipantStatus
 from app.meeting.infrastructure.repository import (
     MeetingEvaluationRepository,
+    MeetingOverallEvaluationRepository,
     MeetingRepository,
 )
 from app.utils.datetime import get_current_utc7_time
@@ -17,10 +18,12 @@ class CheckEvaluationDeadlineJobUseCase:
         self,
         meeting_repo: MeetingRepository,
         evaluation_repo: MeetingEvaluationRepository,
+        overall_eval_repo: MeetingOverallEvaluationRepository,
         violation_repo: ViolationRepository,
     ):
         self.meeting_repo = meeting_repo
         self.evaluation_repo = evaluation_repo
+        self.overall_eval_repo = overall_eval_repo
         self.violation_repo = violation_repo
 
     async def execute(self) -> dict:
@@ -87,22 +90,12 @@ class CheckEvaluationDeadlineJobUseCase:
                         self.violation_repo.save(v)
                         trainee_violations_created += 1
 
-            # 2. Kiểm tra Trainer (người tạo meeting): Phải chấm đủ cho toàn bộ Trainee đã tham gia
+            # 2. Kiểm tra Trainer (người tạo meeting / host): Chỉ cần 01 bản ghi MeetingOverallEvaluation cho meeting đó (quan hệ 1-1)
             trainer_id = meeting.created_by
             if trainer_id:
-                trainer_eval_targets = {
-                    e.target_user_id
-                    for e in meeting_evals
-                    if e.evaluation_type == EvaluationType.TRAINER_TO_TRAINEE
-                }
-                unevaluated_trainees = [
-                    p
-                    for p in joined_participants
-                    if p.user_id not in trainer_eval_targets
-                ]
-
-                if unevaluated_trainees:
-                    reason = f"Trainer chưa hoàn tất đánh giá học viên cho buổi học '{meeting.title}' trong vòng 24h"
+                has_overall_eval = self.overall_eval_repo.exists_for_meeting(meeting.id)
+                if not has_overall_eval:
+                    reason = f"Trainer chưa hoàn tất đánh giá tổng thể buổi học '{meeting.title}' trong vòng 24h"
                     existing_violation = self._has_existing_violation(
                         trainer_id, reason
                     )

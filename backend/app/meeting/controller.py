@@ -15,9 +15,11 @@ from app.meeting.application import (
     CreateMeetingUseCase,
     DeleteMeetingUseCase,
     GetMeetingEvaluationSummaryUseCase,
+    GetMeetingOverallEvaluationUseCase,
     GetMeetingsUseCase,
     GetMyEvaluationResultUseCase,
     GetUpcomingMeetingsWithSeatsUseCase,
+    SubmitMeetingOverallEvaluationUseCase,
     SubmitTraineeEvaluationUseCase,
     SubmitTrainerEvaluationUseCase,
     UpdateMeetingUseCase,
@@ -31,10 +33,12 @@ from app.meeting.schemas import (
     MeetingCreate,
     MeetingDetailResponse,
     MeetingEvaluationSummaryResponse,
+    MeetingOverallEvaluationResponse,
     MeetingResponse,
     MeetingSeatAvailabilityDto,
     MeetingUpdate,
     ParticipantResponse,
+    SubmitMeetingOverallEvaluationRequest,
     TraineeSubmitEvaluationRequest,
     TrainerSubmitEvaluationRequest,
     UpdateParticipantStatusRequest,
@@ -338,8 +342,51 @@ async def get_capacity_forecast(
 
 
 # ==========================================
-# EVALUATION ENDPOINTS (Trainer & Trainee)
+# EVALUATION ENDPOINTS (Overall & Individual)
 # ==========================================
+
+
+@router.post(
+    "/{meeting_id}/evaluations/overall",
+    response_model=ApiResponse[MeetingOverallEvaluationResponse],
+    status_code=status.HTTP_201_CREATED,
+)
+@inject
+async def submit_meeting_overall_evaluation(
+    meeting_id: int,
+    data: SubmitMeetingOverallEvaluationRequest,
+    uc: FromDishka[SubmitMeetingOverallEvaluationUseCase],
+    current_user: Annotated[CurrentUser, hasPermission(MeetingPermission.CREATE)],
+):
+    """Trainer gửi đánh giá tổng thể cho toàn bộ buổi học (quan hệ 1 - 1 với Meeting)."""
+    if current_user.id is None:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    result = await uc.execute(
+        meeting_id=meeting_id,
+        trainer_id=current_user.id,
+        scores_data=[s.model_dump() for s in data.scores],
+        general_feedback=data.general_feedback,
+    )
+    return ApiResponse.success(
+        data=MeetingOverallEvaluationResponse.from_domain(result),
+        message="Đánh giá tổng thể buổi học thành công",
+    )
+
+
+@router.get(
+    "/{meeting_id}/evaluations/overall",
+    response_model=ApiResponse[MeetingOverallEvaluationResponse | None],
+)
+@inject
+async def get_meeting_overall_evaluation(
+    meeting_id: int,
+    uc: FromDishka[GetMeetingOverallEvaluationUseCase],
+    _current_user: CurrentUser,
+):
+    """Lấy đánh giá tổng thể của buổi học (Công khai cho toàn bộ thành viên)."""
+    result = await uc.execute(meeting_id=meeting_id)
+    data = MeetingOverallEvaluationResponse.from_domain(result) if result else None
+    return ApiResponse.success(data=data)
 
 
 @router.post(

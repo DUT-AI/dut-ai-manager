@@ -11,9 +11,11 @@ from app.meeting.application import (
     CreateMeetingUseCase,
     DeleteMeetingUseCase,
     GetMeetingEvaluationSummaryUseCase,
+    GetMeetingOverallEvaluationUseCase,
     GetMeetingsUseCase,
     GetMyEvaluationResultUseCase,
     GetUpcomingMeetingsWithSeatsUseCase,
+    SubmitMeetingOverallEvaluationUseCase,
     SubmitTraineeEvaluationUseCase,
     SubmitTrainerEvaluationUseCase,
     UpdateMeetingUseCase,
@@ -23,6 +25,7 @@ from app.meeting.application.event_handlers import MeetingNotificationHandler
 from app.meeting.application.sse_handler import MeetingSseHandler
 from app.meeting.infrastructure.repository import (
     MeetingEvaluationRepository,
+    MeetingOverallEvaluationRepository,
     MeetingRepository,
     ParticipantRepository,
 )
@@ -52,6 +55,12 @@ class MeetingModuleProvider(Provider):
         self, session: Session
     ) -> MeetingEvaluationRepository:
         return MeetingEvaluationRepository(session)
+
+    @provide
+    def get_meeting_overall_evaluation_repo(
+        self, session: Session
+    ) -> MeetingOverallEvaluationRepository:
+        return MeetingOverallEvaluationRepository(session)
 
     # Use Cases
     @provide
@@ -137,6 +146,22 @@ class MeetingModuleProvider(Provider):
         return CalculateCurrentCapacityUseCase(meeting_repo)
 
     @provide
+    def submit_meeting_overall_evaluation_uc(
+        self,
+        meeting_repo: MeetingRepository,
+        overall_eval_repo: MeetingOverallEvaluationRepository,
+    ) -> SubmitMeetingOverallEvaluationUseCase:
+        return SubmitMeetingOverallEvaluationUseCase(meeting_repo, overall_eval_repo)
+
+    @provide
+    def get_meeting_overall_evaluation_uc(
+        self,
+        meeting_repo: MeetingRepository,
+        overall_eval_repo: MeetingOverallEvaluationRepository,
+    ) -> GetMeetingOverallEvaluationUseCase:
+        return GetMeetingOverallEvaluationUseCase(meeting_repo, overall_eval_repo)
+
+    @provide
     def submit_trainer_evaluation_uc(
         self,
         meeting_repo: MeetingRepository,
@@ -165,18 +190,22 @@ class MeetingModuleProvider(Provider):
         self,
         meeting_repo: MeetingRepository,
         evaluation_repo: MeetingEvaluationRepository,
+        overall_eval_repo: MeetingOverallEvaluationRepository,
     ) -> GetMeetingEvaluationSummaryUseCase:
-        return GetMeetingEvaluationSummaryUseCase(meeting_repo, evaluation_repo)
+        return GetMeetingEvaluationSummaryUseCase(
+            meeting_repo, evaluation_repo, overall_eval_repo
+        )
 
     @provide
     def check_evaluation_deadline_job_uc(
         self,
         meeting_repo: MeetingRepository,
         evaluation_repo: MeetingEvaluationRepository,
+        overall_eval_repo: MeetingOverallEvaluationRepository,
         violation_repo: ViolationRepository,
     ) -> CheckEvaluationDeadlineJobUseCase:
         return CheckEvaluationDeadlineJobUseCase(
-            meeting_repo, evaluation_repo, violation_repo
+            meeting_repo, evaluation_repo, overall_eval_repo, violation_repo
         )
 
     @provide

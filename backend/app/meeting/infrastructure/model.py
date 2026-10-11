@@ -17,6 +17,9 @@ from app.meeting.domain.entity import Meeting as MeetingEntity
 from app.meeting.domain.entity import (
     MeetingEvaluation as MeetingEvaluationEntity,
 )
+from app.meeting.domain.entity import (
+    MeetingOverallEvaluation as MeetingOverallEvaluationEntity,
+)
 from app.meeting.domain.entity import MeetingParticipant as MeetingParticipantEntity
 from app.meeting.domain.value_objects import EvaluationType, ParticipantStatus
 from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
@@ -46,6 +49,12 @@ class Meeting(SQLAlchemyTimestampMixin, Base):
     )
     evaluations: Mapped[list["MeetingEvaluation"]] = relationship(
         back_populates="meeting",
+        cascade="all, delete-orphan",
+    )
+    overall_evaluation: Mapped["MeetingOverallEvaluation | None"] = relationship(
+        "MeetingOverallEvaluation",
+        back_populates="meeting",
+        uselist=False,
         cascade="all, delete-orphan",
     )
     creator: Mapped["UserModel | None"] = relationship(
@@ -263,4 +272,69 @@ class MeetingEvaluation(SQLAlchemyTimestampMixin, Base):
             scores=[s.model_dump() for s in entity.scores],
             average_score=entity.average_score,
             feedback_text=entity.feedback_text,
+        )
+
+
+class MeetingOverallEvaluation(SQLAlchemyTimestampMixin, Base):
+    """Bản ghi đánh giá tổng thể buổi học do Trainer thực hiện (ORM Model - Quan hệ 1 - 1 với Meeting)"""
+
+    __tablename__ = "meeting_overall_evaluations"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    meeting_id: Mapped[int] = mapped_column(
+        ForeignKey("meetings.id", ondelete="CASCADE"), unique=True, index=True
+    )
+    trainer_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    scores: Mapped[list[dict]] = mapped_column(
+        postgresql.JSONB(astext_type=String()), default=list
+    )
+    average_score: Mapped[float] = mapped_column(Float, default=0.0)
+    general_feedback: Mapped[str | None] = mapped_column(String(2000), default=None)
+
+    meeting: Mapped[Meeting] = relationship(back_populates="overall_evaluation")
+    trainer: Mapped["UserModel"] = relationship(foreign_keys=[trainer_id])
+
+    def to_entity(self) -> "MeetingOverallEvaluationEntity":
+        trainer_ref = None
+        if self.trainer:
+            trainer_ref = UserRef(
+                id=self.trainer.id or 0,
+                name=self.trainer.name or "",
+                avatar_url=self.trainer.avatar_url,
+            )
+
+        score_items = [
+            EvaluationScoreItem(
+                criteria_code=item.get("criteria_code", ""),
+                score=item.get("score", 0),
+            )
+            for item in (self.scores or [])
+        ]
+
+        return MeetingOverallEvaluationEntity(
+            id=self.id,
+            meeting_id=self.meeting_id,
+            trainer_id=self.trainer_id,
+            scores=score_items,
+            average_score=self.average_score,
+            general_feedback=self.general_feedback,
+            trainer=trainer_ref,
+            created_at=self.created_at or get_current_utc7_time(),
+            updated_at=self.updated_at or get_current_utc7_time(),
+            created_by=self.created_by,
+            updated_by=self.updated_by,
+            is_deleted=self.is_deleted if self.is_deleted is not None else False,
+        )
+
+    @classmethod
+    def from_entity(
+        cls, entity: "MeetingOverallEvaluationEntity"
+    ) -> "MeetingOverallEvaluation":
+        return cls(
+            id=entity.id,
+            meeting_id=entity.meeting_id,
+            trainer_id=entity.trainer_id,
+            scores=[s.model_dump() for s in entity.scores],
+            average_score=entity.average_score,
+            general_feedback=entity.general_feedback,
         )

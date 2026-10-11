@@ -15,10 +15,14 @@ from app.shared.infrastructure.base_repository import BaseRepository
 
 from ..domain.entity import Meeting as DomainMeeting
 from ..domain.entity import MeetingEvaluation as DomainEvaluation
+from ..domain.entity import (
+    MeetingOverallEvaluation as DomainOverallEvaluation,
+)
 from ..domain.entity import MeetingParticipant as DomainParticipant
 from ..domain.value_objects import ParticipantStatus
 from .model import Meeting as ORMMeeting
 from .model import MeetingEvaluation as ORMEvaluation
+from .model import MeetingOverallEvaluation as ORMOverallEvaluation
 from .model import MeetingParticipant as ORMParticipant
 
 
@@ -686,3 +690,63 @@ class MeetingEvaluationRepository(BaseRepository[ORMEvaluation, DomainEvaluation
             ORMEvaluation.is_deleted.is_(False),
         )
         return self.session.scalar(stmt) or 0
+
+
+class MeetingOverallEvaluationRepository(
+    BaseRepository[ORMOverallEvaluation, DomainOverallEvaluation]
+):
+    """Repository quản lý đánh giá tổng thể buổi học do Trainer thực hiện (MeetingOverallEvaluation - Quan hệ 1 - 1)"""
+
+    def __init__(self, session: Session):
+        super().__init__(session, ORMOverallEvaluation)
+
+    def _to_domain(self, orm: ORMOverallEvaluation) -> DomainOverallEvaluation:
+        return orm.to_entity()
+
+    def save(
+        self, entity: DomainOverallEvaluation
+    ) -> DomainOverallEvaluation:
+        """Lưu hoặc cập nhật đánh giá tổng thể buổi học (quan hệ 1 - 1)."""
+        existing = (
+            self.session.scalars(
+                select(ORMOverallEvaluation).where(
+                    ORMOverallEvaluation.meeting_id == entity.meeting_id,
+                    ORMOverallEvaluation.is_deleted.is_(False),
+                )
+            ).first()
+        )
+        if existing:
+            existing.scores = [s.model_dump() for s in entity.scores]
+            existing.average_score = entity.average_score
+            existing.general_feedback = entity.general_feedback
+            existing.trainer_id = entity.trainer_id
+            orm = existing
+        else:
+            orm = ORMOverallEvaluation.from_entity(entity)
+
+        self.session.add(orm)
+        self.session.flush()
+        return orm.to_entity()
+
+    def get_by_meeting_id(
+        self, meeting_id: int
+    ) -> DomainOverallEvaluation | None:
+        """Lấy đánh giá tổng thể của buổi học kèm thông tin Trainer."""
+        stmt = (
+            select(ORMOverallEvaluation)
+            .where(
+                ORMOverallEvaluation.meeting_id == meeting_id,
+                ORMOverallEvaluation.is_deleted.is_(False),
+            )
+            .options(joinedload(ORMOverallEvaluation.trainer))
+        )
+        orm = self.session.scalars(stmt).first()
+        return self._to_domain(orm) if orm else None
+
+    def exists_for_meeting(self, meeting_id: int) -> bool:
+        """Kiểm tra buổi học đã có đánh giá tổng thể từ Trainer hay chưa."""
+        stmt = select(func.count(ORMOverallEvaluation.id)).where(
+            ORMOverallEvaluation.meeting_id == meeting_id,
+            ORMOverallEvaluation.is_deleted.is_(False),
+        )
+        return (self.session.scalar(stmt) or 0) > 0
