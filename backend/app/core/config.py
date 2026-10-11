@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     MINIO_SECURE: bool = False
 
     # Meeting Configuration
-    MAX_SEATS: int = 35
+    MAX_SEATS: int = 31
 
     # Discord Bot Configuration
     DISCORD_BOT_TOKEN: str = ""
