@@ -274,6 +274,24 @@ class GetInvoicesUseCase:
             limit=limit,
         )
 
+    def get_paged_invoices(
+        self,
+        user_id: int | None = None,
+        status: str | None = None,
+        billing_period: date | None = None,
+        team_id: int | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[Invoice], int]:
+        return self.repo.get_paged_active(
+            user_id=user_id,
+            status=status,
+            billing_period=billing_period,
+            team_id=team_id,
+            page=page,
+            page_size=page_size,
+        )
+
     def get_matrix_report(
         self,
         start_month: int,

@@ -84,17 +84,17 @@ class GetExpensesUseCase:
         status: ExpenseStatus | None = None,
         spender_id: int | None = None,
         team_id: int | None = None,
-        limit: int = 100,
-        offset: int = 0,
-    ) -> Sequence[ExpenseInvoiceModel]:
-        return self.repo.get_all(
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[Sequence[ExpenseInvoiceModel], int]:
+        return self.repo.get_paged(
             month=month,
             year=year,
             status=status,
             spender_id=spender_id,
             team_id=team_id,
-            limit=limit,
-            offset=offset,
+            page=page,
+            page_size=page_size,
         )
 
 

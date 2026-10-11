@@ -5,7 +5,7 @@ import {
     PhoneOutlined,
     UserOutlined,
 } from '@ant-design/icons';
-import { Avatar, Badge, Button, Popconfirm, Space, Table, Tag, Typography } from 'antd';
+import { Avatar, Badge, Button, Popconfirm, Space, Table, Tag, Typography, type TablePaginationConfig } from 'antd';
 import { UserStatus, type UserResponse } from '../types/user.types';
 
 const { Text } = Typography;
@@ -13,6 +13,7 @@ const { Text } = Typography;
 interface UserTableProps {
     users: UserResponse[];
     isLoading: boolean;
+    paginationProps?: TablePaginationConfig;
     canUpdate: boolean;
     canDelete: boolean;
     onNavigateProfile: (userId: number) => void;
@@ -23,6 +24,7 @@ interface UserTableProps {
 export const UserTable = ({
     users,
     isLoading,
+    paginationProps,
     canUpdate,
     canDelete,
     onNavigateProfile,
@@ -149,7 +151,7 @@ export const UserTable = ({
             rowKey="id"
             loading={isLoading}
             className="border border-gray-100 rounded-lg custom-table"
-            pagination={{ pageSize: 10 }}
+            pagination={paginationProps}
             scroll={{ x: 1000 }}
         />
     );

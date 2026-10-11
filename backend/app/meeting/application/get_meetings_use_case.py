@@ -17,12 +17,13 @@ class GetMeetingsUseCase:
 
     def execute(
         self,
-        skip: int = 0,
-        limit: int = 100,
+        page: int = 1,
+        page_size: int = 20,
         start_date: date | None = None,
         end_date: date | None = None,
         deleted: bool = False,
-    ) -> list[Meeting]:
+        all_records: bool = False,
+    ) -> tuple[list[Meeting], int]:
         filters = []
         if start_date:
             filters.append(
@@ -38,14 +39,23 @@ class GetMeetingsUseCase:
                 )
             )
 
+        if all_records:
+            qs = build_query_support(
+                filters=filters,
+                sort_by="start_time",
+                descending=True,
+            )
+            items = self.repo.get_all(query_support=qs, deleted=deleted)
+            return items, len(items)
+
         qs = build_query_support(
-            skip=skip,
-            limit=limit,
+            page=page,
+            page_size=page_size,
             filters=filters,
             sort_by="start_time",
             descending=True,
         )
-        return self.repo.get_all(query_support=qs, deleted=deleted)
+        return self.repo.get_paged(query_support=qs, deleted=deleted)
 
     def get_by_id(self, meeting_id: int) -> Meeting:
         meeting = self.repo.get_with_participants(meeting_id)

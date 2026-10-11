@@ -107,12 +107,13 @@ const ProfilePage = () => {
     const user = useMemo(() => users.find(u => u.id === uid), [users, uid]);
 
     // Lazy load data - only fetch when tab is active
-    const { data: violations = [], isLoading: violationsLoading } = useViolations({
+    const { data: violationsResult, isLoading: violationsLoading } = useViolations({
         userId: uid,
         month: selectedDate.month() + 1,
         year: selectedDate.year(),
         enabled: activeTab === 'violations' && !!uid,
     });
+    const violations = violationsResult?.data ?? [];
 
     const { data: bonusPoints = [], isLoading: bonusLoading } = useBonusPoints({
         userId: uid,

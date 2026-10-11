@@ -42,3 +42,13 @@ class GetUserUseCase:
 
     def search(self, keyword: str) -> list[UserEntity]:
         return self.repo.search_user(keyword)
+
+    def get_paged(
+        self, page: int = 1, page_size: int = 20, keyword: str | None = None
+    ) -> tuple[list[UserEntity], int]:
+        return self.repo.get_paged_users(
+            page=page, page_size=page_size, keyword=keyword
+        )
+
+    def get_active_users(self) -> list[UserEntity]:
+        return self.repo.get_active_users()

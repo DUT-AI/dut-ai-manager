@@ -12,8 +12,10 @@ from app.shared.domain.query_support import (
 
 
 def build_query_support(
-    skip: int = 0,
-    limit: int = 100,
+    skip: int | None = None,
+    limit: int | None = None,
+    page: int | None = None,
+    page_size: int | None = None,
     sort_by: str | None = None,
     descending: bool = True,
     filters: list[FilterCriterion] | None = None,
@@ -22,8 +24,16 @@ def build_query_support(
 ) -> QuerySupport:
     """
     Helper to build QuerySupport from common parameters.
+    Supports both (page, page_size) and legacy (skip, limit).
     """
-    pagination = OffsetPaginationParams(limit=limit, offset=skip)
+    if page is not None and page_size is not None:
+        pagination = OffsetPaginationParams.from_page(page=page, page_size=page_size)
+    elif limit is not None:
+        pagination = OffsetPaginationParams(limit=limit, offset=skip or 0)
+    elif page_size is not None:
+        pagination = OffsetPaginationParams.from_page(page=page or 1, page_size=page_size)
+    else:
+        pagination = OffsetPaginationParams(limit=100, offset=skip or 0)
 
     sorting = None
     if sort_by:

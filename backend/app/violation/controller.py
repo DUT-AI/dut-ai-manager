@@ -9,11 +9,12 @@ from datetime import date
 from typing import Annotated, Any
 
 from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.deps import hasPermission
 from app.core.permissions import ViolationPermission
-from app.shared.application.response import ApiResponse
+from app.shared.application.pagination import PaginationParams
+from app.shared.application.response import ApiResponse, PaginationMeta
 from app.user.domain.entity import UserEntity
 from app.violation.application import (
     BulkDeleteViolationsUseCase,
@@ -38,26 +39,34 @@ router = APIRouter(prefix="/violations", tags=["violations"])
 async def get_violations(
     uc: FromDishka[GetViolationsUseCase],
     _: Annotated[UserEntity, hasPermission(ViolationPermission.READ)],
+    pagination: Annotated[PaginationParams, Depends()],
     user_id: int | None = None,
     month: int | None = None,
     year: int | None = None,
     start_date: date | None = None,
     end_date: date | None = None,
-    skip: int = 0,
-    limit: int = 100,
     deleted: bool = False,
 ):
-    if user_id or month or year or start_date or end_date:
-        result = uc.get_by_month(
-            user_id=user_id,
-            month=month,
-            year=year,
-            start_date=start_date,
-            end_date=end_date,
-        )
-    else:
-        result = uc.get_all(skip=skip, limit=limit, deleted=deleted)
-    return ApiResponse.success(data=result)
+    violations, total = uc.get_paged(
+        page=pagination.page,
+        page_size=pagination.page_size,
+        user_id=user_id,
+        month=month,
+        year=year,
+        start_date=start_date,
+        end_date=end_date,
+        deleted=deleted,
+    )
+    meta = PaginationMeta.create(
+        page=pagination.page,
+        page_size=pagination.page_size,
+        total=total,
+    )
+    return ApiResponse.success(
+        data=violations,
+        message="Violations retrieved successfully",
+        pagination=meta,
+    )
 
 
 @router.post("", response_model=ApiResponse[list[ViolationResponse]])

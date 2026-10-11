@@ -42,12 +42,13 @@ export const UserRecordDetailModal = ({
   });
 
   // Fetch violations if active tab is violation
-  const { data: violations = [], isLoading: isViolationLoading } = useViolations({
+  const { data: violationsResult, isLoading: isViolationLoading } = useViolations({
     userId: user?.id,
     startDate,
     endDate,
     enabled: isOpen && !!user?.id && !isBonus,
   });
+  const violations = violationsResult?.data ?? [];
 
   const loading = isBonus ? isBonusLoading : isViolationLoading;
 

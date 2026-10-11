@@ -35,3 +35,8 @@ class TeamResponse(TeamBase):
 
     class Config:
         from_attributes = True
+
+
+class TeamOptionDto(BaseModel):
+    id: int
+    name: str

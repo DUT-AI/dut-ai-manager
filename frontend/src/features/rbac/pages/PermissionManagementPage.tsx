@@ -23,6 +23,7 @@ import {
     PermissionFormModal,
     PermissionDetailDrawer,
 } from '../components/permissions';
+import { useTablePagination } from '@/hooks/useTablePagination';
 
 const { Title, Text } = Typography;
 
@@ -62,13 +63,19 @@ const PermissionManagementPage: React.FC = () => {
     const [detailItem, setDetailItem] = useState<PermissionRequestResponse | null>(null);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
 
+    // Pagination
+    const { page, pageSize, resetPage, getPaginationProps } = useTablePagination();
+
     // Queries & Mutations
     const { data: permissions = [], isLoading } = usePermissionRequests({
         month: filterMonth,
         year: filterYear,
         category: filterCategory,
         userId: filterUserId,
+        page,
+        pageSize,
     });
+    const totalCount = (permissions as any)?.pagination?.total ?? permissions.length;
     const { data: usersData = [] } = useUsers();
     const users = Array.isArray(usersData) ? usersData : (usersData as any)?.data || [];
 
@@ -124,6 +131,7 @@ const PermissionManagementPage: React.FC = () => {
         setFilterYear(undefined);
         setFilterCategory(undefined);
         setFilterUserId(undefined);
+        resetPage();
     };
 
     return (
@@ -174,9 +182,16 @@ const PermissionManagementPage: React.FC = () => {
                             setFilterDate(date);
                             setFilterMonth(date ? date.month() + 1 : undefined);
                             setFilterYear(date ? date.year() : undefined);
+                            resetPage();
                         }}
-                        onCategoryChange={(val) => setFilterCategory(val)}
-                        onUserChange={(val) => setFilterUserId(val)}
+                        onCategoryChange={(val) => {
+                            setFilterCategory(val);
+                            resetPage();
+                        }}
+                        onUserChange={(val) => {
+                            setFilterUserId(val);
+                            resetPage();
+                        }}
                         onReset={handleResetFilter}
                     />
                 </motion.div>
@@ -199,6 +214,7 @@ const PermissionManagementPage: React.FC = () => {
                             isLoading={isLoading}
                             canUpdate={canUpdate}
                             canDelete={canDelete}
+                            pagination={getPaginationProps(totalCount)}
                             onViewDetail={handleViewDetail}
                             onEdit={handleOpenEdit}
                             onDelete={handleDelete}

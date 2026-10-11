@@ -83,12 +83,13 @@ const InvoicesPage = () => {
 
   const hasViolation = detail?.items.some(item => item.item_type === 'VIOLATION');
 
-  const { data: violations = [], isLoading: isViolationsLoading } = useViolations({
+  const { data: violationsResult, isLoading: isViolationsLoading } = useViolations({
     userId: detail?.user_id,
     month,
     year,
     enabled: isModalOpen && !!detail && !!hasViolation && !!month && !!year
   });
+  const violations = violationsResult?.data ?? [];
 
   useEffect(() => {
     if (detail?.status === InvoiceStatus.PAID && isModalOpen) {
@@ -178,7 +179,12 @@ const InvoicesPage = () => {
             rowKey="id"
             loading={isLoading}
             locale={{ emptyText: <Empty description="Bạn chưa có hóa đơn nào" /> }}
-            pagination={{ pageSize: 10 }}
+            pagination={{
+              defaultPageSize: 20,
+              pageSizeOptions: ['10', '20', '50', '100'],
+              showSizeChanger: true,
+              showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} hóa đơn`,
+            }}
             scroll={{ x: 'max-content' }}
           />
         </Card>

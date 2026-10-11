@@ -1,4 +1,4 @@
-import { Table, Space, Avatar, Typography, Tag, Button, Popconfirm } from 'antd';
+import { Table, Space, Avatar, Typography, Tag, Button, Popconfirm, type TablePaginationConfig } from 'antd';
 import { UserOutlined, EyeOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { type Invoice, InvoiceStatus } from '@/types';
@@ -6,14 +6,22 @@ import type { UserResponse } from '@/features/users/types/user.types';
 
 const { Text } = Typography;
 
+export interface BillingTableUserItem {
+  id: number;
+  name: string;
+  avatar_url?: string | null;
+  email?: string;
+}
+
 interface BillingTableProps {
   invoices: Invoice[];
   isLoading: boolean;
-  users: UserResponse[];
+  users: Array<UserResponse | BillingTableUserItem>;
   onViewDetail: (id: number) => void;
   onEdit?: (invoice: Invoice) => void;
   onDelete: (id: number) => void;
   deletingId: number | null;
+  pagination?: TablePaginationConfig | false;
 }
 
 const BillingTable = ({
@@ -23,7 +31,8 @@ const BillingTable = ({
   onViewDetail,
   onEdit,
   onDelete,
-  deletingId
+  deletingId,
+  pagination,
 }: BillingTableProps) => {
   const columns = [
     {
@@ -123,7 +132,7 @@ const BillingTable = ({
       columns={columns}
       rowKey="id"
       loading={isLoading}
-      pagination={{ pageSize: 15 }}
+      pagination={pagination !== undefined ? pagination : { pageSize: 20 }}
       scroll={{ x: 'max-content' }}
     />
   );

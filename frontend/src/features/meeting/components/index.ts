@@ -14,3 +14,4 @@ export { MeetingParticipantsTab } from './MeetingParticipantsTab';
 export { ParticipantStatusTag } from './ParticipantStatusTag';
 export { ParticipantActionButtons } from './ParticipantActionButtons';
 export { MeetingBatchCheckInBanner } from './MeetingBatchCheckInBanner';
+export { MeetingTable } from './MeetingTable';

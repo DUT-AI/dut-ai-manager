@@ -15,17 +15,13 @@ const billingService = {
 
   getAllInvoices: async (
     filters?: { user_id?: number; team_id?: number; status?: string; billing_period?: string },
-    skip: number = 0,
-    limit: number = 100
+    page: number = 1,
+    pageSize: number = 20
   ) => {
-    const apiParams: {
-      skip: number;
-      limit: number;
-      user_id?: number;
-      team_id?: number;
-      bill_status?: string;
-      billing_period?: string;
-    } = { skip, limit };
+    const apiParams: Record<string, unknown> = {
+      page,
+      page_size: pageSize,
+    };
 
     if (filters) {
       if (filters.user_id !== undefined) apiParams.user_id = filters.user_id;

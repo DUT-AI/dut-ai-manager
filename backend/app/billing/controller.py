@@ -23,7 +23,8 @@ from app.billing.schemas import (
 )
 from app.core.deps import CurrentUser, PermissionChecker
 from app.core.permissions import BillingPermission
-from app.shared.application.response import ApiResponse
+from app.shared.application.pagination import PaginationParams
+from app.shared.application.response import ApiResponse, PaginationMeta
 
 router = APIRouter(prefix="/billing", tags=["Billing"])
 
@@ -130,26 +131,30 @@ async def get_my_invoices(
 async def get_all_invoices(
     get_uc: FromDishka[GetInvoicesUseCase],
     _: Annotated[CurrentUser, Depends(PermissionChecker(BillingPermission.READ))],
+    pagination: Annotated[PaginationParams, Depends()],
     user_id: int | None = Query(default=None),
     team_id: int | None = Query(default=None),
     bill_status: InvoiceStatus | None = Query(default=None),
     billing_period: date | None = Query(default=None),
-    skip: int = 0,
-    limit: int = 100,
 ):
     """
-    Get all invoices (Admin only).
+    Get all invoices with server-side pagination (Admin only).
     """
-    invoices = get_uc.get_all_invoices(
+    invoices, total = get_uc.get_paged_invoices(
         user_id=user_id,
         status=bill_status,
         billing_period=billing_period,
         team_id=team_id,
-        skip=skip,
-        limit=limit,
+        page=pagination.page,
+        page_size=pagination.page_size,
+    )
+    meta = PaginationMeta.create(
+        page=pagination.page,
+        page_size=pagination.page_size,
+        total=total,
     )
     data = [InvoiceResponse.from_domain(inv) for inv in invoices]
-    return ApiResponse.success(data=data)
+    return ApiResponse.success(data=data, pagination=meta)
 
 
 @router.get("/report/matrix", response_model=ApiResponse[list[InvoiceResponse]])

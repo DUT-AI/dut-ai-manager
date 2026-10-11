@@ -13,18 +13,18 @@ export const homeworkService = {
     baseUrl: 'homeworks',
 
     // Homeworks
-    async getAll(skip = 0, limit = 100, deleted = false) {
+    async getAll(page = 1, pageSize = 20, deleted = false) {
         const response = await axiosInstance.get<ApiResponse<Homework[]>>(`/${this.baseUrl}`, {
-            params: { skip, limit, deleted }
+            params: { page, page_size: pageSize, deleted }
         });
-        return response.data.data;
+        return response.data;
     },
 
-    async getMyHomeworks(skip = 0, limit = 100) {
+    async getMyHomeworks(page = 1, pageSize = 20) {
         const response = await axiosInstance.get<ApiResponse<Homework[]>>(`/${this.baseUrl}/me`, {
-            params: { skip, limit }
+            params: { page, page_size: pageSize }
         });
-        return response.data.data;
+        return response.data;
     },
 
     async getById(id: number) {

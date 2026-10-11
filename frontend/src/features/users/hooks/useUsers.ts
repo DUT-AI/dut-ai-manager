@@ -1,22 +1,55 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { userService } from '@/features/users/services/user.service';
-import type { UserCreate, UserUpdate } from '@/features/users/types/user.types';
+import type { UserCreate, UserUpdate, UserOptionDto, UserResponse } from '@/features/users/types/user.types';
+import type { PaginationMeta } from '@/types/api.types';
 
 // Query Keys
 const userKeys = {
   all: ['users'] as const,
+  list: (filters: { page?: number; pageSize?: number; keyword?: string }) =>
+    ['users', filters] as const,
+  options: ['users', 'options'] as const,
   detail: (id: number) => ['users', id] as const,
 };
 
 // Queries
-export const useUsers = () => {
+export const useUsers = (filters?: {
+  page?: number;
+  pageSize?: number;
+  keyword?: string;
+  enabled?: boolean;
+}) => {
+  const page = filters?.page;
+  const pageSize = filters?.pageSize;
+  const keyword = filters?.keyword;
+  const enabled = filters?.enabled ?? true;
+
   return useQuery({
-    queryKey: userKeys.all,
+    queryKey: userKeys.list({ page, pageSize, keyword }),
     queryFn: async () => {
-      const response = await userService.getUsers();
-      return response.data ?? [];
+      const response = await userService.getUsers(page ?? 1, pageSize ?? 20, keyword);
+      const items = response.data ?? [];
+      const result = items as Array<UserResponse> & {
+        data: UserResponse[];
+        pagination: PaginationMeta | null;
+      };
+      result.data = items;
+      result.pagination = response.pagination ?? null;
+      return result;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled,
+  });
+};
+
+export const useUserOptions = () => {
+  return useQuery({
+    queryKey: userKeys.options,
+    queryFn: async () => {
+      const response = await userService.getUserOptions();
+      return response.data ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
   });
 };
 

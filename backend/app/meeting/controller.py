@@ -39,7 +39,8 @@ from app.meeting.schemas import (
     TrainerSubmitEvaluationRequest,
     UpdateParticipantStatusRequest,
 )
-from app.shared.application.response import ApiResponse, BadRequestException
+from app.shared.application.pagination import PaginationParams
+from app.shared.application.response import ApiResponse, BadRequestException, PaginationMeta
 from app.shared.infrastructure.sse import sse_broadcaster
 from app.utils.text import remove_vietnamese_tones
 
@@ -89,23 +90,34 @@ async def create_meeting(
 async def get_meetings(
     uc: FromDishka[GetMeetingsUseCase],
     _: Annotated[CurrentUser, hasPermission(MeetingPermission.READ)],
-    skip: int = 0,
-    limit: int = 100,
+    pagination: Annotated[PaginationParams, Depends()],
     start_date: date | None = None,
     end_date: date | None = None,
     deleted: bool = False,
 ):
-    """Lấy danh sách các buổi họp (metadata rút gọn, không tải participants)"""
-    meetings = uc.execute(
-        skip=skip,
-        limit=limit,
+    """Lấy danh sách các buổi họp (metadata rút gọn, hỗ trợ phân trang)"""
+    is_calendar_view = start_date is not None and end_date is not None
+    meetings, total = uc.execute(
+        page=pagination.page,
+        page_size=pagination.page_size,
         start_date=start_date,
         end_date=end_date,
         deleted=deleted,
+        all_records=is_calendar_view,
+    )
+    meta = (
+        None
+        if is_calendar_view
+        else PaginationMeta.create(
+            page=pagination.page,
+            page_size=pagination.page_size,
+            total=total,
+        )
     )
     return ApiResponse.success(
         data=[MeetingResponse.from_domain(m) for m in meetings],
         message="Meetings retrieved successfully",
+        pagination=meta,
     )
 
 
@@ -382,7 +394,7 @@ async def submit_trainee_evaluation(
         feedback_text=data.feedback_text,
     )
     return ApiResponse.success(
-        data=EvaluationResponse.from_domain(result),
+        data=EvaluationResponse.from_domain(result, current_user_id=current_user.id),
         message="Gửi đánh giá Trainer thành công",
     )
 
@@ -398,7 +410,7 @@ async def get_meeting_evaluation_summary(
     current_user: CurrentUser,
 ):
     """Lấy báo cáo tổng hợp kết quả đánh giá của buổi học."""
-    summary = await uc.execute(meeting_id=meeting_id)
+    summary = await uc.execute(meeting_id=meeting_id, current_user_id=current_user.id)
     return ApiResponse.success(data=summary)
 
 

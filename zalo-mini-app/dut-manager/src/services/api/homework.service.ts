@@ -12,9 +12,9 @@ export interface HomeworkItem {
 export const homeworkService = {
   baseUrl: 'homeworks',
 
-  async getAll(skip = 0, limit = 100): Promise<HomeworkItem[]> {
+  async getAll(page = 1, pageSize = 20): Promise<HomeworkItem[]> {
     const response = await axiosInstance.get<ApiResponse<HomeworkItem[]>>(`/${this.baseUrl}`, {
-      params: { skip, limit, deleted: false },
+      params: { page, page_size: pageSize, deleted: false },
     });
     return response.data.data || [];
   },

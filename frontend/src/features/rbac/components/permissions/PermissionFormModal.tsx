@@ -29,7 +29,8 @@ export const PermissionFormModal: React.FC<PermissionFormModalProps> = ({
     // Chỉ kích hoạt query khi modal thực sự mở
     const { data: homeworksData } = useHomeworks({ enabled: isOpen });
     const homeworks = homeworksData || [];
-    const { data: meetings = [] } = useMeetings({ enabled: isOpen });
+    const { data: meetingsResult } = useMeetings({ enabled: isOpen });
+    const meetings = meetingsResult?.data ?? [];
     const { data: upcomingMeetings = [] } = useUpcomingMeetingsWithSeats(undefined, isOpen);
 
     useEffect(() => {

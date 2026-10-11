@@ -3,7 +3,7 @@ import { Modal, Form, Select, DatePicker, Input, message, Switch, Button, Space,
 import { TeamOutlined, UserOutlined, CheckOutlined, ClearOutlined } from '@ant-design/icons';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
-import type { UserResponse } from '@/features/users/types/user.types';
+import { useUserOptions } from '@/features/users/hooks/useUsers';
 import { teamService } from '@/features/teams/services/team.service';
 import type { TeamResponse } from '@/features/teams/types/team.types';
 import type { MeetingResponse } from '@/features/meeting/types/meeting.types';
@@ -15,34 +15,64 @@ const { Text } = Typography;
 interface Props {
     open: boolean;
     editingItem?: MeetingResponse | null;
-    initialDate: Dayjs;
-    users: UserResponse[];
+    initialDate?: Dayjs;
     onSubmit: (values: any) => void;
     onCancel: () => void;
 }
 
-export const MeetingModal = ({ open, editingItem, initialDate, users, onSubmit, onCancel }: Props) => {
+export const MeetingModal = ({ open, editingItem, initialDate, onSubmit, onCancel }: Props) => {
     const [form] = Form.useForm();
     const [teams, setTeams] = useState<TeamResponse[]>([]);
     const [loadingTeams, setLoadingTeams] = useState(false);
     const [selectedTeamIds, setSelectedTeamIds] = useState<number[]>([]);
     const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
 
-    const initialValues = editingItem ? {
-        title: editingItem.title,
-        content: editingItem.content,
-        require_check_in: editingItem.require_check_in,
-        enable_evaluation: editingItem.enable_evaluation ?? false,
-        time_range: [dayjs(editingItem.start_time), dayjs(editingItem.end_time)],
-        user_ids: editingItem.participants.map(p => p.user_id),
-    } : {
-        time_range: [
-            initialDate.hour(19).minute(0).second(0),
-            initialDate.hour(21).minute(0).second(0),
-        ],
-        require_check_in: true,
-        enable_evaluation: false,
+    const { data: userOptions = [] } = useUserOptions();
+
+    const userSelectOptions = useMemo(() => {
+        return userOptions.map(u => ({
+            label: u.email ? `${u.name} (${u.email})` : u.name,
+            value: u.id,
+        }));
+    }, [userOptions]);
+
+    const filterUserOption = (input: string, option?: { label?: string; value?: number }) => {
+        if (!input || !option?.label) return true;
+        const cleanInput = input.trim().toLowerCase();
+        const cleanLabel = option.label.toLowerCase();
+
+        // 1. Khớp chuỗi trực tiếp
+        if (cleanLabel.includes(cleanInput)) return true;
+
+        // 2. Khớp không dấu (hỗ trợ tiếng Việt không dấu hoặc gõ sai dấu)
+        const normInput = cleanInput.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const normLabel = cleanLabel.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        return normLabel.includes(normInput);
     };
+
+    const initialDateKey = initialDate ? initialDate.format('YYYY-MM-DD') : '';
+
+    const initialValues = useMemo(() => {
+        if (editingItem) {
+            return {
+                title: editingItem.title,
+                content: editingItem.content,
+                require_check_in: editingItem.require_check_in,
+                enable_evaluation: editingItem.enable_evaluation ?? false,
+                time_range: [dayjs(editingItem.start_time), dayjs(editingItem.end_time)],
+                user_ids: editingItem.participants.map(p => p.user_id),
+            };
+        }
+        const baseDate = initialDate || dayjs();
+        return {
+            time_range: [
+                baseDate.hour(19).minute(0).second(0),
+                baseDate.hour(21).minute(0).second(0),
+            ],
+            require_check_in: true,
+            enable_evaluation: false,
+        };
+    }, [editingItem?.id, initialDateKey]);
 
     // Helper map: teamId -> array of member user_ids
     const teamMemberMap = useMemo(() => {
@@ -72,40 +102,41 @@ export const MeetingModal = ({ open, editingItem, initialDate, users, onSubmit, 
     }, []);
 
     useEffect(() => {
-        if (open) {
-            if (editingItem) {
-                const initialUserIds = editingItem.participants.map(p => p.user_id);
-                const matchedTeams = detectMatchingTeams(initialUserIds);
-                setSelectedTeamIds(matchedTeams);
-                setSelectedUserIds(initialUserIds);
+        if (!open) return;
 
-                form.setFieldsValue({
-                    title: editingItem.title,
-                    content: editingItem.content,
-                    require_check_in: editingItem.require_check_in,
-                    enable_evaluation: editingItem.enable_evaluation ?? false,
-                    time_range: [dayjs(editingItem.start_time), dayjs(editingItem.end_time)],
-                    team_ids: matchedTeams,
-                    user_ids: initialUserIds,
-                });
-            } else {
-                setSelectedTeamIds([]);
-                setSelectedUserIds([]);
-                form.setFieldsValue({
-                    title: '',
-                    content: '',
-                    time_range: [
-                        initialDate.hour(19).minute(0).second(0),
-                        initialDate.hour(21).minute(0).second(0),
-                    ],
-                    require_check_in: true,
-                    enable_evaluation: false,
-                    team_ids: [],
-                    user_ids: [],
-                });
-            }
+        if (editingItem) {
+            const initialUserIds = editingItem.participants.map(p => p.user_id);
+            const matchedTeams = detectMatchingTeams(initialUserIds);
+            setSelectedTeamIds(matchedTeams);
+            setSelectedUserIds(initialUserIds);
+
+            form.setFieldsValue({
+                title: editingItem.title,
+                content: editingItem.content,
+                require_check_in: editingItem.require_check_in,
+                enable_evaluation: editingItem.enable_evaluation ?? false,
+                time_range: [dayjs(editingItem.start_time), dayjs(editingItem.end_time)],
+                team_ids: matchedTeams,
+                user_ids: initialUserIds,
+            });
+        } else {
+            const baseDate = initialDate || dayjs();
+            setSelectedTeamIds([]);
+            setSelectedUserIds([]);
+            form.setFieldsValue({
+                title: '',
+                content: '',
+                time_range: [
+                    baseDate.hour(19).minute(0).second(0),
+                    baseDate.hour(21).minute(0).second(0),
+                ],
+                require_check_in: true,
+                enable_evaluation: false,
+                team_ids: [],
+                user_ids: [],
+            });
         }
-    }, [open, editingItem, initialDate, detectMatchingTeams, form]);
+    }, [open, editingItem?.id, initialDateKey, detectMatchingTeams, form]);
 
     const fetchTeams = async () => {
         setLoadingTeams(true);
@@ -172,7 +203,7 @@ export const MeetingModal = ({ open, editingItem, initialDate, users, onSubmit, 
 
     // Quick Action: Select All Users
     const handleSelectAll = () => {
-        const allUserIds = users.map(u => u.id).filter((id): id is number => id !== undefined);
+        const allUserIds = userOptions.map(u => u.id);
         const allTeamIds = teams.map(t => t.id);
         setSelectedTeamIds(allTeamIds);
         setSelectedUserIds(allUserIds);
@@ -256,7 +287,7 @@ export const MeetingModal = ({ open, editingItem, initialDate, users, onSubmit, 
                                 onClick={handleSelectAll}
                                 className="!p-0 !text-xs !text-indigo-600 font-medium"
                             >
-                                Chọn tất cả ({users.length})
+                                Chọn tất cả ({userOptions.length})
                             </Button>
                             <span className="text-gray-300">|</span>
                             <Button
@@ -334,13 +365,8 @@ export const MeetingModal = ({ open, editingItem, initialDate, users, onSubmit, 
                         allowClear
                         value={selectedUserIds}
                         onChange={handleUserChange}
-                        filterOption={(input: string, option: any) =>
-                            (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-                        }
-                        options={users.map(u => ({
-                            label: u.email ? `${u.name} (${u.email})` : u.name,
-                            value: u.id
-                        }))}
+                        filterOption={filterUserOption}
+                        options={userSelectOptions}
                         maxTagCount="responsive"
                     />
                 </Form.Item>

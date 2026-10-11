@@ -3,11 +3,11 @@ import type { ApiResponse } from '@/types/api.types';
 import type { ViolationResponse } from '@/features/violations/types/violation.types';
 
 export const violationService = {
-  getViolations: async (skip = 0, limit = 100, userId?: number, month?: number, year?: number, deleted?: boolean, startDate?: string, endDate?: string) => {
+  getViolations: async (page = 1, pageSize = 20, userId?: number, month?: number, year?: number, deleted?: boolean, startDate?: string, endDate?: string) => {
     const response = await axiosInstance.get<ApiResponse<ViolationResponse[]>>('/violations', {
-      params: { skip, limit, user_id: userId, month, year, deleted, start_date: startDate, end_date: endDate },
+      params: { page, page_size: pageSize, user_id: userId, month, year, deleted, start_date: startDate, end_date: endDate },
     });
-    return response.data.data;
+    return response.data;
   },
 
   createViolation: async (data: Record<string, unknown>) => {

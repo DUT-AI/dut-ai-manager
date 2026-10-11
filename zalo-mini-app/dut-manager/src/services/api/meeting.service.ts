@@ -12,16 +12,16 @@ export type MeetingItem = MeetingResponse;
 export const meetingService = {
   subPath: 'meetings',
 
-  async getMeetings(skip: number = 0, limit: number = 100): Promise<MeetingResponse[]> {
+  async getMeetings(page: number = 1, pageSize: number = 20): Promise<MeetingResponse[]> {
     const response = await axiosInstance.get<ApiResponse<MeetingResponse[]>>(`/${this.subPath}`, {
-      params: { skip, limit },
+      params: { page, page_size: pageSize },
     });
     return response.data.data || [];
   },
 
   async getMeetingsByDateRange(startDate: string, endDate: string): Promise<MeetingResponse[]> {
     const response = await axiosInstance.get<ApiResponse<MeetingResponse[]>>(`/${this.subPath}`, {
-      params: { start_date: startDate, end_date: endDate, limit: 200 },
+      params: { start_date: startDate, end_date: endDate },
     });
     return response.data.data || [];
   },

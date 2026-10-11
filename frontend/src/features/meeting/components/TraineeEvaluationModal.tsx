@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Modal, Form, Rate, Input, Switch, message, Typography, Space, Divider, Avatar } from 'antd';
+import { Modal, Form, Rate, Input, Switch, message, Typography, Space, Divider, Avatar, Alert } from 'antd';
 import { HeartFilled, EyeInvisibleOutlined, UserOutlined } from '@ant-design/icons';
 import { meetingService } from '../services/meeting.service';
 import { useQueryClient } from '@tanstack/react-query';
@@ -160,6 +160,25 @@ export const TraineeEvaluationModal: React.FC<Props> = ({
         </div>
       </div>
       <Divider style={{ margin: '12px 0' }} />
+
+      {existingEvaluation && (
+        <Alert
+          type="info"
+          showIcon
+          className="mb-4 rounded-xl border-indigo-100 bg-indigo-50/70"
+          message={
+            existingEvaluation.is_anonymous ? (
+              <span>
+                Bạn đã gửi đánh giá <strong>ẩn danh</strong> cho Trainer. Bạn có thể cập nhật lại điểm số hoặc nhận xét bên dưới.
+              </span>
+            ) : (
+              <span>
+                Bạn đã gửi đánh giá cho Trainer. Bạn có thể cập nhật lại điểm số hoặc nhận xét bên dưới.
+              </span>
+            )
+          }
+        />
+      )}
 
       <Form
         form={form}

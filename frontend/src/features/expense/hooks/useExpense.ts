@@ -16,12 +16,18 @@ export const useExpenses = (params?: {
   status?: ExpenseStatusType;
   spender_id?: number;
   team_id?: number;
+  page?: number;
+  pageSize?: number;
 }) => {
   return useQuery({
     queryKey: [...EXPENSES_QUERY_KEY, params],
     queryFn: async () => {
       const res = await expenseService.getExpenses(params);
-      return res.data;
+      const items = res.data ?? [];
+      if (res.pagination) {
+        (items as any).pagination = res.pagination;
+      }
+      return items;
     },
   });
 };

@@ -87,6 +87,47 @@ class BonusPointRepository(BaseRepository[BonusPointModel, BonusPoint]):
         models = self.session.scalars(statement).all()
         return [self.to_entity(m) for m in models]
 
+    def get_paged(
+        self, query_support: QuerySupport | None = None, deleted: bool = False
+    ) -> tuple[list[BonusPoint], int]:
+        """Get paginated bonus points with eager-loaded relations and total count."""
+        from app.shared.domain.query_support import apply_filters_only
+
+        count_stmt = select(func.count(BonusPointModel.id)).where(
+            BonusPointModel.is_deleted.is_(deleted)
+        )
+        data_stmt = (
+            select(BonusPointModel)
+            .where(BonusPointModel.is_deleted.is_(deleted))
+            .options(
+                joinedload(BonusPointModel.user),
+                joinedload(BonusPointModel.creator),
+                joinedload(BonusPointModel.updater),
+            )
+        )
+
+        if query_support:
+            count_stmt = apply_filters_only(count_stmt, BonusPointModel, query_support.filters)
+            data_stmt = apply_query_support(data_stmt, BonusPointModel, query_support)
+            if not query_support.sorting:
+                sort_field = (
+                    BonusPointModel.updated_at
+                    if deleted
+                    else BonusPointModel.created_at
+                )
+                data_stmt = data_stmt.order_by(
+                    sort_field.desc(), BonusPointModel.id.desc()
+                )
+        else:
+            sort_field = (
+                BonusPointModel.updated_at if deleted else BonusPointModel.created_at
+            )
+            data_stmt = data_stmt.order_by(sort_field.desc(), BonusPointModel.id.desc())
+
+        total = self.session.scalar(count_stmt) or 0
+        models = self.session.scalars(data_stmt).unique().all()
+        return [self.to_entity(m) for m in models], total
+
     def get_by_date(self, target_date: date) -> list[BonusPoint]:
 
         qs = build_query_support(

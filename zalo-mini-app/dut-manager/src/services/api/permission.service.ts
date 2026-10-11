@@ -15,8 +15,8 @@ export const permissionService = {
     year?: number;
     category?: string;
     deleted?: boolean;
-    skip?: number;
-    limit?: number;
+    page?: number;
+    pageSize?: number;
   }): Promise<PermissionRequestResponse[]> {
     const response = await axiosInstance.get<ApiResponse<PermissionRequestResponse[]>>(
       `/${this.subPath}`,
@@ -27,8 +27,8 @@ export const permissionService = {
           year: params?.year,
           category: params?.category,
           deleted: params?.deleted,
-          skip: params?.skip ?? 0,
-          limit: params?.limit ?? 100,
+          page: params?.page ?? 1,
+          page_size: params?.pageSize ?? 20,
         },
       }
     );

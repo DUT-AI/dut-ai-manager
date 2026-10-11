@@ -30,10 +30,10 @@ class GetPermissionRequestsUseCase:
         month: int | None = None,
         year: int | None = None,
         category: RequestCategory | None = None,
-        skip: int = 0,
-        limit: int = 100,
+        page: int = 1,
+        page_size: int = 20,
         deleted: bool = False,
-    ) -> list[PermissionRequest]:
+    ) -> tuple[list[PermissionRequest], int]:
         filters = []
         if user_id:
             filters.append(
@@ -61,13 +61,13 @@ class GetPermissionRequestsUseCase:
             )
 
         qs = build_query_support(
-            skip=skip,
-            limit=limit,
+            page=page,
+            page_size=page_size,
             sort_by="updated_at" if deleted else "created_at",
             descending=True,
             filters=filters,
         )
-        return self.repo.get_all(query_support=qs, deleted=deleted)
+        return self.repo.get_paged(query_support=qs, deleted=deleted)
 
 
 class CreatePermissionRequestUseCase:

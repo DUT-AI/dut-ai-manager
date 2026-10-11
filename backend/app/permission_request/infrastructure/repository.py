@@ -41,6 +41,39 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         rows = self.session.scalars(stmt).unique().all()
         return [r.to_entity() for r in rows]
 
+    def get_paged(
+        self, query_support: QuerySupport | None = None, deleted: bool = False
+    ) -> tuple[list[DomainEntity], int]:
+        """Get paginated permission requests with eager-loaded relations and optimized count."""
+        from app.shared.domain.query_support import apply_filters_only
+
+        count_stmt = select(func.count(ORMModel.id)).where(ORMModel.is_deleted == deleted)
+        data_stmt = (
+            select(ORMModel)
+            .options(
+                joinedload(ORMModel.user),
+                joinedload(ORMModel.homework).noload(HomeworkModel.assignees),
+                joinedload(ORMModel.meeting),
+            )
+            .where(ORMModel.is_deleted == deleted)
+        )
+
+        if query_support:
+            count_stmt = apply_filters_only(count_stmt, ORMModel, query_support.filters)
+            data_stmt = apply_query_support(data_stmt, ORMModel, query_support)
+            if not query_support.sorting:
+                sort_field = (
+                    ORMModel.updated_at if deleted else ORMModel.created_at
+                )
+                data_stmt = data_stmt.order_by(sort_field.desc(), ORMModel.id.desc())
+        else:
+            sort_field = ORMModel.updated_at if deleted else ORMModel.created_at
+            data_stmt = data_stmt.order_by(sort_field.desc(), ORMModel.id.desc())
+
+        total = self.session.scalar(count_stmt) or 0
+        rows = self.session.scalars(data_stmt).unique().all()
+        return [r.to_entity() for r in rows], total
+
     def get_by_date(self, target_date: date) -> list[DomainEntity]:
         """Lấy tất cả yêu cầu xin phép trong một ngày cụ thể."""
         stmt = (

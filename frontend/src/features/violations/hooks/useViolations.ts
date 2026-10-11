@@ -4,12 +4,14 @@ import { violationService } from '@/features/violations/services/violation.servi
 // Query Keys
 const violationKeys = {
   all: ['violations'] as const,
-  list: (filters: { userId?: number; month?: number; year?: number; startDate?: string; endDate?: string }) =>
+  list: (filters: { page?: number; pageSize?: number; userId?: number; month?: number; year?: number; startDate?: string; endDate?: string }) =>
     ['violations', filters] as const,
 };
 
 // Queries
 export const useViolations = (filters: {
+  page?: number;
+  pageSize?: number;
   userId?: number;
   month?: number;
   year?: number;
@@ -17,12 +19,13 @@ export const useViolations = (filters: {
   endDate?: string;
   enabled?: boolean;
 } = {}) => {
-  const { enabled = true, ...rest } = filters;
+  const { enabled = true, page = 1, pageSize = 20, ...rest } = filters;
   return useQuery({
-    queryKey: violationKeys.list(rest),
+    queryKey: violationKeys.list({ page, pageSize, ...rest }),
     queryFn: async () => {
       const response = await violationService.getViolations(
-        0, 100,
+        page,
+        pageSize,
         rest.userId,
         rest.month,
         rest.year,
@@ -30,7 +33,10 @@ export const useViolations = (filters: {
         rest.startDate,
         rest.endDate
       );
-      return response ?? [];
+      return {
+        data: response.data ?? [],
+        pagination: response.pagination ?? null,
+      };
     },
     staleTime: 60 * 1000, // 1 minute
     enabled,

@@ -74,6 +74,51 @@ class InvoiceRepository(BaseRepository[InvoiceModel, Invoice]):
         )
         return [m.to_entity() for m in self.session.scalars(statement).unique().all()]
 
+    def get_paged_active(
+        self,
+        user_id: int | None = None,
+        status: str | None = None,
+        billing_period: date | None = None,
+        team_id: int | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[Invoice], int]:
+        from sqlalchemy import func
+
+        count_stmt = select(func.count(InvoiceModel.id)).where(InvoiceModel.is_deleted == False)
+        if user_id is not None:
+            count_stmt = count_stmt.where(InvoiceModel.user_id == user_id)
+        if team_id is not None:
+            count_stmt = count_stmt.where(InvoiceModel.team_id == team_id)
+        if status is not None:
+            count_stmt = count_stmt.where(InvoiceModel.status == status)
+        if billing_period is not None:
+            count_stmt = count_stmt.where(InvoiceModel.billing_period == billing_period)
+        total = self.session.scalar(count_stmt) or 0
+
+        statement = select(InvoiceModel).where(InvoiceModel.is_deleted == False)
+        if user_id is not None:
+            statement = statement.where(InvoiceModel.user_id == user_id)
+        if team_id is not None:
+            statement = statement.where(InvoiceModel.team_id == team_id)
+        if status is not None:
+            statement = statement.where(InvoiceModel.status == status)
+        if billing_period is not None:
+            statement = statement.where(InvoiceModel.billing_period == billing_period)
+
+        offset = (page - 1) * page_size
+        statement = (
+            statement.options(
+                joinedload(InvoiceModel.items),
+                joinedload(InvoiceModel.user_rel),
+                joinedload(InvoiceModel.team_rel),
+            )
+            .order_by(desc(InvoiceModel.created_at))
+            .offset(offset)
+            .limit(page_size)
+        )
+        return [m.to_entity() for m in self.session.scalars(statement).unique().all()], total
+
     def get_matrix_report(
         self,
         start_date: date,

@@ -5,6 +5,7 @@ import type { TeamCreate, TeamUpdate } from '@/features/teams/types/team.types';
 // Query Keys
 const teamKeys = {
   all: ['teams'] as const,
+  options: ['teams', 'options'] as const,
   detail: (id: number) => ['teams', id] as const,
 };
 
@@ -15,6 +16,17 @@ export const useTeams = () => {
     queryFn: async () => {
       const response = await teamService.getTeams();
       return response.data;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+export const useTeamOptions = () => {
+  return useQuery({
+    queryKey: teamKeys.options,
+    queryFn: async () => {
+      const response = await teamService.getTeamOptions();
+      return response.data ?? [];
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });

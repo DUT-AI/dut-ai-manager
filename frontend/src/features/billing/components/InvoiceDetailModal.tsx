@@ -31,12 +31,13 @@ const InvoiceDetailModal = ({
 
   const hasViolation = detail?.items.some(item => item.item_type === 'VIOLATION');
 
-  const { data: violations = [], isLoading: isViolationsLoading } = useViolations({
+  const { data: violationsResult, isLoading: isViolationsLoading } = useViolations({
     userId: detail?.user_id,
     month,
     year,
     enabled: isOpen && !!detail && !!hasViolation && !!month && !!year
   });
+  const violations = violationsResult?.data ?? [];
 
   return (
     <Modal

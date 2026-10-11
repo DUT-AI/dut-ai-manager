@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.deps import CurrentUser, hasPermission
 from app.core.permissions import PermissionRequestPermission
@@ -21,7 +21,8 @@ from app.permission_request.schemas import (
     PermissionRequestResponse,
     PermissionRequestUpdate,
 )
-from app.shared.application.response import ApiResponse
+from app.shared.application.pagination import PaginationParams
+from app.shared.application.response import ApiResponse, PaginationMeta
 
 router = APIRouter(prefix="/permissions", tags=["Permissions"])
 
@@ -33,25 +34,31 @@ async def get_permission_requests(
     _current_user: Annotated[
         CurrentUser, hasPermission(PermissionRequestPermission.READ)
     ],
+    pagination: Annotated[PaginationParams, Depends()],
     user_id: int | None = None,
     month: int | None = None,
     year: int | None = None,
     category: RequestCategory | None = None,
-    skip: int = 0,
-    limit: int = 100,
     deleted: bool = False,
 ):
     """Lấy danh sách các yêu cầu xin phép"""
-    results = uc.execute(
+    items, total = uc.execute(
         user_id=user_id,
         month=month,
         year=year,
         category=category,
-        skip=skip,
-        limit=limit,
+        page=pagination.page,
+        page_size=pagination.page_size,
         deleted=deleted,
     )
-    return ApiResponse.success(data=results)
+    return ApiResponse.success(
+        data=items,
+        pagination=PaginationMeta.create(
+            page=pagination.page,
+            page_size=pagination.page_size,
+            total=total,
+        ),
+    )
 
 
 @router.post("", response_model=ApiResponse[PermissionRequestResponse])

@@ -14,16 +14,19 @@ const meetingKeys = {
 
 // Queries
 export const useMeetings = (filters: {
-  skip?: number;
-  limit?: number;
+  page?: number;
+  pageSize?: number;
   enabled?: boolean;
 } = {}) => {
-  const { enabled = true, skip = 0, limit = 100 } = filters;
+  const { enabled = true, page = 1, pageSize = 20 } = filters;
   return useQuery({
-    queryKey: meetingKeys.list({ skip, limit }),
+    queryKey: meetingKeys.list({ page, pageSize }),
     queryFn: async () => {
-      const response = await meetingService.getMeetings(skip, limit);
-      return response.data ?? [];
+      const response = await meetingService.getMeetings(page, pageSize);
+      return {
+        data: response.data ?? [],
+        pagination: response.pagination ?? null,
+      };
     },
     staleTime: 60 * 1000,
     enabled,

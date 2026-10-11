@@ -3,8 +3,9 @@ import { Card, Button, Typography, Space, Form, message, Grid, Tabs, Select, Dat
 import { PlusOutlined, AuditOutlined, CalendarOutlined, BarChartOutlined, DollarOutlined, ImportOutlined, ExportOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useAllInvoices, useCreateInvoice, useUpdateInvoice, useInvoiceDetail, useDeleteInvoice } from '@/features/billing/hooks/useBilling';
-import { useUsers } from '@/features/users';
-import { useTeams } from '@/features/teams';
+import { useUserOptions } from '@/features/users';
+import { useTeamOptions } from '@/features/teams';
+import { useTablePagination } from '@/hooks';
 import CreateMonthlyInvoiceModal from '@/features/billing/components/CreateMonthlyInvoiceModal';
 import type { CreateInvoiceFormValues, Invoice } from '@/types';
 import { motion, type Variants } from 'motion/react';
@@ -41,6 +42,7 @@ const itemVariants: Variants = {
 
 const AdminBillingPage = () => {
   const screens = useBreakpoint();
+  const { page, pageSize, resetPage, getPaginationProps } = useTablePagination();
   const [filterUser, setFilterUser] = useState<number | undefined>(undefined);
   const [filterTeam, setFilterTeam] = useState<number | undefined>(undefined);
   const [filterStatus, setFilterStatus] = useState<string | undefined>(undefined);
@@ -51,11 +53,11 @@ const AdminBillingPage = () => {
     team_id: filterTeam,
     status: filterStatus,
     billing_period: filterPeriod ? filterPeriod.startOf('month').format('YYYY-MM-DD') : undefined,
-  });
+  }, page, pageSize);
   const invoices = invoicesData ?? [];
-  const { data: usersData } = useUsers();
+  const { data: usersData } = useUserOptions();
   const users = usersData ?? [];
-  const { data: teamsData } = useTeams();
+  const { data: teamsData } = useTeamOptions();
   const teams = teamsData ?? [];
   const createInvoice = useCreateInvoice();
   const updateInvoice = useUpdateInvoice();
@@ -201,7 +203,10 @@ const AdminBillingPage = () => {
                 placeholder="Tất cả thành viên"
                 style={{ width: '100%' }}
                 allowClear
-                onChange={(value) => setFilterUser(value)}
+                onChange={(value) => {
+                  setFilterUser(value);
+                  resetPage();
+                }}
                 optionFilterProp="children"
               >
                 {users.map((u) => (
@@ -219,12 +224,15 @@ const AdminBillingPage = () => {
                 placeholder="Tất cả nhóm"
                 style={{ width: '100%' }}
                 allowClear
-                onChange={(value) => setFilterTeam(value)}
+                onChange={(value) => {
+                  setFilterTeam(value);
+                  resetPage();
+                }}
                 optionFilterProp="children"
               >
                 {teams.map((t) => (
                   <Select.Option key={t.id} value={t.id}>
-                    {t.team_name}
+                    {t.name || (t as { team_name?: string }).team_name}
                   </Select.Option>
                 ))}
               </Select>
@@ -236,7 +244,10 @@ const AdminBillingPage = () => {
                 placeholder="Tất cả trạng thái"
                 style={{ width: '100%' }}
                 allowClear
-                onChange={(value) => setFilterStatus(value)}
+                onChange={(value) => {
+                  setFilterStatus(value);
+                  resetPage();
+                }}
               >
                 <Select.Option value="PENDING">Chờ thanh toán (PENDING)</Select.Option>
                 <Select.Option value="PAID">Đã thanh toán (PAID)</Select.Option>
@@ -253,7 +264,10 @@ const AdminBillingPage = () => {
                 placeholder="Tất cả các kỳ"
                 style={{ width: '100%' }}
                 allowClear
-                onChange={(value) => setFilterPeriod(value)}
+                onChange={(value) => {
+                  setFilterPeriod(value);
+                  resetPage();
+                }}
               />
             </Col>
           </Row>
@@ -266,6 +280,7 @@ const AdminBillingPage = () => {
             onEdit={handleOpenEdit}
             onDelete={handleDelete}
             deletingId={deleteInvoice.isPending ? selectedInvoiceId : null}
+            pagination={getPaginationProps(invoicesData?.pagination)}
           />
         </div>
       ),

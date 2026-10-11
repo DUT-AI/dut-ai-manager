@@ -11,11 +11,15 @@ Old modules can keep using the old BaseRepository until they are migrated.
 
 from typing import Any, Generic, TypeVar, cast
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.shared.domain.base_entity import BaseEntity
-from app.shared.domain.query_support import QuerySupport, apply_query_support
+from app.shared.domain.query_support import (
+    QuerySupport,
+    apply_filters_only,
+    apply_query_support,
+)
 from app.shared.infrastructure.base_model import SQLAlchemyTimestampMixin
 
 # Định nghĩa TypeVar cho Model và Entity
@@ -71,6 +75,26 @@ class BaseRepository(Generic[TModel, TEntity]):
 
         orms = self.session.scalars(query).unique().all()
         return [cast(TEntity, m.to_entity()) for m in orms]
+
+    def get_paged(
+        self,
+        query_support: QuerySupport | None = None,
+        deleted: bool = False,
+    ) -> tuple[list[TEntity], int]:
+        """Get paginated models and total count with optimized COUNT query."""
+        # 1. Optimized Count Query: Filter only, no sorting or eager joins
+        count_stmt = select(func.count(self.model.id)).where(self.model.is_deleted == deleted)
+        if query_support and query_support.filters:
+            count_stmt = apply_filters_only(count_stmt, self.model, query_support.filters)
+        total = self.session.scalar(count_stmt) or 0
+
+        # 2. Select Query: Full query support (include, filter, sorting, pagination)
+        query = select(self.model).where(self.model.is_deleted == deleted)
+        if query_support:
+            query = apply_query_support(query, self.model, query_support)
+
+        orms = self.session.scalars(query).unique().all()
+        return [cast(TEntity, m.to_entity()) for m in orms], total
 
     def update(self, entity: TEntity) -> TEntity:
         """Update a model (merge into session and flush)."""

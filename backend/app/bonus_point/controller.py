@@ -6,8 +6,10 @@ Handles HTTP routes and mapping requests to Use Cases.
 
 from datetime import date
 
+from typing import Annotated
+
 from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.bonus_point.application.dtos import (
     BonusPointCreate,
@@ -24,7 +26,8 @@ from app.bonus_point.application.use_cases import (
 from app.bonus_point.domain.value_objects import BonusPointType
 from app.core.deps import CurrentUser, hasPermission, hasTeamLeaderAccess
 from app.core.permissions import BonusPointPermission
-from app.shared.application.response import ApiResponse
+from app.shared.application.pagination import PaginationParams
+from app.shared.application.response import ApiResponse, PaginationMeta
 
 router = APIRouter(prefix="/bonus-points", tags=["bonus-points"])
 
@@ -37,29 +40,31 @@ router = APIRouter(prefix="/bonus-points", tags=["bonus-points"])
 @inject
 async def get_bonus_points(
     uc: FromDishka[GetBonusPointsUseCase],
+    pagination: Annotated[PaginationParams, Depends()],
     user_id: int | None = None,
     type: BonusPointType | None = None,
     month: int | None = None,
     year: int | None = None,
     start_date: date | None = None,
     end_date: date | None = None,
-    skip: int = 0,
-    limit: int = 100,
     deleted: bool = False,
 ):
     """Retrieve bonus points based on filters."""
-    result = uc.execute(
+    items, total = uc.execute(
         user_id=user_id,
         type=type,
         month=month,
         year=year,
         start_date=start_date,
         end_date=end_date,
-        skip=skip,
-        limit=limit,
+        page=pagination.page,
+        page_size=pagination.page_size,
         deleted=deleted,
     )
-    return ApiResponse.success(data=result)
+    pagination_meta = PaginationMeta.create(
+        page=pagination.page, page_size=pagination.page_size, total=total
+    )
+    return ApiResponse.success(data=items, pagination=pagination_meta)
 
 
 @router.post(

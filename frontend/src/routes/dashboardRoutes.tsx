@@ -5,7 +5,12 @@ và phân quyền).*/
 import React from 'react';
 import HomePage from '@/pages/HomePage';
 import { SettingsPage } from '@/features/settings';
-import { TrashPage } from '@/features/trash';
+import {
+    TrashPage,
+    TrashBonusPointPage,
+    TrashViolationPage,
+    TrashPermissionRequestPage
+} from '@/features/trash';
 
 import { AcademicReportPage } from '@/features/academic-report';
 import { ActivityReportPage, BonusPointManagementPage } from '@/features/activity';
@@ -112,6 +117,30 @@ export const dashboardRoutesConfig: RouteConfig[] = [
     {
         path: 'trash',
         element: <TrashPage />,
+    },
+    {
+        path: 'trash/bonus-point',
+        element: <TrashBonusPointPage />,
+    },
+    {
+        path: 'trash/bonus-points',
+        element: <TrashBonusPointPage />,
+    },
+    {
+        path: 'trash/violation',
+        element: <TrashViolationPage />,
+    },
+    {
+        path: 'trash/violations',
+        element: <TrashViolationPage />,
+    },
+    {
+        path: 'trash/permission-request',
+        element: <TrashPermissionRequestPage />,
+    },
+    {
+        path: 'trash/permission-requests',
+        element: <TrashPermissionRequestPage />,
     },
     {
         path: 'profile/:userId',

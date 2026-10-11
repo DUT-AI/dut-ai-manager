@@ -15,11 +15,22 @@ const expenseService = {
     status?: ExpenseStatusType;
     spender_id?: number;
     team_id?: number;
+    page?: number;
+    pageSize?: number;
     limit?: number;
     offset?: number;
   }) => {
+    const queryParams: Record<string, any> = {
+      month: params?.month,
+      year: params?.year,
+      status: params?.status,
+      spender_id: params?.spender_id,
+      team_id: params?.team_id,
+      page: params?.page ?? (params?.offset !== undefined && params?.limit ? Math.floor(params.offset / params.limit) + 1 : undefined),
+      page_size: params?.pageSize ?? params?.limit,
+    };
     const response = await axiosInstance.get<ApiResponse<ExpenseInvoice[]>>("/expenses/", {
-      params,
+      params: queryParams,
     });
     return response.data;
   },

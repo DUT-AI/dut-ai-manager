@@ -35,6 +35,7 @@ import {
 import { ExpenseStatus, type ExpenseInvoice, type ExpenseStatusType } from '@/features/expense/types/expense.types';
 import { CreateExpenseModal } from '@/features/expense/components/CreateExpenseModal';
 import { UpdateExpenseModal } from '@/features/expense/components/UpdateExpenseModal';
+import { useTablePagination } from '@/hooks/useTablePagination';
 
 const { Text } = Typography;
 
@@ -57,6 +58,9 @@ const ExpenseManagementPage: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<ExpenseInvoice | null>(null);
 
+  // Pagination hook
+  const { page, pageSize, resetPage, getPaginationProps } = useTablePagination();
+
   // Queries & Mutations
   const { data: expensesData, isLoading: isLoadingExpenses } = useExpenses({
     month: selectedMonth,
@@ -64,8 +68,11 @@ const ExpenseManagementPage: React.FC = () => {
     status: selectedStatus,
     spender_id: filterSpender,
     team_id: filterTeam,
+    page,
+    pageSize,
   });
   const expenses = expensesData || [];
+  const totalCount = (expensesData as any)?.pagination?.total ?? (expenses as any)?.pagination?.total ?? expenses.length;
 
   const { data: summary, isLoading: isLoadingSummary } = useExpenseSummary({
     month: selectedMonth,
@@ -271,7 +278,10 @@ const ExpenseManagementPage: React.FC = () => {
               style={{ width: '100%' }}
               allowClear
               value={filterSpender}
-              onChange={(value) => setFilterSpender(value)}
+              onChange={(value) => {
+                setFilterSpender(value);
+                resetPage();
+              }}
               optionFilterProp="children"
             >
               {users.map((u) => (
@@ -290,7 +300,10 @@ const ExpenseManagementPage: React.FC = () => {
               style={{ width: '100%' }}
               allowClear
               value={filterTeam}
-              onChange={(value) => setFilterTeam(value)}
+              onChange={(value) => {
+                setFilterTeam(value);
+                resetPage();
+              }}
               optionFilterProp="children"
             >
               {teams.map((t) => (
@@ -308,7 +321,10 @@ const ExpenseManagementPage: React.FC = () => {
               style={{ width: '100%' }}
               allowClear
               value={selectedStatus}
-              onChange={(value) => setSelectedStatus(value)}
+              onChange={(value) => {
+                setSelectedStatus(value);
+                resetPage();
+              }}
             >
               <Select.Option value={ExpenseStatus.UNPAID}>Chưa trả (UNPAID)</Select.Option>
               <Select.Option value={ExpenseStatus.PAID}>Đã trả (PAID)</Select.Option>
@@ -324,7 +340,10 @@ const ExpenseManagementPage: React.FC = () => {
               style={{ width: '100%' }}
               allowClear
               value={selectedPeriod}
-              onChange={(date) => setSelectedPeriod(date)}
+              onChange={(date) => {
+                setSelectedPeriod(date);
+                resetPage();
+              }}
             />
           </Col>
         </Row>
@@ -335,7 +354,7 @@ const ExpenseManagementPage: React.FC = () => {
           columns={columns}
           rowKey="id"
           loading={isLoadingExpenses}
-          pagination={{ pageSize: 15, showSizeChanger: true }}
+          pagination={getPaginationProps(totalCount)}
           scroll={{ x: 800 }}
         />
       </Card>

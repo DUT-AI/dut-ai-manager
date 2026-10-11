@@ -11,7 +11,8 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query, Response, Upload
 
 from app.core.deps import CurrentUser, PermissionChecker
 from app.core.permissions import UserPermission
-from app.shared.application.response import ApiResponse
+from app.shared.application.pagination import PaginationParams
+from app.shared.application.response import ApiResponse, PaginationMeta
 from app.user.application import (
     CreateUserUseCase,
     DeleteUserUseCase,
@@ -23,6 +24,7 @@ from app.user.application import (
 from app.user.application.dtos import (
     UserCreate,
     UserImportResult,
+    UserOptionDto,
     UserResponse,
     UserSettingsUpdate,
     UserUpdate,
@@ -36,17 +38,39 @@ router = APIRouter(prefix="/users", tags=["users"])
 async def list_users(
     _: Annotated[CurrentUser, Depends(PermissionChecker(UserPermission.READ))],
     uc: FromDishka[GetUserUseCase],
+    pagination: Annotated[PaginationParams, Depends()],
     keyword: str | None = Query(None, description="Search by name or email"),
 ):
-    """List all users or search by keyword."""
-    if keyword:
-        users = uc.search(keyword)
-    else:
-        users = uc.get_all()
-
+    """List users with server-side pagination or search by keyword."""
+    users, total = uc.get_paged(
+        page=pagination.page, page_size=pagination.page_size, keyword=keyword
+    )
+    meta = PaginationMeta.create(
+        page=pagination.page,
+        page_size=pagination.page_size,
+        total=total,
+    )
     return ApiResponse.success(
         data=[UserResponse.model_validate(u) for u in users],
         message="Fetched users successfully",
+        pagination=meta,
+    )
+
+
+@router.get("/options", response_model=ApiResponse[list[UserOptionDto]])
+@inject
+async def get_user_options(
+    _: Annotated[CurrentUser, Depends(PermissionChecker(UserPermission.READ))],
+    uc: FromDishka[GetUserUseCase],
+):
+    """Get lightweight list of active users for dropdowns."""
+    users = uc.get_active_users()
+    return ApiResponse.success(
+        data=[
+            UserOptionDto(id=u.id, name=u.name, email=u.email, avatar_url=u.avatar_url)
+            for u in users
+        ],
+        message="Fetched user options successfully",
     )
 
 

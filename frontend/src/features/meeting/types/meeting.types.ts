@@ -149,6 +149,7 @@ export interface MeetingEvaluationSummary {
   total_trainee_evaluations?: number;
   trainer_average_score?: number | null;
   trainee_average_score?: number | null;
+  my_evaluation?: EvaluationResponse | null;
 }
 
 export interface MeetingSeatAvailabilityDto {

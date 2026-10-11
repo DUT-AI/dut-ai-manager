@@ -28,10 +28,10 @@ class GetBonusPointsUseCase:
         year: int | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
-        skip: int = 0,
-        limit: int = 100,
+        page: int = 1,
+        page_size: int = 20,
         deleted: bool = False,
-    ) -> list[BonusPoint]:
+    ) -> tuple[list[BonusPoint], int]:
         filters = []
         if user_id:
             filters.append(
@@ -72,13 +72,13 @@ class GetBonusPointsUseCase:
             )
 
         qs = build_query_support(
-            skip=skip,
-            limit=limit,
+            page=page,
+            page_size=page_size,
             filters=filters,
             sort_by="created_at",
             descending=True,
         )
-        return self.repository.get_all(query_support=qs, deleted=deleted)
+        return self.repository.get_paged(query_support=qs, deleted=deleted)
 
 
 class CreateBonusPointsUseCase:

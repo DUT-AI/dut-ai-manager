@@ -10,9 +10,9 @@ export interface TeamSummary {
 export const teamService = {
   subPath: 'teams',
 
-  async getTeams(skip = 0, limit = 100): Promise<TeamSummary[]> {
+  async getTeams(page = 1, pageSize = 20): Promise<TeamSummary[]> {
     const response = await axiosInstance.get<ApiResponse<TeamSummary[]>>(`/${this.subPath}`, {
-      params: { skip, limit },
+      params: { page, page_size: pageSize },
     });
     return response.data.data || [];
   },

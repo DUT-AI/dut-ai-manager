@@ -76,3 +76,11 @@ export interface UserImportResult {
   error_count: number;
   errors?: string[];
 }
+
+export interface UserOptionDto {
+  id: number;
+  name: string;
+  email: string;
+  avatar_url?: string | null;
+}
+

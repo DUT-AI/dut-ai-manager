@@ -370,7 +370,6 @@ const RobotActivityPage = () => {
                 <MeetingModal
                     open={isCreateModalOpen}
                     initialDate={dayjs().date(selectedDay)}
-                    users={users}
                     onSubmit={handleCreateMeetingSubmit}
                     onCancel={() => setIsCreateModalOpen(false)}
                 />

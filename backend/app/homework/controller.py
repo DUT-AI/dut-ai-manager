@@ -1,7 +1,7 @@
 from typing import Annotated, Any
 
 from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import APIRouter, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 
 from app.core.config import settings
 from app.core.deps import CurrentUser, hasPermission
@@ -27,7 +27,8 @@ from app.homework.application.dtos import (
     HomeworkUpdate,
 )
 from app.homework.infrastructure.repository import HomeworkRepository
-from app.shared.application.response import ApiResponse
+from app.shared.application.pagination import PaginationParams
+from app.shared.application.response import ApiResponse, PaginationMeta
 
 router = APIRouter(prefix="/homeworks", tags=["homeworks"])
 
@@ -40,12 +41,22 @@ router = APIRouter(prefix="/homeworks", tags=["homeworks"])
 @inject
 async def get_all_homeworks(
     get_homeworks_uc: FromDishka[GetHomeworksUseCase],
-    skip: int = 0,
-    limit: int = 100,
+    pagination: Annotated[PaginationParams, Depends()],
     deleted: bool = False,
 ):
-    result = get_homeworks_uc.get_all(skip=skip, limit=limit, deleted=deleted)
-    return ApiResponse.success(data=result)
+    homeworks, total = get_homeworks_uc.get_paged(
+        page=pagination.page, page_size=pagination.page_size, deleted=deleted
+    )
+    meta = PaginationMeta.create(
+        page=pagination.page,
+        page_size=pagination.page_size,
+        total=total,
+    )
+    return ApiResponse.success(
+        data=[HomeworkResponse.from_domain(h) for h in homeworks],
+        message="Homeworks retrieved successfully",
+        pagination=meta,
+    )
 
 
 @router.post(
@@ -78,15 +89,19 @@ async def rescan_all_homeworks(
 async def get_my_homeworks(
     current_user: CurrentUser,
     get_homeworks_uc: FromDishka[GetHomeworksUseCase],
-    skip: int = 0,
-    limit: int = 100,
+    pagination: Annotated[PaginationParams, Depends()],
 ):
     """Get homeworks assigned to the current user"""
     assert current_user.id is not None
-    result = await get_homeworks_uc.get_assigned_to_user(
-        current_user.id, skip=skip, limit=limit
+    result, total = await get_homeworks_uc.get_assigned_to_user(
+        current_user.id, page=pagination.page, page_size=pagination.page_size
     )
-    return ApiResponse.success(data=result)
+    meta = PaginationMeta.create(
+        page=pagination.page,
+        page_size=pagination.page_size,
+        total=total,
+    )
+    return ApiResponse.success(data=result, pagination=meta)
 
 
 @router.post(

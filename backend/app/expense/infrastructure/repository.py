@@ -77,6 +77,69 @@ class ExpenseRepository:
 
         return self.session.scalars(stmt).all()
 
+    def get_paged(
+        self,
+        month: int | None = None,
+        year: int | None = None,
+        status: ExpenseStatus | str | None = None,
+        spender_id: int | None = None,
+        team_id: int | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[Sequence[ExpenseInvoiceModel], int]:
+        count_stmt = select(func.count(ExpenseInvoiceModel.id)).where(
+            ExpenseInvoiceModel.is_deleted == False
+        )
+        if month is not None:
+            count_stmt = count_stmt.where(
+                extract("month", ExpenseInvoiceModel.expense_date) == month
+            )
+        if year is not None:
+            count_stmt = count_stmt.where(
+                extract("year", ExpenseInvoiceModel.expense_date) == year
+            )
+        if status is not None:
+            status_str = status.value if isinstance(status, ExpenseStatus) else status
+            count_stmt = count_stmt.where(ExpenseInvoiceModel.status == status_str)
+        if spender_id is not None:
+            count_stmt = count_stmt.where(ExpenseInvoiceModel.spender_id == spender_id)
+        if team_id is not None:
+            count_stmt = count_stmt.where(ExpenseInvoiceModel.team_id == team_id)
+
+        total = self.session.scalar(count_stmt) or 0
+
+        offset = (page - 1) * page_size
+        stmt = (
+            select(ExpenseInvoiceModel)
+            .options(
+                joinedload(ExpenseInvoiceModel.spender),
+                joinedload(ExpenseInvoiceModel.team),
+            )
+            .where(ExpenseInvoiceModel.is_deleted == False)
+        )
+
+        if month is not None:
+            stmt = stmt.where(
+                extract("month", ExpenseInvoiceModel.expense_date) == month
+            )
+        if year is not None:
+            stmt = stmt.where(extract("year", ExpenseInvoiceModel.expense_date) == year)
+        if status is not None:
+            status_str = status.value if isinstance(status, ExpenseStatus) else status
+            stmt = stmt.where(ExpenseInvoiceModel.status == status_str)
+        if spender_id is not None:
+            stmt = stmt.where(ExpenseInvoiceModel.spender_id == spender_id)
+        if team_id is not None:
+            stmt = stmt.where(ExpenseInvoiceModel.team_id == team_id)
+
+        stmt = stmt.order_by(
+            ExpenseInvoiceModel.expense_date.desc(),
+            ExpenseInvoiceModel.created_at.desc(),
+        ).offset(offset).limit(page_size)
+
+        items = self.session.scalars(stmt).all()
+        return items, total
+
     def get_summary(
         self,
         month: int | None = None,

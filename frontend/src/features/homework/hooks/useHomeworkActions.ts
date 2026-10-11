@@ -8,7 +8,7 @@ import {
     useDeleteHomework
 } from './useHomeworks';
 
-import { useUsers } from '@/features/users';
+import { useUserOptions } from '@/features/users';
 import { useTeams } from '@/features/teams';
 import { homeworkService } from '@/features/homework/services/homework.service';
 import type { Homework } from '@/features/homework/types/homework.types';
@@ -40,13 +40,15 @@ function homeworkModalReducer(state: HomeworkModalState, action: HomeworkModalAc
     }
 }
 
-export const useHomeworkActions = (activeTab: string) => {
+export const useHomeworkActions = (activeTab: string, pagination?: { page?: number; pageSize?: number }) => {
     const { user, hasPermission, isAdminOrLeader } = useAuth();
     const [state, dispatch] = useReducer(homeworkModalReducer, initialState);
 
-
-    const { data: allData, isLoading: allLoading, refetch: refetchAllHomeworks } = useHomeworks();
-    const { data: usersData = [] } = useUsers();
+    const { data: allData, isLoading: allLoading, refetch: refetchAllHomeworks } = useHomeworks({
+        page: pagination?.page,
+        pageSize: pagination?.pageSize,
+    });
+    const { data: usersData = [] } = useUserOptions();
     const { data: teamsData } = useTeams();
     const deleteHomeworkMutation = useDeleteHomework();
 

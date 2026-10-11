@@ -1,10 +1,17 @@
 import axiosInstance from '../../../services/axiosInstance';
 import type { ApiResponse } from '@/types/api.types';
-import type { UserResponse, UserCreate, UserUpdate, UserSettingsUpdate, UserImportResult } from '@/features/users/types/user.types';
+import type { UserResponse, UserCreate, UserUpdate, UserSettingsUpdate, UserImportResult, UserOptionDto } from '@/features/users/types/user.types';
 
 export const userService = {
-  getUsers: async () => {
-    const response = await axiosInstance.get<ApiResponse<UserResponse[]>>('/users');
+  getUsers: async (page = 1, pageSize = 20, keyword?: string) => {
+    const response = await axiosInstance.get<ApiResponse<UserResponse[]>>('/users', {
+      params: { page, page_size: pageSize, keyword },
+    });
+    return response.data;
+  },
+
+  getUserOptions: async () => {
+    const response = await axiosInstance.get<ApiResponse<UserOptionDto[]>>('/users/options');
     return response.data;
   },
 

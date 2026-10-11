@@ -37,7 +37,8 @@ import {
     useUpdateBonusPoint,
     useDeleteBonusPoint,
 } from '@/features/activity';
-import { useUsers } from '@/features/users';
+import { useUserOptions } from '@/features/users';
+import { useTablePagination } from '@/hooks';
 import { BonusPointModal } from '@/features/users/components/BonusPointModal';
 import {
     BonusPointType,
@@ -70,6 +71,7 @@ const itemVariants: Variants = {
 export const BonusPointManagementPage = () => {
     const { hasPermission } = useAuth();
     const screens = Grid.useBreakpoint();
+    const { page, pageSize, resetPage, getPaginationProps } = useTablePagination();
 
     // Filters
     const [filterUserId, setFilterUserId] = useState<number | undefined>(undefined);
@@ -77,13 +79,16 @@ export const BonusPointManagementPage = () => {
     const [filterDate, setFilterDate] = useState<Dayjs | null>(null);
 
     // Queries & Mutations
-    const { data: bonusPoints = [], isLoading } = useBonusPoints({
+    const { data: bonusPointsData, isLoading } = useBonusPoints({
         userId: filterUserId,
         type: filterType,
         month: filterDate ? filterDate.month() + 1 : undefined,
         year: filterDate ? filterDate.year() : undefined,
+        page,
+        pageSize,
     });
-    const { data: users = [] } = useUsers();
+    const bonusPoints = bonusPointsData ?? [];
+    const { data: users = [] } = useUserOptions();
 
     const createBonusPoint = useCreateBonusPoint();
     const updateBonusPoint = useUpdateBonusPoint();
@@ -392,7 +397,10 @@ export const BonusPointManagementPage = () => {
                             placeholder="Lọc theo thành viên"
                             className="w-full"
                             value={filterUserId}
-                            onChange={(val) => setFilterUserId(val)}
+                            onChange={(val) => {
+                                setFilterUserId(val);
+                                resetPage();
+                            }}
                             optionFilterProp="children"
                             filterOption={(input, option) =>
                                 String(option?.children ?? '').toLowerCase().includes(input.toLowerCase())
@@ -412,7 +420,10 @@ export const BonusPointManagementPage = () => {
                             placeholder="Lọc loại điểm cộng"
                             className="w-full"
                             value={filterType}
-                            onChange={(val) => setFilterType(val)}
+                            onChange={(val) => {
+                                setFilterType(val);
+                                resetPage();
+                            }}
                         >
                             <Option value={BonusPointType.CLUB_ACTIVITY}>
                                 <span className="flex items-center gap-2">
@@ -435,7 +446,10 @@ export const BonusPointManagementPage = () => {
                             placeholder="Lọc theo Tháng/Năm"
                             className="w-full"
                             value={filterDate}
-                            onChange={(val) => setFilterDate(val)}
+                            onChange={(val) => {
+                                setFilterDate(val);
+                                resetPage();
+                            }}
                             format="MM/YYYY"
                         />
                     </div>
@@ -447,6 +461,7 @@ export const BonusPointManagementPage = () => {
                                 setFilterUserId(undefined);
                                 setFilterType(undefined);
                                 setFilterDate(null);
+                                resetPage();
                             }}
                             className="p-0 text-emerald-600 text-xs"
                         >
@@ -462,11 +477,7 @@ export const BonusPointManagementPage = () => {
                         dataSource={bonusPoints}
                         rowKey="id"
                         loading={isLoading}
-                        pagination={{
-                            pageSize: 10,
-                            showSizeChanger: true,
-                            showTotal: (total) => `Tổng số ${total} điểm cộng`,
-                        }}
+                        pagination={getPaginationProps((bonusPointsData as any)?.pagination)}
                         className="rounded-lg overflow-hidden border border-gray-100 dark:border-gray-800"
                         locale={{ emptyText: 'Chưa có ghi nhận điểm cộng nào' }}
                     />

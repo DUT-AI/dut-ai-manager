@@ -5,7 +5,7 @@ from typing import Any, ClassVar, Union
 from sqlalchemy import and_, or_
 
 from app.core.queries.query_support.exceptions import PaginationError
-
+from sqlalchemy.orm import joinedload
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class OffsetPaginationParams:
@@ -31,6 +31,13 @@ class OffsetPaginationParams:
             raise PaginationError(
                 f"Offset cannot be greater than {cls.MAX_INT32}, got {offset}"
             )
+
+    @classmethod
+    def from_page(cls, page: int, page_size: int) -> "OffsetPaginationParams":
+        if page < 1:
+            raise PaginationError(f"Page must be greater than or equal to 1, got {page}")
+        offset = (page - 1) * page_size
+        return cls(limit=page_size, offset=offset)
 
 
 class SortingOrder(StrEnum):
@@ -132,8 +139,6 @@ def _apply_filters(model: Any, group: FilterGroup) -> Any:
 
 def apply_query_support(stmt: Any, model: Any, support: QuerySupport) -> Any:
     """Apply filters, sorting, pagination and eager loading to a statement."""
-    from sqlalchemy.orm import joinedload
-
     # 1. Eager Loading (Include)
     if support.include:
         for relation_path in support.include:
@@ -175,4 +180,17 @@ def apply_query_support(stmt: Any, model: Any, support: QuerySupport) -> Any:
     if support.pagination:
         stmt = stmt.offset(support.pagination.offset).limit(support.pagination.limit)
 
+    return stmt
+
+
+def apply_filters_only(
+    stmt: Any, model: Any, filters: FilterGroup | FilterCriterion | None
+) -> Any:
+    """Apply only filter criteria to statement for optimized counting."""
+    if filters:
+        if isinstance(filters, FilterCriterion):
+            group = FilterGroup(logic=LogicOperator.AND, elements=[filters])
+            stmt = stmt.where(_apply_filters(model, group))
+        else:
+            stmt = stmt.where(_apply_filters(model, filters))
     return stmt

@@ -23,6 +23,28 @@ class TeamRepository:
         models = self.session.scalars(statement).all()
         return [model.to_entity() for model in models]
 
+    def get_paged(
+        self, page: int = 1, page_size: int = 20
+    ) -> tuple[list[TeamEntity], int]:
+        from sqlalchemy import func
+
+        count_stmt = select(func.count(TeamModel.id)).where(TeamModel.is_deleted == False)
+        total = self.session.scalar(count_stmt) or 0
+
+        offset = (page - 1) * page_size
+        statement = (
+            select(TeamModel)
+            .where(TeamModel.is_deleted == False)
+            .options(
+                selectinload(TeamModel.team_members).joinedload(TeamMemberModel.user)
+            )
+            .order_by(TeamModel.id.desc())
+            .offset(offset)
+            .limit(page_size)
+        )
+        models = self.session.scalars(statement).all()
+        return [model.to_entity() for model in models], total
+
     def get_by_id_with_members(self, team_id: int) -> TeamEntity | None:
         statement = (
             select(TeamModel)

@@ -12,6 +12,11 @@ export const teamService = {
     return response.data;
   },
 
+  async getTeamOptions() {
+    const response = await axiosInstance.get<ApiResponse<Array<{ id: number; name: string }>>>(`/${this.subPath}/options`);
+    return response.data;
+  },
+
   async getTeam(id: number) {
     const response = await axiosInstance.get<ApiResponse<TeamResponse>>(`/${this.subPath}/${id}`);
     return response.data;

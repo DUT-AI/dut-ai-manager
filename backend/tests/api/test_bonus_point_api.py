@@ -41,11 +41,14 @@ def test_list_bonus_points_as_member_returns_403(member_client):
 
 def test_list_bonus_points_as_admin_success(admin_client, test_bonus_point):
     """Admin lấy danh sách điểm thưởng thành công."""
-    res = admin_client.get("/api/v1/bonus-points?skip=0&limit=10")
+    res = admin_client.get("/api/v1/bonus-points?page=1&page_size=10")
     assert res.status_code == 200
     data = res.json()
     assert data["is_success"] is True
     assert isinstance(data["data"], list)
+    assert "pagination" in data
+    assert data["pagination"]["page"] == 1
+    assert data["pagination"]["page_size"] == 10
 
 
 def test_list_bonus_points_with_filters(admin_client, test_bonus_point, mock_current_user):

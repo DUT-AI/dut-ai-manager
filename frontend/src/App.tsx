@@ -20,9 +20,11 @@ const AppContent = () => {
     );
   }
 
+  const routeKey = location.pathname.startsWith('/dashboard') ? 'dashboard-shell' : location.pathname;
+
   return (
     <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
+      <Routes location={location} key={routeKey}>
         <Route
           path="/login"
           element={

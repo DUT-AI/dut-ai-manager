@@ -24,6 +24,8 @@ import {
     HomeworkReportTab,
 } from '../components';
 
+import { useTablePagination } from '@/hooks';
+
 const { Title, Text } = Typography;
 
 // Animation Variants
@@ -42,6 +44,9 @@ export const HomeworkPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState('2');
     const screens = Grid.useBreakpoint();
 
+    // Table pagination
+    const { page, pageSize, getPaginationProps } = useTablePagination();
+
     // Report refetch (lifted here for tabBarExtraContent)
     const { isLoading: reportLoading, refetch: refetchReport } = useUnsubmittedReport();
 
@@ -54,7 +59,7 @@ export const HomeworkPage: React.FC = () => {
         hasPermission,
         isAdminOrLeader,
         handlers
-    } = useHomeworkActions(activeTab);
+    } = useHomeworkActions(activeTab, { page, pageSize });
 
     const {
         isFormModalOpen,
@@ -176,6 +181,7 @@ export const HomeworkPage: React.FC = () => {
                 rowKey="id"
                 loading={loading}
                 locale={{ emptyText }}
+                pagination={getPaginationProps((allHomeworks as any)?.pagination?.total)}
             />
         );
     };

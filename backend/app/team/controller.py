@@ -1,11 +1,15 @@
+from typing import Annotated
+
 from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.deps import hasPermission
 from app.core.permissions import TeamPermission
-from app.shared.application.response import ApiResponse
+from app.shared.application.pagination import PaginationParams
+from app.shared.application.response import ApiResponse, PaginationMeta
 from app.team.application.dtos import (
     TeamCreate,
+    TeamOptionDto,
     TeamResponse,
     TeamUpdate,
 )
@@ -22,11 +26,36 @@ router = APIRouter(prefix="/teams", tags=["teams"])
 @inject
 async def get_teams(
     usecases: FromDishka[TeamUseCases],
-    skip: int = 0,
-    limit: int = 100,
+    pagination: Annotated[PaginationParams, Depends()],
 ):
-    result = usecases.get_all(skip=skip, limit=limit)
-    return ApiResponse.success(data=result)
+    teams, total = usecases.get_paged(
+        page=pagination.page, page_size=pagination.page_size
+    )
+    meta = PaginationMeta.create(
+        page=pagination.page,
+        page_size=pagination.page_size,
+        total=total,
+    )
+    return ApiResponse.success(data=teams, pagination=meta)
+
+
+@router.get(
+    "/options",
+    response_model=ApiResponse[list[TeamOptionDto]],
+    dependencies=[hasPermission(TeamPermission.READ)],
+)
+@inject
+async def get_team_options(
+    usecases: FromDishka[TeamUseCases],
+):
+    """Get lightweight list of teams for select dropdowns."""
+    teams = usecases.get_all(skip=0, limit=1000)
+    return ApiResponse.success(
+        data=[
+            TeamOptionDto(id=t.id, name=t.team_name) for t in teams if t.id is not None
+        ],
+        message="Fetched team options successfully",
+    )
 
 
 @router.get(

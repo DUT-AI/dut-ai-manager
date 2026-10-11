@@ -13,9 +13,9 @@ import type {
 export const meetingService = {
   subPath: 'meetings',
 
-  async getMeetings(skip: number = 0, limit: number = 100) {
+  async getMeetings(page: number = 1, pageSize: number = 20) {
     const response = await axiosInstance.get<ApiResponse<MeetingResponse[]>>(`/${this.subPath}`, {
-      params: { skip, limit }
+      params: { page, page_size: pageSize }
     });
     return response.data;
   },

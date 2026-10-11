@@ -24,13 +24,8 @@ const SidebarContent = ({ activeKey, sideMenuItems }: SidebarContentProps) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     useLayoutEffect(() => {
-        if (scrollContainerRef.current && savedSidebarScrollTop > 0) {
+        if (scrollContainerRef.current && savedSidebarScrollTop > 0 && Math.abs(scrollContainerRef.current.scrollTop - savedSidebarScrollTop) > 2) {
             scrollContainerRef.current.scrollTop = savedSidebarScrollTop;
-            requestAnimationFrame(() => {
-                if (scrollContainerRef.current) {
-                    scrollContainerRef.current.scrollTop = savedSidebarScrollTop;
-                }
-            });
         }
     }, [activeKey]);
 
@@ -84,6 +79,18 @@ const DashboardPage = () => {
     // Determine active key from path
     const getActiveKey = () => {
         const path = location.pathname;
+
+        // Ưu tiên khớp tiền tố đường dẫn từ cấu hình sidebarMenuConfig (trừ trang tổng quan /dashboard)
+        const matchingItem = sidebarMenuConfig
+            .filter(item => item.path !== '/dashboard' && (path === item.path || path.startsWith(item.path + '/')))
+            .sort((a, b) => b.path.length - a.path.length)[0];
+
+        if (matchingItem) {
+            return matchingItem.key;
+        }
+
+        // Fallback kiểm tra từ khóa đường dẫn
+        if (path.includes('/bonus-points')) return 'bonus_points';
         if (path.includes('/meetings')) return 'meetings';
         if (path.includes('/rbac')) return 'rbac';
         if (path.includes('/users')) return 'users';
@@ -93,7 +100,7 @@ const DashboardPage = () => {
         if (path.includes('/my-homeworks')) return 'my_homeworks';
         if (path.includes('/homeworks')) return 'homework';
         if (path.includes('/teams')) return 'teams';
-        if (path.includes('/profile')) return 'profile_detail';
+        if (path.includes('/profile')) return 'profile';
         if (path.includes('/settings')) return 'settings';
         if (path.includes('/trash')) return 'trash';
         if (path.includes('/academic-reports')) return 'academic_reports';
@@ -202,7 +209,7 @@ const DashboardPage = () => {
                     margin: 4px 12px !important;
                     width: calc(100% - 24px) !important;
                     border-radius: 12px !important;
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+                    transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
                 }
                 .custom-sidebar-menu .ant-menu-item-selected {
                     background: rgba(99, 102, 241, 0.08) !important;

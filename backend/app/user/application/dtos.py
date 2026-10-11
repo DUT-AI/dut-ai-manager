@@ -74,3 +74,10 @@ class UserImportResult(BaseModel):
     success_count: int
     error_count: int
     errors: list[str] = []
+
+
+class UserOptionDto(BaseModel):
+    id: int
+    name: str
+    email: str
+    avatar_url: str | None = None

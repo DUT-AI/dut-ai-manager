@@ -35,6 +35,12 @@ class TeamUseCases:
             members=members,
         )
 
+    def get_paged(
+        self, page: int = 1, page_size: int = 20
+    ) -> tuple[list[TeamResponse], int]:
+        teams, total = self.repository.get_paged(page=page, page_size=page_size)
+        return [self._map_to_response(t) for t in teams], total
+
     def get_all(self, skip: int = 0, limit: int = 100) -> list[TeamResponse]:
         teams = self.repository.get_all_with_members(skip, limit)
         return [self._map_to_response(t) for t in teams]

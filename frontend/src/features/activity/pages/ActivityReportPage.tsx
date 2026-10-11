@@ -282,7 +282,7 @@ const ActivityReportPage = () => {
     // Pagination state for correct ranking across pages
     const [participationPage, setParticipationPage] = useState(1);
     const [titlePage, setTitlePage] = useState(1);
-    const PAGE_SIZE = 10;
+    const [pageSize, setPageSize] = useState(20);
 
     // Dedicated function to fetch title data for the persistent leaderboard
     const fetchLeaderboardData = async () => {
@@ -420,7 +420,7 @@ const ActivityReportPage = () => {
                                     children: (
                                         <Table
                                             columns={[
-                                                { title: 'Xếp hạng', key: 'rank', render: (_, __, index) => <RankBadge rank={(participationPage - 1) * PAGE_SIZE + index + 1} />, width: 80 },
+                                                { title: 'Xếp hạng', key: 'rank', render: (_, __, index) => <RankBadge rank={(participationPage - 1) * pageSize + index + 1} />, width: 80 },
                                                 {
                                                     title: 'Thành viên', key: 'user', render: (item: ParticipationStats) => (
                                                         <Space>
@@ -450,9 +450,15 @@ const ActivityReportPage = () => {
                                             rowKey={(record) => record.user_id}
                                             loading={loading}
                                             pagination={{
-                                                pageSize: PAGE_SIZE,
+                                                pageSize,
                                                 current: participationPage,
-                                                onChange: (page) => setParticipationPage(page),
+                                                pageSizeOptions: ['10', '20', '50', '100'],
+                                                showSizeChanger: true,
+                                                showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} thành viên`,
+                                                onChange: (p, ps) => {
+                                                    setParticipationPage(p);
+                                                    if (ps && ps !== pageSize) setPageSize(ps);
+                                                },
                                             }}
                                             className="p-4"
                                         />
@@ -470,7 +476,7 @@ const ActivityReportPage = () => {
                                     children: (
                                         <Table
                                             columns={[
-                                                { title: 'Xếp hạng', key: 'rank', render: (_, __, index) => <RankBadge rank={(titlePage - 1) * PAGE_SIZE + index + 1} />, width: 80 },
+                                                { title: 'Xếp hạng', key: 'rank', render: (_, __, index) => <RankBadge rank={(titlePage - 1) * pageSize + index + 1} />, width: 80 },
                                                 {
                                                     title: 'Thành viên', key: 'user', render: (item: TitleReportItem) => (
                                                         <Space>
@@ -494,9 +500,15 @@ const ActivityReportPage = () => {
                                             rowKey={(record) => record.user?.id}
                                             loading={loading}
                                             pagination={{
-                                                pageSize: PAGE_SIZE,
+                                                pageSize,
                                                 current: titlePage,
-                                                onChange: (page) => setTitlePage(page),
+                                                pageSizeOptions: ['10', '20', '50', '100'],
+                                                showSizeChanger: true,
+                                                showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} danh hiệu`,
+                                                onChange: (p, ps) => {
+                                                    setTitlePage(p);
+                                                    if (ps && ps !== pageSize) setPageSize(ps);
+                                                },
                                             }}
                                             className="p-4"
                                         />

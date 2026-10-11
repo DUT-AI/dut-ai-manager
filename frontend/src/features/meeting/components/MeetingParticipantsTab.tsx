@@ -90,7 +90,10 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
     const trainerCount = activeTrainees.filter((p) => trainerMap.has(p.user_id)).length;
     const traineeCount = activeTrainees.filter((p) => traineeMap.has(p.user_id)).length;
 
-    const myEval = currentUserId ? traineeMap.get(currentUserId) : null;
+    const myEval = evalSummary?.my_evaluation || (currentUserId ? traineeMap.get(currentUserId) : null);
+    if (myEval && currentUserId && !traineeMap.has(currentUserId)) {
+      traineeMap.set(currentUserId, myEval);
+    }
     const isTrainee = allTrainees.some((p) => p.user_id === currentUserId);
 
     return {
@@ -202,9 +205,15 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
               }
               const existing = traineeEvalsByReviewerId.get(record.user_id);
               if (existing) {
+                const isAnonymous = existing.is_anonymous;
                 return (
-                  <Tag color="blue" icon={<CheckCircleOutlined />} className="text-xs py-0.5 px-2">
-                    Đã gửi {record.user_id === currentUserId ? `(⭐ ${existing.average_score.toFixed(1)})` : ''}
+                  <Tag
+                    color={isAnonymous ? "purple" : "blue"}
+                    icon={<CheckCircleOutlined />}
+                    className="text-xs py-0.5 px-2"
+                  >
+                    {isAnonymous ? 'Đã gửi (Ẩn danh)' : 'Đã gửi'}
+                    {record.user_id === currentUserId ? ` (⭐ ${existing.average_score.toFixed(1)})` : ''}
                   </Tag>
                 );
               }
@@ -281,7 +290,7 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
                   </Text>
                   {myEvalForTrainer ? (
                     <Tag color="success" className="text-xs m-0">
-                      ✓ Đã hoàn thành (⭐ {myEvalForTrainer.average_score.toFixed(1)}/5)
+                      ✓ Đã hoàn thành {myEvalForTrainer.is_anonymous ? '(Ẩn danh)' : ''} (⭐ {myEvalForTrainer.average_score.toFixed(1)}/5)
                     </Tag>
                   ) : (
                     <Tag color="warning" className="text-xs m-0">
@@ -291,7 +300,7 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
                 </div>
                 <Text type="secondary" className="text-xs text-indigo-700 block mt-0.5">
                   {myEvalForTrainer
-                    ? 'Bạn đã gửi đánh giá cho Trainer. Bạn có thể mở khóa xem bảng điểm rèn luyện cá nhân!'
+                    ? `Bạn đã gửi đánh giá ${myEvalForTrainer.is_anonymous ? 'ẩn danh ' : ''}cho Trainer. Bạn có thể mở khóa xem bảng điểm rèn luyện cá nhân!`
                     : 'Hãy gửi đánh giá & nhận xét cho Trainer để mở khóa xem điểm rèn luyện cá nhân của bạn.'}
                 </Text>
               </div>

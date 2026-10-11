@@ -1,6 +1,7 @@
 import { Table, Space, Avatar, Typography, Button, Popconfirm } from 'antd';
 import { UserOutlined, CalendarOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import type { TablePaginationConfig } from 'antd';
 import type { ViolationResponse } from '@/features/violations/types/violation.types';
 
 const { Title, Text } = Typography;
@@ -8,6 +9,7 @@ const { Title, Text } = Typography;
 interface ViolationTableProps {
     violations: ViolationResponse[];
     isLoading: boolean;
+    paginationProps?: TablePaginationConfig;
     canUpdate: boolean;
     canDelete: boolean;
     selectedRowKeys?: number[];
@@ -20,6 +22,7 @@ interface ViolationTableProps {
 const ViolationTable = ({
     violations,
     isLoading,
+    paginationProps,
     canUpdate,
     canDelete,
     selectedRowKeys = [],
@@ -104,7 +107,7 @@ const ViolationTable = ({
             loading={isLoading}
             rowSelection={rowSelection}
             className="border border-gray-100 rounded-lg custom-table cursor-pointer"
-            pagination={{ pageSize: 10 }}
+            pagination={paginationProps}
             onRow={(record) => ({
                 onClick: () => onRowClick(record),
                 style: { cursor: 'pointer' }

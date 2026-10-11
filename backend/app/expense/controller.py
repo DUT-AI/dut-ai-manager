@@ -26,7 +26,8 @@ from app.expense.schemas import (
     ExpenseInvoiceUpdate,
     ExpenseSummaryResponse,
 )
-from app.shared.application.response import ApiResponse
+from app.shared.application.pagination import PaginationParams
+from app.shared.application.response import ApiResponse, PaginationMeta
 
 router = APIRouter(prefix="/expenses", tags=["Expenses"])
 
@@ -59,26 +60,32 @@ async def get_expense_summary(
 async def get_expenses(
     get_uc: FromDishka[GetExpensesUseCase],
     _: Annotated[CurrentUser, Depends(PermissionChecker(ExpensePermission.READ))],
+    pagination: Annotated[PaginationParams, Depends()],
     month: int | None = Query(None, ge=1, le=12),
     year: int | None = Query(None, ge=2000, le=2100),
     expense_status: ExpenseStatus | None = Query(None, alias="status"),
     spender_id: int | None = Query(None),
     team_id: int | None = Query(None),
-    limit: int = Query(100, ge=1, le=500),
-    offset: int = Query(0, ge=0),
 ):
     """Get list of expense invoices filtered by month/year, status, spender_id, and team_id."""
-    models = get_uc.execute(
+    models, total = get_uc.execute(
         month=month,
         year=year,
         status=expense_status,
         spender_id=spender_id,
         team_id=team_id,
-        limit=limit,
-        offset=offset,
+        page=pagination.page,
+        page_size=pagination.page_size,
     )
     data = [ExpenseInvoiceResponse.model_validate(m) for m in models]
-    return ApiResponse.success(data=data)
+    return ApiResponse.success(
+        data=data,
+        pagination=PaginationMeta.create(
+            page=pagination.page,
+            page_size=pagination.page_size,
+            total=total,
+        ),
+    )
 
 
 @router.post(

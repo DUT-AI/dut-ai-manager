@@ -332,7 +332,9 @@ class EvaluationResponse(BaseModel):
     created_at: datetime
 
     @classmethod
-    def from_domain(cls, e: Any) -> "EvaluationResponse":
+    def from_domain(
+        cls, e: Any, current_user_id: int | None = None
+    ) -> "EvaluationResponse":
         scores_dtos = []
         for s in getattr(e, "scores", []) or []:
             code = getattr(s, "criteria_code", "")
@@ -345,14 +347,22 @@ class EvaluationResponse(BaseModel):
                     score=getattr(s, "score", 0),
                 )
             )
+
+        is_anon = getattr(e, "is_anonymous", False)
+        actual_reviewer_id = getattr(e, "reviewer_id", None)
+        is_owner = current_user_id is not None and actual_reviewer_id == current_user_id
+
         reviewer_dto = None
-        if not getattr(e, "is_anonymous", False) and getattr(e, "reviewer", None):
+        if (not is_anon or is_owner) and getattr(e, "reviewer", None):
             rev = e.reviewer
             reviewer_dto = UserRefDto(
                 id=getattr(rev, "id", 0),
                 name=getattr(rev, "name", ""),
                 avatar_url=getattr(rev, "avatar_url", None),
             )
+
+        masked_reviewer_id = None if (is_anon and not is_owner) else actual_reviewer_id
+
         target_dto = None
         if getattr(e, "target_user", None):
             tgt = e.target_user
@@ -369,12 +379,10 @@ class EvaluationResponse(BaseModel):
         return cls(
             id=getattr(e, "id", 0) or 0,
             meeting_id=e.meeting_id,
-            reviewer_id=None
-            if getattr(e, "is_anonymous", False)
-            else getattr(e, "reviewer_id", None),
+            reviewer_id=masked_reviewer_id,
             target_user_id=e.target_user_id,
             evaluation_type=str(eval_type),
-            is_anonymous=getattr(e, "is_anonymous", False),
+            is_anonymous=is_anon,
             scores=scores_dtos,
             average_score=getattr(e, "average_score", 0.0),
             feedback_text=getattr(e, "feedback_text", None),
@@ -417,6 +425,7 @@ class MeetingEvaluationSummaryResponse(BaseModel):
     total_trainee_evaluations: int = 0
     trainer_average_score: float | None = None
     trainee_average_score: float | None = None
+    my_evaluation: EvaluationResponse | None = None
 
 
 class MeetingSeatAvailabilityDto(BaseModel):

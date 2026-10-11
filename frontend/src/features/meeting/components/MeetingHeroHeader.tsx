@@ -12,9 +12,8 @@ import {
   ThunderboltOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { useMeetingDetail, useDeleteMeeting, useUpdateMeeting } from '../hooks/useMeetings';
+import { useMeetingDetail, useDeleteMeeting, useUpdateMeeting, useMeetingEvaluationSummary } from '../hooks/useMeetings';
 import { useAuth } from '@/features/auth/context/AuthContext';
-import { useUsers } from '@/features/users/hooks/useUsers';
 import { MeetingModal } from './MeetingModal';
 import { TraineeEvaluationModal } from './TraineeEvaluationModal';
 import { MyEvaluationResultModal } from './MyEvaluationResultModal';
@@ -29,7 +28,6 @@ export const MeetingHeroHeader: React.FC<Props> = ({ meetingId }) => {
   const navigate = useNavigate();
   const { data: meeting, refetch } = useMeetingDetail(meetingId);
   const { user } = useAuth();
-  const { data: users = [] } = useUsers();
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isTraineeEvalOpen, setIsTraineeEvalOpen] = useState(false);
@@ -38,6 +36,23 @@ export const MeetingHeroHeader: React.FC<Props> = ({ meetingId }) => {
 
   const deleteMeetingMutation = useDeleteMeeting();
   const updateMeetingMutation = useUpdateMeeting();
+  const { data: evalSummary, refetch: refetchEvalSummary } = useMeetingEvaluationSummary(
+    meetingId,
+    Boolean(meeting?.enable_evaluation)
+  );
+
+  const myEvalForTrainer = useMemo(() => {
+    if (!evalSummary) return null;
+    if (evalSummary.my_evaluation) return evalSummary.my_evaluation;
+    if (user?.id && evalSummary.evaluations) {
+      return (
+        evalSummary.evaluations.find(
+          (e) => e.evaluation_type === 'TRAINEE_TO_TRAINER' && e.reviewer_id === user.id
+        ) || null
+      );
+    }
+    return null;
+  }, [evalSummary, user?.id]);
 
   if (!meeting) return null;
 
@@ -181,9 +196,15 @@ export const MeetingHeroHeader: React.FC<Props> = ({ meetingId }) => {
                   type="primary"
                   icon={<StarOutlined />}
                   onClick={() => setIsTraineeEvalOpen(true)}
-                  className="bg-amber-500 hover:!bg-amber-400 !text-white border-none font-medium shadow-sm"
+                  className={
+                    myEvalForTrainer
+                      ? "!bg-emerald-600 hover:!bg-emerald-500 !text-white border-none font-medium shadow-sm"
+                      : "bg-amber-500 hover:!bg-amber-400 !text-white border-none font-medium shadow-sm"
+                  }
                 >
-                  Đánh giá Trainer
+                  {myEvalForTrainer
+                    ? (myEvalForTrainer.is_anonymous ? '✓ Đã đánh giá (Ẩn danh)' : '✓ Đã đánh giá Trainer')
+                    : 'Đánh giá Trainer'}
                 </Button>
               </>
             )}
@@ -214,7 +235,6 @@ export const MeetingHeroHeader: React.FC<Props> = ({ meetingId }) => {
       <MeetingModal
         open={isEditModalOpen}
         editingItem={meeting}
-        users={users}
         onSubmit={handleEditSubmit}
         onCancel={() => setIsEditModalOpen(false)}
       />
@@ -225,9 +245,11 @@ export const MeetingHeroHeader: React.FC<Props> = ({ meetingId }) => {
         trainerId={meeting.trainer?.id || meeting.created_by || undefined}
         trainerName={meeting.trainer?.name}
         trainerAvatarUrl={meeting.trainer?.avatar_url}
+        existingEvaluation={myEvalForTrainer}
         onSuccess={() => {
           setIsTraineeEvalOpen(false);
           refetch();
+          refetchEvalSummary();
         }}
         onClose={() => setIsTraineeEvalOpen(false)}
         onCancel={() => setIsTraineeEvalOpen(false)}

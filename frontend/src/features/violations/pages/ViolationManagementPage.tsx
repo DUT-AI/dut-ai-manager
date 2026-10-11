@@ -21,6 +21,7 @@ import ViolationTable from '../components/ViolationTable';
 import ViolationMobileList from '../components/ViolationMobileList';
 import ViolationFormModal from '../components/ViolationFormModal';
 import ViolationDetailDrawer from '../components/ViolationDetailDrawer';
+import { useTablePagination } from '@/hooks';
 
 const { Title, Text } = Typography;
 
@@ -47,17 +48,36 @@ const ViolationManagementPage = () => {
     const { hasPermission } = useAuth();
     const screens = Grid.useBreakpoint();
 
+    // Table pagination with URL synchronization
+    const { page, pageSize, resetPage, getPaginationProps } = useTablePagination();
+
     // Filters
     const [filterUserId, setFilterUserId] = useState<number | undefined>(undefined);
     const [filterDate, setFilterDate] = useState<dayjs.Dayjs | null>(null);
 
+    const handleFilterUserChange = (userId: number | undefined) => {
+        setFilterUserId(userId);
+        resetPage();
+    };
+
+    const handleFilterDateChange = (date: dayjs.Dayjs | null) => {
+        setFilterDate(date);
+        resetPage();
+    };
+
     // TanStack Query hooks
-    const { data: violations = [], isLoading } = useViolations({
+    const { data: violationsResult, isLoading } = useViolations({
+        page,
+        pageSize,
         userId: filterUserId,
         month: filterDate ? filterDate.month() + 1 : undefined,
         year: filterDate ? filterDate.year() : undefined,
     });
-    const { data: users = [] } = useUsers();
+    const violations = violationsResult?.data ?? [];
+    const paginationMeta = violationsResult?.pagination;
+
+    const { data: usersData } = useUsers();
+    const users = (usersData as any)?.data ?? usersData ?? [];
     const createViolation = useCreateViolation();
     const updateViolation = useUpdateViolation();
     const deleteViolation = useDeleteViolation();
@@ -190,9 +210,9 @@ const ViolationManagementPage = () => {
                 <motion.div variants={itemVariants}>
                     <ViolationFilter
                         filterUserId={filterUserId}
-                        setFilterUserId={setFilterUserId}
+                        setFilterUserId={handleFilterUserChange}
                         filterDate={filterDate}
-                        setFilterDate={setFilterDate}
+                        setFilterDate={handleFilterDateChange}
                         users={users}
                     />
                 </motion.div>
@@ -264,6 +284,7 @@ const ViolationManagementPage = () => {
                         <ViolationTable
                             violations={violations}
                             isLoading={isLoading}
+                            paginationProps={getPaginationProps(paginationMeta?.total)}
                             canUpdate={canUpdate}
                             canDelete={canDelete}
                             selectedRowKeys={selectedRowKeys}

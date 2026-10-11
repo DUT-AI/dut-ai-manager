@@ -1,12 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import billingService from '../services/billing.service';
 import type { InvoiceCreate, MonthlyInvoiceCreate } from '@/features/billing/types/billing.types';
+import type { PaginationMeta } from '@/types/api.types';
 
 // Query Keys
 export const billingKeys = {
   all: ['billing'] as const,
   my: () => ['billing', 'me'] as const,
-  list: (skip?: number, limit?: number) => ['billing', { skip, limit }] as const,
+  list: (filters?: Record<string, unknown>, page?: number, pageSize?: number) =>
+    ['billing', 'list', { filters, page, pageSize }] as const,
   detail: (id: number) => ['billing', 'detail', id] as const,
 };
 
@@ -24,14 +26,21 @@ export const useMyInvoices = () => {
 
 export const useAllInvoices = (
   filters?: { user_id?: number; team_id?: number; status?: string; billing_period?: string },
-  skip = 0,
-  limit = 100
+  page = 1,
+  pageSize = 20
 ) => {
   return useQuery({
-    queryKey: ['billing', 'list', { filters, skip, limit }],
+    queryKey: billingKeys.list(filters, page, pageSize),
     queryFn: async () => {
-      const response = await billingService.getAllInvoices(filters, skip, limit);
-      return response.data ?? [];
+      const response = await billingService.getAllInvoices(filters, page, pageSize);
+      const items = response.data ?? [];
+      const result = [...items] as typeof items & {
+        data: typeof items;
+        pagination: PaginationMeta | null;
+      };
+      result.data = items;
+      result.pagination = response.pagination ?? null;
+      return result;
     },
     staleTime: 30 * 1000,
   });

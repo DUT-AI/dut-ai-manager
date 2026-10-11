@@ -1,5 +1,5 @@
 import React from 'react';
-import { Table, Space, Tag, Avatar, Typography, Button, Popconfirm } from 'antd';
+import { Table, Space, Tag, Avatar, Typography, Button, Popconfirm, type TablePaginationConfig } from 'antd';
 import {
     UserOutlined,
     FileTextOutlined,
@@ -18,6 +18,7 @@ interface PermissionTableProps {
     isLoading: boolean;
     canUpdate: boolean;
     canDelete: boolean;
+    pagination?: TablePaginationConfig | false;
     onViewDetail: (item: PermissionRequestResponse) => void;
     onEdit: (item: PermissionRequestResponse) => void;
     onDelete: (id: number) => void;
@@ -28,6 +29,7 @@ export const PermissionTable: React.FC<PermissionTableProps> = ({
     isLoading,
     canUpdate,
     canDelete,
+    pagination,
     onViewDetail,
     onEdit,
     onDelete,
@@ -36,7 +38,7 @@ export const PermissionTable: React.FC<PermissionTableProps> = ({
         {
             title: 'Người tạo',
             key: 'creator',
-            render: (_: any, record: PermissionRequestResponse) => (
+            render: (_: unknown, record: PermissionRequestResponse) => (
                 <Space>
                     <Avatar
                         src={record.owner?.avatar_url}
@@ -65,7 +67,7 @@ export const PermissionTable: React.FC<PermissionTableProps> = ({
         {
             title: 'Mục tiêu',
             key: 'target',
-            render: (_: any, record: PermissionRequestResponse) => {
+            render: (_: unknown, record: PermissionRequestResponse) => {
                 if (record.category === 'POSTPONE' && record.homework) {
                     return (
                         <Space>
@@ -103,7 +105,7 @@ export const PermissionTable: React.FC<PermissionTableProps> = ({
             title: 'Thao tác',
             key: 'actions',
             width: 120,
-            render: (_: any, record: PermissionRequestResponse) => (
+            render: (_: unknown, record: PermissionRequestResponse) => (
                 <Space onClick={(e) => e.stopPropagation()}>
                     <Button
                         icon={<EditOutlined />}
@@ -132,7 +134,12 @@ export const PermissionTable: React.FC<PermissionTableProps> = ({
             rowKey="id"
             loading={isLoading}
             className="border border-gray-100 rounded-lg custom-table cursor-pointer"
-            pagination={{ pageSize: 10 }}
+            pagination={pagination !== undefined ? pagination : {
+                defaultPageSize: 20,
+                pageSizeOptions: ['10', '20', '50', '100'],
+                showSizeChanger: true,
+                showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} đơn phép`,
+            }}
             onRow={(record) => ({
                 onClick: () => onViewDetail(record),
                 style: { cursor: 'pointer' },

@@ -20,6 +20,7 @@ import {
     UserTable,
 } from '../components';
 import { UserStatus, type UserResponse } from '../types/user.types';
+import { useTablePagination } from '@/hooks';
 
 const { Title, Text } = Typography;
 
@@ -83,13 +84,38 @@ const UserManagementPage = () => {
     const { isUserModalOpen, isImportModalOpen, editingUser } = modalState;
     const screens = Grid.useBreakpoint();
 
+    // Table pagination with URL synchronization
+    const { page, pageSize, resetPage, getPaginationProps } = useTablePagination();
+
     // Search & Filter states
     const [searchText, setSearchText] = useState('');
     const [filterRole, setFilterRole] = useState<string | undefined>(undefined);
     const [filterStatus, setFilterStatus] = useState<string | undefined>(undefined);
 
+    const handleSearchTextChange = (text: string) => {
+        setSearchText(text);
+        resetPage();
+    };
+
+    const handleFilterRoleChange = (role: string | undefined) => {
+        setFilterRole(role);
+        resetPage();
+    };
+
+    const handleFilterStatusChange = (status: string | undefined) => {
+        setFilterStatus(status);
+        resetPage();
+    };
+
     // TanStack Query hooks
-    const { data: users = [], isLoading } = useUsers();
+    const { data: usersResult, isLoading } = useUsers({
+        page,
+        pageSize,
+        keyword: searchText.trim() || undefined,
+    });
+    const users = usersResult?.data ?? [];
+    const paginationMeta = usersResult?.pagination;
+
     const { data: roles = [] } = useRoles();
     const createUser = useCreateUser();
     const updateUser = useUpdateUser();
@@ -100,21 +126,14 @@ const UserManagementPage = () => {
     const canUpdate = hasPermission(UserPermission.UPDATE);
     const canDelete = hasPermission(UserPermission.DELETE);
 
-    // Filtered users
+    // Filtered users (by role and status if selected)
     const filteredUsers = useMemo(() => {
         return users.filter((user) => {
-            const matchSearch =
-                searchText === '' ||
-                user.name?.toLowerCase().includes(searchText.toLowerCase()) ||
-                user.email?.toLowerCase().includes(searchText.toLowerCase()) ||
-                user.phone_number?.toLowerCase().includes(searchText.toLowerCase());
-
             const matchRole = !filterRole || (user.role_names && user.role_names.includes(filterRole));
             const matchStatus = !filterStatus || user.status === filterStatus;
-
-            return matchSearch && matchRole && matchStatus;
+            return matchRole && matchStatus;
         });
-    }, [users, searchText, filterRole, filterStatus]);
+    }, [users, filterRole, filterStatus]);
 
     const handleCreateOrUpdate = async (values: Record<string, unknown>) => {
         try {
@@ -145,6 +164,7 @@ const UserManagementPage = () => {
         setSearchText('');
         setFilterRole(undefined);
         setFilterStatus(undefined);
+        resetPage();
     };
 
     return (
@@ -197,11 +217,11 @@ const UserManagementPage = () => {
                 <motion.div variants={itemVariants}>
                     <UserFilterBar
                         searchText={searchText}
-                        onSearchTextChange={setSearchText}
+                        onSearchTextChange={handleSearchTextChange}
                         filterRole={filterRole}
-                        onFilterRoleChange={setFilterRole}
+                        onFilterRoleChange={handleFilterRoleChange}
                         filterStatus={filterStatus}
-                        onFilterStatusChange={setFilterStatus}
+                        onFilterStatusChange={handleFilterStatusChange}
                         roles={roles}
                         onResetFilters={handleResetFilters}
                     />
@@ -238,6 +258,7 @@ const UserManagementPage = () => {
                         <UserTable
                             users={filteredUsers}
                             isLoading={isLoading}
+                            paginationProps={getPaginationProps(paginationMeta?.total)}
                             canUpdate={canUpdate}
                             canDelete={canDelete}
                             onNavigateProfile={(id) => navigate(`/dashboard/profile/${id}`)}

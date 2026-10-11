@@ -9,11 +9,56 @@ import type {
 export const permissionService = {
   subPath: 'permissions',
 
-  async getPermissions(userId?: number, month?: number, year?: number, category?: string, deleted?: boolean) {
+  async getPermissions(
+    paramsOrUserId?:
+      | {
+          userId?: number;
+          month?: number;
+          year?: number;
+          category?: string;
+          deleted?: boolean;
+          page?: number;
+          pageSize?: number;
+        }
+      | number,
+    month?: number,
+    year?: number,
+    category?: string,
+    deleted?: boolean,
+    page?: number,
+    pageSize?: number
+  ) {
+    let params: Record<string, any> = {};
+    if (typeof paramsOrUserId === 'object' && paramsOrUserId !== null) {
+      params = {
+        user_id: paramsOrUserId.userId,
+        month: paramsOrUserId.month,
+        year: paramsOrUserId.year,
+        category: paramsOrUserId.category,
+        deleted: paramsOrUserId.deleted,
+        page: paramsOrUserId.page,
+        page_size: paramsOrUserId.pageSize,
+      };
+    } else {
+      params = {
+        user_id: paramsOrUserId,
+        month,
+        year,
+        category,
+        deleted,
+        page,
+        page_size: pageSize,
+      };
+    }
+
     const response = await axiosInstance.get<ApiResponse<PermissionRequestResponse[]>>(`/${this.subPath}`, {
-      params: { user_id: userId, month, year, category, deleted }
+      params,
     });
-    return response.data.data;
+    const items = response.data.data ?? [];
+    if (response.data.pagination) {
+      (items as any).pagination = response.data.pagination;
+    }
+    return items;
   },
 
   async createPermission(data: PermissionCreate) {

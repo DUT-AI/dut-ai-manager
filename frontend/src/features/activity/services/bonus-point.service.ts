@@ -16,12 +16,24 @@ export const bonusPointService = {
     year?: number,
     deleted?: boolean,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    page: number = 1,
+    pageSize: number = 20
   ) {
     const response = await axiosInstance.get<ApiResponse<BonusPointResponse[]>>(`/${this.subPath}`, {
-      params: { user_id: userId, type, month, year, deleted, start_date: startDate, end_date: endDate }
+      params: {
+        user_id: userId,
+        type,
+        month,
+        year,
+        deleted,
+        start_date: startDate,
+        end_date: endDate,
+        page,
+        page_size: pageSize,
+      }
     });
-    return response.data.data;
+    return response.data;
   },
 
   async createBonusPoint(data: BonusPointCreate) {

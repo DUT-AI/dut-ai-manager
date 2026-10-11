@@ -5,7 +5,7 @@ import type { PermissionCreate, PermissionUpdate } from '@/features/activity/typ
 // Query Keys
 const permissionRequestKeys = {
   all: ['permissionRequests'] as const,
-  list: (filters: { userId?: number; month?: number; year?: number; category?: string }) =>
+  list: (filters: { userId?: number; month?: number; year?: number; category?: string; page?: number; pageSize?: number }) =>
     ['permissionRequests', filters] as const,
 };
 
@@ -15,18 +15,15 @@ export const usePermissionRequests = (filters: {
   month?: number;
   year?: number;
   category?: string;
+  page?: number;
+  pageSize?: number;
   enabled?: boolean;
 } = {}) => {
   const { enabled = true, ...rest } = filters;
   return useQuery({
     queryKey: permissionRequestKeys.list(rest),
     queryFn: async () => {
-      const response = await permissionService.getPermissions(
-        rest.userId,
-        rest.month,
-        rest.year,
-        rest.category
-      );
+      const response = await permissionService.getPermissions(rest);
       return response ?? [];
     },
     staleTime: 60 * 1000, // 1 minute

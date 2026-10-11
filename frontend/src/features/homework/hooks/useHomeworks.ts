@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { homeworkService } from '@/features/homework/services/homework.service';
-import type { HomeworkCreate, HomeworkUpdate, HomeworkStatus } from '@/features/homework/types/homework.types';
+import type { HomeworkCreate, HomeworkUpdate, HomeworkStatus, Homework } from '@/features/homework/types/homework.types';
+import type { PaginationMeta } from '@/types/api.types';
 
 // Query Keys
 const homeworkKeys = {
@@ -9,20 +10,49 @@ const homeworkKeys = {
 };
 
 // Queries
-export const useHomeworks = (options?: { enabled?: boolean }) => {
+export const useHomeworks = (options?: {
+  page?: number;
+  pageSize?: number;
+  deleted?: boolean;
+  enabled?: boolean;
+}) => {
+  const page = options?.page ?? 1;
+  const pageSize = options?.pageSize ?? 20;
+  const deleted = options?.deleted ?? false;
   return useQuery({
-    queryKey: homeworkKeys.all,
-    queryFn: () => homeworkService.getAll(),
+    queryKey: ['homeworks', { page, pageSize, deleted }],
+    queryFn: async () => {
+      const res = await homeworkService.getAll(page, pageSize, deleted);
+      const items = res.data ?? [];
+      const result = items as Array<Homework> & {
+        data: Homework[];
+        pagination: PaginationMeta | null;
+      };
+      result.data = items;
+      result.pagination = res.pagination ?? null;
+      return result;
+    },
     staleTime: 2 * 60 * 1000, // 2 minutes
     enabled: options?.enabled,
   });
 };
 
-
-export const useMyHomeworks = () => {
+export const useMyHomeworks = (options?: { page?: number; pageSize?: number }) => {
+  const page = options?.page ?? 1;
+  const pageSize = options?.pageSize ?? 20;
   return useQuery({
-    queryKey: ['homeworks', 'me'],
-    queryFn: () => homeworkService.getMyHomeworks(),
+    queryKey: ['homeworks', 'me', { page, pageSize }],
+    queryFn: async () => {
+      const res = await homeworkService.getMyHomeworks(page, pageSize);
+      const items = res.data ?? [];
+      const result = items as Array<Homework> & {
+        data: Homework[];
+        pagination: PaginationMeta | null;
+      };
+      result.data = items;
+      result.pagination = res.pagination ?? null;
+      return result;
+    },
     staleTime: 0,
     refetchOnMount: 'always',
   });

@@ -53,6 +53,33 @@ class HomeworkRepository:
         models = self.session.scalars(statement).all()
         return [m.to_entity() for m in models]
 
+    def get_paged(
+        self,
+        query_support: QuerySupport | None = None,
+        deleted: bool = False,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[HomeworkEntity], int]:
+        """Get paginated homeworks and total count with optimized COUNT query."""
+        from sqlalchemy import func
+        from app.shared.domain.query_support import apply_filters_only, apply_query_support
+
+        count_stmt = select(func.count(HomeworkModel.id)).where(HomeworkModel.is_deleted == deleted)
+        if query_support and query_support.filters:
+            count_stmt = apply_filters_only(count_stmt, HomeworkModel, query_support.filters)
+        total = self.session.scalar(count_stmt) or 0
+
+        statement = select(HomeworkModel).where(HomeworkModel.is_deleted == deleted)
+        if query_support:
+            statement = apply_query_support(statement, HomeworkModel, query_support)
+        else:
+            sort_field = HomeworkModel.updated_at if deleted else HomeworkModel.created_at
+            offset = (page - 1) * page_size
+            statement = statement.order_by(desc(cast(Any, sort_field))).offset(offset).limit(page_size)
+
+        models = self.session.scalars(statement).all()
+        return [m.to_entity() for m in models], total
+
     def get_by_id(self, homework_id: int) -> HomeworkEntity | None:
         statement = select(HomeworkModel).where(
             HomeworkModel.id == homework_id,

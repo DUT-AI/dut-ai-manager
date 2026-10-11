@@ -50,6 +50,22 @@ class HomeworkResponse(HomeworkBase):
     class Config:
         from_attributes = True
 
+    @classmethod
+    def from_domain(cls, hw: Any) -> "HomeworkResponse":
+        return cls(
+            id=hw.id,
+            title=hw.title,
+            deadline=hw.deadline,
+            link=hw.link,
+            slug=hw.slug,
+            requires_coding=hw.requires_coding,
+            requires_game=hw.requires_game,
+            created_at=hw.created_at,
+            updated_at=hw.updated_at,
+            created_by=hw.created_by,
+            assignee_ids=getattr(hw, "assignee_ids", []) or [],
+        )
+
 
 class ExerciseSummaryDTO(BaseModel):
     """Thông tin tóm tắt của một bài tập coding con kèm số liệu hoàn thành."""

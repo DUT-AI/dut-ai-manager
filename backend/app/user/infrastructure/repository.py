@@ -120,3 +120,36 @@ class UserRepository(BaseRepository[UserModel, UserEntity]):
         )
         models = self.session.scalars(statement).unique().all()
         return [m.to_entity() for m in models]
+
+    def get_paged_users(
+        self, page: int = 1, page_size: int = 20, keyword: str | None = None
+    ) -> tuple[list[UserEntity], int]:
+        """Get paginated users with eager loaded roles/permissions and total count."""
+        from sqlalchemy import func
+
+        count_stmt = select(func.count(UserModel.id)).where(UserModel.is_deleted.is_(False))
+        if keyword:
+            count_stmt = count_stmt.where(
+                or_(
+                    UserModel.name.ilike(f"%{keyword}%"),
+                    UserModel.email.ilike(f"%{keyword}%"),
+                )
+            )
+        total = self.session.scalar(count_stmt) or 0
+
+        statement = self._get_base_query().where(UserModel.is_deleted.is_(False))
+        if keyword:
+            statement = statement.where(
+                or_(
+                    UserModel.name.ilike(f"%{keyword}%"),
+                    UserModel.email.ilike(f"%{keyword}%"),
+                )
+            )
+        offset = (page - 1) * page_size
+        statement = (
+            statement.order_by(UserModel.created_at.desc())
+            .offset(offset)
+            .limit(page_size)
+        )
+        models = self.session.scalars(statement).unique().all()
+        return [m.to_entity() for m in models], total

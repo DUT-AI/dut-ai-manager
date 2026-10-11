@@ -5,6 +5,7 @@ from app.homework.application.helpers import QuizSubmissionHelper
 from app.homework.domain.entity import Homework as HomeworkEntity
 from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.homework.infrastructure.repository import HomeworkRepository
+from app.shared.application.query_support_utils import build_query_support
 from app.shared.domain.query_support import QuerySupport
 from app.shared.domain.value_objects import UserRef
 from app.user.infrastructure.repository import UserRepository
@@ -24,14 +25,27 @@ class GetHomeworksUseCase:
         self.quiz_api = quiz_api
         self.user_repo = user_repo
 
+    def get_paged(
+        self, page: int = 1, page_size: int = 20, deleted: bool = False
+    ) -> tuple[list[HomeworkEntity], int]:
+        qs = build_query_support(
+            page=page, page_size=page_size, sort_by="created_at", descending=True
+        )
+        return self.homework_repo.get_paged(query_support=qs, deleted=deleted)
+
     def get_all(
         self, skip: int = 0, limit: int = 100, deleted: bool = False
     ) -> list[HomeworkEntity]:
         return self.homework_repo.get_all(skip=skip, limit=limit, deleted=deleted)
 
     async def get_assigned_to_user(
-        self, user_id: int, skip: int = 0, limit: int = 100
-    ) -> list[HomeworkResponse]:
+        self,
+        user_id: int,
+        page: int = 1,
+        page_size: int = 20,
+        skip: int | None = None,
+        limit: int | None = None,
+    ) -> tuple[list[HomeworkResponse], int]:
         all_homeworks = self.homework_repo.get_all(skip=0, limit=1000)
         assigned_homeworks: list[HomeworkEntity] = []
         for hw in all_homeworks:
@@ -40,9 +54,13 @@ class GetHomeworksUseCase:
             if user_id in (hw.assignee_ids or []):
                 assigned_homeworks.append(hw)
 
-        paged_hw = assigned_homeworks[skip : skip + limit]
+        total = len(assigned_homeworks)
+        actual_skip = skip if skip is not None else (page - 1) * page_size
+        actual_limit = limit if limit is not None else page_size
+
+        paged_hw = assigned_homeworks[actual_skip : actual_skip + actual_limit]
         if not paged_hw:
-            return []
+            return [], total
 
         now = get_current_utc7_time()
 
@@ -137,7 +155,7 @@ class GetHomeworksUseCase:
             )
             responses.append(resp)
 
-        return responses
+        return responses, total
 
     def get_by_id(self, homework_id: int) -> HomeworkEntity | None:
         return self.homework_repo.get_by_id(homework_id)
