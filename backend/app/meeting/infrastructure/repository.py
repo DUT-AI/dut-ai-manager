@@ -97,10 +97,28 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         limit: int = 100,
         month: int | None = None,
         year: int | None = None,
+        start_date: Any | None = None,
+        end_date: Any | None = None,
     ) -> list[DomainMeeting]:
 
         if not query_support:
             filters = []
+            if start_date is not None:
+                filters.append(
+                    FilterCriterion(
+                        field="start_time",
+                        operator=FilterOperator.GTE,
+                        value=start_date,
+                    )
+                )
+            if end_date is not None:
+                filters.append(
+                    FilterCriterion(
+                        field="start_time",
+                        operator=FilterOperator.LTE,
+                        value=end_date,
+                    )
+                )
             if month:
                 filters.append(
                     FilterCriterion(
@@ -589,6 +607,24 @@ class ParticipantRepository(BaseRepository[ORMParticipant, DomainParticipant]):
             .where(
                 ORMParticipant.is_deleted.is_(False),
                 ORMParticipant.user_id == user_id,
+                ORMParticipant.check_in_at.is_not(None),
+                extract("month", ORMMeeting.start_time) == month,
+                extract("year", ORMMeeting.start_time) == year,
+            )
+            .order_by(ORMMeeting.start_time.asc())
+            .options(joinedload(ORMParticipant.user))
+        )
+        return [self._to_domain(orm) for orm in self.session.scalars(stmt).all()]
+
+    def get_all_by_month(
+        self, month: int, year: int
+    ) -> list[DomainParticipant]:
+        """Lấy tất cả session đã check-in của tất cả user trong tháng trong 1 query duy nhất."""
+        stmt = (
+            select(ORMParticipant)
+            .join(ORMMeeting, ORMParticipant.meeting_id == ORMMeeting.id)
+            .where(
+                ORMParticipant.is_deleted.is_(False),
                 ORMParticipant.check_in_at.is_not(None),
                 extract("month", ORMMeeting.start_time) == month,
                 extract("year", ORMMeeting.start_time) == year,

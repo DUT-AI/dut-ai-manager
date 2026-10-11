@@ -37,31 +37,31 @@ class GetActivityTrendUseCase:
             return self._aggregate_by_month(month, year)
 
     def _aggregate_by_week(self, month: int, year: int) -> list[ActivityTrendItem]:
-        from datetime import date, timedelta
+        from datetime import date, datetime, time, timedelta
 
         last_day = calendar.monthrange(year, month)[1]
         end_date = date(year, month, last_day)
 
         WEEKS_COUNT = 24
-        meetings = []
-        violations = []
+        # Khoảng thời gian từ 24 tuần trước đến ngày cuối cùng của tháng được chọn
+        start_date = end_date - timedelta(weeks=WEEKS_COUNT)
 
-        curr_m = month
-        curr_y = year
-        for _ in range(6):
-            meetings.extend(
-                self.meeting_repo.get_all_with_participants(month=curr_m, year=curr_y)
-            )
-            violations.extend(
-                self.violation_repo.get_by_month(
-                    user_id=None, month=curr_m, year=curr_y
-                )
-            )
+        start_datetime = datetime.combine(start_date, time.min)
+        end_datetime = datetime.combine(end_date, time.max)
 
-            curr_m -= 1
-            if curr_m == 0:
-                curr_m = 12
-                curr_y -= 1
+        # 1 query duy nhất trên bảng violation theo dải ngày
+        violations = self.violation_repo.get_by_month(
+            user_id=None,
+            start_date=start_datetime,
+            end_date=end_datetime,
+        )
+
+        # 1 query duy nhất trên bảng meeting/participant theo dải ngày
+        meetings = self.meeting_repo.get_all_with_participants(
+            start_date=start_datetime,
+            end_date=end_datetime,
+            limit=5000,
+        )
 
         items = []
         current_end = end_date
@@ -70,7 +70,7 @@ class GetActivityTrendUseCase:
 
             label = current_start.strftime("%d/%m")
 
-            # Calculate violations
+            # Calculate violations in this week
             week_v = [
                 v
                 for v in violations
@@ -79,7 +79,7 @@ class GetActivityTrendUseCase:
                 and v.type in (ViolationType.LATE, ViolationType.ABSENT)
             ]
 
-            # Calculate attendance hours
+            # Calculate attendance hours in this week
             week_meetings = [
                 m
                 for m in meetings
@@ -112,22 +112,49 @@ class GetActivityTrendUseCase:
         return items
 
     def _aggregate_by_month(self, month: int, year: int) -> list[ActivityTrendItem]:
+        from datetime import date, datetime, time
+
+        last_day = calendar.monthrange(year, month)[1]
+        start_datetime = datetime.combine(date(year, 1, 1), time.min)
+        end_datetime = datetime.combine(date(year, month, last_day), time.max)
+
+        # 1 query violations từ đầu năm đến tháng được chọn
+        violations = self.violation_repo.get_by_month(
+            user_id=None,
+            start_date=start_datetime,
+            end_date=end_datetime,
+        )
+
+        # 1 query meetings từ đầu năm đến tháng được chọn
+        meetings = self.meeting_repo.get_all_with_participants(
+            start_date=start_datetime,
+            end_date=end_datetime,
+            limit=5000,
+        )
+
         items = []
         for m in range(1, month + 1):
             label = f"Tháng {m}"
 
-            violations = self.violation_repo.get_by_month(
-                user_id=None, month=m, year=year
-            )
             v_count = sum(
                 1
                 for v in violations
-                if v.type in (ViolationType.LATE, ViolationType.ABSENT)
+                if v.date
+                and v.date.month == m
+                and v.date.year == year
+                and v.type in (ViolationType.LATE, ViolationType.ABSENT)
             )
 
-            meetings = self.meeting_repo.get_all_with_participants(month=m, year=year)
+            month_meetings = [
+                mtg
+                for mtg in meetings
+                if mtg.start_time
+                and mtg.start_time.month == m
+                and mtg.start_time.year == year
+            ]
+
             total_hours = 0.0
-            for mtg in meetings:
+            for mtg in month_meetings:
                 if mtg.participants:
                     for p in mtg.participants:
                         if p.check_in_at and p.check_out_at:
@@ -148,3 +175,4 @@ class GetActivityTrendUseCase:
             )
 
         return items
+

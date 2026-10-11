@@ -44,6 +44,70 @@ def _calc_streaks(checkin_dates: list, violation_dates: set) -> tuple[int, int]:
     return current, longest
 
 
+def _calculate_user_participation_stats(
+    user_id: int,
+    month: int,
+    year: int,
+    participants: list,
+    violations: list,
+) -> ParticipationStats:
+    """Tính toán ParticipationStats từ danh sách participants và violations đã gom nhóm."""
+    # Tổng giờ
+    total_hours = sum(
+        max(0.0, (p.check_out_at - p.check_in_at).total_seconds()) / 3600
+        for p in participants
+        if p.check_in_at and p.check_out_at
+    )
+
+    # Tần suất theo tuần
+    active_weeks = {
+        p.check_in_at.isocalendar().week for p in participants if p.check_in_at
+    }
+    # Số tuần trong tháng (thường 4-5)
+    total_weeks = (
+        len(
+            {
+                (p.check_in_at + timedelta(days=i)).isocalendar().week
+                for p in participants
+                if p.check_in_at
+                for i in range(7)
+                if (p.check_in_at + timedelta(days=i)).month == month
+            }
+        )
+        or 4
+    )
+    weekly_frequency = len(active_weeks) / total_weeks
+
+    # Streak — dùng ngày có check-in, reset khi gặp violation
+    checkin_dates = sorted(
+        {p.check_in_at.date() for p in participants if p.check_in_at}
+    )
+    violation_dates = {
+        v.date.date()
+        for v in violations
+        if v.date and v.type in (ViolationType.LATE, ViolationType.ABSENT)
+    }
+    current_streak, longest_streak = _calc_streaks(checkin_dates, violation_dates)
+
+    late_count = sum(1 for v in violations if v.type == ViolationType.LATE)
+    absent_count = sum(1 for v in violations if v.type == ViolationType.ABSENT)
+    on_time_rate = 1.0 - (late_count / len(participants)) if participants else 1.0
+
+    return ParticipationStats(
+        user_id=user_id,
+        month=month,
+        year=year,
+        total_sessions=len(participants),
+        total_hours=round(total_hours, 2),
+        weekly_frequency=round(weekly_frequency, 2),
+        current_streak=current_streak,
+        longest_streak=longest_streak,
+        on_time_rate=round(on_time_rate, 2),
+        late_count=late_count,
+        absent_count=absent_count,
+    )
+
+
 class GetParticipationAnalysisUseCase:
     def __init__(
         self,
@@ -58,60 +122,12 @@ class GetParticipationAnalysisUseCase:
         violations = self.violation_repo.get_by_month(
             user_id=user_id, month=month, year=year
         )
-
-        # Tổng giờ
-        total_hours = sum(
-            max(0.0, (p.check_out_at - p.check_in_at).total_seconds()) / 3600
-            for p in participants
-            if p.check_in_at and p.check_out_at
-        )
-
-        # Tần suất theo tuần
-        active_weeks = {
-            p.check_in_at.isocalendar().week for p in participants if p.check_in_at
-        }
-        # Số tuần trong tháng (thường 4-5)
-        total_weeks = (
-            len(
-                {
-                    (p.check_in_at + timedelta(days=i)).isocalendar().week
-                    for p in participants
-                    if p.check_in_at
-                    for i in range(7)
-                    if (p.check_in_at + timedelta(days=i)).month == month
-                }
-            )
-            or 4
-        )
-        weekly_frequency = len(active_weeks) / total_weeks
-
-        # Streak — dùng ngày có check-in, reset khi gặp violation
-        checkin_dates = sorted(
-            {p.check_in_at.date() for p in participants if p.check_in_at}
-        )
-        violation_dates = {
-            v.date.date()
-            for v in violations
-            if v.date and v.type in (ViolationType.LATE, ViolationType.ABSENT)
-        }
-        current_streak, longest_streak = _calc_streaks(checkin_dates, violation_dates)
-
-        late_count = sum(1 for v in violations if v.type == ViolationType.LATE)
-        absent_count = sum(1 for v in violations if v.type == ViolationType.ABSENT)
-        on_time_rate = 1.0 - (late_count / len(participants)) if participants else 1.0
-
-        return ParticipationStats(
+        return _calculate_user_participation_stats(
             user_id=user_id,
             month=month,
             year=year,
-            total_sessions=len(participants),
-            total_hours=round(total_hours, 2),
-            weekly_frequency=round(weekly_frequency, 2),
-            current_streak=current_streak,
-            longest_streak=longest_streak,
-            on_time_rate=round(on_time_rate, 2),
-            late_count=late_count,
-            absent_count=absent_count,
+            participants=participants,
+            violations=violations,
         )
 
 
@@ -121,20 +137,50 @@ class GetParticipationLeaderboardUseCase:
     def __init__(
         self,
         user_repo: UserRepository,
-        stats_repo: MonthlyUserStatsRepository,
-        analysis_uc: GetParticipationAnalysisUseCase,
+        participant_repo: ParticipantRepository,
+        violation_repo: ViolationRepository,
     ):
         self.user_repo = user_repo
-        self.stats_repo = stats_repo
-        self.analysis_uc = analysis_uc
+        self.participant_repo = participant_repo
+        self.violation_repo = violation_repo
 
     def execute(self, month: int, year: int) -> list[ParticipationStats]:
+        # 1 query lấy danh sách active users
         users = self.user_repo.get_active_users()
+
+        # 1 query lấy toàn bộ participants check-in trong tháng của tất cả users
+        all_participants = self.participant_repo.get_all_by_month(month=month, year=year)
+
+        # 1 query lấy toàn bộ violations trong tháng của tất cả users
+        all_violations = self.violation_repo.get_by_month(month=month, year=year)
+
+        # Gom nhóm participants theo user_id
+        participants_by_user: dict[int, list] = {}
+        for p in all_participants:
+            if p.user_id:
+                participants_by_user.setdefault(p.user_id, []).append(p)
+
+        # Gom nhóm violations theo user_id
+        violations_by_user: dict[int, list] = {}
+        for v in all_violations:
+            if v.user_id:
+                violations_by_user.setdefault(v.user_id, []).append(v)
+
         stats_list = []
         for u in users:
             if u.id is None:
                 continue
-            stat = self.analysis_uc.execute(u.id, month, year)
+
+            user_participants = participants_by_user.get(u.id, [])
+            user_violations = violations_by_user.get(u.id, [])
+
+            stat = _calculate_user_participation_stats(
+                user_id=u.id,
+                month=month,
+                year=year,
+                participants=user_participants,
+                violations=user_violations,
+            )
 
             # Add UserInfo
             stat.user = UserInfoResponse(**u.model_dump())
@@ -156,3 +202,4 @@ class GetParticipationLeaderboardUseCase:
                 x.user.name.lower() if x.user and x.user.name else "",
             ),
         )
+
