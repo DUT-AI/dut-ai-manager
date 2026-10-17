@@ -328,4 +328,8 @@ async def test_check_evaluation_deadline_creates_violation_when_trainer_missing(
     assert res["meetings_scanned"] == 1
     assert res["trainer_violations_created"] == 1
     violation_repo.save.assert_called_once()
+    saved_violation = violation_repo.save.call_args[0][0]
+    assert "Python 101" in saved_violation.reason
+    assert mock_meeting.start_time.strftime("%H:%M") in saved_violation.reason
+    assert mock_meeting.end_time.strftime("%d/%m/%Y") in saved_violation.reason
 

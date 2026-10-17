@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Tag, Tooltip } from 'antd';
+import { Button, Tag, Tooltip, message } from 'antd';
 import {
     BookOutlined,
     CheckCircleOutlined,
@@ -10,11 +10,13 @@ import {
     CodeOutlined,
     TrophyOutlined,
     EyeOutlined,
+    SyncOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/vi';
 import type { Homework } from '../types/homework.types';
+import { useSyncHomeworkFromQuiz } from '../hooks/useHomeworks';
 
 dayjs.extend(relativeTime);
 dayjs.locale('vi');
@@ -37,6 +39,21 @@ export const HomeworkCard: React.FC<HomeworkCardProps> = ({ homework, onViewDeta
     const deadlineObj = dayjs(homework.deadline);
     const formattedDeadline = deadlineObj.format('DD/MM/YYYY HH:mm');
     const relativeDeadline = deadlineObj.fromNow();
+
+    const { mutate: syncHomework, isPending: isSyncing } = useSyncHomeworkFromQuiz();
+
+    const handleSync = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!homework.id) return;
+        syncHomework(homework.id, {
+            onSuccess: (data) => {
+                message.success(data?.message || 'Đồng bộ kết quả từ Quiz thành công!');
+            },
+            onError: () => {
+                message.error('Không thể đồng bộ từ Quiz. Vui lòng thử lại sau.');
+            },
+        });
+    };
 
     return (
         <div
@@ -181,6 +198,18 @@ export const HomeworkCard: React.FC<HomeworkCardProps> = ({ homework, onViewDeta
 
                 {/* Right Action Buttons */}
                 <div className="flex items-center gap-2.5 w-full md:w-auto justify-end pt-3 md:pt-0 border-t md:border-t-0 border-gray-100 shrink-0">
+                    {!isSubmitted && (
+                        <Tooltip title="Đồng bộ kết quả mới nhất từ hệ thống Quiz về tài khoản">
+                            <Button
+                                icon={<SyncOutlined spin={isSyncing} />}
+                                loading={isSyncing}
+                                onClick={handleSync}
+                                className="h-9 sm:h-10 px-3 sm:px-3.5 rounded-xl font-medium text-xs sm:text-sm border-blue-200 text-blue-600 hover:border-blue-500 hover:text-blue-700 hover:bg-blue-50/50 transition-colors shadow-2xs"
+                            >
+                                Đồng bộ
+                            </Button>
+                        </Tooltip>
+                    )}
                     <Button
                         icon={<EyeOutlined />}
                         onClick={() => onViewDetail && onViewDetail(homework)}

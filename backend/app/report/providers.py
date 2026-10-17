@@ -1,7 +1,7 @@
 from dishka import Provider, Scope, provide
 
 from app.bonus_point.infrastructure.repository import BonusPointRepository
-from app.homework.application import GetHomeworksUseCase
+from app.homework.application import GetUnsubmittedHomeworksForUserUseCase
 from app.meeting.infrastructure.repository import (
     MeetingRepository,
     ParticipantRepository,
@@ -64,7 +64,7 @@ class ReportModuleProvider(Provider):
         permission_repo: PermissionRequestRepository,
         violation_repo: ViolationRepository,
         bonus_point_repo: BonusPointRepository,
-        get_homeworks_uc: GetHomeworksUseCase,
+        get_unsubmitted_homeworks_uc: GetUnsubmittedHomeworksForUserUseCase,
     ) -> GetDashboardOverviewUseCase:
         return GetDashboardOverviewUseCase(
             user_repo,
@@ -72,7 +72,7 @@ class ReportModuleProvider(Provider):
             permission_repo,
             violation_repo,
             bonus_point_repo,
-            get_homeworks_uc,
+            get_unsubmitted_homeworks_uc,
         )
 
     @provide

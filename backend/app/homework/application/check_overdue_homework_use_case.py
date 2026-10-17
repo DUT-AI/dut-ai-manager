@@ -14,8 +14,11 @@ from app.homework.application.helpers import QuizSubmissionHelper
 from app.homework.domain.entity import Homework as HomeworkEntity
 from app.homework.domain.entity import SubmissionType
 from app.homework.domain.value_objects import HomeworkOverdueDetected
+from app.homework.infrastructure.homework_repository import HomeworkRepository
+from app.homework.infrastructure.homework_submission_repository import (
+    HomeworkSubmissionRepository,
+)
 from app.homework.infrastructure.quiz_api import QuizApiClient
-from app.homework.infrastructure.repository import HomeworkRepository
 from app.shared.domain.event_bus import DomainEvent, EventBus
 from app.user.infrastructure.repository import UserRepository
 from app.utils.datetime import get_current_utc7_time
@@ -27,11 +30,13 @@ class CheckOverdueHomeworkUseCase:
     def __init__(
         self,
         homework_repo: HomeworkRepository,
+        homework_submission_repo: HomeworkSubmissionRepository,
         quiz_api: QuizApiClient,
         user_repo: UserRepository,
         event_bus: type[EventBus] = EventBus,
     ):
         self.homework_repo = homework_repo
+        self.homework_submission_repo = homework_submission_repo
         self.quiz_api = quiz_api
         self.user_repo = user_repo
         self.event_bus = event_bus
@@ -124,15 +129,15 @@ class CheckOverdueHomeworkUseCase:
                 if req_coding:
                     db_coding = False
                     if (
-                        hasattr(self.homework_repo, "get_submitted_exercise_ids")
+                        hasattr(self.homework_submission_repo, "get_submitted_exercise_ids")
                         and required_exercise_ids
                     ):
-                        submitted_ids = self.homework_repo.get_submitted_exercise_ids(
+                        submitted_ids = self.homework_submission_repo.get_submitted_exercise_ids(
                             homework.id, user_id, homework.deadline
                         )
                         db_coding = required_exercise_ids.issubset(submitted_ids)
-                    elif hasattr(self.homework_repo, "has_valid_submission"):
-                        res = self.homework_repo.has_valid_submission(
+                    elif hasattr(self.homework_submission_repo, "has_valid_submission"):
+                        res = self.homework_submission_repo.has_valid_submission(
                             homework.id,
                             user_id,
                             SubmissionType.CODING,
@@ -144,13 +149,11 @@ class CheckOverdueHomeworkUseCase:
 
                 # 2. Kiểm tra mục Game (nếu bài yêu cầu)
                 game_ok = True
-                if req_game:
-                    db_game = False
-                    if hasattr(self.homework_repo, "has_valid_submission"):
-                        res = self.homework_repo.has_valid_submission(
-                            homework.id, user_id, SubmissionType.GAME, homework.deadline
-                        )
-                        db_game = res is True
+                if req_game:                   
+                    res = self.homework_submission_repo.has_valid_submission(
+                        homework.id, user_id, SubmissionType.GAME, homework.deadline
+                    )
+                    db_game = res is True
                     api_game = user_id in (game_completed_uids or set())
                     game_ok = db_game or api_game
 

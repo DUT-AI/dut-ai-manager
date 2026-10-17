@@ -1,7 +1,7 @@
 from datetime import date
 
 from app.bonus_point.infrastructure.repository import BonusPointRepository
-from app.homework.application import GetHomeworksUseCase
+from app.homework.application import GetUnsubmittedHomeworksForUserUseCase
 from app.homework.application.dtos import HomeworkResponse
 from app.meeting.infrastructure.repository import MeetingRepository
 from app.meeting.schemas import MeetingResponse
@@ -117,14 +117,14 @@ class GetDashboardOverviewUseCase:
         permission_repo: PermissionRequestRepository,
         violation_repo: ViolationRepository,
         bonus_point_repo: BonusPointRepository,
-        get_homeworks_uc: GetHomeworksUseCase,
+        get_unsubmitted_homeworks_uc: GetUnsubmittedHomeworksForUserUseCase,
     ):
         self.user_repo = user_repo
         self.meeting_repo = meeting_repo
         self.permission_repo = permission_repo
         self.violation_repo = violation_repo
         self.bonus_point_repo = bonus_point_repo
-        self.get_homeworks_uc = get_homeworks_uc
+        self.get_unsubmitted_homeworks_uc = get_unsubmitted_homeworks_uc
 
     async def execute(
         self, user_id: int, month: int, year: int
@@ -145,7 +145,7 @@ class GetDashboardOverviewUseCase:
         )
 
         # 4. Assigned Homework (Lấy các bài tập chưa nộp tính đến tháng được chọn)
-        user_unsubmitted = await self.get_homeworks_uc.get_unsubmitted_for_user(user_id)
+        user_unsubmitted = await self.get_unsubmitted_homeworks_uc.execute(user_id)
         month_unsubmitted = [
             h
             for h in user_unsubmitted

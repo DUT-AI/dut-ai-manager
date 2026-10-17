@@ -137,6 +137,8 @@ export const useSyncHomeworkFromQuiz = () => {
     onSuccess: (_, homeworkId) => {
       queryClient.invalidateQueries({ queryKey: ['homeworks', 'submission-status', homeworkId] });
       queryClient.invalidateQueries({ queryKey: ['homeworks', 'submissions', homeworkId] });
+      queryClient.invalidateQueries({ queryKey: ['homeworks', 'my-submissions', homeworkId] });
+      queryClient.invalidateQueries({ queryKey: ['homeworks', 'me'] });
       queryClient.invalidateQueries({ queryKey: homeworkKeys.all });
     },
   });

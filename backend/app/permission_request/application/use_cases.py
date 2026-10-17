@@ -4,7 +4,7 @@ from typing import cast
 from fastapi import HTTPException
 
 from app.core.context import get_current_user_id
-from app.homework.infrastructure.repository import HomeworkRepository
+from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.permission_request.domain.entity import PermissionRequest
 from app.permission_request.domain.events import (
     PermissionRequestCreated,

@@ -9,9 +9,13 @@ from app.core.permissions import HomeworkPermission
 from app.homework.application import (
     CreateHomeworkUseCase,
     DeleteHomeworkUseCase,
+    GetHomeworkDetailUseCase,
     GetHomeworkSubmissionStatusUseCase,
-    GetHomeworksUseCase,
+    GetHomeworksPagedUseCase,
+    GetUnsubmittedHomeworkReportUseCase,
+    GetUnsubmittedHomeworksForUserUseCase,
     GetUserHomeworkSubmissionsUseCase,
+    GetUserHomeworksUseCase,
     HomeworkSubmissionWebhookIn,
     RecordHomeworkSubmissionUseCase,
     RescanAllHomeworksUseCase,
@@ -26,7 +30,7 @@ from app.homework.application.dtos import (
     HomeworkSubmissionStatusResponse,
     HomeworkUpdate,
 )
-from app.homework.infrastructure.repository import HomeworkRepository
+from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.shared.application.pagination import PaginationParams
 from app.shared.application.response import ApiResponse, PaginationMeta
 
@@ -40,11 +44,11 @@ router = APIRouter(prefix="/homeworks", tags=["homeworks"])
 )
 @inject
 async def get_all_homeworks(
-    get_homeworks_uc: FromDishka[GetHomeworksUseCase],
+    get_paged_uc: FromDishka[GetHomeworksPagedUseCase],
     pagination: Annotated[PaginationParams, Depends()],
     deleted: bool = False,
 ):
-    homeworks, total = get_homeworks_uc.get_paged(
+    homeworks, total = get_paged_uc.execute(
         page=pagination.page, page_size=pagination.page_size, deleted=deleted
     )
     meta = PaginationMeta.create(
@@ -88,11 +92,11 @@ async def rescan_all_homeworks(
 @inject
 async def get_my_homeworks(
     current_user: CurrentUser,
-    get_homeworks_uc: FromDishka[GetHomeworksUseCase],
+    get_user_homeworks_uc: FromDishka[GetUserHomeworksUseCase],
     pagination: Annotated[PaginationParams, Depends()],
 ):
     """Get homeworks assigned to the current user"""
-    result, total = await get_homeworks_uc.get_assigned_to_user(
+    result, total = await get_user_homeworks_uc.execute(
         current_user.user_id, page=pagination.page, page_size=pagination.page_size
     )
     meta = PaginationMeta.create(
@@ -124,10 +128,10 @@ async def create_homework(
 )
 @inject
 async def get_unsubmitted_report(
-    get_homeworks_uc: FromDishka[GetHomeworksUseCase],
+    get_report_uc: FromDishka[GetUnsubmittedHomeworkReportUseCase],
 ):
     """Lấy danh sách thống kê số bài tập chưa nộp của toàn bộ user"""
-    result = await get_homeworks_uc.get_unsubmitted_report()
+    result = await get_report_uc.execute()
     return ApiResponse.success(data=result)
 
 
@@ -139,10 +143,10 @@ async def get_unsubmitted_report(
 @inject
 async def get_unsubmitted_by_user(
     user_id: int,
-    get_homeworks_uc: FromDishka[GetHomeworksUseCase],
+    get_unsubmitted_uc: FromDishka[GetUnsubmittedHomeworksForUserUseCase],
 ):
     """Lấy danh sách bài tập chưa nộp của một user cụ thể"""
-    result = await get_homeworks_uc.get_unsubmitted_for_user(user_id)
+    result = await get_unsubmitted_uc.execute(user_id)
     return ApiResponse.success(data=result)
 
 
@@ -171,9 +175,9 @@ async def get_homework_submission_status(
 @inject
 async def get_homework(
     homework_id: int,
-    get_homeworks_uc: FromDishka[GetHomeworksUseCase],
+    get_detail_uc: FromDishka[GetHomeworkDetailUseCase],
 ):
-    result = get_homeworks_uc.get_by_id(homework_id)
+    result = get_detail_uc.execute(homework_id)
     if not result:
         raise HTTPException(status_code=404, detail="Homework not found")
     return ApiResponse.success(data=result)
@@ -282,7 +286,7 @@ async def get_user_homework_submissions(
 @router.post(
     "/{homework_id}/sync",
     response_model=ApiResponse[dict[str, Any]],
-    dependencies=[hasPermission(HomeworkPermission.CREATE)],
+    dependencies=[hasPermission(HomeworkPermission.READ)],
 )
 @inject
 async def sync_homework_from_quiz(

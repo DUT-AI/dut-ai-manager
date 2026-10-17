@@ -1,3 +1,4 @@
+from app.utils.datetime import get_current_utc7_time
 from datetime import datetime
 from enum import StrEnum
 
@@ -6,7 +7,7 @@ from loguru import logger
 
 from app.core.config import settings
 from app.shared.domain.base_entity import BaseEntity
-
+from app.homework.domain.value_objects import SubmissionEvaluation
 
 class SubmissionType(StrEnum):
     CODING = "CODING"
@@ -24,25 +25,48 @@ class Homework(BaseEntity):
     requires_game: bool = False
     assignee_ids: list[int] = []
 
-    async def notify_external_homework_api(self) -> None:
-        """Fire-and-forget POST to external homework service."""
-        try:
-            async with httpx.AsyncClient(timeout=120.0) as client:
-                response = await client.post(
-                    settings.HOMEWORK_CHECKER_API_URL,
-                    json={
-                        "homework_link": self.link or "",
-                        "homework_id": str(self.id),
-                    },
-                )
-                logger.info(
-                    f"External homework API response: status={response.status_code}, body={response.text}"
-                )
+    def evaluate_submissions(
+        self,
+        submissions: list["HomeworkSubmission"],
+        reference_time: datetime | None = None,
+    ) -> SubmissionEvaluation:
+        """Aggregate Root đối chiếu danh sách bài nộp với yêu cầu của đề bài."""
+        has_coding = self.requires_coding
+        has_game = self.requires_game
+        if not has_coding and not has_game:
+            has_coding = True
 
-        except Exception as exc:
-            logger.warning(
-                f"Failed to notify external homework API: {exc}", exc_info=True
-            )
+        coding_submitted = any(
+            getattr(s.submission_type, "value", str(s.submission_type)).upper()
+            == "CODING"
+            for s in submissions
+        )
+        game_submitted = any(
+            getattr(s.submission_type, "value", str(s.submission_type)).upper()
+            == "GAME"
+            and s.is_passed is True
+            for s in submissions
+        )
+
+        uncompleted: list[str] = []
+        if has_coding and not coding_submitted:
+            uncompleted.append("Bài tập Coding")
+        if has_game and not game_submitted:
+            uncompleted.append("Trắc nghiệm Game")
+
+        is_submitted = (not has_coding or coding_submitted) and (
+            not has_game or game_submitted
+        )
+        now = reference_time or get_current_utc7_time()
+        is_overdue = not is_submitted and (self.deadline < now)
+
+        return SubmissionEvaluation(
+            is_submitted=is_submitted,
+            is_overdue=is_overdue,
+            coding_submitted=coding_submitted,
+            game_submitted=game_submitted,
+            uncompleted_items=uncompleted,
+        )
 
 
 class HomeworkSubmission(BaseEntity):

@@ -5,9 +5,13 @@ from app.homework.application import (
     CheckOverdueHomeworkUseCase,
     CreateHomeworkUseCase,
     DeleteHomeworkUseCase,
+    GetHomeworkDetailUseCase,
     GetHomeworkSubmissionStatusUseCase,
-    GetHomeworksUseCase,
+    GetHomeworksPagedUseCase,
+    GetUnsubmittedHomeworkReportUseCase,
+    GetUnsubmittedHomeworksForUserUseCase,
     GetUserHomeworkSubmissionsUseCase,
+    GetUserHomeworksUseCase,
     RecordHomeworkSubmissionUseCase,
     RescanAllHomeworksUseCase,
     SyncHomeworkFromQuizUseCase,
@@ -17,10 +21,16 @@ from app.homework.application.event_handlers import (
     HomeworkGradedNotificationHandler,
     HomeworkNotificationHandler,
 )
-from app.homework.infrastructure.quiz_api import QuizApiClient
-from app.homework.infrastructure.repository import (
+from app.homework.infrastructure.homework_assignee_repository import (
+    HomeworkAssigneeRepository,
+)
+from app.homework.infrastructure.homework_repository import (
     HomeworkRepository,
 )
+from app.homework.infrastructure.homework_submission_repository import (
+    HomeworkSubmissionRepository,
+)
+from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
 from app.shared.infrastructure.notification_service import NotificationService
 from app.user.infrastructure.repository import UserRepository
@@ -38,15 +48,63 @@ class HomeworkModuleProvider(Provider):
         return HomeworkRepository(session)
 
     @provide
-    def get_get_homeworks_use_case(
+    def get_homework_submission_repo(
+        self, session: Session
+    ) -> HomeworkSubmissionRepository:
+        return HomeworkSubmissionRepository(session)
+
+    @provide
+    def get_homework_assignee_repo(
+        self, session: Session
+    ) -> HomeworkAssigneeRepository:
+        return HomeworkAssigneeRepository(session)
+
+    @provide
+    def get_get_homeworks_paged_use_case(
         self,
         homework_repo: HomeworkRepository,
-        quiz_api: QuizApiClient,
-        user_repo: UserRepository,
-    ) -> GetHomeworksUseCase:
-        return GetHomeworksUseCase(
+    ) -> GetHomeworksPagedUseCase:
+        return GetHomeworksPagedUseCase(homework_repo=homework_repo)
+
+    @provide
+    def get_get_homework_detail_use_case(
+        self,
+        homework_repo: HomeworkRepository,
+    ) -> GetHomeworkDetailUseCase:
+        return GetHomeworkDetailUseCase(homework_repo=homework_repo)
+
+    @provide
+    def get_get_user_homeworks_use_case(
+        self,
+        homework_repo: HomeworkRepository,
+        homework_submission_repo: HomeworkSubmissionRepository,
+    ) -> GetUserHomeworksUseCase:
+        return GetUserHomeworksUseCase(
             homework_repo=homework_repo,
-            quiz_api=quiz_api,
+            homework_submission_repo=homework_submission_repo,
+        )
+
+    @provide
+    def get_get_unsubmitted_homeworks_for_user_use_case(
+        self,
+        homework_repo: HomeworkRepository,
+        homework_submission_repo: HomeworkSubmissionRepository,
+    ) -> GetUnsubmittedHomeworksForUserUseCase:
+        return GetUnsubmittedHomeworksForUserUseCase(
+            homework_repo=homework_repo,
+            homework_submission_repo=homework_submission_repo,
+        )
+
+    @provide
+    def get_get_unsubmitted_homework_report_use_case(
+        self,
+        homework_repo: HomeworkRepository,
+        homework_submission_repo: HomeworkSubmissionRepository,
+        user_repo: UserRepository,
+    ) -> GetUnsubmittedHomeworkReportUseCase:
+        return GetUnsubmittedHomeworkReportUseCase(
+            homework_repo=homework_repo,
+            homework_submission_repo=homework_submission_repo,
             user_repo=user_repo,
         )
 
@@ -83,24 +141,32 @@ class HomeworkModuleProvider(Provider):
     def get_record_submission_use_case(
         self,
         homework_repo: HomeworkRepository,
+        homework_submission_repo: HomeworkSubmissionRepository,
     ) -> RecordHomeworkSubmissionUseCase:
-        return RecordHomeworkSubmissionUseCase(homework_repo=homework_repo)
+        return RecordHomeworkSubmissionUseCase(
+            homework_repo=homework_repo,
+            homework_submission_repo=homework_submission_repo,
+        )
 
     @provide
     def get_user_submissions_use_case(
         self,
-        homework_repo: HomeworkRepository,
+        homework_submission_repo: HomeworkSubmissionRepository,
     ) -> GetUserHomeworkSubmissionsUseCase:
-        return GetUserHomeworkSubmissionsUseCase(homework_repo=homework_repo)
+        return GetUserHomeworkSubmissionsUseCase(
+            homework_submission_repo=homework_submission_repo
+        )
 
     @provide
     def get_sync_homework_use_case(
         self,
         homework_repo: HomeworkRepository,
+        homework_submission_repo: HomeworkSubmissionRepository,
         quiz_api: QuizApiClient,
     ) -> SyncHomeworkFromQuizUseCase:
         return SyncHomeworkFromQuizUseCase(
             homework_repo=homework_repo,
+            homework_submission_repo=homework_submission_repo,
             quiz_api=quiz_api,
         )
 
@@ -108,12 +174,14 @@ class HomeworkModuleProvider(Provider):
     def get_submission_status_use_case(
         self,
         homework_repo: HomeworkRepository,
+        homework_submission_repo: HomeworkSubmissionRepository,
         user_repo: UserRepository,
         quiz_api: QuizApiClient,
         permission_repo: PermissionRequestRepository,
     ) -> GetHomeworkSubmissionStatusUseCase:
         return GetHomeworkSubmissionStatusUseCase(
             homework_repo=homework_repo,
+            homework_submission_repo=homework_submission_repo,
             user_repo=user_repo,
             quiz_api=quiz_api,
             permission_repo=permission_repo,
@@ -123,11 +191,13 @@ class HomeworkModuleProvider(Provider):
     def get_check_overdue_use_case(
         self,
         homework_repo: HomeworkRepository,
+        homework_submission_repo: HomeworkSubmissionRepository,
         quiz_api: QuizApiClient,
         user_repo: UserRepository,
     ) -> CheckOverdueHomeworkUseCase:
         return CheckOverdueHomeworkUseCase(
             homework_repo=homework_repo,
+            homework_submission_repo=homework_submission_repo,
             quiz_api=quiz_api,
             user_repo=user_repo,
         )
@@ -136,11 +206,13 @@ class HomeworkModuleProvider(Provider):
     def get_rescan_all_use_case(
         self,
         homework_repo: HomeworkRepository,
+        homework_submission_repo: HomeworkSubmissionRepository,
         quiz_api: QuizApiClient,
         user_repo: UserRepository,
     ) -> RescanAllHomeworksUseCase:
         return RescanAllHomeworksUseCase(
             homework_repo=homework_repo,
+            homework_submission_repo=homework_submission_repo,
             quiz_api=quiz_api,
             user_repo=user_repo,
         )

@@ -1,6 +1,6 @@
 from fastapi import status
 
-from app.homework.infrastructure.repository import HomeworkRepository
+from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.shared.application.response import BadRequestException
 
 
@@ -16,4 +16,4 @@ class DeleteHomeworkUseCase:
             raise BadRequestException(
                 "Homework not found", status_code=status.HTTP_404_NOT_FOUND
             )
-        return self.homework_repo.delete(homework_id)
+        return self.homework_repo.soft_delete(homework_id)

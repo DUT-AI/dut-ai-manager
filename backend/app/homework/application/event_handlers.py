@@ -3,7 +3,7 @@ import asyncio
 from loguru import logger
 
 from app.homework.domain.value_objects import HomeworkAssigned, HomeworkGraded
-from app.homework.infrastructure.repository import HomeworkRepository
+from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.shared.application.event_handler import EventHandler
 from app.shared.infrastructure.notification_payload import (
     NotificationCategory,

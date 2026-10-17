@@ -8,20 +8,32 @@ from app.homework.application.record_submission_use_case import (
     RecordHomeworkSubmissionUseCase,
 )
 from app.homework.domain.entity import Homework, HomeworkSubmission, SubmissionType
-from app.homework.infrastructure.repository import HomeworkRepository
+from app.homework.infrastructure.homework_repository import HomeworkRepository
+from app.homework.infrastructure.homework_submission_repository import (
+    HomeworkSubmissionRepository,
+)
 
 
 @pytest.fixture
 def mock_homework_repo():
     repo = MagicMock(spec=HomeworkRepository)
+    return repo
+
+
+@pytest.fixture
+def mock_submission_repo():
+    repo = MagicMock(spec=HomeworkSubmissionRepository)
     repo.find_submission_match.return_value = None
     return repo
 
 
 @pytest.mark.asyncio
-async def test_webhook_ignore_external_user(mock_homework_repo):
+async def test_webhook_ignore_external_user(mock_homework_repo, mock_submission_repo):
     """User ngoài nền tảng (user_id >= 1_000_000) sẽ bị bỏ qua."""
-    use_case = RecordHomeworkSubmissionUseCase(homework_repo=mock_homework_repo)
+    use_case = RecordHomeworkSubmissionUseCase(
+        homework_repo=mock_homework_repo,
+        homework_submission_repo=mock_submission_repo,
+    )
     payload = HomeworkSubmissionWebhookIn(
         lesson_slug="batch-normalization",
         user_id=1000005,
@@ -32,14 +44,19 @@ async def test_webhook_ignore_external_user(mock_homework_repo):
     result = await use_case.execute(payload)
     assert result["status"] == "ignored"
     assert "External user" in result["reason"]
-    mock_homework_repo.add_submission.assert_not_called()
+    mock_submission_repo.add_submission.assert_not_called()
 
 
 @pytest.mark.asyncio
-async def test_webhook_ignore_nonexistent_homework(mock_homework_repo):
+async def test_webhook_ignore_nonexistent_homework(
+    mock_homework_repo, mock_submission_repo
+):
     """Bài tập không tồn tại theo slug sẽ bị bỏ qua."""
     mock_homework_repo.get_by_slug = MagicMock(return_value=None)
-    use_case = RecordHomeworkSubmissionUseCase(homework_repo=mock_homework_repo)
+    use_case = RecordHomeworkSubmissionUseCase(
+        homework_repo=mock_homework_repo,
+        homework_submission_repo=mock_submission_repo,
+    )
     payload = HomeworkSubmissionWebhookIn(
         lesson_slug="nonexistent-slug",
         user_id=12,
@@ -50,11 +67,13 @@ async def test_webhook_ignore_nonexistent_homework(mock_homework_repo):
     result = await use_case.execute(payload)
     assert result["status"] == "ignored"
     assert "Homework not found" in result["reason"]
-    mock_homework_repo.add_submission.assert_not_called()
+    mock_submission_repo.add_submission.assert_not_called()
 
 
 @pytest.mark.asyncio
-async def test_webhook_record_coding_submission_success(mock_homework_repo):
+async def test_webhook_record_coding_submission_success(
+    mock_homework_repo, mock_submission_repo
+):
     """Ghi nhận thành công bài nộp coding của học viên nội bộ."""
     hw = Homework(
         id=1,
@@ -69,9 +88,12 @@ async def test_webhook_record_coding_submission_success(mock_homework_repo):
         submission.id = 99
         return submission
 
-    mock_homework_repo.add_submission = MagicMock(side_effect=fake_add)
+    mock_submission_repo.add_submission = MagicMock(side_effect=fake_add)
 
-    use_case = RecordHomeworkSubmissionUseCase(homework_repo=mock_homework_repo)
+    use_case = RecordHomeworkSubmissionUseCase(
+        homework_repo=mock_homework_repo,
+        homework_submission_repo=mock_submission_repo,
+    )
     now_time = datetime.now(UTC)
     payload = HomeworkSubmissionWebhookIn(
         lesson_slug="batch-norm",
@@ -86,11 +108,13 @@ async def test_webhook_record_coding_submission_success(mock_homework_repo):
     assert result["submission_id"] == 99
     assert result["homework_id"] == 1
     assert result["user_id"] == 42
-    mock_homework_repo.add_submission.assert_called_once()
+    mock_submission_repo.add_submission.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_webhook_record_game_submission_success(mock_homework_repo):
+async def test_webhook_record_game_submission_success(
+    mock_homework_repo, mock_submission_repo
+):
     """Ghi nhận thành công lượt chơi game 100% của học viên nội bộ."""
     hw = Homework(
         id=2,
@@ -105,9 +129,12 @@ async def test_webhook_record_game_submission_success(mock_homework_repo):
         submission.id = 100
         return submission
 
-    mock_homework_repo.add_submission = MagicMock(side_effect=fake_add)
+    mock_submission_repo.add_submission = MagicMock(side_effect=fake_add)
 
-    use_case = RecordHomeworkSubmissionUseCase(homework_repo=mock_homework_repo)
+    use_case = RecordHomeworkSubmissionUseCase(
+        homework_repo=mock_homework_repo,
+        homework_submission_repo=mock_submission_repo,
+    )
     payload = HomeworkSubmissionWebhookIn(
         lesson_slug="game-opt",
         user_id=15,
@@ -120,18 +147,18 @@ async def test_webhook_record_game_submission_success(mock_homework_repo):
     result = await use_case.execute(payload)
     assert result["status"] == "recorded"
     assert result["submission_id"] == 100
-    mock_homework_repo.add_submission.assert_called_once()
+    mock_submission_repo.add_submission.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_get_user_homework_submissions_use_case(mock_homework_repo):
+async def test_get_user_homework_submissions_use_case(mock_submission_repo):
     """Kiểm tra lấy danh sách lịch sử bài nộp qua GetUserHomeworkSubmissionsUseCase."""
     from app.homework.application.get_user_homework_submissions_use_case import (
         GetUserHomeworkSubmissionsUseCase,
     )
 
     now_time = datetime.now(UTC)
-    mock_homework_repo.get_submissions_by_user.return_value = [
+    mock_submission_repo.get_submissions_by_user.return_value = [
         HomeworkSubmission(
             id=1,
             homework_id=10,
@@ -152,7 +179,9 @@ async def test_get_user_homework_submissions_use_case(mock_homework_repo):
         ),
     ]
 
-    use_case = GetUserHomeworkSubmissionsUseCase(homework_repo=mock_homework_repo)
+    use_case = GetUserHomeworkSubmissionsUseCase(
+        homework_submission_repo=mock_submission_repo
+    )
     result = await use_case.execute(homework_id=10, user_id=5)
 
     assert len(result) == 2
@@ -160,11 +189,13 @@ async def test_get_user_homework_submissions_use_case(mock_homework_repo):
     assert result[0].submission_type == SubmissionType.CODING
     assert result[1].id == 2
     assert result[1].submission_type == SubmissionType.GAME
-    mock_homework_repo.get_submissions_by_user.assert_called_once_with(10, 5)
+    mock_submission_repo.get_submissions_by_user.assert_called_once_with(10, 5)
 
 
 @pytest.mark.asyncio
-async def test_webhook_record_exercise_submission_with_details(mock_homework_repo):
+async def test_webhook_record_exercise_submission_with_details(
+    mock_homework_repo, mock_submission_repo
+):
     """Ghi nhận thành công bài nộp kèm exercise_id và exercise_title."""
     hw = Homework(
         id=5,
@@ -174,15 +205,18 @@ async def test_webhook_record_exercise_submission_with_details(mock_homework_rep
         requires_coding=True,
     )
     mock_homework_repo.get_by_slug = MagicMock(return_value=hw)
-    mock_homework_repo.find_submission_match = MagicMock(return_value=None)
+    mock_submission_repo.find_submission_match = MagicMock(return_value=None)
 
     def fake_add(submission):
         submission.id = 101
         return submission
 
-    mock_homework_repo.add_submission = MagicMock(side_effect=fake_add)
+    mock_submission_repo.add_submission = MagicMock(side_effect=fake_add)
 
-    use_case = RecordHomeworkSubmissionUseCase(homework_repo=mock_homework_repo)
+    use_case = RecordHomeworkSubmissionUseCase(
+        homework_repo=mock_homework_repo,
+        homework_submission_repo=mock_submission_repo,
+    )
     payload = HomeworkSubmissionWebhookIn(
         lesson_slug="dl-lab",
         user_id=42,
@@ -201,15 +235,17 @@ async def test_webhook_record_exercise_submission_with_details(mock_homework_rep
     assert result["status"] == "recorded"
     assert result["submission_id"] == 101
     assert result["exercise_id"] == "uuid-ex-1"
-    mock_homework_repo.add_submission.assert_called_once()
-    added_sub = mock_homework_repo.add_submission.call_args[0][0]
+    mock_submission_repo.add_submission.assert_called_once()
+    added_sub = mock_submission_repo.add_submission.call_args[0][0]
     assert added_sub.exercise_id == "uuid-ex-1"
     assert added_sub.exercise_title == "Bài tập 1: Cài đặt CNN"
     assert added_sub.score == 95.0
 
 
 @pytest.mark.asyncio
-async def test_webhook_update_existing_exercise_submission(mock_homework_repo):
+async def test_webhook_update_existing_exercise_submission(
+    mock_homework_repo, mock_submission_repo
+):
     """Cập nhật bản ghi khi nộp lại bài tập con (Idempotent update)."""
     hw = Homework(
         id=5,
@@ -221,7 +257,9 @@ async def test_webhook_update_existing_exercise_submission(mock_homework_repo):
     mock_homework_repo.get_by_slug = MagicMock(return_value=hw)
     existing_model = MagicMock()
     existing_model.id = 101
-    mock_homework_repo.find_submission_match = MagicMock(return_value=existing_model)
+    mock_submission_repo.find_submission_match = MagicMock(
+        return_value=existing_model
+    )
 
     updated_entity = HomeworkSubmission(
         id=101,
@@ -235,9 +273,14 @@ async def test_webhook_update_existing_exercise_submission(mock_homework_repo):
         submitted_at=datetime.now(UTC),
         is_passed=True,
     )
-    mock_homework_repo.update_submission = MagicMock(return_value=updated_entity)
+    mock_submission_repo.update_submission = MagicMock(
+        return_value=updated_entity
+    )
 
-    use_case = RecordHomeworkSubmissionUseCase(homework_repo=mock_homework_repo)
+    use_case = RecordHomeworkSubmissionUseCase(
+        homework_repo=mock_homework_repo,
+        homework_submission_repo=mock_submission_repo,
+    )
     payload = HomeworkSubmissionWebhookIn(
         lesson_slug="dl-lab",
         user_id=42,
@@ -256,4 +299,4 @@ async def test_webhook_update_existing_exercise_submission(mock_homework_repo):
     assert result["status"] == "updated"
     assert result["submission_id"] == 101
     assert result["exercise_id"] == "uuid-ex-1"
-    mock_homework_repo.update_submission.assert_called_once()
+    mock_submission_repo.update_submission.assert_called_once()

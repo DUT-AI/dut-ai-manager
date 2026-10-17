@@ -4,8 +4,11 @@ from loguru import logger
 
 from app.homework.application.helpers import QuizSubmissionHelper
 from app.homework.domain.entity import HomeworkSubmission, SubmissionType
+from app.homework.infrastructure.homework_repository import HomeworkRepository
+from app.homework.infrastructure.homework_submission_repository import (
+    HomeworkSubmissionRepository,
+)
 from app.homework.infrastructure.quiz_api import QuizApiClient
-from app.homework.infrastructure.repository import HomeworkRepository
 from app.shared.application.response import BadRequestException
 from app.utils.datetime import get_current_utc7_time, to_utc7_naive
 
@@ -16,9 +19,11 @@ class SyncHomeworkFromQuizUseCase:
     def __init__(
         self,
         homework_repo: HomeworkRepository,
+        homework_submission_repo: HomeworkSubmissionRepository,
         quiz_api: QuizApiClient,
     ):
         self.homework_repo = homework_repo
+        self.homework_submission_repo = homework_submission_repo
         self.quiz_api = quiz_api
 
     async def execute(self, homework_id: int) -> dict[str, Any]:
@@ -87,7 +92,7 @@ class SyncHomeworkFromQuizUseCase:
                         }
 
                         # Đối soát xem bài nộp này đã có trong Manage chưa
-                        existing = self.homework_repo.find_submission_match(
+                        existing = self.homework_submission_repo.find_submission_match(
                             homework.id,
                             uid,
                             SubmissionType.CODING,
@@ -97,7 +102,7 @@ class SyncHomeworkFromQuizUseCase:
                         )
                         if existing:
                             # Ghi đè / Cập nhật lại thông tin mới nhất
-                            self.homework_repo.update_submission(
+                            self.homework_submission_repo.update_submission(
                                 existing,
                                 submitted_at=sub_time,
                                 is_passed=True,
@@ -115,7 +120,7 @@ class SyncHomeworkFromQuizUseCase:
                                 if exercise_id
                                 else f"sync-{homework.id}-{sub_id or uid}"
                             )
-                            self.homework_repo.add_submission(
+                            self.homework_submission_repo.add_submission(
                                 HomeworkSubmission.create_coding(
                                     homework_id=homework.id,
                                     user_id=uid,
@@ -147,14 +152,14 @@ class SyncHomeworkFromQuizUseCase:
                             if not sub_time:
                                 continue
 
-                            existing = self.homework_repo.find_submission_match(
+                            existing = self.homework_submission_repo.find_submission_match(
                                 homework.id,
                                 uid,
                                 SubmissionType.CODING,
                                 submitted_at=sub_time,
                             )
                             if not existing:
-                                self.homework_repo.add_submission(
+                                self.homework_submission_repo.add_submission(
                                     HomeworkSubmission.create_coding(
                                         homework_id=homework.id,
                                         user_id=uid,
@@ -211,7 +216,7 @@ class SyncHomeworkFromQuizUseCase:
                         }
 
                         # Đối soát xem game session này đã có trong Manage chưa
-                        existing = self.homework_repo.find_submission_match(
+                        existing = self.homework_submission_repo.find_submission_match(
                             homework.id,
                             uid,
                             SubmissionType.GAME,
@@ -220,7 +225,7 @@ class SyncHomeworkFromQuizUseCase:
                         )
                         if existing:
                             # Ghi đè / Cập nhật lại thông tin mới nhất
-                            self.homework_repo.update_submission(
+                            self.homework_submission_repo.update_submission(
                                 existing,
                                 submitted_at=sub_time,
                                 is_passed=True,
@@ -229,7 +234,7 @@ class SyncHomeworkFromQuizUseCase:
                             updated_game += 1
                         else:
                             # Thêm mới vào lịch sử nộp bài
-                            self.homework_repo.add_submission(
+                            self.homework_submission_repo.add_submission(
                                 HomeworkSubmission.create_game(
                                     homework_id=homework.id,
                                     user_id=uid,
@@ -260,14 +265,14 @@ class SyncHomeworkFromQuizUseCase:
                                 if not sub_time:
                                     continue
 
-                                existing = self.homework_repo.find_submission_match(
+                                existing = self.homework_submission_repo.find_submission_match(
                                     homework.id,
                                     uid,
                                     SubmissionType.GAME,
                                     submitted_at=sub_time,
                                 )
                                 if not existing:
-                                    self.homework_repo.add_submission(
+                                    self.homework_submission_repo.add_submission(
                                         HomeworkSubmission.create_game(
                                             homework_id=homework.id,
                                             user_id=uid,

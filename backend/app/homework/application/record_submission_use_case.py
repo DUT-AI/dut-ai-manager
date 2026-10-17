@@ -5,7 +5,10 @@ from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 
 from app.homework.domain.entity import HomeworkSubmission, SubmissionType
-from app.homework.infrastructure.repository import HomeworkRepository
+from app.homework.infrastructure.homework_repository import HomeworkRepository
+from app.homework.infrastructure.homework_submission_repository import (
+    HomeworkSubmissionRepository,
+)
 from app.utils.datetime import to_utc7_naive
 
 
@@ -43,8 +46,13 @@ class HomeworkSubmissionWebhookIn(BaseModel):
 class RecordHomeworkSubmissionUseCase:
     """Xử lý và lưu vết lịch sử nộp bài (Append-Only) nhận được từ Quiz Webhook."""
 
-    def __init__(self, homework_repo: HomeworkRepository):
+    def __init__(
+        self,
+        homework_repo: HomeworkRepository,
+        homework_submission_repo: HomeworkSubmissionRepository,
+    ):
         self.homework_repo = homework_repo
+        self.homework_submission_repo = homework_submission_repo
 
     async def execute(self, payload: HomeworkSubmissionWebhookIn) -> dict[str, Any]:
         # 1. Bỏ qua người dùng vãng lai bên ngoài nền tảng (user_id >= 1,000,000)
@@ -93,7 +101,7 @@ class RecordHomeworkSubmissionUseCase:
         attempt_number = payload.attempt_number or details.get("attempt_number", 1)
 
         # 4. Lưu hoặc cập nhật bản ghi lịch sử vào database (Idempotent Upsert)
-        existing = self.homework_repo.find_submission_match(
+        existing = self.homework_submission_repo.find_submission_match(
             homework.id,
             payload.user_id,
             payload.type,
@@ -102,7 +110,7 @@ class RecordHomeworkSubmissionUseCase:
             submitted_at=submitted_at,
         )
         if existing:
-            saved = self.homework_repo.update_submission(
+            saved = self.homework_submission_repo.update_submission(
                 existing,
                 submitted_at=submitted_at,
                 is_passed=payload.is_passed,
@@ -151,7 +159,7 @@ class RecordHomeworkSubmissionUseCase:
                 is_passed=payload.is_passed,
                 details=details,
             )
-        saved = self.homework_repo.add_submission(submission)
+        saved = self.homework_submission_repo.add_submission(submission)
 
         logger.info(
             f"✅ [Webhook] Ghi nhận mới lịch sử bài nộp: id={saved.id}, hw_id={homework.id}, "

@@ -7,14 +7,26 @@ from .create_homework_use_case import (
 from .delete_homework_use_case import (
     DeleteHomeworkUseCase,
 )
+from .get_homework_detail_use_case import (
+    GetHomeworkDetailUseCase,
+)
 from .get_homework_submission_status_use_case import (
     GetHomeworkSubmissionStatusUseCase,
 )
-from .get_homeworks_use_case import (
-    GetHomeworksUseCase,
+from .get_homeworks_paged_use_case import (
+    GetHomeworksPagedUseCase,
+)
+from .get_unsubmitted_homework_report_use_case import (
+    GetUnsubmittedHomeworkReportUseCase,
+)
+from .get_unsubmitted_homeworks_for_user_use_case import (
+    GetUnsubmittedHomeworksForUserUseCase,
 )
 from .get_user_homework_submissions_use_case import (
     GetUserHomeworkSubmissionsUseCase,
+)
+from .get_user_homeworks_use_case import (
+    GetUserHomeworksUseCase,
 )
 from .record_submission_use_case import (
     HomeworkSubmissionWebhookIn,
@@ -34,9 +46,13 @@ __all__ = [
     "CheckOverdueHomeworkUseCase",
     "CreateHomeworkUseCase",
     "DeleteHomeworkUseCase",
+    "GetHomeworkDetailUseCase",
     "GetHomeworkSubmissionStatusUseCase",
-    "GetHomeworksUseCase",
+    "GetHomeworksPagedUseCase",
+    "GetUnsubmittedHomeworkReportUseCase",
+    "GetUnsubmittedHomeworksForUserUseCase",
     "GetUserHomeworkSubmissionsUseCase",
+    "GetUserHomeworksUseCase",
     "HomeworkSubmissionWebhookIn",
     "RecordHomeworkSubmissionUseCase",
     "RescanAllHomeworksUseCase",

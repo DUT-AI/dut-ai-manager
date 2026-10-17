@@ -74,9 +74,15 @@ class CheckEvaluationDeadlineJobUseCase:
                 if e.evaluation_type == EvaluationType.TRAINEE_TO_TRAINER
             }
 
+            time_str = ""
+            if meeting.start_time and meeting.end_time:
+                time_str = f" ({meeting.start_time.strftime('%H:%M')} - {meeting.end_time.strftime('%H:%M %d/%m/%Y')})"
+            elif meeting.start_time:
+                time_str = f" ({meeting.start_time.strftime('%H:%M %d/%m/%Y')})"
+
             for participant in joined_participants:
                 if participant.user_id not in trainee_eval_reviewers:
-                    reason = f"Chưa hoàn thành đánh giá Trainer cho buổi học '{meeting.title}' trong vòng 24h"
+                    reason = f"Chưa hoàn thành đánh giá Trainer cho buổi học '{meeting.title}'{time_str} trong vòng 24h"
                     # Kiểm tra xem đã tạo vi phạm này chưa
                     existing_violation = self._has_existing_violation(
                         participant.user_id, reason
@@ -95,7 +101,7 @@ class CheckEvaluationDeadlineJobUseCase:
             if trainer_id:
                 has_overall_eval = self.overall_eval_repo.exists_for_meeting(meeting.id)
                 if not has_overall_eval:
-                    reason = f"Trainer chưa hoàn tất đánh giá tổng thể buổi học '{meeting.title}' trong vòng 24h"
+                    reason = f"Trainer chưa hoàn tất đánh giá tổng thể buổi học '{meeting.title}'{time_str} trong vòng 24h"
                     existing_violation = self._has_existing_violation(
                         trainer_id, reason
                     )

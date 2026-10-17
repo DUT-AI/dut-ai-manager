@@ -46,3 +46,11 @@ class HomeworkOverdueDetected(DomainEvent):
     deadline_date: str
     reason: str = "Không nộp bài tập"
     uncompleted_items: list[str] = []
+
+
+class SubmissionEvaluation(BaseModel):
+    is_submitted: bool
+    is_overdue: bool
+    coding_submitted: bool
+    game_submitted: bool
+    uncompleted_items: list[str]

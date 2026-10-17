@@ -4,19 +4,23 @@ Lấy danh sách lịch sử nộp bài (Audit trail) của học viên cho 1 b�
 """
 
 from app.homework.application.dtos import HomeworkSubmissionDetailResponse
-from app.homework.infrastructure.repository import HomeworkRepository
+from app.homework.infrastructure.homework_submission_repository import (
+    HomeworkSubmissionRepository,
+)
 
 
 class GetUserHomeworkSubmissionsUseCase:
     """Lấy danh sách lịch sử tất cả các lần nộp bài (Audit log) của 1 học viên."""
 
-    def __init__(self, homework_repo: HomeworkRepository):
-        self.homework_repo = homework_repo
+    def __init__(self, homework_submission_repo: HomeworkSubmissionRepository):
+        self.homework_submission_repo = homework_submission_repo
 
     async def execute(
         self, homework_id: int, user_id: int
     ) -> list[HomeworkSubmissionDetailResponse]:
-        submissions = self.homework_repo.get_submissions_by_user(homework_id, user_id)
+        submissions = self.homework_submission_repo.get_submissions_by_user(
+            homework_id, user_id
+        )
         return [
             HomeworkSubmissionDetailResponse(
                 id=s.id,

@@ -24,6 +24,7 @@ async def test_lesson_aggregated_violation_single_ticket():
     Lý do vi phạm phải chứa nội dung tổng hợp cả 'bài tập coding' và 'trắc nghiệm game'.
     """
     mock_homework_repo = MagicMock()
+    mock_submission_repo = MagicMock()
     mock_user_repo = MagicMock()
     mock_quiz_api = MagicMock(spec=QuizApiClient)
 
@@ -47,6 +48,7 @@ async def test_lesson_aggregated_violation_single_ticket():
 
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=mock_homework_repo,
+        homework_submission_repo=mock_submission_repo,
         quiz_api=mock_quiz_api,
         user_repo=mock_user_repo,
     )
@@ -73,6 +75,7 @@ async def test_lesson_coding_only_violation():
     Test Case 2: Học viên làm xong Game nhưng THIẾU Coding -> Sinh ĐÚNG 1 VÉ VI PHẠM về Coding.
     """
     mock_homework_repo = MagicMock()
+    mock_submission_repo = MagicMock()
     mock_user_repo = MagicMock()
     mock_quiz_api = MagicMock(spec=QuizApiClient)
 
@@ -105,6 +108,7 @@ async def test_lesson_coding_only_violation():
 
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=mock_homework_repo,
+        homework_submission_repo=mock_submission_repo,
         quiz_api=mock_quiz_api,
         user_repo=mock_user_repo,
     )
@@ -129,6 +133,7 @@ async def test_lesson_game_only_violation():
     Test Case 3: Học viên làm xong Coding nhưng THIẾU Game (hoặc làm chưa xong game) -> Sinh 1 VÉ VI PHẠM về Game.
     """
     mock_homework_repo = MagicMock()
+    mock_submission_repo = MagicMock()
     mock_user_repo = MagicMock()
     mock_quiz_api = MagicMock(spec=QuizApiClient)
 
@@ -163,6 +168,7 @@ async def test_lesson_game_only_violation():
 
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=mock_homework_repo,
+        homework_submission_repo=mock_submission_repo,
         quiz_api=mock_quiz_api,
         user_repo=mock_user_repo,
     )
@@ -187,6 +193,7 @@ async def test_unassigned_legacy_homework_does_not_penalize_users():
     -> KHÔNG tự động phạt nhầm toàn bộ active users trong hệ thống.
     """
     mock_homework_repo = MagicMock()
+    mock_submission_repo = MagicMock()
     mock_user_repo = MagicMock()
     mock_quiz_api = MagicMock(spec=QuizApiClient)
 
@@ -210,6 +217,7 @@ async def test_unassigned_legacy_homework_does_not_penalize_users():
 
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=mock_homework_repo,
+        homework_submission_repo=mock_submission_repo,
         quiz_api=mock_quiz_api,
         user_repo=mock_user_repo,
     )
@@ -236,6 +244,7 @@ async def test_sync_homework_from_quiz_with_string_timestamps():
     )
 
     mock_homework_repo = MagicMock()
+    mock_submission_repo = MagicMock()
     mock_quiz_api = MagicMock(spec=QuizApiClient)
 
     hw = Homework(
@@ -249,7 +258,7 @@ async def test_sync_homework_from_quiz_with_string_timestamps():
     )
 
     mock_homework_repo.get_by_id.return_value = hw
-    mock_homework_repo.find_submission_match.return_value = None
+    mock_submission_repo.find_submission_match.return_value = None
 
     mock_quiz_api.get_homework_submissions_for_sync = AsyncMock(
         return_value=[
@@ -278,6 +287,7 @@ async def test_sync_homework_from_quiz_with_string_timestamps():
 
     use_case = SyncHomeworkFromQuizUseCase(
         homework_repo=mock_homework_repo,
+        homework_submission_repo=mock_submission_repo,
         quiz_api=mock_quiz_api,
     )
 
@@ -285,4 +295,4 @@ async def test_sync_homework_from_quiz_with_string_timestamps():
 
     assert result["synced_coding_count"] == 1
     assert result["synced_game_count"] == 1
-    assert mock_homework_repo.add_submission.call_count == 2
+    assert mock_submission_repo.add_submission.call_count == 2

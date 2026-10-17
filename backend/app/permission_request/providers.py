@@ -1,7 +1,7 @@
 from dishka import Provider, Scope, provide
 from sqlalchemy.orm import Session
 
-from app.homework.infrastructure.repository import HomeworkRepository
+from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.meeting.infrastructure.repository import MeetingRepository
 from app.permission_request.application.create_change_meeting_request_use_case import (
     CreateChangeMeetingRequestUseCase,

@@ -11,6 +11,7 @@ from app.homework.domain.value_objects import HomeworkOverdueDetected
 @pytest.mark.asyncio
 async def test_check_overdue_homework_publishes_event():
     homework_repo = MagicMock()
+    submission_repo = MagicMock()
     quiz_api = MagicMock()
     user_repo = MagicMock()
     event_bus = MagicMock()
@@ -36,6 +37,7 @@ async def test_check_overdue_homework_publishes_event():
 
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=homework_repo,
+        homework_submission_repo=submission_repo,
         quiz_api=quiz_api,
         user_repo=user_repo,
         event_bus=event_bus,
@@ -60,6 +62,7 @@ async def test_check_overdue_homework_publishes_event():
 async def test_check_overdue_multi_exercise_partial_submission_flags_overdue():
     """Học viên chỉ nộp 1/2 bài tập con sẽ bị tính là quá hạn bài tập coding."""
     homework_repo = MagicMock()
+    submission_repo = MagicMock()
     quiz_api = MagicMock()
     user_repo = MagicMock()
     event_bus = MagicMock()
@@ -87,10 +90,11 @@ async def test_check_overdue_multi_exercise_partial_submission_flags_overdue():
     quiz_api.get_game_leaderboard = AsyncMock(return_value=None)
 
     # Trong DB Manager, user 201 chỉ nộp ex-1
-    homework_repo.get_submitted_exercise_ids.return_value = {"ex-1"}
+    submission_repo.get_submitted_exercise_ids.return_value = {"ex-1"}
 
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=homework_repo,
+        homework_submission_repo=submission_repo,
         quiz_api=quiz_api,
         user_repo=user_repo,
         event_bus=event_bus,
@@ -112,6 +116,7 @@ async def test_check_overdue_multi_exercise_partial_submission_flags_overdue():
 async def test_check_overdue_multi_exercise_full_submission_passes():
     """Học viên nộp đủ 2/2 bài tập con trong DB không bị phạt."""
     homework_repo = MagicMock()
+    submission_repo = MagicMock()
     quiz_api = MagicMock()
     user_repo = MagicMock()
     event_bus = MagicMock()
@@ -138,10 +143,11 @@ async def test_check_overdue_multi_exercise_full_submission_passes():
     quiz_api.get_game_leaderboard = AsyncMock(return_value=None)
 
     # Trong DB Manager, user 301 đã nộp cả ex-1 và ex-2
-    homework_repo.get_submitted_exercise_ids.return_value = {"ex-1", "ex-2"}
+    submission_repo.get_submitted_exercise_ids.return_value = {"ex-1", "ex-2"}
 
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=homework_repo,
+        homework_submission_repo=submission_repo,
         quiz_api=quiz_api,
         user_repo=user_repo,
         event_bus=event_bus,

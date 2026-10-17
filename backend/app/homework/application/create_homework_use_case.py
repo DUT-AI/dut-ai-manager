@@ -2,7 +2,7 @@ from app.homework.application.dtos import HomeworkCreate
 from app.homework.application.helpers import QuizSubmissionHelper
 from app.homework.domain.entity import Homework as HomeworkEntity
 from app.homework.infrastructure.quiz_api import QuizApiClient
-from app.homework.infrastructure.repository import HomeworkRepository
+from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.shared.application.response import BadRequestException
 
 

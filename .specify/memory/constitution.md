@@ -1,19 +1,16 @@
 <!--
 Sync Impact Report:
-- Version: v1.2.0 -> v1.3.0
+- Version: v1.4.0 -> v1.5.0
 - Ratification Date: 2026-09-25
-- Last Amended: 2026-10-05
+- Last Amended: 2026-10-18
+- Principles enhanced / modified:
+  - I. Clean Architecture & Practical DDD Boundaries (MUST) -> Clarified strict boundary between Repositories/Domain Services and Use Cases. Repositories handle data retrieval/persistence; Use Cases orchestrate business flows.
+  - VII. Strict Single-Responsibility Use Cases (One Public Execute Per Class) (MUST) -> Strengthened enforcement: Each Use Case file MUST contain exactly ONE use case class with a single primary entrypoint method (`execute` or domain-specific action). Grouping multiple distinct queries/commands into a single use case class (e.g. `get_all`, `get_paged`, `get_assigned_to_user`, `get_unsubmitted_report` in one class) is strictly prohibited.
+  - VIII. Frontend Component Modularity & Clean Hook Consumption (MUST) -> Mandated direct consumption of canonical hooks/services; prohibited redundant inline mutations, wrappers, or duplicate state logic.
+  - IX. Pure Composition & Domain Services Over Base Use Cases (MUST) -> Maintained zero-base-use-case rule and explicit Dishka injection.
 - Principles added:
-  - VIII. Frontend Component Modularity & Single-Responsibility UI (MUST) -> Mandates strict separation of subcomponents (Modals, Tables, Mobile Lists, Overview Cards, Timelines) into dedicated files within `components/`, disallowing monolithic multi-component files. Pages/Drawers act purely as Orchestrators. Mandates explicit table pagination configurations (`pageSize >= 20`, `pageSizeOptions`, `showTotal`).
-- Principles preserved:
-  - I. Clean Architecture & Practical DDD Boundaries (MUST)
-  - II. Dependency Injection with Dishka (MUST)
-  - III. Unified UTC+7 Timezone & DateTime Integrity (MUST)
-  - IV. Event-Driven Decoupling & Asynchronous Handlers (MUST)
-  - V. API Backward Compatibility & Non-Null Contract DTOs (MUST)
-  - VI. Idempotency & Network Resilience (MUST)
-  - VII. Single-Responsibility Use Cases (MUST)
-- Rationale: Codifying project constitution with architectural standards for both backend and frontend modularity, preventing regressions on UI component sprawl and hidden pagination.
+  - X. Zero Redundant Backward Compatibility & No Duplicate API Surface (MUST) -> Strictly forbids creating duplicate aliases, dual-named functions/hooks, or obsolete compatibility layers that pollute the codebase (e.g., `useSyncHomework = useSyncHomeworkFromQuiz`). When renaming or refactoring, all call sites MUST be updated directly to use the canonical identifier.
+- Rationale: Eliminating monolithic multi-method use cases, enforcing single responsibility across backend queries, and preventing codebase rot caused by needless backward compatibility aliases.
 -->
 
 # DUT AI Manager Constitution
@@ -23,8 +20,8 @@ Sync Impact Report:
 ### I. Clean Architecture & Practical DDD Boundaries (MUST)
 Every business domain in `dut-ai-manager` (Meeting, Homework, Violation, Report, User, PermissionRequest) MUST strictly follow Clean Architecture / Practical Domain-Driven Design layering:
 - **Domain Layer (`domain/`)**: Pure business logic, Entities, Value Objects, and Domain Events. Must have ZERO dependencies on frameworks, databases, or third-party web APIs. May embed lightweight Value Objects (such as `UserRef(id, name, avatar_url)`) as identity snapshots for domain and use case cohesion.
-- **Application Layer (`application/`)**: Use Cases orchestrating domain logic, repositories, and domain event publishing.
-- **Infrastructure Layer (`infrastructure/`)**: Database models (SQLAlchemy ORM), repositories, external service clients (MinIO, Discord, Zalo). ORM Models MUST implement `to_entity()` and `from_entity()` methods for clean domain mapping.
+- **Application Layer (`application/`)**: Dedicated Single-Responsibility Use Cases orchestrating domain logic, repositories, domain services, and domain event publishing.
+- **Infrastructure Layer (`infrastructure/`)**: Database models (SQLAlchemy ORM), repositories, external service clients (MinIO, Discord, Zalo, Quiz). ORM Models MUST implement `to_entity()` and `from_entity()` methods for clean domain mapping. Raw database queries and multi-table filtering belong in Repositories, not in Use Cases or Controllers.
 - **Presentation / API Layer (`controller.py`, `schemas.py`)**: FastAPI routers, Pydantic schemas, permission dependencies.
 
 ### II. Dependency Injection with Dishka (MUST)
@@ -42,8 +39,11 @@ Existing REST API endpoints consumed by the Web Frontend (`frontend/`) and Zalo 
 ### VI. Idempotency & Network Resilience (MUST)
 Any endpoint that records transactional state over unreliable networks (such as bulk check-in, card tap, check-out) MUST support idempotency keys (`client_event_id` / `event_id`) to prevent duplicate processing on client retries.
 
-### VII. Single-Responsibility Use Cases (MUST)
-Each use case in the `application/` layer of every domain MUST be implemented in its own dedicated Python file with the `*_use_case.py` naming convention (e.g. `create_meeting_use_case.py`, `get_violations_use_case.py`). Grouping multiple use case classes into a monolithic file (such as `use_cases.py`, `crud_use_cases.py`, `checkin_use_cases.py`) is prohibited. The `application/__init__.py` file MUST explicitly re-export all domain use cases via `__all__`.
+### VII. Strict Single-Responsibility Use Cases (One Public Execute Per Class) (MUST)
+Each use case in the `application/` layer of every domain MUST strictly follow the Single-Responsibility Principle:
+- **Dedicated File per Use Case**: Each use case MUST reside in its own dedicated Python file named `*_use_case.py` (e.g., `get_user_homeworks_use_case.py`, `get_unsubmitted_homeworks_use_case.py`, `sync_homework_submissions_use_case.py`).
+- **Single Public Action**: Each use case class MUST expose exactly ONE primary public method (conventionally `execute(...)`). Bundling multiple unrelated read or write operations (e.g., bundling `get_all`, `get_paged`, `get_assigned_to_user`, `get_unsubmitted_report` inside a generic `GetHomeworksUseCase`) is strictly prohibited.
+- **Export Discipline**: The domain's `application/__init__.py` file MUST explicitly re-export all use case classes via `__all__`.
 
 ### VIII. Frontend Component Modularity & Single-Responsibility UI (MUST)
 All frontend features in `frontend/src/features/` MUST adhere to modular component architecture:
@@ -51,6 +51,18 @@ All frontend features in `frontend/src/features/` MUST adhere to modular compone
 - **Dedicated Components Directory**: Subcomponents MUST be placed into individual files inside the feature's `components/` folder and exported cleanly via `components/index.ts`.
 - **Orchestrator Role for Pages and Drawers**: Page and drawer components MUST act solely as orchestrators (managing query/mutation hooks, routing/modal visibility state, and top-level filter states), delegating presentation and table rendering to dedicated subcomponents.
 - **Transparent Data Presentation & Pagination**: All data tables (`Table`) displaying business records MUST configure explicit pagination with `defaultPageSize >= 20`, `pageSizeOptions: ['10', '20', '50', '100']`, `showSizeChanger: true`, and `showTotal` indicators to guarantee no records are inadvertently clipped or hidden from administrators.
+
+### IX. Pure Composition & Domain Services Over Base Use Cases (MUST)
+Reusable business operations across use cases MUST be modeled as dedicated **Domain Services** (e.g. `TokenService`, `AuthService`, `AttendancePolicy`) or pure stateless utility functions:
+- **Prohibition of Base Use Cases**: Creating generic/abstract "Base Use Case" classes (e.g., `BaseAuthUseCase`, `BaseMeetingUseCase`) solely to share helper methods or inject a bundle of common repositories is strictly prohibited. Use cases MUST maintain explicit, minimal dependencies in their `__init__`.
+- **Favor Composition Over Inheritance**: Use cases requiring shared domain logic MUST either call stateless static methods on domain services (e.g. `TokenService.create_tokens(user)`) or inject the domain service directly via Dishka DI.
+- **Independence & Modularity**: Each use case must remain self-contained, easily testable in isolation, and free from hidden coupling introduced by inheritance hierarchies.
+
+### X. Zero Redundant Backward Compatibility & No Duplicate API Surface (MUST)
+Both backend and frontend codebases MUST NOT retain redundant backward-compatibility layers, duplicate function aliases, or dual-named wrappers that pollute the codebase:
+- **Prohibition of Internal Aliases**: Never create redundant re-exports or aliases (e.g., `export const useSyncHomework = useSyncHomeworkFromQuiz` or duplicate endpoints) merely to avoid updating callers.
+- **Refactor Call Sites Directly**: When renaming, refactoring, or consolidating functions, hooks, DTOs, or services, all consuming callers MUST be updated directly to use the canonical identifier.
+- **Single Source of Truth**: Every operation, endpoint, and hook MUST have exactly one canonical representation. Code cleanliness and maintainability strictly take precedence over lazy compatibility wrappers.
 
 ## Security & Compliance Standards
 
@@ -74,4 +86,4 @@ All frontend features in `frontend/src/features/` MUST adhere to modular compone
    - **MINOR**: Addition of new principles or major workflow standards.
    - **PATCH**: Non-semantic clarifications and wording updates.
 
-**Version**: 1.3.0 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-10-05
+**Version**: 1.5.0 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-10-18

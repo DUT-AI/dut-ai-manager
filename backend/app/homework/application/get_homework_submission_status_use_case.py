@@ -12,7 +12,10 @@ from app.homework.application.dtos import (
 from app.homework.application.helpers import QuizSubmissionHelper
 from app.homework.domain.entity import Homework as HomeworkEntity
 from app.homework.infrastructure.quiz_api import QuizApiClient
-from app.homework.infrastructure.repository import HomeworkRepository
+from app.homework.infrastructure.homework_repository import HomeworkRepository
+from app.homework.infrastructure.homework_submission_repository import (
+    HomeworkSubmissionRepository,
+)
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
 from app.user.infrastructure.repository import UserRepository
 from app.utils.datetime import get_current_utc7_time
@@ -24,11 +27,13 @@ class GetHomeworkSubmissionStatusUseCase:
     def __init__(
         self,
         homework_repo: HomeworkRepository,
+        homework_submission_repo: HomeworkSubmissionRepository,
         user_repo: UserRepository,
         quiz_api: QuizApiClient,
         permission_repo: PermissionRequestRepository | None = None,
     ):
         self.homework_repo = homework_repo
+        self.homework_submission_repo = homework_submission_repo
         self.user_repo = user_repo
         self.quiz_api = quiz_api
         self.permission_repo = permission_repo
@@ -110,8 +115,8 @@ class GetHomeworkSubmissionStatusUseCase:
 
         # 3. Lấy toàn bộ submission lưu trong database Manager
         db_submissions = (
-            self.homework_repo.get_submissions_by_homework(homework.id)
-            if self.homework_repo and homework.id
+            self.homework_submission_repo.get_submissions_by_homework(homework.id)
+            if self.homework_submission_repo and homework.id
             else []
         )
         db_exercise_map: dict[tuple[int, str], Any] = {}
