@@ -2,16 +2,18 @@ from dishka import Provider, Scope, provide
 from sqlalchemy.orm import Session
 
 from app.auth.account_notification_handler import AccountNotificationHandler
-from app.auth.application.use_cases import (
+from app.auth.application import (
     AuthenticateUseCase,
     AuthenticateZaloPhoneUseCase,
     ChangePasswordUseCase,
     CreateAccountUseCase,
     ForgotPasswordUseCase,
+    GetMeUseCase,
     RefreshTokenUseCase,
+    UserAccountHandler,
 )
-from app.auth.application.user_event_handler import UserAccountHandler
 from app.auth.domain.service import AuthService
+from app.auth.domain.token_service import TokenService
 from app.auth.infrastructure.repository import AccountRepository
 from app.shared.infrastructure.discord_service import DiscordService
 from app.shared.infrastructure.email_service import EmailService
@@ -25,6 +27,10 @@ class AuthModuleProvider(Provider):
     @provide(scope=Scope.APP)
     def get_auth_service(self) -> AuthService:
         return AuthService()
+
+    @provide(scope=Scope.APP)
+    def get_token_service(self) -> TokenService:
+        return TokenService()
 
     @provide
     def get_account_repo(self, session: Session) -> AccountRepository:
@@ -47,16 +53,18 @@ class AuthModuleProvider(Provider):
         return AuthenticateZaloPhoneUseCase(account_repo, user_repo)
 
     @provide
-    def refresh_token_uc(
-        self, account_repo: AccountRepository, user_repo: UserRepository
-    ) -> RefreshTokenUseCase:
-        return RefreshTokenUseCase(account_repo, user_repo)
+    def refresh_token_uc(self, user_repo: UserRepository) -> RefreshTokenUseCase:
+        return RefreshTokenUseCase(user_repo)
 
     @provide
     def change_password_uc(
         self, account_repo: AccountRepository, user_repo: UserRepository
     ) -> ChangePasswordUseCase:
         return ChangePasswordUseCase(account_repo, user_repo)
+
+    @provide
+    def get_me_uc(self, user_repo: UserRepository) -> GetMeUseCase:
+        return GetMeUseCase(user_repo)
 
     @provide
     def create_account_uc(

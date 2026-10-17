@@ -2,7 +2,7 @@ from unittest.mock import MagicMock
 import pytest
 from fastapi import status
 
-from app.core.deps import PermissionChecker, get_current_user_entity
+from app.core.deps import PermissionChecker, get_current_principal
 from app.core.principal import AuthPrincipal, PrincipalType
 from app.shared.application.response import BadRequestException
 
@@ -52,50 +52,7 @@ def test_permission_checker_admin_bypass():
     assert result == admin
 
 
-def test_get_current_user_entity_rejects_api_key():
-    api_key_principal = AuthPrincipal(
-        actor_id=1,
-        actor_type=PrincipalType.API_KEY,
-        name="System Key",
-        role_names=["SYSTEM"],
-        permissions={"system.sync"},
-    )
-
-    mock_session = MagicMock()
-    with pytest.raises(BadRequestException) as exc_info:
-        get_current_user_entity(api_key_principal, mock_session)
-
-    assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
-    assert "chỉ dành cho tài khoản người dùng cá nhân" in exc_info.value.message
-
-
-def test_get_current_user_entity_success():
-    user_principal = AuthPrincipal(
-        actor_id=42,
-        actor_type=PrincipalType.USER,
-        name="Real User",
-        email="real@example.com",
-        role_names=["MEMBER"],
-        permissions=set(),
-    )
-
-    mock_session = MagicMock()
-    mock_user = MagicMock()
-    mock_user.is_active = True
-
-    # Mock UserRepository.get_by_id
-    with pytest.MonkeyPatch.context() as mp:
-        mock_repo = MagicMock()
-        mock_repo.get_by_id.return_value = mock_user
-        mp.setattr("app.core.deps.UserRepository", lambda session: mock_repo)
-
-        entity = get_current_user_entity(user_principal, mock_session)
-        assert entity == mock_user
-        mock_repo.get_by_id.assert_called_once_with(42)
-
-
 def test_get_current_principal_jwt_success():
-    from app.core.deps import get_current_principal
     from app.utils.password import AccessTokenPayload
 
     mock_session = MagicMock()
@@ -123,8 +80,6 @@ def test_get_current_principal_jwt_success():
 
 
 def test_get_current_principal_api_key_success():
-    from app.core.deps import get_current_principal
-
     mock_session = MagicMock()
     mock_key = MagicMock()
     mock_key.id = 7
@@ -160,4 +115,3 @@ def test_get_current_principal_api_key_success():
         assert principal.name == "System: Bot Sync"
         assert principal.role_names == ["SYSTEM"]
         assert principal.has_permission("homework.read") is True
-

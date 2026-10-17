@@ -10,7 +10,6 @@ from typing import Any
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-from app.core.context import get_current_user_id
 from app.utils.datetime import get_current_utc7_time
 
 
@@ -18,6 +17,9 @@ class Base(DeclarativeBase):
     """Base class for all SQLAlchemy ORM models."""
 
     pass
+
+
+from app.core.context import get_current_user_id
 
 
 class SQLAlchemyTimestampMixin:

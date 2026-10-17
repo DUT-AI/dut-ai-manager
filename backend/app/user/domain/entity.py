@@ -48,5 +48,10 @@ class UserEntity(BaseEntity):
         return self.id
 
     @property
+    def is_user(self) -> bool:
+        """Matches AuthPrincipal.is_user interface."""
+        return True
+
+    @property
     def is_active(self) -> bool:
         return self.status == UserStatus.ACTIVE

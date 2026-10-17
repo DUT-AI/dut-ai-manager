@@ -6,21 +6,20 @@ from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, Cookie, Response
 from loguru import logger
 
-from app.auth.application.dtos import (
+from app.auth.application import (
+    AuthenticateUseCase,
+    AuthenticateZaloPhoneUseCase,
     ChangePasswordRequest,
+    ChangePasswordUseCase,
     ForgotPasswordRequest,
+    ForgotPasswordUseCase,
+    GetMeUseCase,
     LoginRequest,
     RefreshTokenRequest,
+    RefreshTokenUseCase,
     TokenResponse,
     UserReponseMe,
     ZaloPhoneLoginRequest,
-)
-from app.auth.application.use_cases import (
-    AuthenticateUseCase,
-    AuthenticateZaloPhoneUseCase,
-    ChangePasswordUseCase,
-    ForgotPasswordUseCase,
-    RefreshTokenUseCase,
 )
 from app.core.config import settings
 from app.core.deps import CurrentUser
@@ -141,11 +140,15 @@ async def refresh_token(
 
 
 @router.get("/me", response_model=ApiResponse[UserReponseMe])
-async def get_me(current_user: CurrentUser):
-    """Get current user info using JWT claims."""
-    logger.debug(f"Current user: {current_user}")
+@inject
+async def get_me(
+    current_user: CurrentUser,
+    uc: FromDishka[GetMeUseCase],
+):
+    """Get current user info."""
+    user = uc.execute(user_id=current_user.user_id)
     return ApiResponse.success(
-        data=current_user,
+        data=user,
         message="Success fetching current user data",
     )
 
@@ -158,14 +161,12 @@ async def change_password(
     uc: FromDishka[ChangePasswordUseCase],
 ):
     """Change user password."""
-    if request.new_password != request.confirm_password:
-        return ApiResponse.error(
-            message="Mật khẩu xác nhận không khớp",
-            data=None,
-        )
-
-    uc.execute(current_user, request.old_password, request.new_password)
-
+    uc.execute(
+        user_id=current_user.user_id,
+        old_password=request.old_password,
+        new_password=request.new_password,
+        confirm_password=request.confirm_password,
+    )
     return ApiResponse.success(message="Đổi mật khẩu thành công", data=None)
 
 

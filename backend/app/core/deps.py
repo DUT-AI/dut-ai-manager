@@ -11,8 +11,6 @@ from app.core.principal import AuthPrincipal, PrincipalType
 from app.rbac.domain.entity import RoleType
 from app.rbac.infrastructure.repository import RoleApiKeyRepository, RoleRepository
 from app.shared.application.response import BadRequestException
-from app.user.domain.entity import UserEntity
-from app.user.infrastructure.repository import UserRepository
 from app.utils.password import decode_access_token, verify_password
 
 security = HTTPBearer(auto_error=False)
@@ -97,7 +95,7 @@ def get_current_principal(
 
     if not payload:
         raise BadRequestException(
-            "Invalid or expired token", status.HTTP_401_UNAUTHORIZED
+            "Invalid or expired token", status_code=status.HTTP_401_UNAUTHORIZED
         )
 
     # Set current user ID in context for audit fields
@@ -113,40 +111,9 @@ def get_current_principal(
     )
 
 
-# Alias for backward compatibility
+# Type alias for dependency injection
 get_current_user = get_current_principal
-
-# Type alias for dependency injection (Default: lightweight AuthPrincipal)
 CurrentUser = Annotated[AuthPrincipal, Depends(get_current_principal)]
-
-
-def get_current_user_entity(
-    principal: CurrentUser,
-    session: Annotated[Session, Depends(get_session)],
-) -> UserEntity:
-    """
-    Fetch the full UserEntity from database for endpoints that require detailed personal profile.
-    Raises 403 Forbidden if accessed by an API Key/System account.
-    """
-    if not principal.is_user:
-        raise BadRequestException(
-            "Thao tác chỉ dành cho tài khoản người dùng cá nhân",
-            status_code=status.HTTP_403_FORBIDDEN,
-        )
-
-    user_repo = UserRepository(session)
-    user = user_repo.get_by_id(principal.user_id)
-
-    if not user or not user.is_active:
-        raise BadRequestException(
-            "User not found or inactive", status_code=status.HTTP_401_UNAUTHORIZED
-        )
-
-    return user
-
-
-# Type alias for endpoints strictly needing database UserEntity
-CurrentUserEntity = Annotated[UserEntity, Depends(get_current_user_entity)]
 
 
 class PermissionChecker:
@@ -156,7 +123,6 @@ class PermissionChecker:
         )
 
     def __call__(self, current_user: CurrentUser) -> AuthPrincipal:
-        # Use claims for role/permissions (no DB query needed)
         if not current_user.has_permission(self.permission):
             raise BadRequestException(
                 status_code=status.HTTP_403_FORBIDDEN,
