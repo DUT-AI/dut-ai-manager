@@ -65,9 +65,9 @@ def test_pagination_params_validation():
     # Default values
     p = PaginationParams()
     assert p.page == 1
-    assert p.page_size == 20
+    assert p.page_size == 100
     assert p.offset == 0
-    assert p.limit == 20
+    assert p.limit == 100
 
     # Custom valid values
     p_custom = PaginationParams(page=3, page_size=50)

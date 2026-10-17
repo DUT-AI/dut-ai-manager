@@ -10,7 +10,7 @@ from datetime import datetime
 from dishka import AsyncContainer
 from loguru import logger
 
-from app.bonus_point.application.use_cases import CalculateActivityPointsUseCase
+from app.bonus_point.application import CalculateActivityPointsUseCase
 from app.shared.infrastructure.request_context import (
     _request_container_context,
     set_request_container,

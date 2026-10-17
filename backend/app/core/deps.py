@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.context import set_current_user_id
 from app.core.database import get_session
+from app.core.principal import AuthPrincipal, PrincipalType
 from app.rbac.domain.entity import RoleType
 from app.rbac.infrastructure.repository import RoleApiKeyRepository, RoleRepository
 from app.shared.application.response import BadRequestException
@@ -37,15 +38,15 @@ def get_token_from_cookie_or_header(
     return token
 
 
-def get_current_user(
+def get_current_principal(
     token: Annotated[str, Depends(get_token_from_cookie_or_header)],
     session: Annotated[Session, Depends(get_session)],
-) -> UserEntity:
+) -> AuthPrincipal:
     """
-    Get current user from token.
+    Get current authenticated principal from token.
     Supports:
-    1. JWT Access Token (User login)
-    2. API Key (Role-based system access)
+    1. API Key (Role-based system access)
+    2. JWT Access Token (User login)
     """
     # 1. Check for API Key format (sk-...)
     if token.startswith("sk-"):
@@ -61,35 +62,37 @@ def get_current_user(
                 break
 
         if not matched_key:
-            raise BadRequestException("Invalid API Key", status.HTTP_401_UNAUTHORIZED)
+            raise BadRequestException("Invalid API Key", status_code=status.HTTP_401_UNAUTHORIZED)
 
         role = matched_key.role
         if not role:
-            raise BadRequestException("Role not found", status.HTTP_401_UNAUTHORIZED)
-
-        system_user = UserEntity(
-            id=0,
-            name=f"System: {matched_key.name}",
-            email=f"system+{matched_key.id}@dutai.site",
-            role_ids=[role.id] if role.id else [],
-        )
+            raise BadRequestException("Role not found", status_code=status.HTTP_401_UNAUTHORIZED)
 
         full_role = RoleRepository(session).get_role_with_permissions(
             cast(int, role.id)
         )
-        if full_role and full_role.role_permissions:
-            perms = set()
-            for rp in full_role.role_permissions:
-                if rp.permission:
-                    perms.add(rp.permission.name)
-            system_user.permissions = perms
-            system_user.role_names = [full_role.name] if full_role.name else []
+        perms: set[str] = set()
+        role_names: list[str] = []
+        if full_role:
+            if full_role.name:
+                role_names.append(full_role.name)
+            if full_role.role_permissions:
+                for rp in full_role.role_permissions:
+                    if rp.permission:
+                        perms.add(rp.permission.name)
 
-        set_current_user_id(0)
+        # Do not assign fake user ID to avoid DB foreign key collisions
+        set_current_user_id(None)
 
-        return system_user
+        return AuthPrincipal(
+            actor_id=matched_key.id,
+            actor_type=PrincipalType.API_KEY,
+            name=f"System: {matched_key.name}",
+            role_names=role_names,
+            permissions=perms,
+        )
 
-    # 2. Regular JWT processing
+    # 2. Regular JWT processing (Fast-path: load roles & permissions from JWT claims)
     payload = decode_access_token(token)
 
     if not payload:
@@ -97,24 +100,53 @@ def get_current_user(
             "Invalid or expired token", status.HTTP_401_UNAUTHORIZED
         )
 
-    # Fetch fresh user data from database to ensure permissions are up to date
+    # Set current user ID in context for audit fields
+    set_current_user_id(payload.sub)
 
-    user_repo = UserRepository(session)
-    user = user_repo.get_by_id(payload.sub)
+    return AuthPrincipal(
+        actor_id=payload.sub,
+        actor_type=PrincipalType.USER,
+        name=payload.name,
+        email=payload.email,
+        role_names=payload.roles,
+        permissions=set(payload.permissions),
+    )
 
-    if not user:
+
+# Alias for backward compatibility
+get_current_user = get_current_principal
+
+# Type alias for dependency injection (Default: lightweight AuthPrincipal)
+CurrentUser = Annotated[AuthPrincipal, Depends(get_current_principal)]
+
+
+def get_current_user_entity(
+    principal: CurrentUser,
+    session: Annotated[Session, Depends(get_session)],
+) -> UserEntity:
+    """
+    Fetch the full UserEntity from database for endpoints that require detailed personal profile.
+    Raises 403 Forbidden if accessed by an API Key/System account.
+    """
+    if not principal.is_user:
         raise BadRequestException(
-            "User not found or inactive", status.HTTP_401_UNAUTHORIZED
+            "Thao tác chỉ dành cho tài khoản người dùng cá nhân",
+            status_code=status.HTTP_403_FORBIDDEN,
         )
 
-    # Set current user ID in context for audit fields
-    set_current_user_id(user.id or 0)
+    user_repo = UserRepository(session)
+    user = user_repo.get_by_id(principal.user_id)
+
+    if not user or not user.is_active:
+        raise BadRequestException(
+            "User not found or inactive", status_code=status.HTTP_401_UNAUTHORIZED
+        )
 
     return user
 
 
-# Type alias for dependency injection
-CurrentUser = Annotated[UserEntity, Depends(get_current_user)]
+# Type alias for endpoints strictly needing database UserEntity
+CurrentUserEntity = Annotated[UserEntity, Depends(get_current_user_entity)]
 
 
 class PermissionChecker:
@@ -123,8 +155,8 @@ class PermissionChecker:
             permission.value if isinstance(permission, Enum) else permission
         )
 
-    def __call__(self, current_user: CurrentUser) -> UserEntity:
-        # Use JWT claims for role/permissions (no DB query needed)
+    def __call__(self, current_user: CurrentUser) -> AuthPrincipal:
+        # Use claims for role/permissions (no DB query needed)
         if not current_user.has_permission(self.permission):
             raise BadRequestException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -134,7 +166,7 @@ class PermissionChecker:
         return current_user
 
 
-def hasPermission(permission: str):
+def hasPermission(permission: str | Enum):
     """Dependency factory to check for a specific permission"""
     return Depends(PermissionChecker(permission))
 
@@ -186,7 +218,12 @@ def onlyEditOrDeleteYourself(target_user_id_param: str = "user_id"):
             except Exception:
                 target_user_id = None
 
-        if target_user_id is None or current_user.id != int(target_user_id):
+        if (
+            not current_user.is_user
+            or current_user.id is None
+            or target_user_id is None
+            or current_user.id != int(target_user_id)
+        ):
             raise BadRequestException(
                 "Chỉ được edit thông tin bản thân",
                 status_code=status.HTTP_403_FORBIDDEN,

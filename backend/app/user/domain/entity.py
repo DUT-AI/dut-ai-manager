@@ -43,5 +43,10 @@ class UserEntity(BaseEntity):
         return permission_name in self.permissions
 
     @property
+    def user_id(self) -> int | None:
+        """Alias to match AuthPrincipal.user_id interface."""
+        return self.id
+
+    @property
     def is_active(self) -> bool:
         return self.status == UserStatus.ACTIVE

@@ -15,8 +15,8 @@ def get_current_user_id() -> int | None:
     return current_user_id.get()
 
 
-def set_current_user_id(user_id: int) -> None:
-    """Set the current user ID in context."""
+def set_current_user_id(user_id: int | None) -> None:
+    """Set the current user ID in context (None for API Key / System)."""
     current_user_id.set(user_id)
 
 

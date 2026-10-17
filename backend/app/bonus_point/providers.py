@@ -1,7 +1,7 @@
 from dishka import Provider, Scope, provide
 from sqlalchemy.orm import Session
 
-from app.bonus_point.application.use_cases import (
+from app.bonus_point.application import (
     CalculateActivityPointsUseCase,
     CreateBonusPointsUseCase,
     DeleteBonusPointUseCase,

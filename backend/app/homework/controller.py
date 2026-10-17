@@ -92,9 +92,8 @@ async def get_my_homeworks(
     pagination: Annotated[PaginationParams, Depends()],
 ):
     """Get homeworks assigned to the current user"""
-    assert current_user.id is not None
     result, total = await get_homeworks_uc.get_assigned_to_user(
-        current_user.id, page=pagination.page, page_size=pagination.page_size
+        current_user.user_id, page=pagination.page, page_size=pagination.page_size
     )
     meta = PaginationMeta.create(
         page=pagination.page,

@@ -16,7 +16,7 @@ from app.bonus_point.application.dtos import (
     BonusPointResponse,
     BonusPointUpdate,
 )
-from app.bonus_point.application.use_cases import (
+from app.bonus_point.application import (
     CreateBonusPointsUseCase,
     DeleteBonusPointUseCase,
     GetBonusPointsUseCase,
