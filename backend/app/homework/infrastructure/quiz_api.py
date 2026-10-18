@@ -175,33 +175,6 @@ class QuizApiClient:
 
         return []
 
-    async def get_user_quiz_summary(self, user_id: int) -> dict[str, Any]:
-        """
-        Calls GET /api/v1/users/{user_id}/quiz-report
-        Returns summary of games and homeworks completed by specific user.
-        """
-        url = f"{self.base_url}/api/v1/users/{user_id}/quiz-report"
-        try:
-            async with httpx.AsyncClient(
-                timeout=30.0, headers=self._get_headers()
-            ) as client:
-                response = await client.get(url)
-                if response.status_code == 200:
-                    res_json = response.json()
-                    if isinstance(res_json, dict):
-                        return res_json.get("data", res_json)
-                else:
-                    logger.warning(
-                        f"Quiz user summary request failed: status={response.status_code}, url={url}"
-                    )
-        except Exception as exc:
-            err_msg = str(exc) or repr(exc)
-            logger.error(
-                f"Error calling Quiz user summary ({url}): {type(exc).__name__} - {err_msg}"
-            )
-
-        return {}
-
     async def get_lesson_exercises(
         self, lesson_slug: str
     ) -> list[dict[str, Any]] | None:
