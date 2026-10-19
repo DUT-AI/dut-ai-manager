@@ -44,6 +44,11 @@ class InvoiceUpdate(BaseModel):
     team_id: int | None = None
     items: list[InvoiceItemCreate]
     description: str | None = None
+    status: InvoiceStatus | None = None
+
+
+class InvoiceStatusUpdate(BaseModel):
+    status: InvoiceStatus
 
 
 class InvoiceResponse(BaseModel):
@@ -171,3 +176,9 @@ class MonthlyInvoiceCreate(BaseModel):
     fund_amount: int = 50000
     extra_items: list[InvoiceItemCreate] = []
     execute: bool = False  # If false, only return preview
+
+
+class BillingSummaryResponse(BaseModel):
+    total_amount: int = 0
+    paid_amount: int = 0
+    unpaid_amount: int = 0

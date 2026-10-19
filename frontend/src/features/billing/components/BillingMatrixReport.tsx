@@ -2,9 +2,10 @@ import { useState, useMemo } from 'react';
 import { Form, Select, DatePicker, Button, Space, Table, Typography, Tag, Row, Col, Card, Statistic } from 'antd';
 import { SearchOutlined, ImportOutlined, ExportOutlined, WalletOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
-import { useMatrixReport, useAllInvoices } from '@/features/billing/hooks/useBilling';
+import { useMatrixReport, useBillingSummary } from '@/features/billing/hooks/useBilling';
 import { useExpenses } from '@/features/expense/hooks/useExpense';
 import { useUserOptions } from '@/features/users';
+import type { UserOptionDto } from '@/features/users/types/user.types';
 import { useTeams } from '@/features/teams';
 import { InvoiceItemType } from '@/features/billing/types/billing.types';
 import { ExpenseStatus } from '@/features/expense/types/expense.types';
@@ -44,26 +45,17 @@ const BillingMatrixReport = () => {
   const { data: invoices = [], isFetching } = useMatrixReport(queryParams!, !!queryParams);
 
   // General Summary Data (Incoming & Outgoing)
-  const { data: allIncomingInvoices = [] } = useAllInvoices({
+  const { data: incomingSummary } = useBillingSummary({
     team_id: queryParams?.team_id,
   });
   const { data: allOutgoingInvoices = [] } = useExpenses({
     team_id: queryParams?.team_id,
   });
 
-  // Hóa đơn nhập vào (Thu - Quỹ & Phạt)
-  const fundAndFineInvoices = useMemo(() => {
-    return allIncomingInvoices.filter((inv) => {
-      if (!inv.items || inv.items.length === 0) return true;
-      return inv.items.some(
-        (item) => item.item_type === 'FUND' || item.item_type === 'VIOLATION'
-      );
-    });
-  }, [allIncomingInvoices]);
-
-  const incomingTotal = useMemo(() => fundAndFineInvoices.reduce((acc, curr) => acc + (curr.amount ?? curr.total_amount ?? 0), 0), [fundAndFineInvoices]);
-  const incomingPaid = useMemo(() => fundAndFineInvoices.filter(inv => inv.status === 'PAID').reduce((acc, curr) => acc + (curr.amount ?? curr.total_amount ?? 0), 0), [fundAndFineInvoices]);
-  const incomingUnpaid = useMemo(() => fundAndFineInvoices.filter(inv => inv.status === 'PENDING').reduce((acc, curr) => acc + (curr.amount ?? curr.total_amount ?? 0), 0), [fundAndFineInvoices]);
+  // Hóa đơn nhập vào (Thu)
+  const incomingTotal = incomingSummary?.total_amount ?? 0;
+  const incomingPaid = incomingSummary?.paid_amount ?? 0;
+  const incomingUnpaid = incomingSummary?.unpaid_amount ?? 0;
 
   // Hóa đơn xuất ra (Chi)
   const outgoingTotal = useMemo(() => (allOutgoingInvoices ?? []).reduce((acc, curr) => acc + (curr.amount ?? 0), 0), [allOutgoingInvoices]);
@@ -239,7 +231,7 @@ const BillingMatrixReport = () => {
       key: 'user',
       fixed: 'left' as const,
       width: 200,
-      render: (user: UserResponse) => (
+      render: (user: UserOptionDto) => (
         <div className="flex flex-col">
           <Text strong>{user?.name}</Text>
           <Text type="secondary" className="text-xs">{user?.email}</Text>

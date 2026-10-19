@@ -10,12 +10,15 @@ from app.billing.application.use_cases import (
     DeleteInvoiceUseCase,
     GetInvoicesUseCase,
     HandleSePayWebhookUseCase,
+    UpdateInvoiceStatusUseCase,
     UpdateInvoiceUseCase,
 )
 from app.billing.domain.entity import InvoiceStatus
 from app.billing.schemas import (
+    BillingSummaryResponse,
     InvoiceCreate,
     InvoiceResponse,
+    InvoiceStatusUpdate,
     InvoiceUpdate,
     MonthlyInvoiceCreate,
     MonthlyInvoicePreviewResponse,
@@ -68,12 +71,34 @@ async def update_invoice(
     _: Annotated[CurrentUser, Depends(PermissionChecker(BillingPermission.UPDATE))],
 ):
     """
-    Admin edits an unpaid invoice.
+    Admin edits an invoice.
     """
     invoice = update_uc.execute(
         invoice_id=invoice_id,
         items_data=[item.model_dump() for item in data.items],
         description=data.description,
+        new_status=data.status,
+    )
+    return ApiResponse.success(data=InvoiceResponse.from_domain(invoice))
+
+
+@router.patch(
+    "/{invoice_id}/status",
+    response_model=ApiResponse[InvoiceResponse],
+)
+@inject
+async def update_invoice_status(
+    invoice_id: int,
+    data: InvoiceStatusUpdate,
+    update_status_uc: FromDishka[UpdateInvoiceStatusUseCase],
+    _: Annotated[CurrentUser, Depends(PermissionChecker(BillingPermission.UPDATE))],
+):
+    """
+    Admin updates invoice payment status (e.g. PAID, PENDING, CANCELLED).
+    """
+    invoice = await update_status_uc.execute(
+        invoice_id=invoice_id,
+        new_status=data.status,
     )
     return ApiResponse.success(data=InvoiceResponse.from_domain(invoice))
 
@@ -181,6 +206,27 @@ async def get_matrix_report(
 
     data = [InvoiceResponse.from_domain(inv) for inv in invoices]
     return ApiResponse.success(data=data)
+
+
+@router.get("/summary", response_model=ApiResponse[BillingSummaryResponse])
+@inject
+async def get_billing_summary(
+    get_uc: FromDishka[GetInvoicesUseCase],
+    _: Annotated[CurrentUser, Depends(PermissionChecker(BillingPermission.READ))],
+    user_id: int | None = Query(default=None),
+    team_id: int | None = Query(default=None),
+    billing_period: date | None = Query(default=None),
+):
+    """
+    Get billing summary statistics (total, paid, unpaid) across all invoices.
+    Admin only.
+    """
+    summary = get_uc.get_summary(
+        billing_period=billing_period,
+        team_id=team_id,
+        user_id=user_id,
+    )
+    return ApiResponse.success(data=BillingSummaryResponse(**summary))
 
 
 @router.get("/{invoice_id}", response_model=ApiResponse[InvoiceResponse])

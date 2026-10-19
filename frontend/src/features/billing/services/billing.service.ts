@@ -1,9 +1,11 @@
 import axiosInstance from "../../../services/axiosInstance";
 import type {
+  BillingSummary,
   Invoice,
   InvoiceCreate,
   MonthlyInvoiceCreate,
-  MonthlyInvoicePreviewResponse
+  MonthlyInvoicePreviewResponse,
+  UpdateInvoiceFormValues
 } from "../types/billing.types";
 import type { ApiResponse } from "../../../types/api.types";
 
@@ -43,6 +45,13 @@ const billingService = {
     return response.data;
   },
 
+  getBillingSummary: async (filters?: { user_id?: number; team_id?: number; billing_period?: string }) => {
+    const response = await axiosInstance.get<ApiResponse<BillingSummary>>("/billing/summary", {
+      params: filters
+    });
+    return response.data;
+  },
+
   getInvoiceDetails: async (id: number) => {
     const response = await axiosInstance.get<ApiResponse<Invoice>>(`/billing/${id}`);
     return response.data;
@@ -53,8 +62,13 @@ const billingService = {
     return response.data;
   },
 
-  updateInvoice: async (invoiceId: number, data: Omit<InvoiceCreate, 'user_ids' | 'user_id'>) => {
+  updateInvoice: async (invoiceId: number, data: UpdateInvoiceFormValues | Omit<InvoiceCreate, 'user_ids' | 'user_id'>) => {
     const response = await axiosInstance.put<ApiResponse<Invoice>>(`/billing/${invoiceId}`, data);
+    return response.data;
+  },
+
+  updateInvoiceStatus: async (invoiceId: number, status: string) => {
+    const response = await axiosInstance.patch<ApiResponse<Invoice>>(`/billing/${invoiceId}/status`, { status });
     return response.data;
   },
 

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import billingService from '../services/billing.service';
-import type { InvoiceCreate, MonthlyInvoiceCreate } from '@/features/billing/types/billing.types';
+import type { InvoiceCreate, MonthlyInvoiceCreate, UpdateInvoiceFormValues } from '@/features/billing/types/billing.types';
 import type { PaginationMeta } from '@/types/api.types';
 
 // Query Keys
@@ -10,6 +10,7 @@ export const billingKeys = {
   list: (filters?: Record<string, unknown>, page?: number, pageSize?: number) =>
     ['billing', 'list', { filters, page, pageSize }] as const,
   detail: (id: number) => ['billing', 'detail', id] as const,
+  summary: (filters?: Record<string, unknown>) => ['billing', 'summary', filters] as const,
 };
 
 // Queries
@@ -73,6 +74,19 @@ export const useMatrixReport = (
   });
 };
 
+export const useBillingSummary = (
+  filters?: { user_id?: number; team_id?: number; billing_period?: string }
+) => {
+  return useQuery({
+    queryKey: billingKeys.summary(filters),
+    queryFn: async () => {
+      const response = await billingService.getBillingSummary(filters);
+      return response.data;
+    },
+    staleTime: 30 * 1000,
+  });
+};
+
 // Mutations
 export const useCreateInvoice = () => {
   const queryClient = useQueryClient();
@@ -89,8 +103,21 @@ export const useUpdateInvoice = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Omit<InvoiceCreate, 'user_id'> }) =>
+    mutationFn: ({ id, data }: { id: number; data: UpdateInvoiceFormValues | Omit<InvoiceCreate, 'user_id'> }) =>
       billingService.updateInvoice(id, data),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: billingKeys.all });
+      queryClient.invalidateQueries({ queryKey: billingKeys.detail(id) });
+    },
+  });
+};
+
+export const useUpdateInvoiceStatus = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, status }: { id: number; status: string }) =>
+      billingService.updateInvoiceStatus(id, status),
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: billingKeys.all });
       queryClient.invalidateQueries({ queryKey: billingKeys.detail(id) });

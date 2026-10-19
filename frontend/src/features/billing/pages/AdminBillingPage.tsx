@@ -1,13 +1,15 @@
 import { useState } from 'react';
-import { Card, Button, Typography, Space, Form, message, Grid, Tabs, Select, DatePicker, Row, Col, Statistic } from 'antd';
+import { Card, Button, Typography, Space, Form, message, Grid, Tabs, Select, DatePicker, Row, Col, Statistic, Tooltip } from 'antd';
 import { PlusOutlined, AuditOutlined, CalendarOutlined, BarChartOutlined, DollarOutlined, ImportOutlined, ExportOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { useAllInvoices, useCreateInvoice, useUpdateInvoice, useInvoiceDetail, useDeleteInvoice } from '@/features/billing/hooks/useBilling';
+import { useAllInvoices, useCreateInvoice, useUpdateInvoice, useUpdateInvoiceStatus, useInvoiceDetail, useDeleteInvoice, useBillingSummary } from '@/features/billing/hooks/useBilling';
 import { useUserOptions } from '@/features/users';
 import { useTeamOptions } from '@/features/teams';
 import { useTablePagination } from '@/hooks';
+import { useAuth } from '@/features/auth';
+import { BillingPermission } from '@/features/rbac/types/rbac.types';
 import CreateMonthlyInvoiceModal from '@/features/billing/components/CreateMonthlyInvoiceModal';
-import type { CreateInvoiceFormValues, Invoice } from '@/types';
+import { InvoiceStatus, type CreateInvoiceFormValues, type Invoice } from '@/types';
 import { motion, type Variants } from 'motion/react';
 
 // Sub-components
@@ -42,6 +44,8 @@ const itemVariants: Variants = {
 
 const AdminBillingPage = () => {
   const screens = useBreakpoint();
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission(BillingPermission.CREATE);
   const { page, pageSize, resetPage, getPaginationProps } = useTablePagination();
   const [filterUser, setFilterUser] = useState<number | undefined>(undefined);
   const [filterTeam, setFilterTeam] = useState<number | undefined>(undefined);
@@ -61,6 +65,7 @@ const AdminBillingPage = () => {
   const teams = teamsData ?? [];
   const createInvoice = useCreateInvoice();
   const updateInvoice = useUpdateInvoice();
+  const updateInvoiceStatus = useUpdateInvoiceStatus();
   const deleteInvoice = useDeleteInvoice();
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -111,6 +116,18 @@ const AdminBillingPage = () => {
     }
   };
 
+  const handleUpdateStatus = async (id: number, nextStatus: InvoiceStatus) => {
+    try {
+      await updateInvoiceStatus.mutateAsync({ id, status: nextStatus });
+      message.success(
+        `Đã chuyển trạng thái hóa đơn sang ${nextStatus === InvoiceStatus.PAID ? 'Đã thanh toán (PAID)' : 'Chờ thanh toán (PENDING)'
+        }`
+      );
+    } catch (error: any) {
+      message.error(error?.response?.data?.message || 'Cập nhật trạng thái thất bại');
+    }
+  };
+
   const handleDelete = async (id: number) => {
     try {
       await deleteInvoice.mutateAsync(id);
@@ -131,21 +148,12 @@ const AdminBillingPage = () => {
     setIsUpdateModalOpen(true);
   };
 
-  // Calculate Fund and Fine statistics
-  const fundAndFineInvoices = invoices.filter((inv) => {
-    if (!inv.items || inv.items.length === 0) return true;
-    return inv.items.some(
-      (item) => item.item_type === 'FUND' || item.item_type === 'VIOLATION'
-    );
+  // Billing summary from backend across all matching invoices (not affected by pagination)
+  const { data: summary, isLoading: isLoadingSummary } = useBillingSummary({
+    user_id: filterUser,
+    team_id: filterTeam,
+    billing_period: filterPeriod ? filterPeriod.startOf('month').format('YYYY-MM-DD') : undefined,
   });
-
-  const totalFundAndFineAmount = fundAndFineInvoices.reduce((acc, curr) => acc + (Number(curr.amount ?? curr.total_amount) || 0), 0);
-  const paidFundAndFineAmount = fundAndFineInvoices
-    .filter((inv) => inv.status === 'PAID')
-    .reduce((acc, curr) => acc + (Number(curr.amount ?? curr.total_amount) || 0), 0);
-  const unpaidFundAndFineAmount = fundAndFineInvoices
-    .filter((inv) => inv.status === 'PENDING')
-    .reduce((acc, curr) => acc + (Number(curr.amount ?? curr.total_amount) || 0), 0);
 
   const tabItems = [
     {
@@ -158,23 +166,23 @@ const AdminBillingPage = () => {
       ),
       children: (
         <div className="p-4">
-          {/* KPI Stat Cards (Quỹ & Phạt) */}
+          {/* KPI Stat Cards (Quỹ nhập vào) */}
           <Row gutter={[16, 16]} className="mb-4">
             <Col xs={24} sm={8}>
-              <Card loading={isLoading} className="shadow-sm border-gray-100">
+              <Card loading={isLoadingSummary} className="shadow-sm border-gray-100">
                 <Statistic
                   title="Tổng số tiền quỹ (Quỹ & Phạt)"
-                  value={totalFundAndFineAmount}
+                  value={summary?.total_amount || 0}
                   formatter={(val) => `${Number(val).toLocaleString()} VNĐ`}
                   prefix={<DollarOutlined className="text-blue-500 mr-2" />}
                 />
               </Card>
             </Col>
             <Col xs={24} sm={8}>
-              <Card loading={isLoading} className="shadow-sm border-gray-100">
+              <Card loading={isLoadingSummary} className="shadow-sm border-gray-100">
                 <Statistic
                   title="Đã nhập vào (Đã thanh toán)"
-                  value={paidFundAndFineAmount}
+                  value={summary?.paid_amount || 0}
                   formatter={(val) => `${Number(val).toLocaleString()} VNĐ`}
                   styles={{ content: { color: '#52c41a' } }}
                   prefix={<CheckCircleOutlined className="text-green-500 mr-2" />}
@@ -182,10 +190,10 @@ const AdminBillingPage = () => {
               </Card>
             </Col>
             <Col xs={24} sm={8}>
-              <Card loading={isLoading} className="shadow-sm border-gray-100">
+              <Card loading={isLoadingSummary} className="shadow-sm border-gray-100">
                 <Statistic
-                  title="Chưa thanh toán (Chờ nộp quỹ & phạt)"
-                  value={unpaidFundAndFineAmount}
+                  title="Chưa thanh toán (Chờ nộp quỹ)"
+                  value={summary?.unpaid_amount || 0}
                   formatter={(val) => `${Number(val).toLocaleString()} VNĐ`}
                   styles={{ content: { color: '#faad14' } }}
                   prefix={<ClockCircleOutlined className="text-amber-500 mr-2" />}
@@ -281,6 +289,8 @@ const AdminBillingPage = () => {
             onDelete={handleDelete}
             deletingId={deleteInvoice.isPending ? selectedInvoiceId : null}
             pagination={getPaginationProps(invoicesData?.pagination)}
+            onUpdateStatus={handleUpdateStatus}
+            updatingStatusId={updateInvoiceStatus.isPending ? (updateInvoiceStatus.variables as any)?.id : null}
           />
         </div>
       ),
@@ -342,21 +352,31 @@ const AdminBillingPage = () => {
           }
           extra={
             <Space size={12}>
-              <Button
-                icon={<CalendarOutlined />}
-                onClick={() => setIsMonthlyModalOpen(true)}
-                className="h-10 px-6 font-semibold rounded-lg border-indigo-200 text-indigo-600 hover:text-indigo-700 hover:border-indigo-300 transition-all"
-              >
-                Tạo hóa đơn tháng
-              </Button>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => setIsCreateModalOpen(true)}
-                className="bg-indigo-600 border-none h-10 px-6 font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-all"
-              >
-                Tạo hóa đơn
-              </Button>
+              <Tooltip title={!canCreate ? 'Bạn không có quyền tạo hóa đơn' : ''}>
+                <span className="inline-block">
+                  <Button
+                    icon={<CalendarOutlined />}
+                    onClick={() => setIsMonthlyModalOpen(true)}
+                    disabled={!canCreate}
+                    className="h-10 px-6 font-semibold rounded-lg border-indigo-200 text-indigo-600 hover:text-indigo-700 hover:border-indigo-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Tạo hóa đơn tháng
+                  </Button>
+                </span>
+              </Tooltip>
+              <Tooltip title={!canCreate ? 'Bạn không có quyền tạo hóa đơn' : ''}>
+                <span className="inline-block">
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => setIsCreateModalOpen(true)}
+                    disabled={!canCreate}
+                    className="bg-indigo-600 border-none h-10 px-6 font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Tạo hóa đơn
+                  </Button>
+                </span>
+              </Tooltip>
             </Space>
           }
         >

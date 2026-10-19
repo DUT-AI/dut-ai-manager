@@ -68,12 +68,12 @@ export const CapacityProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     fetchCapacity();
-    const timer = setInterval(fetchCapacity, 30 * 1000); // 30s
+    const timer = setInterval(fetchCapacity, REFRESH_INTERVAL);
 
     return () => clearInterval(timer);
   }, [fetchCapacity]);
 
-  const capacityStatus = capacity?.status?.toLowerCase() ?? null;
+  const capacityStatus = (capacity?.status?.toLowerCase() as 'safe' | 'warning' | 'overload') ?? null;
 
   return (
     <CapacityContext.Provider value={{ capacity, capacityStatus, loading }}>

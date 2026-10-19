@@ -141,6 +141,41 @@ class InvoiceRepository(BaseRepository[InvoiceModel, Invoice]):
         )
         return [m.to_entity() for m in self.session.scalars(statement).unique().all()]
 
+    def get_summary(
+        self,
+        billing_period: date | None = None,
+        team_id: int | None = None,
+        user_id: int | None = None,
+    ) -> dict[str, int]:
+        """Calculate total, paid, and unpaid fund amounts across all matching invoices."""
+        from sqlalchemy import func
+
+        stmt = select(
+            InvoiceModel.status,
+            func.coalesce(func.sum(InvoiceModel.amount), 0),
+        ).where(InvoiceModel.is_deleted == False)
+
+        if billing_period is not None:
+            stmt = stmt.where(InvoiceModel.billing_period == billing_period)
+        if team_id is not None:
+            stmt = stmt.where(InvoiceModel.team_id == team_id)
+        if user_id is not None:
+            stmt = stmt.where(InvoiceModel.user_id == user_id)
+
+        stmt = stmt.group_by(InvoiceModel.status)
+        results = self.session.execute(stmt).all()
+
+        summary = {"total_amount": 0, "paid_amount": 0, "unpaid_amount": 0}
+        for status_val, total_amt in results:
+            amt = int(total_amt)
+            if status_val == "PAID":
+                summary["paid_amount"] += amt
+            elif status_val == "PENDING":
+                summary["unpaid_amount"] += amt
+            summary["total_amount"] += amt
+
+        return summary
+
     def save_invoice(self, invoice: Invoice) -> Invoice:
         """
         Save invoice and its items.
