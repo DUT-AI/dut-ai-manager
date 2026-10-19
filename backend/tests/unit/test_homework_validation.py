@@ -37,13 +37,20 @@ def mock_quiz_api():
     return MagicMock(spec=QuizApiClient)
 
 
+@pytest.fixture
+def mock_assignee_repo():
+    return MagicMock()
+
+
 @pytest.mark.asyncio
 async def test_create_homework_rejects_when_no_options_selected(
-    mock_homework_repo, mock_quiz_api
+    mock_homework_repo, mock_quiz_api, mock_assignee_repo
 ):
     """Bắt lỗi khi không chọn bất kỳ option nào (cả coding và game đều False)."""
     use_case = CreateHomeworkUseCase(
-        homework_repo=mock_homework_repo, quiz_api=mock_quiz_api
+        homework_repo=mock_homework_repo,
+        quiz_api=mock_quiz_api,
+        homework_assignee_repo=mock_assignee_repo,
     )
 
     data = HomeworkCreate(
@@ -63,12 +70,14 @@ async def test_create_homework_rejects_when_no_options_selected(
 
 @pytest.mark.asyncio
 async def test_create_homework_rejects_when_lesson_not_found_on_quiz(
-    mock_homework_repo, mock_quiz_api
+    mock_homework_repo, mock_quiz_api, mock_assignee_repo
 ):
     """Bắt lỗi khi slug bài học không tồn tại trên hệ thống Quiz (404/None)."""
     mock_quiz_api.get_lesson_metadata = AsyncMock(return_value=None)
     use_case = CreateHomeworkUseCase(
-        homework_repo=mock_homework_repo, quiz_api=mock_quiz_api
+        homework_repo=mock_homework_repo,
+        quiz_api=mock_quiz_api,
+        homework_assignee_repo=mock_assignee_repo,
     )
 
     data = HomeworkCreate(
@@ -88,7 +97,7 @@ async def test_create_homework_rejects_when_lesson_not_found_on_quiz(
 
 @pytest.mark.asyncio
 async def test_create_homework_rejects_when_coding_not_available(
-    mock_homework_repo, mock_quiz_api
+    mock_homework_repo, mock_quiz_api, mock_assignee_repo
 ):
     """Bắt lỗi khi chọn 'requires_coding' nhưng Quiz metadata báo chưa có bài tập coding."""
     mock_quiz_api.get_lesson_metadata = AsyncMock(
@@ -103,7 +112,9 @@ async def test_create_homework_rejects_when_coding_not_available(
         }
     )
     use_case = CreateHomeworkUseCase(
-        homework_repo=mock_homework_repo, quiz_api=mock_quiz_api
+        homework_repo=mock_homework_repo,
+        quiz_api=mock_quiz_api,
+        homework_assignee_repo=mock_assignee_repo,
     )
 
     data = HomeworkCreate(
@@ -124,7 +135,7 @@ async def test_create_homework_rejects_when_coding_not_available(
 
 @pytest.mark.asyncio
 async def test_create_homework_rejects_when_game_not_available(
-    mock_homework_repo, mock_quiz_api
+    mock_homework_repo, mock_quiz_api, mock_assignee_repo
 ):
     """Bắt lỗi khi chọn 'requires_game' nhưng Quiz metadata báo chưa có câu hỏi game."""
     mock_quiz_api.get_lesson_metadata = AsyncMock(
@@ -139,7 +150,9 @@ async def test_create_homework_rejects_when_game_not_available(
         }
     )
     use_case = CreateHomeworkUseCase(
-        homework_repo=mock_homework_repo, quiz_api=mock_quiz_api
+        homework_repo=mock_homework_repo,
+        quiz_api=mock_quiz_api,
+        homework_assignee_repo=mock_assignee_repo,
     )
 
     data = HomeworkCreate(
@@ -172,8 +185,14 @@ async def test_create_homework_success(mock_homework_repo, mock_quiz_api):
             "is_ready": True,
         }
     )
+    mock_assignee_repo = MagicMock()
+    mock_homework_repo.save = MagicMock(
+        side_effect=lambda hw: hw.model_copy(update={"id": 999})
+    )
     use_case = CreateHomeworkUseCase(
-        homework_repo=mock_homework_repo, quiz_api=mock_quiz_api
+        homework_repo=mock_homework_repo,
+        quiz_api=mock_quiz_api,
+        homework_assignee_repo=mock_assignee_repo,
     )
 
     data = HomeworkCreate(
@@ -191,8 +210,8 @@ async def test_create_homework_success(mock_homework_repo, mock_quiz_api):
     assert saved.slug == "unet-01"
     assert saved.requires_coding is True
     assert saved.requires_game is True
-    assert saved.assignee_ids == [1, 2, 3]
     mock_homework_repo.save.assert_called_once()
+    mock_assignee_repo.sync_assignees.assert_called_once_with(saved.id, [1, 2, 3])
 
 
 @pytest.mark.asyncio
@@ -218,8 +237,11 @@ async def test_update_homework_validation(mock_homework_repo, mock_quiz_api):
         }
     )
 
+    mock_assignee_repo = MagicMock()
     use_case = UpdateHomeworkUseCase(
-        homework_repo=mock_homework_repo, quiz_api=mock_quiz_api
+        homework_repo=mock_homework_repo,
+        homework_assignee_repo=mock_assignee_repo,
+        quiz_api=mock_quiz_api,
     )
 
     # Thử update thành requires_coding=True khi quiz không có coding -> Phải fail

@@ -70,8 +70,12 @@ class HomeworkModuleProvider(Provider):
     def get_get_homework_detail_use_case(
         self,
         homework_repo: HomeworkRepository,
+        homework_assignee_repo: HomeworkAssigneeRepository,
     ) -> GetHomeworkDetailUseCase:
-        return GetHomeworkDetailUseCase(homework_repo=homework_repo)
+        return GetHomeworkDetailUseCase(
+            homework_repo=homework_repo,
+            homework_assignee_repo=homework_assignee_repo,
+        )
 
     @provide
     def get_get_user_homeworks_use_case(
@@ -100,11 +104,13 @@ class HomeworkModuleProvider(Provider):
         self,
         homework_repo: HomeworkRepository,
         homework_submission_repo: HomeworkSubmissionRepository,
+        homework_assignee_repo: HomeworkAssigneeRepository,
         user_repo: UserRepository,
     ) -> GetUnsubmittedHomeworkReportUseCase:
         return GetUnsubmittedHomeworkReportUseCase(
             homework_repo=homework_repo,
             homework_submission_repo=homework_submission_repo,
+            homework_assignee_repo=homework_assignee_repo,
             user_repo=user_repo,
         )
 
@@ -112,10 +118,12 @@ class HomeworkModuleProvider(Provider):
     def get_create_homework_use_case(
         self,
         homework_repo: HomeworkRepository,
+        homework_assignee_repo: HomeworkAssigneeRepository,
         quiz_api: QuizApiClient,
     ) -> CreateHomeworkUseCase:
         return CreateHomeworkUseCase(
             homework_repo=homework_repo,
+            homework_assignee_repo=homework_assignee_repo,
             quiz_api=quiz_api,
         )
 
@@ -123,10 +131,12 @@ class HomeworkModuleProvider(Provider):
     def get_update_homework_use_case(
         self,
         homework_repo: HomeworkRepository,
+        homework_assignee_repo: HomeworkAssigneeRepository,
         quiz_api: QuizApiClient,
     ) -> UpdateHomeworkUseCase:
         return UpdateHomeworkUseCase(
             homework_repo=homework_repo,
+            homework_assignee_repo=homework_assignee_repo,
             quiz_api=quiz_api,
         )
 
@@ -175,6 +185,7 @@ class HomeworkModuleProvider(Provider):
         self,
         homework_repo: HomeworkRepository,
         homework_submission_repo: HomeworkSubmissionRepository,
+        homework_assignee_repo: HomeworkAssigneeRepository,
         user_repo: UserRepository,
         quiz_api: QuizApiClient,
         permission_repo: PermissionRequestRepository,
@@ -182,6 +193,7 @@ class HomeworkModuleProvider(Provider):
         return GetHomeworkSubmissionStatusUseCase(
             homework_repo=homework_repo,
             homework_submission_repo=homework_submission_repo,
+            homework_assignee_repo=homework_assignee_repo,
             user_repo=user_repo,
             quiz_api=quiz_api,
             permission_repo=permission_repo,
@@ -192,12 +204,14 @@ class HomeworkModuleProvider(Provider):
         self,
         homework_repo: HomeworkRepository,
         homework_submission_repo: HomeworkSubmissionRepository,
+        homework_assignee_repo: HomeworkAssigneeRepository,
         quiz_api: QuizApiClient,
         user_repo: UserRepository,
     ) -> CheckOverdueHomeworkUseCase:
         return CheckOverdueHomeworkUseCase(
             homework_repo=homework_repo,
             homework_submission_repo=homework_submission_repo,
+            homework_assignee_repo=homework_assignee_repo,
             quiz_api=quiz_api,
             user_repo=user_repo,
         )
@@ -207,12 +221,14 @@ class HomeworkModuleProvider(Provider):
         self,
         homework_repo: HomeworkRepository,
         homework_submission_repo: HomeworkSubmissionRepository,
+        homework_assignee_repo: HomeworkAssigneeRepository,
         quiz_api: QuizApiClient,
         user_repo: UserRepository,
     ) -> RescanAllHomeworksUseCase:
         return RescanAllHomeworksUseCase(
             homework_repo=homework_repo,
             homework_submission_repo=homework_submission_repo,
+            homework_assignee_repo=homework_assignee_repo,
             quiz_api=quiz_api,
             user_repo=user_repo,
         )

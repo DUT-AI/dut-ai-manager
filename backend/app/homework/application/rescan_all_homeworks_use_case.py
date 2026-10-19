@@ -8,11 +8,14 @@ from app.homework.application.check_overdue_homework_use_case import (
     CheckOverdueHomeworkUseCase,
 )
 from app.homework.application.helpers import QuizSubmissionHelper
-from app.homework.infrastructure.quiz_api import QuizApiClient
+from app.homework.infrastructure.homework_assignee_repository import (
+    HomeworkAssigneeRepository,
+)
 from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.homework.infrastructure.homework_submission_repository import (
     HomeworkSubmissionRepository,
 )
+from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.shared.domain.event_bus import EventBus
 from app.user.infrastructure.repository import UserRepository
 from app.utils.datetime import get_current_utc7_time
@@ -27,11 +30,13 @@ class RescanAllHomeworksUseCase:
         homework_submission_repo: HomeworkSubmissionRepository,
         quiz_api: QuizApiClient,
         user_repo: UserRepository,
+        homework_assignee_repo: HomeworkAssigneeRepository,
         event_bus: type[EventBus] = EventBus,
     ):
         self.checker = CheckOverdueHomeworkUseCase(
             homework_repo=homework_repo,
             homework_submission_repo=homework_submission_repo,
+            homework_assignee_repo=homework_assignee_repo,
             quiz_api=quiz_api,
             user_repo=user_repo,
             event_bus=event_bus,
@@ -40,6 +45,7 @@ class RescanAllHomeworksUseCase:
         self.homework_submission_repo = homework_submission_repo
         self.quiz_api = quiz_api
         self.user_repo = user_repo
+        self.homework_assignee_repo = homework_assignee_repo
 
     async def execute(self, auto_sync_legacy: bool = True) -> int:
         """
@@ -80,7 +86,7 @@ class RescanAllHomeworksUseCase:
                         legacy_uids.update(game_uids)
 
                 if legacy_uids:
-                    self.homework_repo.sync_assignees(
+                    self.homework_assignee_repo.sync_assignees(
                         hw.id,
                         assignee_ids=list(legacy_uids),
                     )

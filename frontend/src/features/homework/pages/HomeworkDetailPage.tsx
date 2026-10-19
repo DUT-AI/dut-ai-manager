@@ -80,12 +80,7 @@ export const HomeworkDetailPage: React.FC = () => {
 
   // Chuẩn bị dữ liệu Coding & Game
   const codingStatus = useMemo(() => {
-    return (
-      statusData?.coding ?? {
-        submitted: statusData?.submitted ?? [],
-        not_submitted: statusData?.not_submitted ?? [],
-      }
-    );
+    return statusData?.coding ?? { submitted: [], not_submitted: [] };
   }, [statusData]);
 
   const gameStatus = useMemo(() => {
@@ -102,20 +97,18 @@ export const HomeworkDetailPage: React.FC = () => {
   const gameTotalCount = gameSubmittedCount + gameStatus.not_submitted.length;
 
   const totalSubmitted =
-    statusData?.submitted?.length ??
-    (hasCoding && !hasGame
+    hasCoding && !hasGame
       ? codingSubmittedCount
       : !hasCoding && hasGame
         ? gameSubmittedCount
-        : Math.max(codingSubmittedCount, gameSubmittedCount));
+        : Math.max(codingSubmittedCount, gameSubmittedCount);
 
   const totalAssigned =
-    (statusData?.submitted?.length ?? 0) + (statusData?.not_submitted?.length ?? 0) ||
-    (hasCoding && !hasGame
+    hasCoding && !hasGame
       ? codingTotalCount
       : !hasCoding && hasGame
         ? gameTotalCount
-        : Math.max(codingTotalCount, gameTotalCount));
+        : Math.max(codingTotalCount, gameTotalCount);
 
   const submissionPercent =
     totalAssigned > 0 ? Math.round((totalSubmitted / totalAssigned) * 100) : 0;

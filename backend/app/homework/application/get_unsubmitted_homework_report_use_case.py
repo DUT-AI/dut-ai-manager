@@ -1,4 +1,7 @@
 from app.homework.application.dtos import HomeworkReportResponse
+from app.homework.infrastructure.homework_assignee_repository import (
+    HomeworkAssigneeRepository,
+)
 from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.homework.infrastructure.homework_submission_repository import (
     HomeworkSubmissionRepository,
@@ -15,10 +18,12 @@ class GetUnsubmittedHomeworkReportUseCase:
         homework_repo: HomeworkRepository,
         homework_submission_repo: HomeworkSubmissionRepository,
         user_repo: UserRepository,
+        homework_assignee_repo: HomeworkAssigneeRepository,
     ):
         self.homework_repo = homework_repo
         self.homework_submission_repo = homework_submission_repo
         self.user_repo = user_repo
+        self.homework_assignee_repo = homework_assignee_repo
 
     async def execute(self) -> list[HomeworkReportResponse]:
         active_users = self.user_repo.get_active_users()
@@ -41,10 +46,14 @@ class GetUnsubmittedHomeworkReportUseCase:
             uid = user.id
             unsubmitted_count = 0
 
+            assigned_hw_ids = set(
+                self.homework_assignee_repo.get_assigned_homework_ids(uid)
+            )
+
             for hw in all_homeworks:
                 if not hw.id:
                     continue
-                if uid not in (hw.assignee_ids or []):
+                if hw.id not in assigned_hw_ids:
                     continue
 
                 hw_subs = subs_map.get((hw.id, uid), [])

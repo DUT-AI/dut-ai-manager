@@ -47,10 +47,6 @@ class HomeworkModel(SQLAlchemyTimestampMixin, Base):
     )
 
     def to_entity(self) -> HomeworkEntity:
-        assignee_ids = []
-        if "assignees" in self.__dict__ and self.assignees:
-            assignee_ids = [a.user_id for a in self.assignees]
-
         return HomeworkEntity(
             id=self.id,
             title=self.title,
@@ -59,7 +55,6 @@ class HomeworkModel(SQLAlchemyTimestampMixin, Base):
             slug=self.slug,
             requires_coding=self.requires_coding,
             requires_game=self.requires_game,
-            assignee_ids=assignee_ids,
             created_at=self.created_at,
             updated_at=self.updated_at,
             created_by=self.created_by,

@@ -36,11 +36,11 @@ async def test_lesson_aggregated_violation_single_ticket():
         deadline=datetime.now(UTC) - timedelta(hours=2),
         link="https://quiz.dutai.site/lesson/python-lesson-1",
         slug="python-lesson-1",
-        assignee_ids=[10],
     )
 
     mock_homework_repo.get_by_deadline_date.return_value = [lesson_hw]
-    mock_homework_repo.get_assigned_user_ids.return_value = {10}
+    mock_assignee_repo = MagicMock()
+    mock_assignee_repo.get_assigned_user_ids.return_value = {10}
 
     # User 10 completed NOTHING on Coding, NOTHING on Game
     mock_quiz_api.get_homework_completed_members = AsyncMock(return_value=[])
@@ -51,6 +51,7 @@ async def test_lesson_aggregated_violation_single_ticket():
         homework_submission_repo=mock_submission_repo,
         quiz_api=mock_quiz_api,
         user_repo=mock_user_repo,
+        homework_assignee_repo=mock_assignee_repo,
     )
 
     published_events = []
@@ -87,11 +88,11 @@ async def test_lesson_coding_only_violation():
         deadline=datetime.now(UTC) - timedelta(hours=1),
         link="https://quiz.dutai.site/homeworks/ds-lesson-2",
         slug="ds-lesson-2",
-        assignee_ids=[20],
     )
 
     mock_homework_repo.get_by_deadline_date.return_value = [lesson_hw]
-    mock_homework_repo.get_assigned_user_ids.return_value = {20}
+    mock_assignee_repo = MagicMock()
+    mock_assignee_repo.get_assigned_user_ids.return_value = {20}
 
     # User 20 completed Game (15/15 questions), but did NOT complete Coding
     mock_quiz_api.get_game_leaderboard = AsyncMock(
@@ -111,6 +112,7 @@ async def test_lesson_coding_only_violation():
         homework_submission_repo=mock_submission_repo,
         quiz_api=mock_quiz_api,
         user_repo=mock_user_repo,
+        homework_assignee_repo=mock_assignee_repo,
     )
 
     published_events = []
@@ -145,11 +147,11 @@ async def test_lesson_game_only_violation():
         deadline=datetime.now(UTC) - timedelta(hours=1),
         link="https://quiz.dutai.site/game/algo-game",
         slug="algo-game",
-        assignee_ids=[30],
     )
 
     mock_homework_repo.get_by_deadline_date.return_value = [lesson_hw]
-    mock_homework_repo.get_assigned_user_ids.return_value = {30}
+    mock_assignee_repo = MagicMock()
+    mock_assignee_repo.get_assigned_user_ids.return_value = {30}
 
     # User 30 completed Coding, but only answered 3/10 questions in Game
     mock_quiz_api.get_homework_completed_members = AsyncMock(
@@ -171,6 +173,7 @@ async def test_lesson_game_only_violation():
         homework_submission_repo=mock_submission_repo,
         quiz_api=mock_quiz_api,
         user_repo=mock_user_repo,
+        homework_assignee_repo=mock_assignee_repo,
     )
 
     published_events = []
@@ -205,11 +208,11 @@ async def test_unassigned_legacy_homework_does_not_penalize_users():
         deadline=datetime.now(UTC) - timedelta(hours=1),
         link="https://quiz.dutai.site/homeworks/unassigned",
         slug="unassigned",
-        assignee_ids=[],
     )
 
     mock_homework_repo.get_by_deadline_date.return_value = [unassigned_hw]
-    mock_homework_repo.get_assigned_user_ids.return_value = set()
+    mock_assignee_repo = MagicMock()
+    mock_assignee_repo.get_assigned_user_ids.return_value = set()
     mock_user_repo.get_active_users.return_value = [
         UserEntity(id=1, name="Active 1", email="a1@gmail.com"),
         UserEntity(id=2, name="Active 2", email="a2@gmail.com"),
@@ -220,6 +223,7 @@ async def test_unassigned_legacy_homework_does_not_penalize_users():
         homework_submission_repo=mock_submission_repo,
         quiz_api=mock_quiz_api,
         user_repo=mock_user_repo,
+        homework_assignee_repo=mock_assignee_repo,
     )
 
     published_events = []

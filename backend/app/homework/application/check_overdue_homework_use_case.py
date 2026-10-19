@@ -14,6 +14,9 @@ from app.homework.application.helpers import QuizSubmissionHelper
 from app.homework.domain.entity import Homework as HomeworkEntity
 from app.homework.domain.entity import SubmissionType
 from app.homework.domain.value_objects import HomeworkOverdueDetected
+from app.homework.infrastructure.homework_assignee_repository import (
+    HomeworkAssigneeRepository,
+)
 from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.homework.infrastructure.homework_submission_repository import (
     HomeworkSubmissionRepository,
@@ -33,21 +36,20 @@ class CheckOverdueHomeworkUseCase:
         homework_submission_repo: HomeworkSubmissionRepository,
         quiz_api: QuizApiClient,
         user_repo: UserRepository,
+        homework_assignee_repo: HomeworkAssigneeRepository,
         event_bus: type[EventBus] = EventBus,
     ):
         self.homework_repo = homework_repo
         self.homework_submission_repo = homework_submission_repo
         self.quiz_api = quiz_api
         self.user_repo = user_repo
+        self.homework_assignee_repo = homework_assignee_repo
         self.event_bus = event_bus
 
     def _get_effective_assigned_user_ids(self, homework: HomeworkEntity) -> set[int]:
-        assigned_uids = set(homework.assignee_ids or [])
-        if not assigned_uids and homework.id:
-            repo_uids = self.homework_repo.get_assigned_user_ids(homework.id)
-            if repo_uids:
-                assigned_uids.update(repo_uids)
-        return assigned_uids
+        if not homework.id:
+            return set()
+        return self.homework_assignee_repo.get_assigned_user_ids(homework.id)
 
     async def execute(self, target_date: date | None = None) -> int:
         """

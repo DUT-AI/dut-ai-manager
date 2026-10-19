@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, cast
+from typing import Any, NamedTuple, cast
 
 from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
@@ -178,13 +178,6 @@ class HomeworkRepository:
         model = HomeworkModel.from_entity(homework)
         self.session.add(model)
         self.session.flush()
-
-        if homework.assignee_ids:
-            for uid in homework.assignee_ids:
-                self.session.add(
-                    HomeworkAssigneeModel(homework_id=model.id, user_id=uid)
-                )
-        self.session.flush()
         return model.to_entity()
 
     def update(self, homework: HomeworkEntity) -> HomeworkEntity | None:
@@ -196,38 +189,9 @@ class HomeworkRepository:
             model.link = homework.link
             model.slug = homework.slug
             self.session.add(model)
-            if model.id is not None:
-                self.sync_assignees(model.id, homework.assignee_ids)
+            self.session.flush()
             return model.to_entity()
         return None
-
-    def sync_assignees(self, homework_id: int, assignee_ids: list[int] | None) -> None:
-        """Đồng bộ assignees cho homework (dành cho create/update bài tập)."""
-        if assignee_ids is not None:
-            existing_assignees = self.session.scalars(
-                select(HomeworkAssigneeModel).where(
-                    HomeworkAssigneeModel.homework_id == homework_id
-                )
-            ).all()
-            for a in existing_assignees:
-                self.session.delete(a)
-            for uid in set(assignee_ids):
-                self.session.add(
-                    HomeworkAssigneeModel(homework_id=homework_id, user_id=uid)
-                )
-            self.session.flush()
-
-    def get_assigned_user_ids(self, homework_id: int) -> set[int]:
-        """Lấy danh sách user_id được phân làm homework."""
-        direct_uids = set(
-            self.session.scalars(
-                select(HomeworkAssigneeModel.user_id).where(
-                    HomeworkAssigneeModel.homework_id == homework_id,
-                    HomeworkAssigneeModel.is_deleted == False,
-                )
-            ).all()
-        )
-        return direct_uids
 
     def get_by_deadline_date(self, target_date: Any) -> list[HomeworkEntity]:
         """Lấy danh sách bài tập active có deadline trong một ngày cụ thể."""

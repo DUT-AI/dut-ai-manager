@@ -24,9 +24,10 @@ async def test_check_overdue_homework_publishes_event():
         slug="python-oop",
         deadline=datetime(2026, 9, 25, 23, 59),
         link="https://quiz.example.com/homeworks/python-oop",
-        assignee_ids=[101, 102],
     )
     homework_repo.get_by_deadline_date.return_value = [hw]
+    assignee_repo = MagicMock()
+    assignee_repo.get_assigned_user_ids.return_value = {101, 102}
 
     # User 101 submitted coding, User 102 has NOT submitted; No game component for this homework (returns None)
     quiz_api.get_homework_completed_members = AsyncMock(
@@ -40,6 +41,7 @@ async def test_check_overdue_homework_publishes_event():
         homework_submission_repo=submission_repo,
         quiz_api=quiz_api,
         user_repo=user_repo,
+        homework_assignee_repo=assignee_repo,
         event_bus=event_bus,
     )
 
@@ -74,9 +76,10 @@ async def test_check_overdue_multi_exercise_partial_submission_flags_overdue():
         slug="lesson-2-multi",
         deadline=datetime(2026, 10, 1, 23, 59),
         link="https://quiz.example.com/homeworks/lesson-2-multi",
-        assignee_ids=[201],
     )
     homework_repo.get_by_deadline_date.return_value = [hw]
+    assignee_repo = MagicMock()
+    assignee_repo.get_assigned_user_ids.return_value = {201}
 
     # Lesson có 2 bài tập con: ex-1 và ex-2
     quiz_api.get_lesson_exercises = AsyncMock(
@@ -97,6 +100,7 @@ async def test_check_overdue_multi_exercise_partial_submission_flags_overdue():
         homework_submission_repo=submission_repo,
         quiz_api=quiz_api,
         user_repo=user_repo,
+        homework_assignee_repo=assignee_repo,
         event_bus=event_bus,
     )
 
@@ -128,9 +132,10 @@ async def test_check_overdue_multi_exercise_full_submission_passes():
         slug="lesson-3-multi",
         deadline=datetime(2026, 10, 1, 23, 59),
         link="https://quiz.example.com/homeworks/lesson-3-multi",
-        assignee_ids=[301],
     )
     homework_repo.get_by_deadline_date.return_value = [hw]
+    assignee_repo = MagicMock()
+    assignee_repo.get_assigned_user_ids.return_value = {301}
 
     # Lesson có 2 bài tập con: ex-1 và ex-2
     quiz_api.get_lesson_exercises = AsyncMock(
@@ -150,6 +155,7 @@ async def test_check_overdue_multi_exercise_full_submission_passes():
         homework_submission_repo=submission_repo,
         quiz_api=quiz_api,
         user_repo=user_repo,
+        homework_assignee_repo=assignee_repo,
         event_bus=event_bus,
     )
 

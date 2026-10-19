@@ -59,7 +59,12 @@ export const useHomeworkActions = (activeTab: string, pagination?: { page?: numb
     const handleOpenCreate = () => dispatch({ type: 'OPEN_FORM' });
 
     const handleOpenEdit = async (homework: Homework) => {
-        dispatch({ type: 'OPEN_FORM', payload: homework });
+        try {
+            const detail = await homeworkService.getById(homework.id);
+            dispatch({ type: 'OPEN_FORM', payload: detail });
+        } catch {
+            dispatch({ type: 'OPEN_FORM', payload: homework });
+        }
     };
 
     const handleDelete = async (id: number) => {

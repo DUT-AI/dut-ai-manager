@@ -26,6 +26,7 @@ from app.homework.application.dtos import (
     HomeworkCreate,
     HomeworkReportResponse,
     HomeworkResponse,
+    HomeworkResponseDetail,
     HomeworkSubmissionDetailResponse,
     HomeworkSubmissionStatusResponse,
     HomeworkUpdate,
@@ -169,7 +170,7 @@ async def get_homework_submission_status(
 
 @router.get(
     "/{homework_id}",
-    response_model=ApiResponse[HomeworkResponse],
+    response_model=ApiResponse[HomeworkResponseDetail],
     dependencies=[hasPermission(HomeworkPermission.READ)],
 )
 @inject

@@ -35,7 +35,6 @@ class HomeworkResponse(HomeworkBase):
     created_at: datetime
     updated_at: datetime
     created_by: int | None = None
-    assignee_ids: list[int] = []
 
     # Computed fields (populated by use cases)
     submission_count: int = 0
@@ -63,7 +62,30 @@ class HomeworkResponse(HomeworkBase):
             created_at=hw.created_at,
             updated_at=hw.updated_at,
             created_by=hw.created_by,
-            assignee_ids=getattr(hw, "assignee_ids", []) or [],
+        )
+
+
+class HomeworkResponseDetail(HomeworkResponse):
+    """DTO chi tiết bài tập bao gồm danh sách assignee_ids phục vụ màn hình chỉnh sửa/chi tiết."""
+
+    assignee_ids: list[int] = Field(default_factory=list)
+
+    @classmethod
+    def from_domain(
+        cls, hw: Any, assignee_ids: list[int] | None = None
+    ) -> "HomeworkResponseDetail":
+        return cls(
+            id=hw.id,
+            title=hw.title,
+            deadline=hw.deadline,
+            link=hw.link,
+            slug=hw.slug,
+            requires_coding=hw.requires_coding,
+            requires_game=hw.requires_game,
+            created_at=hw.created_at,
+            updated_at=hw.updated_at,
+            created_by=hw.created_by,
+            assignee_ids=assignee_ids or [],
         )
 
 
@@ -140,10 +162,6 @@ class HomeworkSubmissionStatusResponse(BaseModel):
 
     # Chi tiết theo từng học viên
     students: list[StudentHomeworkDetailDTO] = Field(default_factory=list)
-
-    # Top-level combined fields for fallback
-    submitted: list[UserSubmissionInfo] = []
-    not_submitted: list[UserSubmissionInfo] = []
 
 
 class HomeworkReportResponse(BaseModel):

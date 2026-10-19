@@ -1,8 +1,11 @@
 from app.homework.application.dtos import HomeworkCreate
 from app.homework.application.helpers import QuizSubmissionHelper
 from app.homework.domain.entity import Homework as HomeworkEntity
-from app.homework.infrastructure.quiz_api import QuizApiClient
+from app.homework.infrastructure.homework_assignee_repository import (
+    HomeworkAssigneeRepository,
+)
 from app.homework.infrastructure.homework_repository import HomeworkRepository
+from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.shared.application.response import BadRequestException
 
 
@@ -13,9 +16,11 @@ class CreateHomeworkUseCase:
         self,
         homework_repo: HomeworkRepository,
         quiz_api: QuizApiClient,
+        homework_assignee_repo: HomeworkAssigneeRepository,
     ):
         self.homework_repo = homework_repo
         self.quiz_api = quiz_api
+        self.homework_assignee_repo = homework_assignee_repo
 
     async def execute(self, data: HomeworkCreate) -> HomeworkEntity:
         if not data.requires_coding and not data.requires_game:
@@ -56,7 +61,11 @@ class CreateHomeworkUseCase:
             slug=extracted_slug,
             requires_coding=data.requires_coding,
             requires_game=data.requires_game,
-            assignee_ids=data.assignee_ids or [],
         )
 
-        return self.homework_repo.save(homework)
+        saved = self.homework_repo.save(homework)
+        target_id = saved.id or homework.id
+        if target_id and data.assignee_ids is not None:
+            self.homework_assignee_repo.sync_assignees(target_id, data.assignee_ids)
+
+        return saved

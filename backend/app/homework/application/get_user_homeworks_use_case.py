@@ -66,7 +66,6 @@ class GetUserHomeworksUseCase:
                 created_at=hw.created_at,
                 updated_at=hw.updated_at,
                 created_by=hw.created_by,
-                assignee_ids=hw.assignee_ids or [],
                 is_submitted=evaluation.is_submitted,
                 is_overdue=evaluation.is_overdue,
                 has_coding=hw.requires_coding,

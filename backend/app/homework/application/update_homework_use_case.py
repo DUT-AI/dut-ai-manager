@@ -3,8 +3,11 @@ from fastapi import status
 from app.homework.application.dtos import HomeworkUpdate
 from app.homework.application.helpers import QuizSubmissionHelper
 from app.homework.domain.entity import Homework as HomeworkEntity
-from app.homework.infrastructure.quiz_api import QuizApiClient
+from app.homework.infrastructure.homework_assignee_repository import (
+    HomeworkAssigneeRepository,
+)
 from app.homework.infrastructure.homework_repository import HomeworkRepository
+from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.shared.application.response import BadRequestException
 
 
@@ -15,9 +18,11 @@ class UpdateHomeworkUseCase:
         self,
         homework_repo: HomeworkRepository,
         quiz_api: QuizApiClient,
+        homework_assignee_repo: HomeworkAssigneeRepository,
     ):
         self.homework_repo = homework_repo
         self.quiz_api = quiz_api
+        self.homework_assignee_repo = homework_assignee_repo
 
     async def execute(
         self,
@@ -87,10 +92,13 @@ class UpdateHomeworkUseCase:
                     "slug": extracted_slug,
                     "requires_coding": data.requires_coding,
                     "requires_game": data.requires_game,
-                    "assignee_ids": data.assignee_ids,
                 }.items()
                 if v is not None
             }
         )
 
-        return self.homework_repo.save(updated)
+        saved = self.homework_repo.save(updated)
+        if data.assignee_ids is not None:
+            self.homework_assignee_repo.sync_assignees(homework_id, data.assignee_ids)
+
+        return saved

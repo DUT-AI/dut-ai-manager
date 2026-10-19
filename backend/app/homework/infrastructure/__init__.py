@@ -1,4 +1,5 @@
 from app.homework.infrastructure.homework_assignee_repository import (
+    AssigneeUserInfo,
     HomeworkAssigneeRepository,
 )
 from app.homework.infrastructure.homework_repository import HomeworkRepository
@@ -10,4 +11,5 @@ __all__ = [
     "HomeworkRepository",
     "HomeworkSubmissionRepository",
     "HomeworkAssigneeRepository",
+    "AssigneeUserInfo",
 ]

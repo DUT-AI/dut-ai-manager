@@ -175,8 +175,6 @@ export const homeworkSubmissionStatusSchema = z.object({
   game: categorySubmissionStatusSchema.optional(),
   coding_exercises: z.array(exerciseSummarySchema).optional(),
   students: z.array(studentHomeworkDetailSchema).optional(),
-  submitted: z.array(userSubmissionInfoSchema).optional(),
-  not_submitted: z.array(userSubmissionInfoSchema).optional(),
 });
 export type HomeworkSubmissionStatus = z.infer<typeof homeworkSubmissionStatusSchema>;
 

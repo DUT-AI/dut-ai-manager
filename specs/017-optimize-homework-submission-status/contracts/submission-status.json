@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "HomeworkSubmissionStatusResponse",
+  "type": "object",
+  "required": [
+    "coding",
+    "game",
+    "coding_exercises",
+    "students"
+  ],
+  "properties": {
+    "coding": {
+      "type": "object",
+      "properties": {
+        "submitted": { "type": "array" },
+        "not_submitted": { "type": "array" }
+      }
+    },
+    "game": {
+      "type": "object",
+      "properties": {
+        "submitted": { "type": "array" },
+        "not_submitted": { "type": "array" }
+      }
+    },
+    "coding_exercises": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "exercise_id": { "type": "string" },
+          "title": { "type": "string" },
+          "order_index": { "type": "integer" },
+          "completed_count": { "type": "integer" },
+          "total_assigned": { "type": "integer" },
+          "completion_rate": { "type": "number" }
+        }
+      }
+    },
+    "students": { "type": "array" }
+  }
+}

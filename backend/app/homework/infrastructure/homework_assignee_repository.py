@@ -1,7 +1,16 @@
+from typing import NamedTuple
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.homework.infrastructure.model import HomeworkAssigneeModel
+from app.user.infrastructure.model import UserModel
+
+
+class AssigneeUserInfo(NamedTuple):
+    user_id: int
+    name: str
+    avatar_url: str | None
 
 
 class HomeworkAssigneeRepository:
@@ -37,6 +46,30 @@ class HomeworkAssigneeRepository:
             ).all()
         )
         return direct_uids
+
+    def get_assignees_with_user_info(
+        self, homework_id: int
+    ) -> list[AssigneeUserInfo]:
+        """Lấy danh sách học viên được giao bài tập kèm tên và avatar bằng 1 câu SQL JOIN duy nhất."""
+        statement = (
+            select(
+                HomeworkAssigneeModel.user_id,
+                UserModel.name,
+                UserModel.avatar_url,
+            )
+            .join(UserModel, HomeworkAssigneeModel.user_id == UserModel.id)
+            .where(
+                HomeworkAssigneeModel.homework_id == homework_id,
+                HomeworkAssigneeModel.is_deleted == False,
+                UserModel.is_deleted == False,
+            )
+            .order_by(UserModel.name.asc())
+        )
+        rows = self.session.execute(statement).all()
+        return [
+            AssigneeUserInfo(user_id=r[0], name=r[1], avatar_url=r[2])
+            for r in rows
+        ]
 
     def get_assigned_homework_ids(self, user_id: int) -> list[int]:
         """Lấy danh sách homework_id được giao cho một user cụ thể."""
