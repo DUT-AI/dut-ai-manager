@@ -108,3 +108,9 @@ export interface MonthlyInvoicePreviewResponse {
   total_users?: number;
   total_amount?: number;
 }
+
+export interface BillingSummary {
+  total_amount: number;
+  paid_amount: number;
+  unpaid_amount: number;
+}

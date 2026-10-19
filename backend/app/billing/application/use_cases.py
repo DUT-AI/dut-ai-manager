@@ -310,6 +310,18 @@ class GetInvoicesUseCase:
 
         return self.repo.get_matrix_report(start_date, end_date, user_ids)
 
+    def get_summary(
+        self,
+        billing_period: date | None = None,
+        team_id: int | None = None,
+        user_id: int | None = None,
+    ) -> dict[str, int]:
+        return self.repo.get_summary(
+            billing_period=billing_period,
+            team_id=team_id,
+            user_id=user_id,
+        )
+
 
 class QRGenerator:
     """Utility to generate VietQR URL for an invoice."""

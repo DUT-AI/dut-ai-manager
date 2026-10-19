@@ -14,6 +14,7 @@ from app.billing.application.use_cases import (
 )
 from app.billing.domain.entity import InvoiceStatus
 from app.billing.schemas import (
+    BillingSummaryResponse,
     InvoiceCreate,
     InvoiceResponse,
     InvoiceUpdate,
@@ -181,6 +182,27 @@ async def get_matrix_report(
 
     data = [InvoiceResponse.from_domain(inv) for inv in invoices]
     return ApiResponse.success(data=data)
+
+
+@router.get("/summary", response_model=ApiResponse[BillingSummaryResponse])
+@inject
+async def get_billing_summary(
+    get_uc: FromDishka[GetInvoicesUseCase],
+    _: Annotated[CurrentUser, Depends(PermissionChecker(BillingPermission.READ))],
+    user_id: int | None = Query(default=None),
+    team_id: int | None = Query(default=None),
+    billing_period: date | None = Query(default=None),
+):
+    """
+    Get billing summary statistics (total, paid, unpaid) across all invoices.
+    Admin only.
+    """
+    summary = get_uc.get_summary(
+        billing_period=billing_period,
+        team_id=team_id,
+        user_id=user_id,
+    )
+    return ApiResponse.success(data=BillingSummaryResponse(**summary))
 
 
 @router.get("/{invoice_id}", response_model=ApiResponse[InvoiceResponse])

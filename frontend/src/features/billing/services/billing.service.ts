@@ -1,5 +1,6 @@
 import axiosInstance from "../../../services/axiosInstance";
 import type {
+  BillingSummary,
   Invoice,
   InvoiceCreate,
   MonthlyInvoiceCreate,
@@ -39,6 +40,13 @@ const billingService = {
   getMatrixReport: async (params: { start_month: number, start_year: number, end_month: number, end_year: number, user_ids?: number[] }) => {
     const response = await axiosInstance.get<ApiResponse<Invoice[]>>("/billing/report/matrix", {
       params
+    });
+    return response.data;
+  },
+
+  getBillingSummary: async (filters?: { user_id?: number; team_id?: number; billing_period?: string }) => {
+    const response = await axiosInstance.get<ApiResponse<BillingSummary>>("/billing/summary", {
+      params: filters
     });
     return response.data;
   },

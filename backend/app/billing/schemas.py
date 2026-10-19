@@ -171,3 +171,9 @@ class MonthlyInvoiceCreate(BaseModel):
     fund_amount: int = 50000
     extra_items: list[InvoiceItemCreate] = []
     execute: bool = False  # If false, only return preview
+
+
+class BillingSummaryResponse(BaseModel):
+    total_amount: int = 0
+    paid_amount: int = 0
+    unpaid_amount: int = 0

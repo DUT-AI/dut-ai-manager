@@ -10,6 +10,7 @@ export const billingKeys = {
   list: (filters?: Record<string, unknown>, page?: number, pageSize?: number) =>
     ['billing', 'list', { filters, page, pageSize }] as const,
   detail: (id: number) => ['billing', 'detail', id] as const,
+  summary: (filters?: Record<string, unknown>) => ['billing', 'summary', filters] as const,
 };
 
 // Queries
@@ -70,6 +71,19 @@ export const useMatrixReport = (
     },
     enabled,
     staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+export const useBillingSummary = (
+  filters?: { user_id?: number; team_id?: number; billing_period?: string }
+) => {
+  return useQuery({
+    queryKey: billingKeys.summary(filters),
+    queryFn: async () => {
+      const response = await billingService.getBillingSummary(filters);
+      return response.data;
+    },
+    staleTime: 30 * 1000,
   });
 };
 

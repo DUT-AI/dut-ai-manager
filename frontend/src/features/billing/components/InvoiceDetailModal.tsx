@@ -3,16 +3,23 @@ import { InfoCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { InvoiceStatus } from '@/features/billing/types/billing.types';
 import type { Invoice } from '@/features/billing/types/billing.types';
-import type { UserResponse } from '@/features/users/types/user.types';
+import type { UserResponse, UserOptionDto } from '@/features/users/types/user.types';
 import { useViolations } from '@/features/violations';
 
 const { Title, Text } = Typography;
+
+export interface InvoiceDetailUserItem {
+  id: number;
+  name: string;
+  avatar_url?: string | null;
+  email?: string;
+}
 
 interface InvoiceDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   detail: Invoice | null | undefined;
-  users: UserResponse[];
+  users: Array<UserResponse | UserOptionDto | InvoiceDetailUserItem>;
   isMobile?: boolean;
 }
 
