@@ -4,6 +4,8 @@ from typing import Any, ClassVar
 
 from pydantic import BaseModel
 
+from app.core.config import settings
+
 
 
 class ParticipantStatus(str, Enum):
@@ -252,17 +254,17 @@ class EvaluationGroupSummary(BaseModel):
 
 
 class CapacityStatus(str, Enum):
-    SAFE = "SAFE"  # < 2 người
-    WARNING = "WARNING"  # = 2 người
-    OVERLOAD = "OVERLOAD"  # >= 3 người
+    SAFE = "SAFE"
+    WARNING = "WARNING"
+    OVERLOAD = "OVERLOAD"
 
 
 class CapacityMonitor(BaseModel):
     """Trạng thái cảnh báo quá tải (Value Object)"""
 
-    MAX_CAPACITY: ClassVar[int] = 3
-    WARNING_THRESHOLD: ClassVar[int] = 2
-    OVERLOAD_THRESHOLD: ClassVar[int] = 3
+    MAX_CAPACITY: ClassVar[int] = settings.MAX_SEATS
+    WARNING_THRESHOLD: ClassVar[int] = max(1, settings.MAX_SEATS - 6)
+    OVERLOAD_THRESHOLD: ClassVar[int] = settings.MAX_SEATS
     FORECAST_WINDOW_MINUTES: ClassVar[int] = 30
     EPSILON: ClassVar[int] = 0
 
@@ -271,7 +273,7 @@ class CapacityMonitor(BaseModel):
     outgoing_count: int = 0
     future_count: int = 0
     epsilon: int = 0  # Use literal or field default
-    max_capacity: int = 3
+    max_capacity: int = settings.MAX_SEATS
 
     status: CapacityStatus = CapacityStatus.SAFE
     last_updated: datetime

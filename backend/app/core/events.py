@@ -11,6 +11,13 @@ from app.bonus_point.domain.events import (
     BonusPointUpdated,
 )
 from app.bonus_point.notification_handler import BonusPointNotificationHandler
+from app.duty.domain.events import (
+    DutyScheduled,
+    DutySubmitted,
+    DutyUpdated,
+    DutyViolated,
+)
+from app.duty.notification_handler import DutyNotificationHandler
 from app.homework.application.event_handlers import (
     HomeworkGradedNotificationHandler,
     HomeworkNotificationHandler,
@@ -25,6 +32,7 @@ from app.meeting.application.sse_handler import MeetingSseHandler
 from app.meeting.domain.events import (
     MeetingAbsenceDetected,
     MeetingCreated,
+    MeetingUpdated,
     ParticipantAbsenceRecorded,
     ParticipantCheckedIn,
     ParticipantCheckedOut,
@@ -92,6 +100,12 @@ async def bootstrap_events(container: AsyncContainer):
     EventBus.subscribe(ParticipantCheckedIn, MeetingSseHandler)
     EventBus.subscribe(ParticipantCheckedOut, MeetingSseHandler)
     EventBus.subscribe(MeetingCreated, MeetingNotificationHandler)
+
+    # Duty Module
+    EventBus.subscribe(DutySubmitted, DutyNotificationHandler)
+    EventBus.subscribe(DutyScheduled, DutyNotificationHandler)
+    EventBus.subscribe(DutyUpdated, DutyNotificationHandler)
+    EventBus.subscribe(MeetingUpdated, DutyNotificationHandler)
 
     # print all handlers for verification
     EventBus.print_handlers()

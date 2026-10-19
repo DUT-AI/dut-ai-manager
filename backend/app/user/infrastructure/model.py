@@ -16,7 +16,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 # Runtime imports to ensure relationships resolve during mapper configuration
 from app.auth.infrastructure.model import AccountModel
 from app.bonus_point.infrastructure.model import BonusPointModel
-from app.meeting.infrastructure.model import MeetingParticipant
 from app.rbac.infrastructure.model import RoleModel
 from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
 from app.team.infrastructure.model import TeamMemberModel

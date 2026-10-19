@@ -10,6 +10,7 @@ class NotificationCategory(str, Enum):
     BONUS_POINT = "bonus_point"
     MEETING = "meeting"
     PERMISSION_REQUEST = "permission_request"
+    DUTY = "duty"
 
 
 class NotificationLevel(str, Enum):

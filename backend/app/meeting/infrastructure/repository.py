@@ -213,6 +213,31 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         orms = self.session.scalars(statement).unique().all()
         return [self._to_domain(orm) for orm in orms]
 
+    def get_by_date_range(
+        self, start_date: date, end_date: date
+    ) -> list[DomainMeeting]:
+        statement = (
+            select(ORMMeeting)
+            .where(
+                ORMMeeting.is_deleted.is_(False),
+                func.date(ORMMeeting.start_time) >= start_date,
+                func.date(ORMMeeting.start_time) <= end_date,
+            )
+            .order_by(ORMMeeting.start_time.asc())
+            .outerjoin(
+                ORMParticipant,
+                and_(
+                    ORMMeeting.id == ORMParticipant.meeting_id,
+                    ORMParticipant.is_deleted.is_(False),
+                ),
+            )
+            .options(
+                contains_eager(ORMMeeting.participants).joinedload(ORMParticipant.user)
+            )
+        )
+        orms = self.session.scalars(statement).unique().all()
+        return [self._to_domain(orm) for orm in orms]
+
     def get_domain_for_check_in(self, meeting_id: int) -> DomainMeeting | None:
         """Meeting tối thiểu cho luật trễ / event (không load participants)."""
         orm = self.session.get(ORMMeeting, meeting_id)

@@ -8,6 +8,7 @@ from app.core.permissions import (
     AccountPermission,
     BillingPermission,
     BonusPointPermission,
+    DutyPermission,
     ExpensePermission,
     HomeworkPermission,
     MeetingPermission,
@@ -27,6 +28,7 @@ from app.rbac.infrastructure.model import (
 )
 from app.user.domain.entity import UserStatus
 from app.user.infrastructure.model import UserModel
+import app.meeting.infrastructure.model  # noqa: F401
 from app.utils.password import hash_password
 
 
@@ -134,6 +136,7 @@ def seed_permissions():
         AccountPermission,
         BillingPermission,
         ExpensePermission,
+        DutyPermission,
     ]
 
     with Session(engine) as session:
@@ -212,8 +215,97 @@ def sync_admin_permissions():
             logger.info("Admin role already has all permissions.")
 
 
+def sync_member_duty_permissions():
+    """
+    Ensure:
+    - Admin and HR have all duty permissions (create, read, update, delete, submit).
+    - Teammate ONLY has duty:read.
+    - Leader has NO duty permissions.
+    """
+    with Session(engine) as session:
+        all_duty_perms = session.scalars(
+            select(PermissionModel).where(PermissionModel.resource == "duty")
+        ).all()
+        duty_perm_map = {p.action: p.id for p in all_duty_perms}
+        all_duty_perm_ids = {p.id for p in all_duty_perms}
+        duty_read_id = duty_perm_map.get("read")
+
+        roles = session.scalars(select(RoleModel)).all()
+        for role in roles:
+            role_name_upper = role.name.upper()
+
+            # 1. Admin and HR: Grant ALL duty permissions
+            if role_name_upper in ["ADMIN", "HR"]:
+                existing_perm_ids = set(
+                    session.scalars(
+                        select(RolePermissionModel.permission_id).where(
+                            RolePermissionModel.role_id == role.id
+                        )
+                    ).all()
+                )
+                for perm in all_duty_perms:
+                    if perm.id not in existing_perm_ids:
+                        session.add(RolePermissionModel(role_id=role.id, permission_id=perm.id))
+                        logger.info(f"Granted {perm.name} to {role.name} role")
+                continue
+
+            # 2. Leader: Remove any duty permissions (No leader in duty module)
+            if role_name_upper == "LEADER":
+                duty_role_perms = session.scalars(
+                    select(RolePermissionModel).where(
+                        RolePermissionModel.role_id == role.id,
+                        RolePermissionModel.permission_id.in_(all_duty_perm_ids),
+                    )
+                ).all()
+                for rp in duty_role_perms:
+                    session.delete(rp)
+                    logger.info(f"Revoked duty permission id {rp.permission_id} from LEADER role")
+                continue
+
+            # 3. Teammate: ONLY read permission
+            if role_name_upper == "TEAMMATE":
+                # Revoke any duty permissions that are NOT duty:read
+                non_read_ids = all_duty_perm_ids - ({duty_read_id} if duty_read_id else set())
+                non_read_duty_perms = session.scalars(
+                    select(RolePermissionModel).where(
+                        RolePermissionModel.role_id == role.id,
+                        RolePermissionModel.permission_id.in_(non_read_ids),
+                    )
+                ).all()
+                for rp in non_read_duty_perms:
+                    session.delete(rp)
+                    logger.info(f"Revoked non-read duty permission id {rp.permission_id} from TEAMMATE role")
+
+                # Grant duty:read if not present
+                existing_perm_ids = set(
+                    session.scalars(
+                        select(RolePermissionModel.permission_id).where(
+                            RolePermissionModel.role_id == role.id
+                        )
+                    ).all()
+                )
+                if duty_read_id and duty_read_id not in existing_perm_ids:
+                    session.add(RolePermissionModel(role_id=role.id, permission_id=duty_read_id))
+                    logger.info("Granted duty:read to TEAMMATE role")
+                continue
+
+            # 4. Other roles: Remove any duty permissions
+            other_duty_perms = session.scalars(
+                select(RolePermissionModel).where(
+                    RolePermissionModel.role_id == role.id,
+                    RolePermissionModel.permission_id.in_(all_duty_perm_ids),
+                )
+            ).all()
+            for rp in other_duty_perms:
+                session.delete(rp)
+
+        session.commit()
+        logger.info("Duty permissions sync completed: Leader has none, Teammate is read-only.")
+
+
 if __name__ == "__main__":
     seed_roles()
     seed_permissions()
     seed_admin_user()
     sync_admin_permissions()
+    sync_member_duty_permissions()

@@ -1,5 +1,4 @@
 import React from 'react';
-import type { MenuProps } from 'antd';
 
 /*
 File này sẽ tập hợp tất cả các icon từ @ant-design/icons và định nghĩa 
@@ -15,13 +14,13 @@ import {
     DashboardOutlined,
     SafetyCertificateOutlined,
     TeamOutlined,
-    CalendarOutlined,
     BookOutlined,
     SettingOutlined,
     VideoCameraOutlined,
     CreditCardOutlined,
     AuditOutlined,
     ScheduleOutlined,
+    CarryOutOutlined,
 } from '@ant-design/icons';
 
 // Định nghĩa kiểu dữ liệu cho một item trong menu để hỗ trợ phân quyền sau này
@@ -81,6 +80,12 @@ export const sidebarMenuConfig: MenuItemConfig[] = [
         icon: <VideoCameraOutlined />,
         label: 'Lịch Meeting',
         path: '/dashboard/meetings',
+    },
+    {
+        key: 'duties',
+        icon: <CarryOutOutlined />,
+        label: 'Quản lý Trực nhật',
+        path: '/dashboard/duties',
     },
     {
         key: 'permissions',

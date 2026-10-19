@@ -19,6 +19,7 @@ from app.core.config import settings
 from app.core.events import bootstrap_events
 from app.core.logging_config import setup_logging
 from app.core.scheduler import shutdown_scheduler, start_scheduler
+from app.duty.providers import DutyModuleProvider
 from app.expense.providers import ExpenseModuleProvider
 from app.homework.providers import HomeworkModuleProvider
 from app.meeting.providers import MeetingModuleProvider
@@ -100,6 +101,7 @@ def create_app():
         MeetingModuleProvider(),
         BonusPointModuleProvider(),
         HomeworkModuleProvider(),
+        DutyModuleProvider(),
         TeamModuleProvider(),
         BillingModuleProvider(),
         ZaloModuleProvider(),

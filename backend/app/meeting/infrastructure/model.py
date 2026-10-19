@@ -25,8 +25,7 @@ from app.meeting.domain.value_objects import EvaluationType, ParticipantStatus
 from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
 from app.utils.datetime import get_current_utc7_time
 
-if TYPE_CHECKING:
-    from app.user.infrastructure.model import UserModel
+from app.user.infrastructure.model import UserModel
 
 
 class Meeting(SQLAlchemyTimestampMixin, Base):
@@ -59,8 +58,7 @@ class Meeting(SQLAlchemyTimestampMixin, Base):
     )
     creator: Mapped["UserModel | None"] = relationship(
         "UserModel",
-        foreign_keys="Meeting.created_by",
-        primaryjoin="Meeting.created_by == UserModel.id",
+        foreign_keys="[Meeting.created_by]",
     )
 
     def to_entity(self) -> MeetingEntity:

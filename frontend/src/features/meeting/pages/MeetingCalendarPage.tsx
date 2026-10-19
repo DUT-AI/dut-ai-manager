@@ -220,19 +220,31 @@ const MeetingCalendarPage = () => {
                 { id: editingMeeting.id, data: values },
                 {
                     onSuccess: () => {
-                        message.success('Đã cập nhật');
+                        message.success('Đã cập nhật buổi sinh hoạt');
                         dispatch({ type: 'CLOSE_MODAL' });
                     },
-                    onError: () => message.error('Không thể cập nhật'),
+                    onError: (err: any) => {
+                        const msg =
+                            err?.response?.data?.message ||
+                            err?.response?.data?.detail ||
+                            'Không thể cập nhật buổi sinh hoạt';
+                        message.error(msg);
+                    },
                 }
             );
         } else {
             createMutation.mutate(values, {
                 onSuccess: () => {
-                    message.success('Đã tạo buổi sinh hoạt');
+                    message.success('Đã tạo buổi sinh hoạt thành công');
                     dispatch({ type: 'CLOSE_MODAL' });
                 },
-                onError: () => message.error('Không thể tạo'),
+                onError: (err: any) => {
+                    const msg =
+                        err?.response?.data?.message ||
+                        err?.response?.data?.detail ||
+                        'Không thể tạo buổi sinh hoạt';
+                    message.error(msg);
+                },
             });
         }
     };
@@ -285,8 +297,6 @@ const MeetingCalendarPage = () => {
                             type="primary"
                             icon={<PlusOutlined />}
                             onClick={() => handleCreate(dayjs())}
-                            disabled={isOverload}
-                            title={isOverload ? 'Phòng lab đang quá tải, không thể tạo lịch mới' : undefined}
                         >
                             Tạo mới
                         </Button>
@@ -338,10 +348,10 @@ const MeetingCalendarPage = () => {
                                     <div
                                         role="button"
                                         tabIndex={0}
-                                        className={`h-16 flex flex-col items-center justify-center border-b border-gray-100 transition-colors ${isOverload ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-gray-50'} ${today ? 'bg-indigo-50' : ''
+                                        className={`h-16 flex flex-col items-center justify-center border-b border-gray-100 transition-colors cursor-pointer hover:bg-gray-50 ${today ? 'bg-indigo-50' : ''
                                             }`}
-                                        onClick={() => !isOverload && handleCreate(day)}
-                                        onKeyDown={(e) => { if (!isOverload && (e.key === 'Enter' || e.key === ' ')) handleCreate(day); }}
+                                        onClick={() => handleCreate(day)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCreate(day); }}
                                     >
                                         <Text
                                             className={`text-xs font-semibold uppercase tracking-wide ${today ? '!text-indigo-600' : '!text-gray-500'
@@ -487,6 +497,7 @@ const MeetingCalendarPage = () => {
                 open={modalOpen}
                 editingItem={editingMeeting}
                 initialDate={modalInitialDate}
+                confirmLoading={createMutation.isPending || updateMutation.isPending}
                 onSubmit={handleSubmit}
                 onCancel={() => dispatch({ type: 'CLOSE_MODAL' })}
             />

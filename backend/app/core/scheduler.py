@@ -14,6 +14,7 @@ from dishka import AsyncContainer
 from loguru import logger
 
 from app.jobs.activity_scoring_job import calculate_activity_points
+from app.jobs.duty_checker_job import check_overdue_duties
 from app.jobs.homework_checker_job import check_overdue_homework_submissions
 from app.jobs.meeting_checker_job import check_meeting_attendance
 from app.jobs.meeting_evaluation_checker_job import check_meeting_evaluations
@@ -47,6 +48,16 @@ def start_scheduler(dishka_container: AsyncContainer) -> None:
         CronTrigger(hour=23, minute=59, timezone="Asia/Ho_Chi_Minh"),
         id="meeting_attendance_check",
         name="Check meeting attendance",
+        replace_existing=True,
+        kwargs={"container": dishka_container},
+    )
+
+    # Schedule duty deadline check at 23:59 every day
+    scheduler.add_job(
+        check_overdue_duties,
+        CronTrigger(hour=23, minute=59, timezone="Asia/Ho_Chi_Minh"),
+        id="duty_deadline_check",
+        name="Check overdue cleaning duties",
         replace_existing=True,
         kwargs={"container": dishka_container},
     )

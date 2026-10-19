@@ -24,6 +24,7 @@ import {
 import { MeetingCalendarPage, MeetingDetailPage } from '@/features/meeting';
 import { PermissionManagementPage, RoleManagementPage } from '@/features/rbac';
 import { RobotInterfacePage } from '@/features/robot';
+import { DutyManagementPage } from '@/features/duty';
 import { TeamManagementPage } from '@/features/teams';
 import { ProfilePage, UserManagementPage } from '@/features/users';
 import { ViolationManagementPage } from '@/features/violations';
@@ -100,6 +101,10 @@ export const dashboardRoutesConfig: RouteConfig[] = [
     {
         path: 'meetings/:id',
         element: <MeetingDetailPage />,
+    },
+    {
+        path: 'duties',
+        element: <DutyManagementPage />,
     },
     {
         path: 'invoices',
