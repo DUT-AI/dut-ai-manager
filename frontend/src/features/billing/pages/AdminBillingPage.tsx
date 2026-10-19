@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Card, Button, Typography, Space, Form, message, Grid, Tabs, Select, DatePicker, Row, Col, Statistic } from 'antd';
+import { Card, Button, Typography, Space, Form, message, Grid, Tabs, Select, DatePicker, Row, Col, Statistic, Tooltip } from 'antd';
 import { PlusOutlined, AuditOutlined, CalendarOutlined, BarChartOutlined, DollarOutlined, ImportOutlined, ExportOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useAllInvoices, useCreateInvoice, useUpdateInvoice, useUpdateInvoiceStatus, useInvoiceDetail, useDeleteInvoice, useBillingSummary } from '@/features/billing/hooks/useBilling';
 import { useUserOptions } from '@/features/users';
 import { useTeamOptions } from '@/features/teams';
 import { useTablePagination } from '@/hooks';
+import { useAuth } from '@/features/auth';
+import { BillingPermission } from '@/features/rbac/types/rbac.types';
 import CreateMonthlyInvoiceModal from '@/features/billing/components/CreateMonthlyInvoiceModal';
 import { InvoiceStatus, type CreateInvoiceFormValues, type Invoice } from '@/types';
 import { motion, type Variants } from 'motion/react';
@@ -42,6 +44,8 @@ const itemVariants: Variants = {
 
 const AdminBillingPage = () => {
   const screens = useBreakpoint();
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission(BillingPermission.CREATE);
   const { page, pageSize, resetPage, getPaginationProps } = useTablePagination();
   const [filterUser, setFilterUser] = useState<number | undefined>(undefined);
   const [filterTeam, setFilterTeam] = useState<number | undefined>(undefined);
@@ -116,8 +120,7 @@ const AdminBillingPage = () => {
     try {
       await updateInvoiceStatus.mutateAsync({ id, status: nextStatus });
       message.success(
-        `Đã chuyển trạng thái hóa đơn sang ${
-          nextStatus === InvoiceStatus.PAID ? 'Đã thanh toán (PAID)' : 'Chờ thanh toán (PENDING)'
+        `Đã chuyển trạng thái hóa đơn sang ${nextStatus === InvoiceStatus.PAID ? 'Đã thanh toán (PAID)' : 'Chờ thanh toán (PENDING)'
         }`
       );
     } catch (error: any) {
@@ -349,21 +352,31 @@ const AdminBillingPage = () => {
           }
           extra={
             <Space size={12}>
-              <Button
-                icon={<CalendarOutlined />}
-                onClick={() => setIsMonthlyModalOpen(true)}
-                className="h-10 px-6 font-semibold rounded-lg border-indigo-200 text-indigo-600 hover:text-indigo-700 hover:border-indigo-300 transition-all"
-              >
-                Tạo hóa đơn tháng
-              </Button>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => setIsCreateModalOpen(true)}
-                className="bg-indigo-600 border-none h-10 px-6 font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-all"
-              >
-                Tạo hóa đơn
-              </Button>
+              <Tooltip title={!canCreate ? 'Bạn không có quyền tạo hóa đơn' : ''}>
+                <span className="inline-block">
+                  <Button
+                    icon={<CalendarOutlined />}
+                    onClick={() => setIsMonthlyModalOpen(true)}
+                    disabled={!canCreate}
+                    className="h-10 px-6 font-semibold rounded-lg border-indigo-200 text-indigo-600 hover:text-indigo-700 hover:border-indigo-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Tạo hóa đơn tháng
+                  </Button>
+                </span>
+              </Tooltip>
+              <Tooltip title={!canCreate ? 'Bạn không có quyền tạo hóa đơn' : ''}>
+                <span className="inline-block">
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => setIsCreateModalOpen(true)}
+                    disabled={!canCreate}
+                    className="bg-indigo-600 border-none h-10 px-6 font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Tạo hóa đơn
+                  </Button>
+                </span>
+              </Tooltip>
             </Space>
           }
         >

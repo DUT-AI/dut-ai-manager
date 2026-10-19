@@ -73,6 +73,7 @@ export const HomeworkSubmissionPermission = {
 export const BillingPermission = {
   CREATE: 'billing:create',
   READ: 'billing:read',
+  UPDATE: 'billing:update',
   MY_INVOICES: 'billing:my_invoices',
   DELETE: 'billing:delete',
 } as const;
