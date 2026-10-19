@@ -66,6 +66,7 @@ export type CreateInvoiceFormValues = z.infer<typeof createInvoiceSchema>;
 // Update Request Schema & Type
 export const updateInvoiceSchema = z.object({
   status: z.enum(['PENDING', 'PAID', 'CANCELLED', 'EXPIRED']).optional(),
+  description: z.string().optional().nullable(),
   items: z.array(invoiceItemSchema).optional(),
 });
 export type UpdateInvoiceFormValues = z.infer<typeof updateInvoiceSchema>;

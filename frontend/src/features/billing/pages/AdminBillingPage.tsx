@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { Card, Button, Typography, Space, Form, message, Grid, Tabs, Select, DatePicker, Row, Col, Statistic } from 'antd';
 import { PlusOutlined, AuditOutlined, CalendarOutlined, BarChartOutlined, DollarOutlined, ImportOutlined, ExportOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { useAllInvoices, useCreateInvoice, useUpdateInvoice, useInvoiceDetail, useDeleteInvoice, useBillingSummary } from '@/features/billing/hooks/useBilling';
+import { useAllInvoices, useCreateInvoice, useUpdateInvoice, useUpdateInvoiceStatus, useInvoiceDetail, useDeleteInvoice, useBillingSummary } from '@/features/billing/hooks/useBilling';
 import { useUserOptions } from '@/features/users';
 import { useTeamOptions } from '@/features/teams';
 import { useTablePagination } from '@/hooks';
 import CreateMonthlyInvoiceModal from '@/features/billing/components/CreateMonthlyInvoiceModal';
-import type { CreateInvoiceFormValues, Invoice } from '@/types';
+import { InvoiceStatus, type CreateInvoiceFormValues, type Invoice } from '@/types';
 import { motion, type Variants } from 'motion/react';
 
 // Sub-components
@@ -61,6 +61,7 @@ const AdminBillingPage = () => {
   const teams = teamsData ?? [];
   const createInvoice = useCreateInvoice();
   const updateInvoice = useUpdateInvoice();
+  const updateInvoiceStatus = useUpdateInvoiceStatus();
   const deleteInvoice = useDeleteInvoice();
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -108,6 +109,19 @@ const AdminBillingPage = () => {
       updateForm.resetFields();
     } catch (error: any) {
       message.error(error?.response?.data?.message || 'Cập nhật thất bại');
+    }
+  };
+
+  const handleUpdateStatus = async (id: number, nextStatus: InvoiceStatus) => {
+    try {
+      await updateInvoiceStatus.mutateAsync({ id, status: nextStatus });
+      message.success(
+        `Đã chuyển trạng thái hóa đơn sang ${
+          nextStatus === InvoiceStatus.PAID ? 'Đã thanh toán (PAID)' : 'Chờ thanh toán (PENDING)'
+        }`
+      );
+    } catch (error: any) {
+      message.error(error?.response?.data?.message || 'Cập nhật trạng thái thất bại');
     }
   };
 
@@ -272,6 +286,8 @@ const AdminBillingPage = () => {
             onDelete={handleDelete}
             deletingId={deleteInvoice.isPending ? selectedInvoiceId : null}
             pagination={getPaginationProps(invoicesData?.pagination)}
+            onUpdateStatus={handleUpdateStatus}
+            updatingStatusId={updateInvoiceStatus.isPending ? (updateInvoiceStatus.variables as any)?.id : null}
           />
         </div>
       ),

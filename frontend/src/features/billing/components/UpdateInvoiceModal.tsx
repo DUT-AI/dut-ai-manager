@@ -28,6 +28,7 @@ const UpdateInvoiceModal = ({
   useEffect(() => {
     if (isOpen && invoice) {
       form.setFieldsValue({
+        status: invoice.status,
         description: invoice.description,
         items: invoice.items.map(item => ({
           item_type: item.item_type,
@@ -60,6 +61,19 @@ const UpdateInvoiceModal = ({
         onFinish={onFinish}
         className="mt-4"
       >
+        <Form.Item
+          name="status"
+          label="Trạng thái thanh toán"
+          rules={[{ required: true, message: 'Vui lòng chọn trạng thái' }]}
+        >
+          <Select placeholder="Chọn trạng thái">
+            <Option value="PENDING">Chờ thanh toán (PENDING)</Option>
+            <Option value="PAID">Đã thanh toán (PAID)</Option>
+            <Option value="CANCELLED">Đã hủy (CANCELLED)</Option>
+            <Option value="EXPIRED">Hết hạn (EXPIRED)</Option>
+          </Select>
+        </Form.Item>
+
         <Form.Item name="description" label="Ghi chú tổng quát">
           <Input placeholder="Ví dụ: Phí sinh hoạt và vi phạm tháng 3" />
         </Form.Item>

@@ -1,5 +1,5 @@
-import { Table, Space, Avatar, Typography, Tag, Button, Popconfirm, type TablePaginationConfig } from 'antd';
-import { UserOutlined, EyeOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
+import { Table, Space, Avatar, Typography, Tag, Button, Popconfirm, Tooltip, type TablePaginationConfig } from 'antd';
+import { UserOutlined, EyeOutlined, DeleteOutlined, EditOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { type Invoice, InvoiceStatus } from '@/types';
 import type { UserResponse } from '@/features/users/types/user.types';
@@ -22,6 +22,8 @@ interface BillingTableProps {
   onDelete: (id: number) => void;
   deletingId: number | null;
   pagination?: TablePaginationConfig | false;
+  onUpdateStatus?: (id: number, status: InvoiceStatus) => void;
+  updatingStatusId?: number | null;
 }
 
 const BillingTable = ({
@@ -33,6 +35,8 @@ const BillingTable = ({
   onDelete,
   deletingId,
   pagination,
+  onUpdateStatus,
+  updatingStatusId,
 }: BillingTableProps) => {
   const columns = [
     {
@@ -97,13 +101,65 @@ const BillingTable = ({
           >
             Chi tiết
           </Button>
-          {record.status !== InvoiceStatus.PAID && (
-            <Button
-              icon={<EditOutlined />}
-              size="small"
-              onClick={() => onEdit && onEdit(record)}
-            />
+
+          {onUpdateStatus && (
+            <Popconfirm
+              title={
+                record.status === InvoiceStatus.PAID
+                  ? 'Chuyển về Chưa thanh toán?'
+                  : 'Xác nhận bạn này đã nộp tiền?'
+              }
+              description={
+                record.status === InvoiceStatus.PAID
+                  ? 'Hóa đơn sẽ chuyển lại về PENDING.'
+                  : 'Hóa đơn sẽ được đánh dấu đã nộp (PAID).'
+              }
+              onConfirm={() =>
+                onUpdateStatus(
+                  record.id,
+                  record.status === InvoiceStatus.PAID
+                    ? InvoiceStatus.PENDING
+                    : InvoiceStatus.PAID
+                )
+              }
+              okText="Đồng ý"
+              cancelText="Hủy"
+            >
+              <Tooltip
+                title={
+                  record.status === InvoiceStatus.PAID
+                    ? 'Chuyển về chờ thanh toán'
+                    : 'Đánh dấu đã nộp tiền'
+                }
+              >
+                <Button
+                  size="small"
+                  className={
+                    record.status === InvoiceStatus.PAID
+                      ? 'text-amber-600 border-amber-300 hover:text-amber-700'
+                      : 'text-emerald-600 border-emerald-300 hover:text-emerald-700'
+                  }
+                  icon={
+                    record.status === InvoiceStatus.PAID ? (
+                      <ClockCircleOutlined />
+                    ) : (
+                      <CheckCircleOutlined />
+                    )
+                  }
+                  loading={updatingStatusId === record.id}
+                >
+                  {record.status === InvoiceStatus.PAID ? 'Hủy gạch nợ' : 'Đã nộp'}
+                </Button>
+              </Tooltip>
+            </Popconfirm>
           )}
+
+          <Button
+            icon={<EditOutlined />}
+            size="small"
+            onClick={() => onEdit && onEdit(record)}
+          />
+
           <Popconfirm
             title="Xóa hóa đơn?"
             description="Hành động này không thể hoàn tác."

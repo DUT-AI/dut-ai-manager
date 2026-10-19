@@ -8,6 +8,7 @@ from app.billing.application.use_cases import (
     DeleteInvoiceUseCase,
     GetInvoicesUseCase,
     HandleSePayWebhookUseCase,
+    UpdateInvoiceStatusUseCase,
     UpdateInvoiceUseCase,
 )
 from app.billing.infrastructure.repository import InvoiceRepository
@@ -30,6 +31,12 @@ class BillingModuleProvider(Provider):
     @provide
     def update_invoice_uc(self, repo: InvoiceRepository) -> UpdateInvoiceUseCase:
         return UpdateInvoiceUseCase(repo)
+
+    @provide
+    def update_invoice_status_uc(
+        self, repo: InvoiceRepository
+    ) -> UpdateInvoiceStatusUseCase:
+        return UpdateInvoiceStatusUseCase(repo)
 
     @provide
     def get_invoices_uc(self, repo: InvoiceRepository) -> GetInvoicesUseCase:

@@ -10,6 +10,7 @@ from app.billing.application.use_cases import (
     DeleteInvoiceUseCase,
     GetInvoicesUseCase,
     HandleSePayWebhookUseCase,
+    UpdateInvoiceStatusUseCase,
     UpdateInvoiceUseCase,
 )
 from app.billing.domain.entity import InvoiceStatus
@@ -17,6 +18,7 @@ from app.billing.schemas import (
     BillingSummaryResponse,
     InvoiceCreate,
     InvoiceResponse,
+    InvoiceStatusUpdate,
     InvoiceUpdate,
     MonthlyInvoiceCreate,
     MonthlyInvoicePreviewResponse,
@@ -69,12 +71,34 @@ async def update_invoice(
     _: Annotated[CurrentUser, Depends(PermissionChecker(BillingPermission.UPDATE))],
 ):
     """
-    Admin edits an unpaid invoice.
+    Admin edits an invoice.
     """
     invoice = update_uc.execute(
         invoice_id=invoice_id,
         items_data=[item.model_dump() for item in data.items],
         description=data.description,
+        new_status=data.status,
+    )
+    return ApiResponse.success(data=InvoiceResponse.from_domain(invoice))
+
+
+@router.patch(
+    "/{invoice_id}/status",
+    response_model=ApiResponse[InvoiceResponse],
+)
+@inject
+async def update_invoice_status(
+    invoice_id: int,
+    data: InvoiceStatusUpdate,
+    update_status_uc: FromDishka[UpdateInvoiceStatusUseCase],
+    _: Annotated[CurrentUser, Depends(PermissionChecker(BillingPermission.UPDATE))],
+):
+    """
+    Admin updates invoice payment status (e.g. PAID, PENDING, CANCELLED).
+    """
+    invoice = await update_status_uc.execute(
+        invoice_id=invoice_id,
+        new_status=data.status,
     )
     return ApiResponse.success(data=InvoiceResponse.from_domain(invoice))
 

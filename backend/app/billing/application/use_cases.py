@@ -121,13 +121,17 @@ class CreateInvoiceUseCase:
 
 
 class UpdateInvoiceUseCase:
-    """UseCase to edit an unpaid invoice."""
+    """UseCase to edit an invoice."""
 
     def __init__(self, repo: InvoiceRepository):
         self.repo = repo
 
     def execute(
-        self, invoice_id: int, items_data: list[dict], description: str | None = None
+        self,
+        invoice_id: int,
+        items_data: list[dict],
+        description: str | None = None,
+        new_status: InvoiceStatus | None = None,
     ) -> Invoice:
         # 1. Get the invoice
         invoice = self.repo.get_by_id(invoice_id)
@@ -135,9 +139,6 @@ class UpdateInvoiceUseCase:
             raise BadRequestException(
                 "Hóa đơn không tồn tại", status_code=status.HTTP_404_NOT_FOUND
             )
-
-        if invoice.status == InvoiceStatus.PAID:
-            raise BadRequestException("Không thể sửa hóa đơn đã thanh toán")
 
         # 2. Calculate new amount and create items
         total_amount = 0
@@ -168,8 +169,46 @@ class UpdateInvoiceUseCase:
         invoice.items = new_items
         if description is not None:
             invoice.description = description
+        if new_status is not None:
+            invoice.status = new_status
+            if new_status == InvoiceStatus.PAID and not invoice.transaction_id:
+                invoice.transaction_id = f"MANUAL_{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
 
         # 4. Save
+        return self.repo.save_invoice(invoice)
+
+
+class UpdateInvoiceStatusUseCase:
+    """UseCase to update an invoice's payment status (e.g. manual payment by Admin)."""
+
+    def __init__(self, repo: InvoiceRepository):
+        self.repo = repo
+
+    async def execute(self, invoice_id: int, new_status: InvoiceStatus) -> Invoice:
+        invoice = self.repo.get_by_id(invoice_id)
+        if not invoice:
+            raise BadRequestException(
+                "Hóa đơn không tồn tại", status_code=status.HTTP_404_NOT_FOUND
+            )
+
+        invoice.status = new_status
+        if new_status == InvoiceStatus.PAID:
+            if not invoice.transaction_id:
+                invoice.transaction_id = f"MANUAL_{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
+
+            # Publish event if marked as PAID
+            if invoice.id:
+                await EventBus.publish(
+                    InvoicePaid(
+                        invoice_id=invoice.id,
+                        user_id=invoice.user_id,
+                        amount=invoice.amount,
+                        reference_code=invoice.reference_code,
+                        transaction_id=invoice.transaction_id,
+                        paid_at=datetime.now(UTC),
+                    )
+                )
+
         return self.repo.save_invoice(invoice)
 
 

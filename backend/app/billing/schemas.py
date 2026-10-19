@@ -44,6 +44,11 @@ class InvoiceUpdate(BaseModel):
     team_id: int | None = None
     items: list[InvoiceItemCreate]
     description: str | None = None
+    status: InvoiceStatus | None = None
+
+
+class InvoiceStatusUpdate(BaseModel):
+    status: InvoiceStatus
 
 
 class InvoiceResponse(BaseModel):
