@@ -114,16 +114,9 @@ class CheckOverdueHomeworkUseCase:
                     if isinstance(ex, dict) and ex.get("id")
                 }
 
-            # Xác định yêu cầu coding/game cho bài tập này
-            if homework.requires_game and not homework.requires_coding:
-                req_coding = False
-                req_game = has_game
-            elif homework.requires_coding and homework.requires_game:
-                req_coding = has_coding
-                req_game = has_game
-            else:
-                req_coding = has_coding
-                req_game = has_game
+            # Xác định yêu cầu coding/game cho bài tập này dựa trên cấu hình của bài tập
+            req_coding = bool(homework.requires_coding and has_coding)
+            req_game = bool(homework.requires_game and has_game)
 
             for user_id in assigned_uids:
                 # 1. Kiểm tra mục Coding (nếu bài yêu cầu)

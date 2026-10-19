@@ -36,6 +36,8 @@ async def test_lesson_aggregated_violation_single_ticket():
         deadline=datetime.now(UTC) - timedelta(hours=2),
         link="https://quiz.dutai.site/lesson/python-lesson-1",
         slug="python-lesson-1",
+        requires_coding=True,
+        requires_game=True,
     )
 
     mock_homework_repo.get_by_deadline_date.return_value = [lesson_hw]
@@ -147,6 +149,8 @@ async def test_lesson_game_only_violation():
         deadline=datetime.now(UTC) - timedelta(hours=1),
         link="https://quiz.dutai.site/game/algo-game",
         slug="algo-game",
+        requires_coding=True,
+        requires_game=True,
     )
 
     mock_homework_repo.get_by_deadline_date.return_value = [lesson_hw]
