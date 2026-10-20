@@ -12,6 +12,7 @@ import app.homework.infrastructure.model  # noqa: F401
 import app.meeting.infrastructure.model  # noqa: F401
 import app.permission_request.infrastructure.model  # noqa: F401
 import app.rbac.infrastructure.model  # noqa: F401
+import app.reminder.infrastructure.model  # noqa: F401
 import app.team.infrastructure.model  # noqa: F401
 import app.user.infrastructure.model  # noqa: F401
 import app.user.infrastructure.monthly_stats_model  # noqa: F401

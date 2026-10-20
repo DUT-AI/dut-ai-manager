@@ -28,6 +28,7 @@ import { DutyManagementPage } from '@/features/duty';
 import { TeamManagementPage } from '@/features/teams';
 import { ProfilePage, UserManagementPage } from '@/features/users';
 import { ViolationManagementPage } from '@/features/violations';
+import { NotificationManagementPage } from '@/features/notification';
 
 export interface RouteConfig {
     path: string;
@@ -114,6 +115,10 @@ export const dashboardRoutesConfig: RouteConfig[] = [
         path: 'admin-billing',
         element: <AdminBillingPage />,
         permission: 'billing:read',
+    },
+    {
+        path: 'notifications',
+        element: <NotificationManagementPage />,
     },
     {
         path: 'settings',

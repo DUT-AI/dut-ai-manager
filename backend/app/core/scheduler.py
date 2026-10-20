@@ -19,6 +19,7 @@ from app.jobs.homework_checker_job import check_overdue_homework_submissions
 from app.jobs.meeting_checker_job import check_meeting_attendance
 from app.jobs.meeting_evaluation_checker_job import check_meeting_evaluations
 from app.jobs.monthly_title_job import assign_monthly_titles
+from app.jobs.reminder_scanner_job import scan_and_send_reminders
 
 # Global scheduler instance
 scheduler: AsyncIOScheduler | None = None
@@ -88,6 +89,16 @@ def start_scheduler(dishka_container: AsyncContainer) -> None:
         CronTrigger(day=1, hour=0, minute=1, timezone="Asia/Ho_Chi_Minh"),
         id="monthly_title_job",
         name="Assign monthly titles",
+        replace_existing=True,
+        kwargs={"container": dishka_container},
+    )
+
+    # Schedule task deadline reminder check every 30 minutes
+    scheduler.add_job(
+        scan_and_send_reminders,
+        CronTrigger(minute="0,30", timezone="Asia/Ho_Chi_Minh"),
+        id="task_deadline_reminder_check",
+        name="Check and send task deadline reminders",
         replace_existing=True,
         kwargs={"container": dishka_container},
     )

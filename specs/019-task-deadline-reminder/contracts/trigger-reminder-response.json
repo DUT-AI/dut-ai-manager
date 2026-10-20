@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TriggerReminderScanResponse",
+  "description": "API response envelope for triggering manual reminder scan",
+  "type": "object",
+  "properties": {
+    "success": { "type": "boolean" },
+    "data": {
+      "type": "object",
+      "properties": {
+        "scanned_at": { "type": "string", "format": "date-time" },
+        "total_tasks_scanned": { "type": "integer" },
+        "total_reminders_sent": { "type": "integer" },
+        "total_skipped_already_sent": { "type": "integer" },
+        "total_failed": { "type": "integer" },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "task_type": { "type": "string", "enum": ["HOMEWORK", "DUTY", "MEETING_EVALUATION"] },
+              "task_id": { "type": "integer" },
+              "user_id": { "type": "integer" },
+              "stage": { "type": "string" },
+              "status": { "type": "string" }
+            },
+            "required": ["task_type", "task_id", "user_id", "stage", "status"]
+          }
+        }
+      },
+      "required": ["scanned_at", "total_tasks_scanned", "total_reminders_sent", "total_skipped_already_sent", "total_failed"]
+    },
+    "message": { "type": "string" }
+  },
+  "required": ["success", "data", "message"]
+}

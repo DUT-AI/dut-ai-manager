@@ -11,6 +11,7 @@ from app.homework.controller import (
 from app.meeting.controller import router as meeting_router
 from app.permission_request.controller import router as permission_request_router
 from app.rbac.controller import router as rbac_router
+from app.reminder.controller import router as notification_router
 from app.report.controller import router as report_router
 from app.team.controller import router as team_router
 from app.user.controller import router as user_router
@@ -41,6 +42,7 @@ routers = [
     zalo_bot_router,
     billing_router,
     expense_router,
+    notification_router,
 ]
 
 # Include all routers in a single loop

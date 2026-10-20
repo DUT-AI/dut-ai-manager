@@ -21,6 +21,7 @@ import {
     AuditOutlined,
     ScheduleOutlined,
     CarryOutOutlined,
+    BellOutlined,
 } from '@ant-design/icons';
 
 // Định nghĩa kiểu dữ liệu cho một item trong menu để hỗ trợ phân quyền sau này
@@ -44,6 +45,12 @@ export const sidebarMenuConfig: MenuItemConfig[] = [
         icon: <TrophyOutlined />,
         label: 'Báo cáo Học tập',
         path: '/dashboard/academic-reports',
+    },
+    {
+        key: 'notifications',
+        icon: <BellOutlined />,
+        label: 'Thông báo',
+        path: '/dashboard/notifications',
     },
     {
         key: 'activity_reports',
@@ -125,6 +132,7 @@ export const sidebarMenuConfig: MenuItemConfig[] = [
         path: '/dashboard/admin-billing',
         permission: 'billing:read', // Quyền cần có để xem mục này
     },
+
     {
         key: 'settings',
         icon: <SettingOutlined />,
