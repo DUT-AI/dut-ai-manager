@@ -16,11 +16,12 @@ interface Props {
     open: boolean;
     editingItem?: MeetingResponse | null;
     initialDate?: Dayjs;
+    confirmLoading?: boolean;
     onSubmit: (values: any) => void;
     onCancel: () => void;
 }
 
-export const MeetingModal = ({ open, editingItem, initialDate, onSubmit, onCancel }: Props) => {
+export const MeetingModal = ({ open, editingItem, initialDate, confirmLoading, onSubmit, onCancel }: Props) => {
     const [form] = Form.useForm();
     const [teams, setTeams] = useState<TeamResponse[]>([]);
     const [loadingTeams, setLoadingTeams] = useState(false);
@@ -251,6 +252,7 @@ export const MeetingModal = ({ open, editingItem, initialDate, onSubmit, onCance
             open={open}
             onCancel={onCancel}
             onOk={form.submit}
+            confirmLoading={confirmLoading}
             destroyOnClose
             width={640}
         >

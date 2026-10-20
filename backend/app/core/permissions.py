@@ -92,3 +92,11 @@ class ExpensePermission(str, Enum):
     READ = "expense:read"
     UPDATE = "expense:update"
     DELETE = "expense:delete"
+
+
+class DutyPermission(str, Enum):
+    CREATE = "duty:create"
+    READ = "duty:read"
+    UPDATE = "duty:update"
+    DELETE = "duty:delete"
+    SUBMIT = "duty:submit"

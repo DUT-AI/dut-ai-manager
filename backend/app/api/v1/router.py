@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.auth.controller import router as auth_router
 from app.billing.controller import router as billing_router
 from app.bonus_point.controller import router as bonus_point_router
+from app.duty.controller import router as duty_router
 from app.expense.controller import router as expense_router
 from app.homework.controller import (
     router as homework_router,
@@ -35,6 +36,7 @@ routers = [
     team_router,
     homework_router,
     meeting_router,
+    duty_router,
     zalo_router,
     zalo_bot_router,
     billing_router,

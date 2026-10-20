@@ -22,6 +22,7 @@ DEFAULT_CATEGORY_COLORS: dict[NotificationCategory, int] = {
     NotificationCategory.BONUS_POINT: 0xF1C40F,  # Vàng kim
     NotificationCategory.MEETING: 0x2980B9,  # Xanh nước biển
     NotificationCategory.PERMISSION_REQUEST: 0xE67E22,  # Cam
+    NotificationCategory.DUTY: 0x1ABC9C,  # Xanh ngọc / Mint
 }
 
 LEVEL_COLORS: dict[NotificationLevel, int] = {
