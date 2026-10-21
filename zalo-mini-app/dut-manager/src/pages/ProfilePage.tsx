@@ -52,32 +52,12 @@ const ProfilePage: React.FC = () => {
               )}
             </div>
           </div>
-
-          <Button
-            size="small"
-            variant={isAuthenticated ? 'secondary' : 'primary'}
-            className="rounded-xl text-xs"
-            onClick={handleAuthAction}
-          >
-            {isAuthenticated ? 'Đăng xuất' : 'Đăng nhập'}
-          </Button>
         </div>
 
         {/* Member Menu */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
           <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
             <Text className="font-bold text-xs text-gray-500 uppercase tracking-wider">Cá nhân</Text>
-          </div>
-
-          <div
-            onClick={() => navigateForward(navigate, PATHS.INVOICES)}
-            className="flex items-center justify-between p-4 border-b border-gray-100 cursor-pointer active:bg-gray-50"
-          >
-            <div className="flex items-center gap-3">
-              <Icon icon="zi-wallet" className="text-blue-600" size={20} />
-              <span className="text-sm font-medium text-gray-800">Hóa đơn của tôi</span>
-            </div>
-            <Icon icon="zi-chevron-right" size={18} className="text-gray-400" />
           </div>
 
           <div
@@ -92,65 +72,20 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Management Menu (Admin/Leader only) */}
-        {isAdminOrLeader() && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
-            <div className="px-4 py-3 bg-indigo-50 border-b border-indigo-100 flex items-center justify-between">
-              <Text className="font-bold text-xs text-indigo-700 uppercase tracking-wider">
-                Khu vực Quản trị (Leader / Admin)
-              </Text>
-              <span className="bg-indigo-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                Admin
-              </span>
-            </div>
+        {/* Logout / Login Button */}
+        <button
+          onClick={handleAuthAction}
+          className={`w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 border transition-all active:scale-[0.98] ${
+            isAuthenticated
+              ? 'bg-rose-50 text-rose-600 border-rose-100 active:bg-rose-100'
+              : 'bg-blue-600 text-white border-blue-600 active:bg-blue-700'
+          }`}
+        >
+          <Icon icon={isAuthenticated ? 'zi-leave' : 'zi-user'} size={18} />
+          <span>{isAuthenticated ? 'Đăng xuất tài khoản' : 'Đăng nhập'}</span>
+        </button>
 
-            <div
-              onClick={() => navigateForward(navigate, PATHS.USERS)}
-              className="flex items-center justify-between p-4 border-b border-gray-100 cursor-pointer active:bg-gray-50"
-            >
-              <div className="flex items-center gap-3">
-                <Icon icon="zi-user" className="text-indigo-600" size={20} />
-                <span className="text-sm font-medium text-gray-800">Quản lý Thành viên</span>
-              </div>
-              <Icon icon="zi-chevron-right" size={18} className="text-gray-400" />
-            </div>
-
-            <div
-              onClick={() => navigateForward(navigate, PATHS.TEAMS)}
-              className="flex items-center justify-between p-4 border-b border-gray-100 cursor-pointer active:bg-gray-50"
-            >
-              <div className="flex items-center gap-3">
-                <Icon icon="zi-members" className="text-indigo-600" size={20} />
-                <span className="text-sm font-medium text-gray-800">Quản lý Nhóm (Teams)</span>
-              </div>
-              <Icon icon="zi-chevron-right" size={18} className="text-gray-400" />
-            </div>
-
-            <div
-              onClick={() => navigateForward(navigate, PATHS.RBAC)}
-              className="flex items-center justify-between p-4 border-b border-gray-100 cursor-pointer active:bg-gray-50"
-            >
-              <div className="flex items-center gap-3">
-                <Icon icon="zi-shield-check" className="text-indigo-600" size={20} />
-                <span className="text-sm font-medium text-gray-800">Phân quyền RBAC</span>
-              </div>
-              <Icon icon="zi-chevron-right" size={18} className="text-gray-400" />
-            </div>
-
-            <div
-              onClick={() => navigateForward(navigate, PATHS.ADMIN_BILLING)}
-              className="flex items-center justify-between p-4 cursor-pointer active:bg-gray-50"
-            >
-              <div className="flex items-center gap-3">
-                <Icon icon="zi-check-circle" className="text-indigo-600" size={20} />
-                <span className="text-sm font-medium text-gray-800">Quản lý Thu chi & Quỹ</span>
-              </div>
-              <Icon icon="zi-chevron-right" size={18} className="text-gray-400" />
-            </div>
-          </div>
-        )}
-
-        <div className="text-center text-xs text-gray-400 mt-2">
+        <div className="text-center text-xs text-gray-400 mt-1">
           DUT AI Manager • Zalo Mini App Edition v1.0
         </div>
       </div>

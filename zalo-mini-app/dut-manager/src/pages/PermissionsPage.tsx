@@ -19,10 +19,13 @@ const PermissionsPage: React.FC = () => {
   const {
     permissions,
     meetings,
+    upcomingMeetings,
     homeworks,
     isLoading,
     selectedCategory,
     setSelectedCategory,
+    filterMine,
+    setFilterMine,
     isModalOpen,
     editingItem,
     detailItem,
@@ -33,6 +36,8 @@ const PermissionsPage: React.FC = () => {
     setFormCategory,
     formMeetingId,
     setFormMeetingId,
+    formOldMeetingId,
+    setFormOldMeetingId,
     formHomeworkId,
     setFormHomeworkId,
     formStartTime,
@@ -48,10 +53,11 @@ const PermissionsPage: React.FC = () => {
     closeModal,
     handleFormSubmit,
     confirmDelete,
-  } = usePermissionManagement(isAuthenticated);
+  } = usePermissionManagement(isAuthenticated, user?.id);
 
   const hasUpdatePermission = hasPermission('permissions:update');
   const hasDeletePermission = hasPermission('permissions:delete');
+  const canViewAll = hasPermission('permissions:read') || hasPermission('permissions:list');
 
   return (
     <Page className="bg-[#f8fafc] flex flex-col min-h-screen">
@@ -64,10 +70,13 @@ const PermissionsPage: React.FC = () => {
           onOpenCreate={openCreateModal}
         />
 
-        {/* 2. Category Filters */}
+        {/* 2. Category & Mine Filters */}
         <PermissionFilters
           selectedCategory={selectedCategory}
           onSelectCategory={setSelectedCategory}
+          filterMine={filterMine}
+          onToggleMine={setFilterMine}
+          canViewAll={canViewAll}
         />
 
         {/* 3. Permission List / Empty State / Cards */}
@@ -90,17 +99,20 @@ const PermissionsPage: React.FC = () => {
         editingItem={editingItem}
         formCategory={formCategory}
         formMeetingId={formMeetingId}
+        formOldMeetingId={formOldMeetingId}
         formHomeworkId={formHomeworkId}
         formStartTime={formStartTime}
         formLateTime={formLateTime}
         formNote={formNote}
         meetings={meetings}
+        upcomingMeetings={upcomingMeetings}
         homeworks={homeworks}
         isSubmitting={isSubmitting}
         onClose={closeModal}
         onSubmit={handleFormSubmit}
         setFormCategory={setFormCategory}
         setFormMeetingId={setFormMeetingId}
+        setFormOldMeetingId={setFormOldMeetingId}
         setFormHomeworkId={setFormHomeworkId}
         setFormStartTime={setFormStartTime}
         setFormLateTime={setFormLateTime}

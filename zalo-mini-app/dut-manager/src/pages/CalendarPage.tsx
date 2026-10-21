@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Page, Icon } from 'zmp-ui';
 import Header from '@/components/Header';
 import { useAuth } from '@/context/AuthContext';
@@ -14,6 +15,7 @@ import {
 import { formatDateFull } from '@/features/schedule/MeetingCard';
 
 const CalendarPage: React.FC = () => {
+  const navigate = useNavigate();
   const { user, isAuthenticated, hasPermission } = useAuth();
 
   const {
@@ -45,10 +47,14 @@ const CalendarPage: React.FC = () => {
     setFormEndTime,
     formRequireCheckIn,
     setFormRequireCheckIn,
+    formEnableEvaluation,
+    setFormEnableEvaluation,
     formUserIds,
     formTeamIds,
     toggleUserId,
     toggleTeamId,
+    selectAllUsers,
+    clearAllUsers,
     isSubmitting,
     isDeleting,
     goToPrevWeek,
@@ -162,7 +168,7 @@ const CalendarPage: React.FC = () => {
           hasDeletePermission={hasDeletePermission}
           canCreate={canCreate}
           onOpenCreate={openCreateModal}
-          onSelectMeeting={(m) => setDetailItem(m)}
+          onSelectMeeting={(m) => navigate(`/meetings/${m.id}`)}
           onEditMeeting={(m) => openEditModal(m)}
           onDeleteMeeting={(id) => setDeletingId(id)}
         />
@@ -177,6 +183,7 @@ const CalendarPage: React.FC = () => {
         formStartTime={formStartTime}
         formEndTime={formEndTime}
         formRequireCheckIn={formRequireCheckIn}
+        formEnableEvaluation={formEnableEvaluation}
         formUserIds={formUserIds}
         formTeamIds={formTeamIds}
         users={users}
@@ -189,8 +196,11 @@ const CalendarPage: React.FC = () => {
         setFormStartTime={setFormStartTime}
         setFormEndTime={setFormEndTime}
         setFormRequireCheckIn={setFormRequireCheckIn}
+        setFormEnableEvaluation={setFormEnableEvaluation}
         toggleUserId={toggleUserId}
         toggleTeamId={toggleTeamId}
+        selectAllUsers={selectAllUsers}
+        clearAllUsers={clearAllUsers}
       />
 
       {/* 6. Modal Chi tiết Meeting & Điểm danh Checkin */}

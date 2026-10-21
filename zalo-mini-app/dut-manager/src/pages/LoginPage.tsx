@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Page, Input, Button, Icon, Spinner, Box, useSnackbar } from 'zmp-ui';
+import { Page, Input, Button, Icon, Box, useSnackbar } from 'zmp-ui';
 import { getPhoneNumber } from 'zmp-sdk/apis';
 import Header from '@/components/Header';
+import PageLoading from '@/components/PageLoading';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { PATHS } from '@/constants/paths';
@@ -125,12 +126,7 @@ const LoginPage: React.FC = () => {
   };
 
   if (authLoading) {
-    return (
-      <Box className="flex flex-col items-center justify-center min-h-screen bg-surface gap-3">
-        <Spinner visible logo="" />
-        <span className="text-xs text-gray-500">Đang tự động xác thực phiên đăng nhập...</span>
-      </Box>
-    );
+    return <PageLoading text="Đang tự động xác thực phiên đăng nhập..." />;
   }
 
   return (
@@ -150,7 +146,7 @@ const LoginPage: React.FC = () => {
             </p>
           </div>
 
-          {/* Option 1: Zalo Phone Login Button */}
+          {/* Option 1: Zalo Phone Login Button
           <div className="flex flex-col gap-2">
             <Button
               onClick={handleZaloPhoneLogin}
@@ -166,20 +162,20 @@ const LoginPage: React.FC = () => {
           </div>
 
           {/* Divider */}
-          <div className="flex items-center gap-3 my-1">
+          {/* <div className="flex items-center gap-3 my-1">
             <div className="flex-1 h-px bg-gray-200" />
             <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
               Hoặc dùng tài khoản
             </span>
             <div className="flex-1 h-px bg-gray-200" />
-          </div>
+          </div>  */}
 
           {/* Option 2: Email & Password Form */}
           <form onSubmit={handleEmailLogin} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">
               <label className="text-xs font-semibold text-gray-700">Email DUT</label>
               <Input
-                type="email"
+                type="text"
                 placeholder="vd: student@dut.udn.vn"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}

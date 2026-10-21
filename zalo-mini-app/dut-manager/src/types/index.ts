@@ -7,6 +7,7 @@ export * from './expense.types';
 export * from './homework.types';
 export * from './meeting.types';
 export * from './violation.types';
+export * from './notification.types';
 
 // Explicit re-exports from activity.types to avoid ambiguity with rbac.types
 export {

@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { PATHS } from '@/constants/paths';
-import { Box, Spinner, Text } from 'zmp-ui';
+import PageLoading from '@/components/PageLoading';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -29,12 +29,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   // Trong lúc đang kiểm tra phiên đăng nhập từ cache/storage
   if (loading) {
-    return (
-      <Box className="flex flex-col items-center justify-center min-h-screen bg-surface gap-3">
-        <Spinner visible logo="" />
-        <Text className="text-xs text-gray-500">Đang kiểm tra thông tin đăng nhập...</Text>
-      </Box>
-    );
+    return <PageLoading text="Đang kiểm tra thông tin đăng nhập..." />;
   }
 
   // Nếu chưa xác thực, không render nội dung trang được bảo vệ

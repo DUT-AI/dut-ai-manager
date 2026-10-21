@@ -19,6 +19,7 @@ interface PermissionFormModalProps {
   formLateTime: string;
   formNote: string;
   meetings: MeetingItem[];
+  upcomingMeetings?: import('@/types/meeting.types').MeetingSeatAvailabilityDto[];
   homeworks: HomeworkItem[];
   isSubmitting: boolean;
   onClose: () => void;
@@ -44,6 +45,7 @@ export const PermissionFormModal: React.FC<PermissionFormModalProps> = ({
   formLateTime,
   formNote,
   meetings,
+  upcomingMeetings = [],
   homeworks,
   isSubmitting,
   onClose,
@@ -138,12 +140,26 @@ export const PermissionFormModal: React.FC<PermissionFormModalProps> = ({
                 className="w-full border border-purple-300 rounded-xl px-3 py-2.5 text-xs outline-none focus:border-purple-500 bg-purple-50/40 font-medium"
               >
                 <option value="">-- Chọn buổi sinh hoạt đích --</option>
-                {meetings.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.title} ({formatDate(m.start_time)})
-                  </option>
-                ))}
+                {upcomingMeetings.length > 0
+                  ? upcomingMeetings.map((m) => (
+                      <option key={m.id} value={m.id} disabled={m.is_full}>
+                        {m.title} ({formatDate(m.start_time)}) - {m.is_full ? 'Hết chỗ' : `Còn ${m.available_seats}/${m.max_seats} chỗ`}
+                      </option>
+                    ))
+                  : meetings.map((m) => {
+                      const maxSeats = m.max_seats ?? 30;
+                      const currentCount = m.participants?.length || 0;
+                      const available = Math.max(0, maxSeats - currentCount);
+                      const isFull = available === 0;
+
+                      return (
+                        <option key={m.id} value={m.id} disabled={isFull}>
+                          {m.title} ({formatDate(m.start_time)}) - {isFull ? 'Hết chỗ' : `Còn ${available}/${maxSeats} chỗ`}
+                        </option>
+                      );
+                    })}
               </select>
+              <span className="text-[10px] text-gray-500">Chỉ có thể đổi sang các buổi sinh hoạt diễn ra trong tương lai (chưa bắt đầu).</span>
             </div>
           </>
         )}

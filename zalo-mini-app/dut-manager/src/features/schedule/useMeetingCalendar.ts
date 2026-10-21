@@ -20,6 +20,21 @@ const getStartOfWeek = (date: Date): Date => {
   return d;
 };
 
+// Safe ISO string format for datetime-local input
+const toLocalISO = (dateOrStr: Date | string): string => {
+  try {
+    const d = typeof dateOrStr === 'string' ? new Date(dateOrStr) : dateOrStr;
+    if (isNaN(d.getTime())) {
+      const now = new Date();
+      return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    }
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  } catch {
+    const now = new Date();
+    return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  }
+};
+
 export const useMeetingCalendar = (isAuthenticated: boolean) => {
   const queryClient = useQueryClient();
   const { openSnackbar } = useSnackbar();
@@ -42,6 +57,7 @@ export const useMeetingCalendar = (isAuthenticated: boolean) => {
   const [formStartTime, setFormStartTime] = useState<string>('');
   const [formEndTime, setFormEndTime] = useState<string>('');
   const [formRequireCheckIn, setFormRequireCheckIn] = useState<boolean>(true);
+  const [formEnableEvaluation, setFormEnableEvaluation] = useState<boolean>(false);
   const [formUserIds, setFormUserIds] = useState<number[]>([]);
   const [formTeamIds, setFormTeamIds] = useState<number[]>([]);
 
@@ -195,18 +211,16 @@ export const useMeetingCalendar = (isAuthenticated: boolean) => {
     setFormTitle('');
     setFormContent('');
 
-    // Default: Selected date at 19:30 to 21:00
+    // Default: Selected date at 19:00 to 21:00
     const dStart = new Date(selectedDate);
-    dStart.setHours(19, 30, 0, 0);
+    dStart.setHours(19, 0, 0, 0);
     const dEnd = new Date(selectedDate);
     dEnd.setHours(21, 0, 0, 0);
-
-    const toLocalISO = (d: Date) =>
-      new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
     setFormStartTime(toLocalISO(dStart));
     setFormEndTime(toLocalISO(dEnd));
     setFormRequireCheckIn(true);
+    setFormEnableEvaluation(false);
     setFormUserIds([]);
     setFormTeamIds([]);
     setIsModalOpen(true);
@@ -214,18 +228,14 @@ export const useMeetingCalendar = (isAuthenticated: boolean) => {
 
   const openEditModal = (meeting: MeetingResponse) => {
     setEditingItem(meeting);
-    setFormTitle(meeting.title);
+    setFormTitle(meeting.title || '');
     setFormContent(meeting.content || '');
-    setFormRequireCheckIn(meeting.require_check_in);
-
-    const toLocalISO = (isoStr: string) => {
-      const d = new Date(isoStr);
-      return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-    };
+    setFormRequireCheckIn(meeting.require_check_in ?? true);
+    setFormEnableEvaluation(meeting.enable_evaluation ?? false);
 
     setFormStartTime(toLocalISO(meeting.start_time));
     setFormEndTime(toLocalISO(meeting.end_time));
-    setFormUserIds(meeting.participants?.map((p) => p.user_id) || []);
+    setFormUserIds((meeting.participants || []).map((p) => p.user_id));
     setFormTeamIds([]);
     setIsModalOpen(true);
   };
@@ -241,14 +251,49 @@ export const useMeetingCalendar = (isAuthenticated: boolean) => {
     );
   };
 
-  const toggleTeamId = (id: number) => {
-    setFormTeamIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
+  const toggleTeamId = (teamId: number) => {
+    const isCurrentlySelected = formTeamIds.includes(teamId);
+    const targetTeam = teams.find((t) => t.id === teamId);
+    const memberIds = targetTeam?.members?.map((m) => m.user_id) || [];
+
+    if (isCurrentlySelected) {
+      // Bỏ chọn team
+      setFormTeamIds((prev) => prev.filter((id) => id !== teamId));
+      if (memberIds.length > 0) {
+        // Chỉ gỡ user nếu user đó không nằm trong 1 team khác cũng đang được chọn
+        const otherSelectedTeams = teams.filter(
+          (t) => t.id !== teamId && formTeamIds.includes(t.id)
+        );
+        const otherTeamUserIds = new Set<number>();
+        otherSelectedTeams.forEach((t) =>
+          t.members?.forEach((m) => otherTeamUserIds.add(m.user_id))
+        );
+
+        setFormUserIds((prev) =>
+          prev.filter((uid) => !memberIds.includes(uid) || otherTeamUserIds.has(uid))
+        );
+      }
+    } else {
+      // Chọn team: Thêm team và toàn bộ user của team vào formUserIds
+      setFormTeamIds((prev) => [...prev, teamId]);
+      if (memberIds.length > 0) {
+        setFormUserIds((prev) => Array.from(new Set([...prev, ...memberIds])));
+      }
+    }
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const selectAllUsers = () => {
+    setFormUserIds(users.map((u) => u.id));
+    setFormTeamIds(teams.map((t) => t.id));
+  };
+
+  const clearAllUsers = () => {
+    setFormUserIds([]);
+    setFormTeamIds([]);
+  };
+
+  const handleFormSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
 
     if (!formTitle.trim()) {
       openSnackbar({ text: 'Vui lòng nhập tiêu đề cuộc họp', type: 'warning' });
@@ -265,13 +310,19 @@ export const useMeetingCalendar = (isAuthenticated: boolean) => {
       return;
     }
 
+    if (formUserIds.length === 0) {
+      openSnackbar({ text: 'Vui lòng chọn ít nhất 1 thành viên hoặc 1 nhóm tham gia!', type: 'warning' });
+      return;
+    }
+
     const payload = {
       title: formTitle.trim(),
       content: formContent.trim() || undefined,
       start_time: new Date(formStartTime).toISOString(),
       end_time: new Date(formEndTime).toISOString(),
       require_check_in: formRequireCheckIn,
-      user_ids: formUserIds.length > 0 ? formUserIds : undefined,
+      enable_evaluation: formEnableEvaluation,
+      user_ids: formUserIds,
       team_ids: formTeamIds.length > 0 ? formTeamIds : undefined,
     };
 
@@ -311,10 +362,16 @@ export const useMeetingCalendar = (isAuthenticated: boolean) => {
     setFormEndTime,
     formRequireCheckIn,
     setFormRequireCheckIn,
+    formEnableEvaluation,
+    setFormEnableEvaluation,
     formUserIds,
+    setFormUserIds,
     formTeamIds,
+    setFormTeamIds,
     toggleUserId,
     toggleTeamId,
+    selectAllUsers,
+    clearAllUsers,
     isSubmitting: createMutation.isPending || updateMutation.isPending,
     isDeleting: deleteMutation.isPending,
     goToPrevWeek,
@@ -324,6 +381,9 @@ export const useMeetingCalendar = (isAuthenticated: boolean) => {
     openEditModal,
     closeModal,
     handleFormSubmit,
-    confirmDelete: () => deletingId && deleteMutation.mutate(deletingId),
+    confirmDelete: (id?: number) => {
+      const targetId = id ?? deletingId;
+      if (targetId) deleteMutation.mutate(targetId);
+    },
   };
 };

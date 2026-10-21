@@ -41,3 +41,13 @@ export const zaloPhoneLoginRequestSchema = z.object({
 });
 export type ZaloPhoneLoginRequest = z.infer<typeof zaloPhoneLoginRequestSchema>;
 
+export const zaloLoginUrlResponseSchema = z.object({
+  login_url: z.string(),
+});
+export type ZaloLoginUrlResponse = z.infer<typeof zaloLoginUrlResponseSchema>;
+
+export const zaloBindRequestSchema = z.object({
+  code: z.string().min(1, 'Mã code xác thực là bắt buộc'),
+});
+export type ZaloBindRequest = z.infer<typeof zaloBindRequestSchema>;
+

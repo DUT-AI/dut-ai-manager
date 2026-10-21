@@ -2,7 +2,7 @@ export const PATHS = {
   // Main Tabs
   HOME: '/',
   CALENDAR: '/calendar',
-  REPORTS: '/reports',
+  NOTIFICATIONS: '/notifications',
   PROFILE: '/profile',
 
   // Auth
@@ -14,6 +14,7 @@ export const PATHS = {
   ACTIVITY_REPORTS: '/activity-reports',
   ACTIVITIES: '/activities',
   MEETINGS: '/meetings',
+  MEETING_DETAIL: '/meetings/:id',
   PERMISSIONS: '/permissions',
   VIOLATIONS: '/violations',
   HOMEWORKS: '/homeworks',
@@ -30,13 +31,13 @@ export const PATHS = {
 export const TAB_PATHS: Record<string, string> = {
   home: PATHS.HOME,
   calendar: PATHS.CALENDAR,
-  reports: PATHS.REPORTS,
+  notifications: PATHS.NOTIFICATIONS,
   profile: PATHS.PROFILE,
 };
 
 export const PATH_TO_TAB: Record<string, string> = {
   [PATHS.HOME]: 'home',
   [PATHS.CALENDAR]: 'calendar',
-  [PATHS.REPORTS]: 'reports',
+  [PATHS.NOTIFICATIONS]: 'notifications',
   [PATHS.PROFILE]: 'profile',
 };

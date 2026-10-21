@@ -1,13 +1,12 @@
 import { NavigateFunction } from 'react-router-dom';
 import { TAB_PATHS } from '@/constants/paths';
 
-export type TabKey = 'home' | 'calendar' | 'reports' | 'profile';
+export type TabKey = 'home' | 'calendar' | 'profile';
 
 const TAB_ORDER: Record<TabKey, number> = {
   home: 0,
   calendar: 1,
-  reports: 2,
-  profile: 3,
+  profile: 2,
 };
 
 // Module-level direction store — allows navigate(-1) to carry direction without state

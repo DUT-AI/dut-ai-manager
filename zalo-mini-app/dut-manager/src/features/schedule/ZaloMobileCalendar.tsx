@@ -50,7 +50,7 @@ export const ZaloMobileCalendar: React.FC<ZaloMobileCalendarProps> = ({
               </div>
             );
           }
-          return null;
+          return <div />;
         }}
       />
     </div>

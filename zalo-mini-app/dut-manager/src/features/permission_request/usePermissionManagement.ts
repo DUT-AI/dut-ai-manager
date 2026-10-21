@@ -11,12 +11,13 @@ import {
   PermissionRequestUpdate,
 } from '@/types/permission.types';
 
-export const usePermissionManagement = (isAuthenticated: boolean) => {
+export const usePermissionManagement = (isAuthenticated: boolean, currentUserId?: number) => {
   const queryClient = useQueryClient();
   const { openSnackbar } = useSnackbar();
 
   // Filters State
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const [filterMine, setFilterMine] = useState<boolean>(false);
   const [filterMonth, setFilterMonth] = useState<number | undefined>(undefined);
   const [filterYear, setFilterYear] = useState<number | undefined>(undefined);
 
@@ -41,11 +42,13 @@ export const usePermissionManagement = (isAuthenticated: boolean) => {
     isLoading,
     refetch,
   } = useQuery<PermissionRequestResponse[]>({
-    queryKey: ['permissions', selectedCategory, filterMonth, filterYear],
+    queryKey: ['permissions', selectedCategory, filterMine, currentUserId, filterMonth, filterYear],
     queryFn: async () => {
       const categoryParam = selectedCategory === 'ALL' ? undefined : selectedCategory;
+      const targetUserId = filterMine ? currentUserId : undefined;
       return await permissionService.getPermissions({
         category: categoryParam,
+        userId: targetUserId,
         month: filterMonth,
         year: filterYear,
       });
@@ -53,10 +56,18 @@ export const usePermissionManagement = (isAuthenticated: boolean) => {
     enabled: isAuthenticated,
   });
 
-  // 2. Fetch Meetings & Homeworks
   const { data: meetings = [] } = useQuery<MeetingItem[]>({
     queryKey: ['meetings-lookup'],
     queryFn: async () => await meetingService.getMeetings(0, 50),
+    enabled: isAuthenticated,
+  });
+
+  const { data: upcomingMeetings = [] } = useQuery({
+    queryKey: ['meetings-available-seats'],
+    queryFn: async () => {
+      const res = await meetingService.getAvailableSeats();
+      return res.data ?? [];
+    },
     enabled: isAuthenticated,
   });
 
@@ -269,11 +280,14 @@ export const usePermissionManagement = (isAuthenticated: boolean) => {
   return {
     permissions,
     meetings,
+    upcomingMeetings,
     homeworks,
     isLoading,
     refetch,
     selectedCategory,
     setSelectedCategory,
+    filterMine,
+    setFilterMine,
     filterMonth,
     setFilterMonth,
     filterYear,

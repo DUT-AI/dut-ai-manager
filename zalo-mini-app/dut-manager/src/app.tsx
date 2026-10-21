@@ -6,32 +6,28 @@ import { CSSTransition, TransitionGroup } from 'react-transition-group';
 
 import HomePage from '@/pages/HomePage';
 import CalendarPage from '@/pages/CalendarPage';
-import ReportsPage from '@/pages/ReportsPage';
+import NotificationPage from '@/pages/NotificationPage';
 import ProfilePage from '@/pages/ProfilePage';
 import LoginPage from '@/pages/LoginPage';
 import ShortcutsPage from '@/pages/ShortcutsPage';
 import PermissionsPage from '@/pages/PermissionsPage';
+import MeetingDetailPage from '@/pages/MeetingDetailPage';
 import FeaturePlaceholderPage from '@/pages/FeaturePlaceholderPage';
-
-// Legacy pages kept for backwards compatibility
-import ScholarshipPage from '@/pages/ScholarshipPage';
-import CategoryPage from '@/pages/CategoryPage';
-import DepartmentDetailPage from '@/pages/DepartmentDetailPage';
-import NewsDetailPage from '@/pages/NewsDetailPage';
-import SchedulePage from '@/pages/SchedulePage';
 
 import ProtectedRoute from '@/components/ProtectedRoute';
 
 import {
   HomeNavIcon,
   CalendarNavIcon,
-  ReportsNavIcon,
+  NotificationNavIcon,
   UserNavIcon,
 } from '@/components/CustomIcons';
 import { navigateTab, getNavigationDirection } from '@/utils/navigation';
 import Header from '@/components/Header';
 import { PATHS, PATH_TO_TAB } from '@/constants/paths';
-import { AuthProvider } from '@/context/AuthContext';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { notificationService } from '@/services/api/notification.service';
+import { useQuery } from '@tanstack/react-query';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -49,6 +45,18 @@ const AnimatedRoutes: React.FC = () => {
   const activeTab = PATH_TO_TAB[location.pathname] || 'home';
   const isMainTab = !!PATH_TO_TAB[location.pathname];
 
+  const { isAuthenticated } = useAuth();
+  const { data: unreadData } = useQuery({
+    queryKey: ['notifications-unread-count'],
+    queryFn: async () => {
+      const res = await notificationService.getUnreadCount();
+      return res.data?.unread_count ?? 0;
+    },
+    enabled: isAuthenticated,
+    refetchInterval: 30000,
+  });
+  const unreadCount = unreadData ?? 0;
+
   const handleTabChange = (key: string): void => {
     navigateTab(navigate, activeTab, key);
   };
@@ -57,7 +65,9 @@ const AnimatedRoutes: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      {!isMainTab || isLoginPage ? null : <Header variant="logo" />}
+      {!isMainTab || isLoginPage ? null : (
+        <Header variant="logo" unreadCount={unreadCount} />
+      )}
 
       <TransitionGroup
         className={`page-transition-group flex-1 ${
@@ -84,10 +94,10 @@ const AnimatedRoutes: React.FC = () => {
               }
             />
             <Route
-              path={PATHS.REPORTS}
+              path={PATHS.NOTIFICATIONS}
               element={
                 <ProtectedRoute>
-                  <ReportsPage />
+                  <NotificationPage />
                 </ProtectedRoute>
               }
             />
@@ -116,7 +126,7 @@ const AnimatedRoutes: React.FC = () => {
               path={PATHS.ACADEMIC_REPORTS}
               element={
                 <ProtectedRoute>
-                  <FeaturePlaceholderPage title="Báo cáo Học tập" icon="zi-file-text" />
+                  <FeaturePlaceholderPage title="Báo cáo Học tập" icon="zi-file" />
                 </ProtectedRoute>
               }
             />
@@ -140,7 +150,15 @@ const AnimatedRoutes: React.FC = () => {
               path={PATHS.MEETINGS}
               element={
                 <ProtectedRoute>
-                  <FeaturePlaceholderPage title="Lịch Họp (Meetings)" icon="zi-video" />
+                  <CalendarPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path={PATHS.MEETING_DETAIL}
+              element={
+                <ProtectedRoute>
+                  <MeetingDetailPage />
                 </ProtectedRoute>
               }
             />
@@ -164,7 +182,7 @@ const AnimatedRoutes: React.FC = () => {
               path={PATHS.HOMEWORKS}
               element={
                 <ProtectedRoute>
-                  <FeaturePlaceholderPage title="Bài tập về nhà" icon="zi-folder" />
+                  <FeaturePlaceholderPage title="Bài tập về nhà" icon="zi-list-1" />
                 </ProtectedRoute>
               }
             />
@@ -172,7 +190,7 @@ const AnimatedRoutes: React.FC = () => {
               path={PATHS.INVOICES}
               element={
                 <ProtectedRoute>
-                  <FeaturePlaceholderPage title="Hóa đơn của tôi" icon="zi-wallet" />
+                  <FeaturePlaceholderPage title="Hóa đơn của tôi" icon="zi-check-circle" />
                 </ProtectedRoute>
               }
             />
@@ -206,7 +224,7 @@ const AnimatedRoutes: React.FC = () => {
               path={PATHS.RBAC}
               element={
                 <ProtectedRoute>
-                  <FeaturePlaceholderPage title="Quản lý Phân quyền RBAC" icon="zi-shield-check" />
+                  <FeaturePlaceholderPage title="Quản lý Phân quyền RBAC" icon="zi-shield-solid" />
                 </ProtectedRoute>
               }
             />
@@ -219,47 +237,7 @@ const AnimatedRoutes: React.FC = () => {
               }
             />
 
-            {/* Legacy Routes (Protected) */}
-            <Route
-              path="/scholarship"
-              element={
-                <ProtectedRoute>
-                  <ScholarshipPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/category"
-              element={
-                <ProtectedRoute>
-                  <CategoryPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/department-detail"
-              element={
-                <ProtectedRoute>
-                  <DepartmentDetailPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/news-detail"
-              element={
-                <ProtectedRoute>
-                  <NewsDetailPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/schedule"
-              element={
-                <ProtectedRoute>
-                  <SchedulePage />
-                </ProtectedRoute>
-              }
-            />
+
 
             <Route
               path="*"
@@ -288,10 +266,28 @@ const AnimatedRoutes: React.FC = () => {
             activeIcon={<CalendarNavIcon active size={24} />}
           />
           <BottomNavigation.Item
-            key="reports"
-            label="Báo cáo"
-            icon={<ReportsNavIcon size={24} />}
-            activeIcon={<ReportsNavIcon active size={24} />}
+            key="notifications"
+            label="Thông báo"
+            icon={
+              <div className="relative flex items-center justify-center">
+                <NotificationNavIcon size={24} />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-2 bg-rose-500 text-white text-[9px] font-bold rounded-full min-w-4 h-4 px-1 flex items-center justify-center border-2 border-white">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </div>
+            }
+            activeIcon={
+              <div className="relative flex items-center justify-center">
+                <NotificationNavIcon active size={24} />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-2 bg-rose-500 text-white text-[9px] font-bold rounded-full min-w-4 h-4 px-1 flex items-center justify-center border-2 border-white">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </div>
+            }
           />
           <BottomNavigation.Item
             key="profile"
@@ -305,6 +301,8 @@ const AnimatedRoutes: React.FC = () => {
   );
 };
 
+import ErrorBoundary from '@/components/ErrorBoundary';
+
 const MyApp: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
@@ -312,7 +310,9 @@ const MyApp: React.FC = () => {
         <SnackbarProvider>
           <AuthProvider>
             <ZMPRouter>
-              <AnimatedRoutes />
+              <ErrorBoundary>
+                <AnimatedRoutes />
+              </ErrorBoundary>
             </ZMPRouter>
           </AuthProvider>
         </SnackbarProvider>
