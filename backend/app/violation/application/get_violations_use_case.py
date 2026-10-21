@@ -28,7 +28,9 @@ class GetViolationsUseCase:
         filters = []
         if user_id:
             filters.append(
-                FilterCriterion(field="user_id", operator=FilterOperator.EQ, value=user_id)
+                FilterCriterion(
+                    field="user_id", operator=FilterOperator.EQ, value=user_id
+                )
             )
         if month:
             filters.append(

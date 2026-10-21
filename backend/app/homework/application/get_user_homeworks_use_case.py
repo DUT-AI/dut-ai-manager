@@ -1,5 +1,4 @@
 from app.homework.application.dtos import HomeworkResponse
-from app.homework.domain.entity import Homework as HomeworkEntity
 from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.homework.infrastructure.homework_submission_repository import (
     HomeworkSubmissionRepository,

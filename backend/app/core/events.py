@@ -15,7 +15,6 @@ from app.duty.domain.events import (
     DutyScheduled,
     DutySubmitted,
     DutyUpdated,
-    DutyViolated,
 )
 from app.duty.notification_handler import DutyNotificationHandler
 from app.homework.application.event_handlers import (
@@ -52,7 +51,6 @@ from app.violation.application.event_handlers import AutomatedViolationHandler
 from app.violation.domain.events import ViolationCreated
 from app.violation.notification_handler import ViolationNotificationHandler
 from app.violation.permission_handler import PermissionViolationHandler
-
 
 
 async def bootstrap_events(container: AsyncContainer):

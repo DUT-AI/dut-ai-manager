@@ -3,8 +3,6 @@ API Tests for Auth Controller (/api/v1/auth).
 Focus on /auth/me endpoint with database query via user_repo.
 """
 
-import pytest
-
 
 def test_get_me_success(admin_client):
     """Khi user đăng nhập, GET /auth/me query CSDL và trả về đầy đủ UserReponseMe."""

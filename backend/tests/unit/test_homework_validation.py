@@ -20,8 +20,8 @@ from app.homework.application.create_homework_use_case import CreateHomeworkUseC
 from app.homework.application.dtos import HomeworkCreate, HomeworkUpdate
 from app.homework.application.update_homework_use_case import UpdateHomeworkUseCase
 from app.homework.domain.entity import Homework
-from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.homework.infrastructure.homework_repository import HomeworkRepository
+from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.shared.application.response import BadRequestException
 
 

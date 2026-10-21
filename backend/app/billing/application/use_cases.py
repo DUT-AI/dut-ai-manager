@@ -172,7 +172,9 @@ class UpdateInvoiceUseCase:
         if new_status is not None:
             invoice.status = new_status
             if new_status == InvoiceStatus.PAID and not invoice.transaction_id:
-                invoice.transaction_id = f"MANUAL_{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
+                invoice.transaction_id = (
+                    f"MANUAL_{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
+                )
 
         # 4. Save
         return self.repo.save_invoice(invoice)
@@ -194,7 +196,9 @@ class UpdateInvoiceStatusUseCase:
         invoice.status = new_status
         if new_status == InvoiceStatus.PAID:
             if not invoice.transaction_id:
-                invoice.transaction_id = f"MANUAL_{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
+                invoice.transaction_id = (
+                    f"MANUAL_{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
+                )
 
             # Publish event if marked as PAID
             if invoice.id:

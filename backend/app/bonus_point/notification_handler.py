@@ -8,27 +8,29 @@ from app.bonus_point.domain.events import (
     BonusPointUpdated,
 )
 from app.shared.application.event_handler import EventHandler
+from app.shared.infrastructure.notification.dispatcher import (
+    UnifiedNotificationDispatcher,
+)
 from app.shared.infrastructure.notification_payload import (
     NotificationCategory,
     NotificationLevel,
     NotificationPayload,
 )
-from app.shared.infrastructure.notification_service import NotificationService
 
 
 class BonusPointNotificationHandler(EventHandler):
-    """Xử lý gửi thông báo Discord và Zalo khi điểm cộng được tạo, cập nhật hoặc xóa."""
+    """Xử lý gửi thông báo đa kênh (In-App DB, Discord, Zalo, Web Push) khi điểm cộng được tạo, cập nhật hoặc xóa."""
 
     def __init__(
         self,
-        notification_service: NotificationService,
+        dispatcher: UnifiedNotificationDispatcher,
     ):
-        self.notification_service = notification_service
+        self.dispatcher = dispatcher
 
     async def handle(
         self, event: BonusPointCreated | BonusPointUpdated | BonusPointDeleted
     ) -> None:
-        """Thông báo cho người dùng trên Discord và Zalo."""
+        """Thông báo cho người dùng khi có biến động điểm rèn luyện."""
         try:
             logger.info(f"Handling {type(event).__name__} for user_id={event.user_id}")
             asyncio.create_task(self._send_notifications_task(event))
@@ -38,7 +40,7 @@ class BonusPointNotificationHandler(EventHandler):
     async def _send_notifications_task(
         self, event: BonusPointCreated | BonusPointUpdated | BonusPointDeleted
     ) -> None:
-        """Hàm chạy ngầm để gửi thông báo qua NotificationService."""
+        """Hàm chạy ngầm để gửi thông báo qua UnifiedNotificationDispatcher."""
         try:
             if isinstance(event, BonusPointDeleted):
                 payload = NotificationPayload(
@@ -48,6 +50,7 @@ class BonusPointNotificationHandler(EventHandler):
                     category=NotificationCategory.BONUS_POINT,
                     level=NotificationLevel.INFO,
                     image_asset="meme-khoc-2.jpg",
+                    action_url="/bonus-points",
                 )
             else:
                 display_date = event.date
@@ -108,9 +111,10 @@ class BonusPointNotificationHandler(EventHandler):
                     else NotificationLevel.WARNING,
                     image_asset=image_asset,
                     fields=fields,
+                    action_url="/bonus-points",
                 )
 
-            await self.notification_service.send_to_user(payload)
+            await self.dispatcher.dispatch(payload)
             logger.info(f"Sent bonus point notification for user {event.user_id}")
 
         except Exception as e:

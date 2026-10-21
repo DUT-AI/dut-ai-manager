@@ -31,7 +31,9 @@ def build_query_support(
     elif limit is not None:
         pagination = OffsetPaginationParams(limit=limit, offset=skip or 0)
     elif page_size is not None:
-        pagination = OffsetPaginationParams.from_page(page=page or 1, page_size=page_size)
+        pagination = OffsetPaginationParams.from_page(
+            page=page or 1, page_size=page_size
+        )
     else:
         pagination = OffsetPaginationParams(limit=100, offset=skip or 0)
 

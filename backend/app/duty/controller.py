@@ -2,9 +2,9 @@
 Duty Controller — REST API Endpoints.
 """
 
+import json
 from datetime import date
 from typing import Annotated
-import json
 
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status

@@ -14,8 +14,6 @@ class GetMeUseCase:
     def execute(self, user_id: int) -> UserEntity:
         user = self.user_repo.get_by_id(user_id)
         if not user or not user.is_active:
-            raise BadRequestException(
-                "User not found or inactive", status_code=401
-            )
+            raise BadRequestException("User not found or inactive", status_code=401)
 
         return user

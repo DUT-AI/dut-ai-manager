@@ -47,7 +47,9 @@ class CreateChangeMeetingRequestUseCase:
     ) -> PermissionRequest:
         current_user_id = user_id or get_current_user_id()
         if not current_user_id:
-            raise HTTPException(status_code=401, detail="Chưa xác thực danh tính người dùng")
+            raise HTTPException(
+                status_code=401, detail="Chưa xác thực danh tính người dùng"
+            )
 
         if old_meeting_id is not None and old_meeting_id == meeting_id:
             raise HTTPException(
@@ -69,7 +71,9 @@ class CreateChangeMeetingRequestUseCase:
             )
 
         # 3. Kiểm tra số ghế khả dụng của Meeting B
-        absence_user_ids = self.permission_repo.get_absence_user_ids_by_meeting(meeting_id)
+        absence_user_ids = self.permission_repo.get_absence_user_ids_by_meeting(
+            meeting_id
+        )
         available_seats = meeting_b.calculate_available_seats(
             max_seats=settings.MAX_SEATS,
             absence_user_ids=absence_user_ids,

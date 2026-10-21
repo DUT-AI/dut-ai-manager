@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, NamedTuple, cast
+from typing import Any, cast
 
 from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session

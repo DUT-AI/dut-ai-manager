@@ -44,4 +44,3 @@ class DutyUpdated(DomainEvent):
     duty_date: str
     meeting_id: int | None = None
     is_time_changed: bool = True
-

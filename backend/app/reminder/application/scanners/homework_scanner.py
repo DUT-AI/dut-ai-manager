@@ -4,9 +4,14 @@ Scans upcoming homeworks and filters out completed submissions.
 """
 
 from datetime import datetime
-from app.homework.infrastructure.homework_assignee_repository import HomeworkAssigneeRepository
+
+from app.homework.infrastructure.homework_assignee_repository import (
+    HomeworkAssigneeRepository,
+)
 from app.homework.infrastructure.homework_repository import HomeworkRepository
-from app.homework.infrastructure.homework_submission_repository import HomeworkSubmissionRepository
+from app.homework.infrastructure.homework_submission_repository import (
+    HomeworkSubmissionRepository,
+)
 from app.reminder.application.scanners.base_scanner import (
     BaseTaskScanner,
     ScannedCandidateTask,
@@ -35,12 +40,15 @@ class HomeworkTaskScanner(BaseTaskScanner):
                 continue
 
             # Homework deadline là dạng Date, quy ước hạn chót là 23:59:59 của ngày deadline
-            hw_deadline_dt = datetime.combine(
-                hw.deadline, datetime.min.time()
-            ).replace(hour=23, minute=59, second=59)
+            hw_deadline_dt = datetime.combine(hw.deadline, datetime.min.time()).replace(
+                hour=23, minute=59, second=59
+            )
 
             # Chỉ xét task có deadline trong tương lai và cách tối đa 3 ngày
-            if hw_deadline_dt < now or (hw_deadline_dt - now).total_seconds() > 3 * 86400:
+            if (
+                hw_deadline_dt < now
+                or (hw_deadline_dt - now).total_seconds() > 3 * 86400
+            ):
                 continue
 
             stages = calculate_matching_stages(hw_deadline_dt, now)

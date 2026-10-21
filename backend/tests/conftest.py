@@ -2,7 +2,8 @@
 Pytest configuration and shared fixtures for unit, integration, and api test suites.
 """
 
-from typing import Generator
+from collections.abc import Generator
+
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
@@ -43,15 +44,33 @@ def db_session(db_session_factory) -> Generator[Session, None, None]:
 
 @pytest.fixture
 def mock_current_user(db_engine) -> UserEntity:
-    """Lấy một User thật từ DB hoặc tạo mock entity có quyền Admin mặc định."""
+    """Lấy một User active thật từ DB hoặc tạo user active có quyền Admin mặc định."""
     with db_engine.connect() as conn:
         user_row = conn.execute(
-            text("SELECT id, name, email FROM users WHERE is_deleted = false LIMIT 1")
+            text(
+                "SELECT id, name, email FROM users "
+                "WHERE is_deleted = false AND status = 'ACTIVE' "
+                "ORDER BY id ASC LIMIT 1"
+            )
         ).fetchone()
 
-    user_id = user_row[0] if user_row else 999
-    user_name = user_row[1] if user_row else "Admin User"
-    user_email = user_row[2] if user_row else "admin@example.com"
+        if not user_row:
+            result = conn.execute(
+                text(
+                    "INSERT INTO users (name, email, status, is_deleted) "
+                    "VALUES ('Test Admin', 'test_admin_conftest@example.com', "
+                    "'ACTIVE', false) "
+                    "ON CONFLICT (email) DO UPDATE "
+                    "SET status = 'ACTIVE', is_deleted = false "
+                    "RETURNING id, name, email"
+                )
+            )
+            conn.commit()
+            user_row = result.fetchone()
+
+    user_id = user_row[0]
+    user_name = user_row[1]
+    user_email = user_row[2]
 
     return UserEntity(
         id=user_id,

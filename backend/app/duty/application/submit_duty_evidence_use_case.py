@@ -4,10 +4,11 @@ Submit Duty Evidence Use Case.
 
 from datetime import datetime, time
 from typing import cast
+
 from fastapi import HTTPException, UploadFile, status
 
 from app.duty.application.dtos import DutyResponse
-from app.duty.domain.entity import CleaningDuty, DutyStatus
+from app.duty.domain.entity import DutyStatus
 from app.duty.domain.events import DutySubmitted
 from app.duty.infrastructure.repository import DutyRepository
 from app.shared.domain.event_bus import DomainEvent, EventBus

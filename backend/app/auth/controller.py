@@ -4,7 +4,6 @@ Auth Web Controller — API routes for authentication.
 
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, Cookie, Response
-from loguru import logger
 
 from app.auth.application import (
     AuthenticateUseCase,

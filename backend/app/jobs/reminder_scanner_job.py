@@ -4,7 +4,6 @@ Scheduled by APScheduler to run every 30 minutes, resolving ScanAndSendReminders
 from the Dishka request container context.
 """
 
-from datetime import datetime
 from dishka import AsyncContainer
 from loguru import logger
 
@@ -21,7 +20,9 @@ async def scan_and_send_reminders(container: AsyncContainer) -> None:
     """
     Scheduled job that checks for approaching deadlines and triggers reminders.
     """
-    logger.info("⏰ [Reminder Scanner] Starting scheduled task & deadline reminder check...")
+    logger.info(
+        "⏰ [Reminder Scanner] Starting scheduled task & deadline reminder check..."
+    )
     try:
         async with container() as request_container:
             token = set_request_container(request_container)

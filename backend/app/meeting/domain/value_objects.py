@@ -7,7 +7,6 @@ from pydantic import BaseModel
 from app.core.config import settings
 
 
-
 class ParticipantStatus(str, Enum):
     """Trạng thái tham dự buổi họp (7 trạng thái)"""
 
@@ -118,9 +117,8 @@ class EvaluationCriterion(BaseModel):
         }
 
         lookup_key = legacy_aliases.get(raw_code, raw_code)
-        normalized = (
-            lookup_key.replace("TRAINER_TO_TRAINEE_", "")
-            .replace("TRAINEE_TO_TRAINER_", "")
+        normalized = lookup_key.replace("TRAINER_TO_TRAINEE_", "").replace(
+            "TRAINEE_TO_TRAINER_", ""
         )
 
         if normalized in registry:
@@ -211,9 +209,7 @@ class EvaluationGroupSummary(BaseModel):
             t = getattr(e, "evaluation_type", "")
             return t.value if hasattr(t, "value") else str(t)
 
-        relevant_evals = [
-            e for e in evaluations if _get_type_str(e) == eval_type.value
-        ]
+        relevant_evals = [e for e in evaluations if _get_type_str(e) == eval_type.value]
 
         if not relevant_evals:
             return cls(
@@ -224,9 +220,7 @@ class EvaluationGroupSummary(BaseModel):
             )
 
         total_count = len(relevant_evals)
-        avg_score = round(
-            sum(e.average_score for e in relevant_evals) / total_count, 2
-        )
+        avg_score = round(sum(e.average_score for e in relevant_evals) / total_count, 2)
 
         scores_by_code: dict[str, list[int]] = defaultdict(list)
         for e in relevant_evals:
@@ -250,7 +244,6 @@ class EvaluationGroupSummary(BaseModel):
             average_score=avg_score,
             criteria_breakdown=breakdown,
         )
-
 
 
 class CapacityStatus(str, Enum):

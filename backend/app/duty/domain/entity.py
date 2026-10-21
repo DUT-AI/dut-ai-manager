@@ -5,6 +5,7 @@ Duty Domain Entities & Enums.
 from datetime import date, datetime, time
 from enum import Enum
 from typing import Any
+
 from pydantic import Field, field_validator
 
 from app.shared.domain.base_entity import BaseEntity
@@ -98,7 +99,9 @@ class CleaningDuty(BaseEntity):
             for item in (checklist or [])
         )
         if not has_task:
-            raise ValueError("Vui lòng tích chọn ít nhất 1 đầu việc trực nhật đã thực hiện")
+            raise ValueError(
+                "Vui lòng tích chọn ít nhất 1 đầu việc trực nhật đã thực hiện"
+            )
 
         self.checklist = checklist
         self.note = note.strip() if note else None

@@ -4,6 +4,7 @@ Covers CRUD endpoints, filters, restore, and error responses (401, 403, 404, 422
 """
 
 from datetime import date
+
 import pytest
 
 
@@ -51,7 +52,9 @@ def test_list_bonus_points_as_admin_success(admin_client, test_bonus_point):
     assert data["pagination"]["page_size"] == 10
 
 
-def test_list_bonus_points_with_filters(admin_client, test_bonus_point, mock_current_user):
+def test_list_bonus_points_with_filters(
+    admin_client, test_bonus_point, mock_current_user
+):
     """Lọc điểm thưởng theo user_id, month, year."""
     today = date.today()
     url = f"/api/v1/bonus-points?user_id={mock_current_user.id}&month={today.month}&year={today.year}"
@@ -100,14 +103,18 @@ def test_create_bonus_point_success(admin_client, mock_current_user):
 def test_update_bonus_point_as_member_returns_403(member_client, test_bonus_point):
     """Member không có quyền sửa điểm thưởng (403)."""
     payload = {"reason": "Member attempt"}
-    res = member_client.put(f"/api/v1/bonus-points/{test_bonus_point['id']}", json=payload)
+    res = member_client.put(
+        f"/api/v1/bonus-points/{test_bonus_point['id']}", json=payload
+    )
     assert res.status_code == 403
 
 
 def test_update_bonus_point_success(admin_client, test_bonus_point):
     """Cập nhật điểm thưởng thành công."""
     payload = {"reason": "Cập nhật lý do thưởng", "points": 8}
-    res = admin_client.put(f"/api/v1/bonus-points/{test_bonus_point['id']}", json=payload)
+    res = admin_client.put(
+        f"/api/v1/bonus-points/{test_bonus_point['id']}", json=payload
+    )
     assert res.status_code == 200
     data = res.json()
     assert data["is_success"] is True

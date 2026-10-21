@@ -9,6 +9,11 @@ from app.duty.application.check_overdue_duties_use_case import (
     CheckOverdueDutiesUseCase,
 )
 from app.duty.application.get_duties_use_case import GetDutiesUseCase
+from app.duty.application.manage_duty_use_case import (
+    DeleteDutyUseCase,
+    RestoreDutyUseCase,
+    UpdateDutyUseCase,
+)
 from app.duty.application.review_duty_use_case import (
     ApproveDutyUseCase,
     RejectDutyUseCase,
@@ -16,22 +21,19 @@ from app.duty.application.review_duty_use_case import (
 from app.duty.application.submit_duty_evidence_use_case import (
     SubmitDutyEvidenceUseCase,
 )
-from app.duty.application.manage_duty_use_case import (
-    DeleteDutyUseCase,
-    RestoreDutyUseCase,
-    UpdateDutyUseCase,
-)
 from app.duty.application.toggle_duty_schedule_use_case import (
     BatchCreateDutyUseCase,
     ToggleDutyScheduleUseCase,
 )
 from app.duty.infrastructure.repository import DutyRepository
+from app.duty.notification_handler import DutyNotificationHandler
 from app.meeting.infrastructure.repository import MeetingRepository
 from app.shared.domain.event_bus import EventBus
 from app.shared.infrastructure.minio_service import MinioService
+from app.shared.infrastructure.notification.dispatcher import (
+    UnifiedNotificationDispatcher,
+)
 from app.team.infrastructure.repository import TeamRepository
-from app.duty.notification_handler import DutyNotificationHandler
-from app.shared.infrastructure.notification_service import NotificationService
 from app.user.infrastructure.repository import UserRepository
 from app.violation.application.create_violation_use_case import (
     CreateViolationUseCase,
@@ -147,22 +149,20 @@ class DutyModuleProvider(Provider):
         return ApproveDutyUseCase(duty_repo=duty_repo, event_bus=EventBus)
 
     @provide
-    def get_reject_duty_use_case(
-        self, duty_repo: DutyRepository
-    ) -> RejectDutyUseCase:
+    def get_reject_duty_use_case(self, duty_repo: DutyRepository) -> RejectDutyUseCase:
         return RejectDutyUseCase(duty_repo=duty_repo, event_bus=EventBus)
 
     @provide
     def get_duty_notification_handler(
         self,
-        notification_service: NotificationService,
+        dispatcher: UnifiedNotificationDispatcher,
         user_repo: UserRepository,
         team_repo: TeamRepository,
         meeting_repo: MeetingRepository,
         duty_repo: DutyRepository,
     ) -> DutyNotificationHandler:
         return DutyNotificationHandler(
-            notification_service=notification_service,
+            dispatcher=dispatcher,
             user_repo=user_repo,
             team_repo=team_repo,
             meeting_repo=meeting_repo,

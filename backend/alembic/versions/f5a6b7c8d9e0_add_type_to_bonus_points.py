@@ -5,9 +5,11 @@ Revises: d3a2b1c4e5f6
 Create Date: 2026-10-07 12:00:00.000000
 
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 # revision identifiers, used by Alembic.

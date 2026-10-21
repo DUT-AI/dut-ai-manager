@@ -8,29 +8,29 @@ from app.meeting.domain.events import (
     ParticipantCheckedIn,
 )
 from app.shared.application.event_handler import EventHandler
+from app.shared.infrastructure.notification.dispatcher import (
+    UnifiedNotificationDispatcher,
+)
 from app.shared.infrastructure.notification_payload import (
     NotificationCategory,
     NotificationLevel,
     NotificationPayload,
 )
-from app.shared.infrastructure.notification_service import NotificationService
 from app.user.infrastructure.repository import UserRepository
 
 
 class MeetingNotificationHandler(EventHandler):
-    """Xử lý gửi thông báo Discord và Zalo cho các sự kiện của Meeting."""
+    """Xử lý gửi thông báo đa kênh (In-App DB, Discord, Zalo, Web Push) cho các sự kiện của Meeting."""
 
     def __init__(
         self,
-        notification_service: NotificationService,
+        dispatcher: UnifiedNotificationDispatcher,
         user_repo: UserRepository,
     ):
-        self.notification_service = notification_service
+        self.dispatcher = dispatcher
         self.user_repo = user_repo
 
-    async def handle(
-        self, event: ParticipantCheckedIn | MeetingCreated
-    ) -> None:
+    async def handle(self, event: ParticipantCheckedIn | MeetingCreated) -> None:
         """EntryPoint cho EventBus, điều hướng tới các hàm xử lý cụ thể."""
         if isinstance(event, ParticipantCheckedIn):
             await self._handle_check_in(event)
@@ -71,10 +71,11 @@ class MeetingNotificationHandler(EventHandler):
                 if not event.is_late
                 else NotificationLevel.WARNING,
                 image_asset="meme-lam-viec.webp",
+                action_url=f"/meetings/{event.meeting_id}",
                 fields=fields,
             )
 
-            await self.notification_service.send_to_user(payload)
+            await self.dispatcher.dispatch(payload)
         except Exception as e:
             logger.error(f"Unexpected error in check-in notification task: {e}")
 
@@ -87,9 +88,7 @@ class MeetingNotificationHandler(EventHandler):
                 logger.warning(f"No users found for meeting {event.meeting_id}")
                 return
 
-            asyncio.create_task(
-                self._send_meeting_notification_task(users, event)
-            )
+            asyncio.create_task(self._send_meeting_notification_task(users, event))
         except Exception as e:
             logger.error(
                 f"Error in MeetingNotificationHandler._handle_meeting_created: {e}"
@@ -126,12 +125,11 @@ class MeetingNotificationHandler(EventHandler):
                     category=NotificationCategory.MEETING,
                     level=NotificationLevel.INFO,
                     image_asset=image_asset,
+                    action_url=f"/meetings/{event.meeting_id}",
                     fields=fields,
                 )
-                await self.notification_service.send_to_user(payload)
+                await self.dispatcher.dispatch(payload)
 
-            logger.info(
-                f"Finished sending meeting notification for {event.meeting_id}"
-            )
+            logger.info(f"Finished sending meeting notification for {event.meeting_id}")
         except Exception as e:
             logger.error(f"Unexpected error in meeting notification task: {e}")

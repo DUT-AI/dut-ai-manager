@@ -293,7 +293,9 @@ class SubmitMeetingOverallEvaluationRequest(BaseModel):
     """Request DTO để Trainer gửi đánh giá tổng thể buổi học (quan hệ 1 - 1)"""
 
     scores: list[EvaluationScoreItemSubmitDto] = Field(
-        ..., min_length=1, description="Danh sách điểm 4 tiêu chí chuẩn hóa của buổi học"
+        ...,
+        min_length=1,
+        description="Danh sách điểm 4 tiêu chí chuẩn hóa của buổi học",
     )
     general_feedback: str | None = Field(
         None, max_length=2000, description="Nhận xét tổng thể về buổi học"
@@ -315,9 +317,7 @@ class MeetingOverallEvaluationResponse(BaseModel):
     created_at: datetime
 
     @classmethod
-    def from_domain(
-        cls, e: Any
-    ) -> "MeetingOverallEvaluationResponse":
+    def from_domain(cls, e: Any) -> "MeetingOverallEvaluationResponse":
         scores_dtos = []
         for s in getattr(e, "scores", []) or []:
             code = getattr(s, "criteria_code", "")
@@ -464,7 +464,9 @@ class CriteriaAverageScoreDto(BaseModel):
     evaluation_type: str | None = None
 
     @classmethod
-    def from_summary(cls, summary: CriteriaBreakdownSummary) -> "CriteriaAverageScoreDto":
+    def from_summary(
+        cls, summary: CriteriaBreakdownSummary
+    ) -> "CriteriaAverageScoreDto":
         """Khởi tạo DTO trực tiếp từ Domain Value Object CriteriaBreakdownSummary."""
         etype = summary.evaluation_type
         etype_str = etype.value if hasattr(etype, "value") else str(etype)
@@ -503,5 +505,3 @@ class MeetingSeatAvailabilityDto(BaseModel):
     is_full: bool
 
     model_config = ConfigDict(from_attributes=True)
-
-

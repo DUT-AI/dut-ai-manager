@@ -119,7 +119,9 @@ class ToggleDutyScheduleUseCase:
             team_names=team_names,
             meeting_id=matched_meeting_id,
             status=DutyStatus.PENDING,
-            checklist=checklist if checklist is not None else [dict(i) for i in DEFAULT_DUTY_CHECKLIST],
+            checklist=checklist
+            if checklist is not None
+            else [dict(i) for i in DEFAULT_DUTY_CHECKLIST],
             note=note,
         )
 
@@ -185,7 +187,9 @@ class BatchCreateDutyUseCase:
             team_names=team_names,
             meeting_id=None,
             status=DutyStatus.PENDING,
-            checklist=checklist if checklist is not None else [dict(i) for i in DEFAULT_DUTY_CHECKLIST],
+            checklist=checklist
+            if checklist is not None
+            else [dict(i) for i in DEFAULT_DUTY_CHECKLIST],
             note=note,
         )
         saved = self.duty_repo.save(new_duty)

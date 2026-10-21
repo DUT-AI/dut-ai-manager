@@ -10,12 +10,14 @@ from app.permission_request.domain.events import (
 )
 from app.permission_request.domain.value_objects import RequestCategory
 from app.shared.application.event_handler import EventHandler
+from app.shared.infrastructure.notification.dispatcher import (
+    UnifiedNotificationDispatcher,
+)
 from app.shared.infrastructure.notification_payload import (
     NotificationCategory,
     NotificationLevel,
     NotificationPayload,
 )
-from app.shared.infrastructure.notification_service import NotificationService
 from app.user.infrastructure.repository import UserRepository
 
 
@@ -24,10 +26,10 @@ class PermissionRequestNotificationHandler(EventHandler[PermissionRequestCreated
 
     def __init__(
         self,
-        notification_service: NotificationService,
+        dispatcher: UnifiedNotificationDispatcher,
         user_repo: UserRepository,
     ):
-        self.notification_service = notification_service
+        self.dispatcher = dispatcher
         self.user_repo = user_repo
 
     async def handle(self, event: PermissionRequestCreated) -> None:
@@ -98,10 +100,9 @@ class PermissionRequestNotificationHandler(EventHandler[PermissionRequestCreated
                 fields=fields,
             )
 
-            await self.notification_service.send_to_room(
+            await self.dispatcher.dispatch_room(
                 room_id=room_id,
                 payload=payload,
-                channel="discord",
             )
             logger.info(
                 f"Sent Discord room notification for permission request {event.request_id}"
@@ -124,11 +125,11 @@ class MeetingParticipantTransferredNotificationHandler(
 
     def __init__(
         self,
-        notification_service: NotificationService,
+        dispatcher: UnifiedNotificationDispatcher,
         user_repo: UserRepository,
         meeting_repo: MeetingRepository,
     ):
-        self.notification_service = notification_service
+        self.dispatcher = dispatcher
         self.user_repo = user_repo
         self.meeting_repo = meeting_repo
 
@@ -196,7 +197,7 @@ class MeetingParticipantTransferredNotificationHandler(
                     },
                 ],
             )
-            await self.notification_service.send_to_user(user_payload)
+            await self.dispatcher.dispatch(user_payload)
 
             # 2. Gửi thông báo đến Room quản lý Discord / Zalo
             room_id = settings.DISCORD_PERMISSION_ROOM_ID
@@ -220,11 +221,9 @@ class MeetingParticipantTransferredNotificationHandler(
                         },
                     ],
                 )
-                await self.notification_service.send_to_room(
-                    room_id=room_id, payload=room_payload, channel="discord"
+                await self.dispatcher.dispatch_room(
+                    room_id=room_id, payload=room_payload
                 )
 
         except Exception as e:
-            logger.error(
-                f"Error sending transferred background notifications: {e}"
-            )
+            logger.error(f"Error sending transferred background notifications: {e}")

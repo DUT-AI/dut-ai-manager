@@ -59,7 +59,9 @@ def sync_all_sequences():
             conn.execute(text(query))
             logger.info("Successfully synced all PostgreSQL sequences via pg_depend")
         except Exception as e:
-            logger.warning(f"pg_depend query failed ({e}), trying per-table fallback...")
+            logger.warning(
+                f"pg_depend query failed ({e}), trying per-table fallback..."
+            )
 
         for table in fallback_tables:
             try:

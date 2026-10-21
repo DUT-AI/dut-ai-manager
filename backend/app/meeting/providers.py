@@ -33,7 +33,9 @@ from app.permission_request.infrastructure.repository import (
     PermissionRequestRepository,
 )
 from app.shared.infrastructure.minio_service import MinioService
-from app.shared.infrastructure.notification_service import NotificationService
+from app.shared.infrastructure.notification.dispatcher import (
+    UnifiedNotificationDispatcher,
+)
 from app.shared.infrastructure.tts_service import TTSService
 from app.user.infrastructure.repository import UserRepository
 from app.violation.infrastructure.repository import ViolationRepository
@@ -78,7 +80,6 @@ class MeetingModuleProvider(Provider):
     @provide
     def create_meeting_uc(self, repo: MeetingRepository) -> CreateMeetingUseCase:
         return CreateMeetingUseCase(repo)
-
 
     @provide
     def check_in_uc(
@@ -211,10 +212,10 @@ class MeetingModuleProvider(Provider):
     @provide
     def get_meeting_notification_handler(
         self,
-        notification_service: NotificationService,
+        dispatcher: UnifiedNotificationDispatcher,
         user_repo: UserRepository,
     ) -> MeetingNotificationHandler:
-        return MeetingNotificationHandler(notification_service, user_repo)
+        return MeetingNotificationHandler(dispatcher, user_repo)
 
     @provide
     def get_meeting_sse_handler(self) -> MeetingSseHandler:

@@ -1,25 +1,38 @@
 """
 Reminder Dispatcher.
-Handles sending Discord DM embeds, creating In-App Notifications, and recording audit logs into unified Notification repository.
+Orchestrates deadline reminders across all channels via UnifiedNotificationDispatcher.
 """
 
+from __future__ import annotations
+
 from datetime import datetime
+from typing import TYPE_CHECKING
+
 from loguru import logger
 
 from app.core.config import settings
-from app.reminder.application.embed_builder import build_reminder_embed, format_remaining_time
-from app.reminder.application.send_web_push_notification_use_case import (
-    SendWebPushNotificationUseCase,
-)
+from app.reminder.application.embed_builder import format_remaining_time
 from app.reminder.domain.entity import (
-    Notification,
     ReminderStage,
     ReminderStatus,
     TaskType,
 )
 from app.reminder.infrastructure.repository import NotificationRepository
-from app.shared.infrastructure.discord_service import DiscordService
+from app.shared.infrastructure.notification_payload import (
+    NotificationCategory as PayloadCategory,
+)
+from app.shared.infrastructure.notification_payload import (
+    NotificationLevel as PayloadLevel,
+)
+from app.shared.infrastructure.notification_payload import (
+    NotificationPayload,
+)
 from app.user.infrastructure.repository import UserRepository
+
+if TYPE_CHECKING:
+    from app.shared.infrastructure.notification.dispatcher import (
+        UnifiedNotificationDispatcher,
+    )
 
 
 class ReminderDispatcher:
@@ -27,13 +40,11 @@ class ReminderDispatcher:
         self,
         notification_repo: NotificationRepository,
         user_repo: UserRepository,
-        discord_service: DiscordService,
-        send_web_push_use_case: SendWebPushNotificationUseCase,
+        unified_dispatcher: UnifiedNotificationDispatcher,
     ):
         self.notification_repo = notification_repo
         self.user_repo = user_repo
-        self.discord_service = discord_service
-        self.send_web_push_use_case = send_web_push_use_case
+        self.unified_dispatcher = unified_dispatcher
 
     async def dispatch(
         self,
@@ -46,7 +57,7 @@ class ReminderDispatcher:
         action_url: str,
         now: datetime,
     ) -> ReminderStatus:
-        """Gửi thông báo đa kênh (Discord DM + In-App Web) và lưu vào bảng notifications duy nhất."""
+        """Gửi thông báo nhắc việc đa kênh đồng nhất (Discord, In-App DB, Zalo, Web Push) qua UnifiedNotificationDispatcher."""
         user = self.user_repo.get_by_id(user_id)
         if not user:
             return ReminderStatus.FAILED
@@ -55,63 +66,95 @@ class ReminderDispatcher:
         deadline_str = deadline.strftime("%d/%m/%Y %H:%M")
         time_left_str = format_remaining_time(hours_left)
 
-        # 1. Gửi Discord DM nếu người dùng có liên kết discord_id
-        status = ReminderStatus.SENT
-        err_msg: str | None = None
+        category_map = {
+            TaskType.HOMEWORK: PayloadCategory.HOMEWORK,
+            TaskType.DUTY: PayloadCategory.DUTY,
+            TaskType.MEETING_EVALUATION: PayloadCategory.MEETING,
+            TaskType.MEETING: PayloadCategory.MEETING,
+        }
+        category = category_map.get(task_type, PayloadCategory.SYSTEM)
+        level = PayloadLevel.CRITICAL if stage.is_critical else PayloadLevel.WARNING
 
-        if not user.discord_id:
-            status = ReminderStatus.NO_DISCORD_ID
-        else:
-            embed = build_reminder_embed(
-                task_type=task_type,
-                task_title=task_title,
-                deadline_str=deadline_str,
-                hours_left=hours_left,
-                stage=stage,
-                action_url=f"{settings.FRONTEND_URL}{action_url}" if hasattr(settings, "FRONTEND_URL") else action_url,
-            )
-            try:
-                await self.discord_service.send_message_to_user(
-                    user_id=user.discord_id,
-                    embed=embed,
-                )
-            except Exception as e:
-                err_msg = str(e)
-                if "50007" in err_msg or "Cannot send messages to this user" in err_msg:
-                    status = ReminderStatus.DM_BLOCKED
-                else:
-                    status = ReminderStatus.FAILED
-                logger.warning(
-                    f"Không thể gửi Discord DM nhắc nhở tới user {user_id} (discord_id: {user.discord_id}): {err_msg}"
-                )
+        is_urgent = stage in [
+            ReminderStage.OFFSET_1H,
+            ReminderStage.OFFSET_4H,
+            ReminderStage.FIXED_1930,
+            ReminderStage.FIXED_2200,
+        ]
+        color_hex = 0xE74C3C if is_urgent else 0xF39C12
 
-        # 2. Tạo bản ghi Notification thống nhất (hiển thị Web + metadata kỹ thuật chống lặp)
-        notif_entity = Notification.create_deadline_reminder(
-            user_id=user_id,
-            task_type=task_type,
-            task_id=task_id,
-            task_title=task_title,
-            deadline_str=deadline_str,
-            time_left_str=time_left_str,
-            stage=stage,
-            action_url=action_url,
-            now=now,
-            discord_status=status,
-            error_message=err_msg,
+        type_name = {
+            TaskType.HOMEWORK: "Bài tập về nhà",
+            TaskType.DUTY: "Trực nhật vệ sinh",
+            TaskType.MEETING_EVALUATION: "Đánh giá cuộc họp",
+            TaskType.MEETING: "Buổi họp / Sinh hoạt",
+        }.get(task_type, "Nhiệm vụ")
+
+        full_action_url = (
+            f"{settings.FRONTEND_URL}{action_url}"
+            if not action_url.startswith("http")
+            else action_url
         )
-        self.notification_repo.add(notif_entity)
 
-        # 3. Gửi thông báo đẩy Web Push tới thiết bị di động (PWA)
-        try:
-            self.send_web_push_use_case.execute(
-                user_id=user_id,
-                title=f"Nhắc nhở hạn chót: {task_title}",
-                body=f"Nhiệm vụ {task_title} có hạn chót lúc {deadline_str} (còn lại {time_left_str}).",
-                action_url=action_url,
-                tag=f"{task_type.value.lower()}-{task_id}",
-                category=notif_entity.category.value,
+        if task_type == TaskType.MEETING:
+            prefix = "🚨 [CẢNH BÁO GẤP]" if is_urgent else "⏰ [NHẮC NHỞ LỊCH HỌP]"
+            title = f"{prefix} Buổi họp / Sinh hoạt: {task_title}"
+            content = (
+                f"Chào bạn! Bạn có lịch tham gia buổi sinh hoạt **{task_title}** sắp diễn ra.\n\n"
+                f"📅 **Thời gian bắt đầu**: `{deadline_str}` (Giờ VN - UTC+7)\n"
+                f"⏳ **Thời gian còn lại**: **{time_left_str}**\n\n"
+                f"⚠️ *Lưu ý: Vui lòng có mặt đúng giờ và hoàn tất điểm danh trước khi bắt đầu buổi sinh hoạt.*\n\n"
+                f"👉 [**Bấm vào đây để xem chi tiết và điểm danh**]({full_action_url})"
             )
-        except Exception as e:
-            logger.warning(f"Lỗi khi dispatch Web Push cho user {user_id}: {e}")
+        else:
+            prefix = "🚨 [CẢNH BÁO GẤP]" if is_urgent else "⏰ [NHẮC NHỞ HẠN CHÓT]"
+            title = f"{prefix} {type_name}: {task_title}"
+            content = (
+                f"Chào bạn! Bạn có nhiệm vụ **{task_title}** sắp đến hạn nộp.\n\n"
+                f"📅 **Hạn chót**: `{deadline_str}` (Giờ VN - UTC+7)\n"
+                f"⏳ **Thời gian còn lại**: **{time_left_str}**\n\n"
+                f"⚠️ *Lưu ý: Vui lòng hoàn thành và nộp trước thời hạn trên để tránh bị hệ thống tự động ghi nhận lỗi vi phạm (Violation) vào cuối ngày.*\n\n"
+                f"👉 [**Bấm vào đây để nộp bài ngay**]({full_action_url})"
+            )
 
-        return status
+        payload = NotificationPayload(
+            user_id=user_id,
+            title=title,
+            content=content,
+            category=category,
+            level=level,
+            action_url=full_action_url,
+            color_hex=color_hex,
+            task_type=task_type.value,
+            task_id=task_id,
+            reminder_stage=stage.value,
+            metadata={
+                "deadline_str": deadline_str,
+                "time_left_str": time_left_str,
+                "hours_left": hours_left,
+            },
+        )
+
+        try:
+            results = await self.unified_dispatcher.dispatch(payload)
+        except Exception as e:
+            logger.error(f"UnifiedNotificationDispatcher error for user {user_id}: {e}")
+            return ReminderStatus.FAILED
+
+        # Xác định trạng thái báo cáo dựa trên kết quả Discord (kênh DM chính)
+        discord_res = results.get("discord")
+        if discord_res:
+            if discord_res.success:
+                return ReminderStatus.SENT
+            if discord_res.status == "NO_DISCORD_ID":
+                return ReminderStatus.NO_DISCORD_ID
+            if discord_res.status == "DM_BLOCKED":
+                return ReminderStatus.DM_BLOCKED
+            return ReminderStatus.FAILED
+
+        # Fallback: Nếu không gửi discord (ví dụ không cấu hình discord channel), kiểm tra in_app
+        in_app_res = results.get("in_app")
+        if in_app_res and in_app_res.success:
+            return ReminderStatus.SENT
+
+        return ReminderStatus.FAILED

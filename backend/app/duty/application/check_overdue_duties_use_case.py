@@ -2,8 +2,9 @@
 Check Overdue Duties Use Case (for Daily Scheduled Job at 23:59).
 """
 
-from datetime import date, datetime
+from datetime import date
 from typing import cast
+
 from loguru import logger
 
 from app.duty.domain.entity import DutyStatus

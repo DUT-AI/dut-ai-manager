@@ -4,7 +4,6 @@ Covers success responses, 401 Unauthorized, and 422 Unprocessable Entity.
 """
 
 from datetime import date
-import pytest
 
 
 def test_get_daily_summary_success(api_client):

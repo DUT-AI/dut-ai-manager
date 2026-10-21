@@ -64,12 +64,20 @@ class ViolationRepository(BaseRepository[ViolationModel, Violation]):
     ) -> tuple[list[Violation], int]:
         """Get paginated violations with relations and total count."""
         from sqlalchemy import func
-        from app.shared.domain.query_support import apply_filters_only, apply_query_support
+
+        from app.shared.domain.query_support import (
+            apply_filters_only,
+            apply_query_support,
+        )
 
         # 1. Count query
-        count_stmt = select(func.count(ViolationModel.id)).where(ViolationModel.is_deleted == deleted)
+        count_stmt = select(func.count(ViolationModel.id)).where(
+            ViolationModel.is_deleted == deleted
+        )
         if query_support and query_support.filters:
-            count_stmt = apply_filters_only(count_stmt, ViolationModel, query_support.filters)
+            count_stmt = apply_filters_only(
+                count_stmt, ViolationModel, query_support.filters
+            )
         total = self.session.scalar(count_stmt) or 0
 
         # 2. Select query
@@ -83,9 +91,13 @@ class ViolationRepository(BaseRepository[ViolationModel, Violation]):
         if query_support:
             statement = apply_query_support(statement, ViolationModel, query_support)
         else:
-            sort_field = ViolationModel.updated_at if deleted else ViolationModel.created_at
+            sort_field = (
+                ViolationModel.updated_at if deleted else ViolationModel.created_at
+            )
             offset = (page - 1) * page_size
-            statement = statement.order_by(desc(sort_field)).offset(offset).limit(page_size)
+            statement = (
+                statement.order_by(desc(sort_field)).offset(offset).limit(page_size)
+            )
 
         results = self.session.scalars(statement).unique().all()
         return [m.to_entity() for m in results], total

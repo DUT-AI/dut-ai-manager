@@ -3,7 +3,9 @@ from sqlalchemy.orm import Session
 
 from app.meeting.infrastructure.repository import ParticipantRepository
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
-from app.shared.infrastructure.notification_service import NotificationService
+from app.shared.infrastructure.notification.dispatcher import (
+    UnifiedNotificationDispatcher,
+)
 from app.violation.application import (
     BulkDeleteViolationsUseCase,
     CreateViolationUseCase,
@@ -75,6 +77,6 @@ class ViolationModuleProvider(Provider):
     @provide
     def get_violation_notification_handler(
         self,
-        notification_service: NotificationService,
+        dispatcher: UnifiedNotificationDispatcher,
     ) -> ViolationNotificationHandler:
-        return ViolationNotificationHandler(notification_service)
+        return ViolationNotificationHandler(dispatcher)

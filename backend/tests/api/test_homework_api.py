@@ -4,17 +4,18 @@ Covers CRUD endpoints, reports, submission status, Quiz webhooks, user submissio
 and sync from Quiz for both success and error branches (401, 403, 404, 422).
 """
 
+import uuid
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, patch
-import uuid
+
 import pytest
 
 from app.core.config import settings
 
-
 # ---------------------------------------------------------------------------
 # FIXTURES
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(autouse=True)
 def mock_quiz_api_metadata():
@@ -59,6 +60,7 @@ def test_homework(admin_client, mock_current_user):
 # LIST & GET HOMEWORKS
 # ---------------------------------------------------------------------------
 
+
 def test_list_homeworks_unauthenticated(unauth_client):
     """Chưa đăng nhập khi lấy danh sách bài tập trả về 401."""
     res = unauth_client.get("/api/v1/homeworks")
@@ -102,6 +104,7 @@ def test_rescan_all_homeworks_dry_run(admin_client):
 # ---------------------------------------------------------------------------
 # CREATE HOMEWORK
 # ---------------------------------------------------------------------------
+
 
 def test_create_homework_unauthenticated(unauth_client):
     """Chưa đăng nhập không được tạo bài tập (401)."""
@@ -185,6 +188,7 @@ def test_create_homework_as_admin_success(admin_client, mock_current_user):
 # REPORTS & DETAIL
 # ---------------------------------------------------------------------------
 
+
 def test_get_unsubmitted_report(admin_client):
     """Thống kê bài tập chưa nộp của toàn bộ user."""
     res = admin_client.get("/api/v1/homeworks/report/unsubmitted")
@@ -196,7 +200,9 @@ def test_get_unsubmitted_report(admin_client):
 
 def test_get_unsubmitted_by_user(admin_client, mock_current_user):
     """Lấy danh sách bài tập chưa nộp của một user cụ thể."""
-    res = admin_client.get(f"/api/v1/homeworks/report/unsubmitted/{mock_current_user.id}")
+    res = admin_client.get(
+        f"/api/v1/homeworks/report/unsubmitted/{mock_current_user.id}"
+    )
     assert res.status_code == 200
     data = res.json()
     assert data["is_success"] is True
@@ -237,6 +243,7 @@ def test_get_homework_submission_status_success(admin_client, test_homework):
 # ---------------------------------------------------------------------------
 # UPDATE, DELETE & RESTORE
 # ---------------------------------------------------------------------------
+
 
 def test_update_homework_as_member_returns_403(member_client, test_homework):
     """Member không có quyền sửa bài tập (403 Forbidden)."""
@@ -314,7 +321,10 @@ def test_restore_homework_not_found(admin_client):
 # QUIZ WEBHOOK & SUBMISSIONS AUDIT LOG
 # ---------------------------------------------------------------------------
 
-def test_receive_submission_webhook_invalid_secret_returns_401(admin_client, test_homework):
+
+def test_receive_submission_webhook_invalid_secret_returns_401(
+    admin_client, test_homework
+):
     """Gửi webhook không có hoặc sai header X-Webhook-Secret trả về 401."""
     payload = {
         "lesson_slug": test_homework["slug"],
@@ -329,11 +339,15 @@ def test_receive_submission_webhook_invalid_secret_returns_401(admin_client, tes
 
     # Trường hợp sai header
     headers = {"X-Webhook-Secret": "WRONG_SECRET_12345"}
-    res2 = admin_client.post("/api/v1/homeworks/webhook/submission", json=payload, headers=headers)
+    res2 = admin_client.post(
+        "/api/v1/homeworks/webhook/submission", json=payload, headers=headers
+    )
     assert res2.status_code == 401
 
 
-def test_receive_submission_webhook_success_coding(admin_client, test_homework, mock_current_user):
+def test_receive_submission_webhook_success_coding(
+    admin_client, test_homework, mock_current_user
+):
     """Quiz webhook ghi nhận nộp bài Coding hợp lệ từ hệ thống Quiz."""
     headers = {"X-Webhook-Secret": settings.QUIZ_WEBHOOK_SECRET}
     payload = {
@@ -348,13 +362,17 @@ def test_receive_submission_webhook_success_coding(admin_client, test_homework, 
         "attempt_number": 1,
         "details": {"test_cases_passed": 5, "total_test_cases": 5},
     }
-    res = admin_client.post("/api/v1/homeworks/webhook/submission", json=payload, headers=headers)
+    res = admin_client.post(
+        "/api/v1/homeworks/webhook/submission", json=payload, headers=headers
+    )
     assert res.status_code == 200
     data = res.json()
     assert data["is_success"] is True
 
 
-def test_receive_submission_webhook_success_game(admin_client, test_homework, mock_current_user):
+def test_receive_submission_webhook_success_game(
+    admin_client, test_homework, mock_current_user
+):
     """Quiz webhook ghi nhận hoàn thành bài tập Game hợp lệ."""
     headers = {"X-Webhook-Secret": settings.QUIZ_WEBHOOK_SECRET}
     payload = {
@@ -366,7 +384,9 @@ def test_receive_submission_webhook_success_game(admin_client, test_homework, mo
         "score": 95.0,
         "details": {"level": 3, "time_spent_seconds": 120},
     }
-    res = admin_client.post("/api/v1/homeworks/webhook/submission", json=payload, headers=headers)
+    res = admin_client.post(
+        "/api/v1/homeworks/webhook/submission", json=payload, headers=headers
+    )
     assert res.status_code == 200
     data = res.json()
     assert data["is_success"] is True
@@ -392,7 +412,10 @@ def test_get_user_homework_submissions(admin_client, test_homework, mock_current
     assert isinstance(data["data"], list)
 
 
-@patch("app.homework.infrastructure.quiz_api.QuizApiClient.get_homework_submissions_for_sync", new_callable=AsyncMock)
+@patch(
+    "app.homework.infrastructure.quiz_api.QuizApiClient.get_homework_submissions_for_sync",
+    new_callable=AsyncMock,
+)
 def test_sync_homework_from_quiz_success(mock_quiz_sync, admin_client, test_homework):
     """Đồng bộ bài nộp từ Quiz API cho bài tập (mock API ngoài)."""
     mock_quiz_sync.return_value = []

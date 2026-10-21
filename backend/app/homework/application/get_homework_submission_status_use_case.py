@@ -55,12 +55,20 @@ class GetHomeworkSubmissionStatusUseCase:
             return None
 
         # 1. Thu thập dữ liệu từ các Repository
-        submissions = self.homework_submission_repo.get_submissions_by_homework(homework.id)
-        assignees = self.homework_assignee_repo.get_assignees_with_user_info(homework.id)
-        postpone_map = self._get_postpone_map(homework.id, [a.user_id for a in assignees])
+        submissions = self.homework_submission_repo.get_submissions_by_homework(
+            homework.id
+        )
+        assignees = self.homework_assignee_repo.get_assignees_with_user_info(
+            homework.id
+        )
+        postpone_map = self._get_postpone_map(
+            homework.id, [a.user_id for a in assignees]
+        )
 
         # 2. Lập bản đồ bài nộp thông qua Aggregate Root Homework
-        db_exercise_map, db_coding_general_map, db_game_map = homework.index_submissions(submissions)
+        db_exercise_map, db_coding_general_map, db_game_map = (
+            homework.index_submissions(submissions)
+        )
 
         # 3. Trích xuất danh mục các bài tập con
         coding_exercises = self._extract_coding_exercises(db_exercise_map, submissions)
@@ -82,7 +90,9 @@ class GetHomeworkSubmissionStatusUseCase:
         ]
 
         # 5. Tính tỷ lệ hoàn thành theo từng bài tập con
-        self._calculate_exercise_completion_rates(coding_exercises, students, len(assignees))
+        self._calculate_exercise_completion_rates(
+            coding_exercises, students, len(assignees)
+        )
 
         # 6. Phân nhóm nộp bài Coding và Game
         coding_status, game_status = self._categorize_submissions(students)
@@ -93,6 +103,7 @@ class GetHomeworkSubmissionStatusUseCase:
             coding_exercises=coding_exercises,
             students=students,
         )
+
     # -------------------------------------------------------------------------
     # Private Helper Methods
     # -------------------------------------------------------------------------
@@ -174,7 +185,9 @@ class GetHomeworkSubmissionStatusUseCase:
                             is_passed=sub.is_passed,
                             score=sub.score,
                             attempt_number=sub.attempt_number or 1,
-                            submitted_at=sub.submitted_at.isoformat() if sub.submitted_at else None,
+                            submitted_at=sub.submitted_at.isoformat()
+                            if sub.submitted_at
+                            else None,
                             is_late=is_late,
                         )
                     )
@@ -210,7 +223,9 @@ class GetHomeworkSubmissionStatusUseCase:
         if game_sub:
             # Áp dụng Domain Rule: kiểm tra nộp trễ game
             game_is_late = game_sub.is_late_for(effective_deadline)
-            game_submitted_at_str = game_sub.submitted_at.isoformat() if game_sub.submitted_at else None
+            game_submitted_at_str = (
+                game_sub.submitted_at.isoformat() if game_sub.submitted_at else None
+            )
             game_score = game_sub.score
 
         return StudentHomeworkDetailDTO(
@@ -240,7 +255,10 @@ class GetHomeworkSubmissionStatusUseCase:
             ex.completed_count = sum(
                 1
                 for s in students
-                if any(ce.exercise_id == ex.exercise_id and ce.is_passed for ce in s.coding_exercises)
+                if any(
+                    ce.exercise_id == ex.exercise_id and ce.is_passed
+                    for ce in s.coding_exercises
+                )
             )
             ex.completion_rate = (
                 round((ex.completed_count / total_assigned) * 100, 1)
@@ -295,6 +313,10 @@ class GetHomeworkSubmissionStatusUseCase:
                 )
 
         return (
-            CategorySubmissionStatus(submitted=coding_submitted, not_submitted=coding_not_submitted),
-            CategorySubmissionStatus(submitted=game_submitted, not_submitted=game_not_submitted),
+            CategorySubmissionStatus(
+                submitted=coding_submitted, not_submitted=coding_not_submitted
+            ),
+            CategorySubmissionStatus(
+                submitted=game_submitted, not_submitted=game_not_submitted
+            ),
         )

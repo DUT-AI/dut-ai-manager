@@ -41,8 +41,8 @@ from app.reminder.application.send_web_push_notification_use_case import (
 from app.reminder.application.unregister_push_subscription_use_case import (
     UnregisterPushSubscriptionUseCase,
 )
-from app.reminder.infrastructure.web_push_service import WebPushService
 from app.reminder.domain.entity import NotificationCategory
+from app.reminder.infrastructure.web_push_service import WebPushService
 from app.shared.application.response import ApiResponse, PaginationMeta
 
 router = APIRouter(
@@ -116,7 +116,9 @@ async def mark_all_as_read(
 ):
     """Đánh dấu tất cả thông báo của tôi là đã đọc."""
     count = await use_case.execute(user_id=current_user.user_id)
-    return ApiResponse.success(data=count, message=f"Đã đánh dấu {count} thông báo là đã đọc")
+    return ApiResponse.success(
+        data=count, message=f"Đã đánh dấu {count} thông báo là đã đọc"
+    )
 
 
 @router.get("/push-public-key", response_model=ApiResponse[PushPublicKeyDto])
@@ -136,7 +138,9 @@ async def get_push_public_key(
     )
 
 
-@router.post("/push-subscriptions", response_model=ApiResponse[PushSubscriptionResponseDto])
+@router.post(
+    "/push-subscriptions", response_model=ApiResponse[PushSubscriptionResponseDto]
+)
 async def register_push_subscription(
     body: PushSubscriptionRequestDto,
     current_user: CurrentUser,
@@ -182,5 +186,3 @@ async def test_push_notification(
         data=TestPushResponseDto(sent_count=sent, failed_count=failed),
         message=f"Đã gửi thông báo thử nghiệm tới {sent} thiết bị đang hoạt động",
     )
-
-

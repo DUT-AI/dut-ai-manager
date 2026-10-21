@@ -28,4 +28,3 @@ class MeetingParticipantTransferred(DomainEvent):
     old_meeting_id: int | None
     new_meeting_id: int
     note: str = ""
-

@@ -5,18 +5,18 @@ Revises: 6a13dfe16856
 Create Date: 2026-10-05 00:30:31.591303
 
 """
-from typing import Sequence, Union
+
+from collections.abc import Sequence
+
+import sqlalchemy as sa
 
 from alembic import op
-import sqlalchemy as sa
-import sqlmodel
-
 
 # revision identifiers, used by Alembic.
-revision: str = '235acc57f519'
-down_revision: Union[str, Sequence[str], None] = '6a13dfe16856'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+revision: str = "235acc57f519"
+down_revision: str | Sequence[str] | None = "6a13dfe16856"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -30,7 +30,12 @@ def upgrade() -> None:
         sa.Column("submitted_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("is_passed", sa.Boolean(), server_default="true", nullable=False),
         sa.Column("details", sa.JSON(), server_default="{}", nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(["homework_id"], ["homeworks.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
@@ -41,13 +46,27 @@ def upgrade() -> None:
         ["homework_id", "user_id", "submission_type", "submitted_at"],
         unique=False,
     )
-    op.create_index(op.f("ix_homework_submissions_homework_id"), "homework_submissions", ["homework_id"], unique=False)
-    op.create_index(op.f("ix_homework_submissions_user_id"), "homework_submissions", ["user_id"], unique=False)
+    op.create_index(
+        op.f("ix_homework_submissions_homework_id"),
+        "homework_submissions",
+        ["homework_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_homework_submissions_user_id"),
+        "homework_submissions",
+        ["user_id"],
+        unique=False,
+    )
 
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.drop_index(op.f("ix_homework_submissions_user_id"), table_name="homework_submissions")
-    op.drop_index(op.f("ix_homework_submissions_homework_id"), table_name="homework_submissions")
+    op.drop_index(
+        op.f("ix_homework_submissions_user_id"), table_name="homework_submissions"
+    )
+    op.drop_index(
+        op.f("ix_homework_submissions_homework_id"), table_name="homework_submissions"
+    )
     op.drop_index("idx_hw_submissions_lookup", table_name="homework_submissions")
     op.drop_table("homework_submissions")

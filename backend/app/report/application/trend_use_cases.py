@@ -175,4 +175,3 @@ class GetActivityTrendUseCase:
             )
 
         return items
-

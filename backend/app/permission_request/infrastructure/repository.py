@@ -47,7 +47,9 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         """Get paginated permission requests with eager-loaded relations and optimized count."""
         from app.shared.domain.query_support import apply_filters_only
 
-        count_stmt = select(func.count(ORMModel.id)).where(ORMModel.is_deleted == deleted)
+        count_stmt = select(func.count(ORMModel.id)).where(
+            ORMModel.is_deleted == deleted
+        )
         data_stmt = (
             select(ORMModel)
             .options(
@@ -62,9 +64,7 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
             count_stmt = apply_filters_only(count_stmt, ORMModel, query_support.filters)
             data_stmt = apply_query_support(data_stmt, ORMModel, query_support)
             if not query_support.sorting:
-                sort_field = (
-                    ORMModel.updated_at if deleted else ORMModel.created_at
-                )
+                sort_field = ORMModel.updated_at if deleted else ORMModel.created_at
                 data_stmt = data_stmt.order_by(sort_field.desc(), ORMModel.id.desc())
         else:
             sort_field = ORMModel.updated_at if deleted else ORMModel.created_at
@@ -279,4 +279,3 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
             self.soft_delete(entity)
             return True
         return False
-

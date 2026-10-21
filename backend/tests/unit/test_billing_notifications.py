@@ -10,12 +10,10 @@ from app.shared.infrastructure.notification_payload import NotificationCategory
 
 @pytest.mark.asyncio
 async def test_billing_notification_handler_invoice_created():
-    mock_notification_service = MagicMock()
-    mock_notification_service.send_to_user = AsyncMock(
-        return_value={"discord": True, "zalo": True}
-    )
+    mock_dispatcher = MagicMock()
+    mock_dispatcher.dispatch = AsyncMock()
 
-    handler = BillingNotificationHandler(notification_service=mock_notification_service)
+    handler = BillingNotificationHandler(dispatcher=mock_dispatcher)
 
     event = InvoiceCreated(
         invoice_id=1,
@@ -28,8 +26,8 @@ async def test_billing_notification_handler_invoice_created():
 
     await handler._send_invoice_created_task(event)
 
-    mock_notification_service.send_to_user.assert_awaited_once()
-    payload = mock_notification_service.send_to_user.call_args[0][0]
+    mock_dispatcher.dispatch.assert_awaited_once()
+    payload = mock_dispatcher.dispatch.call_args[0][0]
 
     assert payload.user_id == 10
     assert payload.category == NotificationCategory.BILLING
@@ -40,12 +38,10 @@ async def test_billing_notification_handler_invoice_created():
 
 @pytest.mark.asyncio
 async def test_billing_notification_handler_invoice_paid():
-    mock_notification_service = MagicMock()
-    mock_notification_service.send_to_user = AsyncMock(
-        return_value={"discord": True, "zalo": True}
-    )
+    mock_dispatcher = MagicMock()
+    mock_dispatcher.dispatch = AsyncMock()
 
-    handler = BillingNotificationHandler(notification_service=mock_notification_service)
+    handler = BillingNotificationHandler(dispatcher=mock_dispatcher)
 
     event = InvoicePaid(
         invoice_id=1,
@@ -58,8 +54,8 @@ async def test_billing_notification_handler_invoice_paid():
 
     await handler._send_invoice_paid_task(event)
 
-    mock_notification_service.send_to_user.assert_awaited_once()
-    payload = mock_notification_service.send_to_user.call_args[0][0]
+    mock_dispatcher.dispatch.assert_awaited_once()
+    payload = mock_dispatcher.dispatch.call_args[0][0]
 
     assert payload.user_id == 10
     assert payload.category == NotificationCategory.BILLING

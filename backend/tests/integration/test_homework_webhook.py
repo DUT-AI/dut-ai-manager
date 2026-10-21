@@ -257,9 +257,7 @@ async def test_webhook_update_existing_exercise_submission(
     mock_homework_repo.get_by_slug = MagicMock(return_value=hw)
     existing_model = MagicMock()
     existing_model.id = 101
-    mock_submission_repo.find_submission_match = MagicMock(
-        return_value=existing_model
-    )
+    mock_submission_repo.find_submission_match = MagicMock(return_value=existing_model)
 
     updated_entity = HomeworkSubmission(
         id=101,
@@ -273,9 +271,7 @@ async def test_webhook_update_existing_exercise_submission(
         submitted_at=datetime.now(UTC),
         is_passed=True,
     )
-    mock_submission_repo.update_submission = MagicMock(
-        return_value=updated_entity
-    )
+    mock_submission_repo.update_submission = MagicMock(return_value=updated_entity)
 
     use_case = RecordHomeworkSubmissionUseCase(
         homework_repo=mock_homework_repo,

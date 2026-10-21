@@ -3,8 +3,6 @@ API Tests for Billing Controller (/api/v1/billing).
 Covers success responses, 401 Unauthorized, 403 Forbidden, 404 Not Found, and 400 Bad Request.
 """
 
-import pytest
-
 
 def test_get_my_invoices_authenticated(member_client):
     """User đã đăng nhập có thể lấy danh sách hoá đơn của chính mình."""

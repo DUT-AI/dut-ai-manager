@@ -4,6 +4,7 @@ and managing reminder deduplication / cooldowns.
 """
 
 from datetime import datetime
+
 from sqlalchemy import desc, func, select, update
 from sqlalchemy.orm import Session
 
@@ -12,7 +13,6 @@ from app.reminder.domain.entity import (
     NotificationCategory,
     PushSubscription,
     ReminderStage,
-    ReminderStatus,
     TaskType,
 )
 from app.reminder.domain.repository import PushSubscriptionRepository
@@ -54,19 +54,18 @@ class NotificationRepository(BaseRepository[NotificationModel, Notification]):
 
         # Lấy dữ liệu phân trang
         offset = (page - 1) * page_size
-        stmt = stmt.order_by(desc(self.model.created_at)).offset(offset).limit(page_size)
+        stmt = (
+            stmt.order_by(desc(self.model.created_at)).offset(offset).limit(page_size)
+        )
         models = self.session.execute(stmt).scalars().all()
 
         return [m.to_entity() for m in models], total
 
     def get_unread_count(self, user_id: int) -> int:
         """Đếm số thông báo chưa đọc của user."""
-        stmt = (
-            select(func.count(self.model.id))
-            .where(
-                self.model.user_id == user_id,
-                self.model.is_read.is_(False),
-            )
+        stmt = select(func.count(self.model.id)).where(
+            self.model.user_id == user_id,
+            self.model.is_read.is_(False),
         )
         return self.session.execute(stmt).scalar() or 0
 
@@ -241,4 +240,3 @@ class PushSubscriptionRepositoryImpl(
             self.session.commit()
             return True
         return False
-

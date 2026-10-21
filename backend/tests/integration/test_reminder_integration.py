@@ -4,6 +4,7 @@ Tests deduplication, cooldown, and notification repository operations on single 
 """
 
 from datetime import datetime
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -102,7 +103,9 @@ def test_unified_notification_repository_crud_and_pagination(db_session):
             user_id=1,
             title=f"Thông báo {i}",
             content=f"Nội dung {i}",
-            category=NotificationCategory.HOMEWORK if i < 3 else NotificationCategory.DUTY,
+            category=NotificationCategory.HOMEWORK
+            if i < 3
+            else NotificationCategory.DUTY,
             level=NotificationLevel.INFO,
             action_url="/dashboard/homeworks",
         )

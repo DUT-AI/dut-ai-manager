@@ -31,14 +31,16 @@ from app.core.config import settings
 from app.shared.infrastructure.asset_helper import get_asset_url
 from app.shared.infrastructure.database import engine
 from app.shared.infrastructure.discord_service import DiscordService
+from app.shared.infrastructure.notification.discord_channel import (
+    DiscordNotificationChannel,
+)
 from app.shared.infrastructure.notification_payload import (
     NotificationCategory,
     NotificationLevel,
     NotificationPayload,
 )
-from app.shared.infrastructure.notification_service import NotificationService
+from app.user.domain.entity import UserEntity
 from app.user.infrastructure.repository import UserRepository
-from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
 
 
 def build_test_payloads(user_id: int = 1) -> dict[str, NotificationPayload]:
@@ -169,7 +171,7 @@ async def main():
     parser.add_argument(
         "--user-id",
         type=int,
-        help="User ID trong DB hệ thống (gửi qua NotificationService)",
+        help="User ID trong DB hệ thống (gửi qua UnifiedNotificationDispatcher)",
     )
     parser.add_argument(
         "--scenario",
@@ -224,22 +226,22 @@ async def main():
     if args.user_id:
         with Session(engine) as db:
             user_repo = UserRepository(db)
-            zalo_bot = ZaloBotClient()
-            notification_service = NotificationService(
-                discord_service=discord_service,
-                zalo_bot=zalo_bot,
-                user_repo=user_repo,
-            )
+            user = user_repo.get_by_id(args.user_id)
+            if not user:
+                print(f"❌ Không tìm thấy User ID: {args.user_id}")
+                return
+
+            channel = DiscordNotificationChannel(discord_service=discord_service)
             print(
-                f"👤 Gửi thông báo cho User ID: {args.user_id} qua NotificationService..."
+                f"👤 Gửi thông báo cho User: {user.name} (Discord ID: {user.discord_id}) qua DiscordNotificationChannel..."
             )
             import dataclasses
 
             for name, payload in selected_scenarios:
                 payload = dataclasses.replace(payload, user_id=args.user_id)
                 print(f"  ➡️ Đang gửi kịch bản: [{name}] - '{payload.title}'...")
-                res = await notification_service.send_to_user(payload)
-                print(f"     Kết quả: {res}")
+                res = await channel.send(user, payload)
+                print(f"     Kết quả: success={res.success}, status={res.status}")
                 await asyncio.sleep(1)
         print("\n🎉 Hoàn thành kiểm thử qua User ID!")
         return
@@ -247,12 +249,13 @@ async def main():
     # 2. Gửi trực tiếp qua Discord User ID (DM)
     if args.discord_id:
         print(f"💬 Gửi trực tiếp DM tới Discord ID: {args.discord_id}...")
-        dummy_repo = UserRepository(None)  # type: ignore
-        dummy_zalo = ZaloBotClient()
-        notification_service = NotificationService(
-            discord_service=discord_service,
-            zalo_bot=dummy_zalo,
-            user_repo=dummy_repo,
+        channel = DiscordNotificationChannel(discord_service=discord_service)
+        dummy_user = UserEntity(
+            id=1,
+            email="test@dut.vn",
+            name="Tester",
+            role="USER",
+            discord_id=args.discord_id,
         )
 
         for name, payload in selected_scenarios:
@@ -261,13 +264,11 @@ async def main():
                 get_asset_url(payload.image_asset) if payload.image_asset else None
             )
             print(f"     📸 Image Asset: {payload.image_asset} -> {asset_url}")
-            success = await notification_service._send_discord_with_retry(
-                args.discord_id, payload
-            )
-            if success:
+            delivery_res = await channel.send(dummy_user, payload)
+            if delivery_res.success:
                 print(f"     ✅ Gửi thành công: [{name}]")
             else:
-                print(f"     ❌ Gửi thất bại: [{name}]")
+                print(f"     ❌ Gửi thất bại: [{name}] ({delivery_res.error_message})")
             await asyncio.sleep(1.5)
 
         print("\n🎉 Hoàn thành kiểm thử DM Discord!")
@@ -276,23 +277,15 @@ async def main():
     # 3. Gửi vào Discord Channel ID (Room)
     if args.channel_id:
         print(f"📢 Gửi tới Discord Channel ID: {args.channel_id}...")
-        dummy_repo = UserRepository(None)  # type: ignore
-        dummy_zalo = ZaloBotClient()
-        notification_service = NotificationService(
-            discord_service=discord_service,
-            zalo_bot=dummy_zalo,
-            user_repo=dummy_repo,
-        )
+        channel = DiscordNotificationChannel(discord_service=discord_service)
 
         for name, payload in selected_scenarios:
             print(f"  ➡️ Đang gửi kịch bản: [{name}] - '{payload.title}'...")
-            success = await notification_service._send_discord_room_with_retry(
-                args.channel_id, payload
-            )
-            if success:
+            delivery_res = await channel.send_room(args.channel_id, payload)
+            if delivery_res.success:
                 print(f"     ✅ Gửi thành công: [{name}]")
             else:
-                print(f"     ❌ Gửi thất bại: [{name}]")
+                print(f"     ❌ Gửi thất bại: [{name}] ({delivery_res.error_message})")
             await asyncio.sleep(1.5)
 
         print("\n🎉 Hoàn thành kiểm thử Channel Discord!")

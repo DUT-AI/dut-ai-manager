@@ -28,7 +28,9 @@ def main():
             name="Huỳnh Phước Nguyên",
             password="DUT-TestPassword-123456",
         )
-        logger.info("✅ Email sending completed! Please check your inbox / spam folder.")
+        logger.info(
+            "✅ Email sending completed! Please check your inbox / spam folder."
+        )
     except Exception as e:
         logger.error(f"❌ Error while calling send_new_account_email: {e}")
 

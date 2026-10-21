@@ -1,28 +1,31 @@
 import asyncio
+from datetime import datetime
 
 from loguru import logger
 
 from app.shared.application.event_handler import EventHandler
+from app.shared.infrastructure.notification.dispatcher import (
+    UnifiedNotificationDispatcher,
+)
 from app.shared.infrastructure.notification_payload import (
     NotificationCategory,
     NotificationLevel,
     NotificationPayload,
 )
-from app.shared.infrastructure.notification_service import NotificationService
 from app.violation.domain.events import ViolationCreated
 
 
 class ViolationNotificationHandler(EventHandler):
-    """Xử lý gửi thông báo Discord và Zalo khi có vi phạm mới."""
+    """Xử lý gửi thông báo đa kênh (In-App DB, Discord, Zalo, Web Push) khi có vi phạm mới."""
 
     def __init__(
         self,
-        notification_service: NotificationService,
+        dispatcher: UnifiedNotificationDispatcher,
     ):
-        self.notification_service = notification_service
+        self.dispatcher = dispatcher
 
     async def handle(self, event: ViolationCreated) -> None:
-        """Thông báo cho người dùng trên Discord và Zalo khi có vi phạm mới."""
+        """Thông báo cho người dùng khi có vi phạm mới."""
         try:
             logger.info(f"Handling ViolationCreated for user {event.user_id}")
             asyncio.create_task(self._send_notifications_task(event))
@@ -30,13 +33,11 @@ class ViolationNotificationHandler(EventHandler):
             logger.error(f"Error in ViolationNotificationHandler: {e}")
 
     async def _send_notifications_task(self, event: ViolationCreated) -> None:
-        """Hàm chạy ngầm để gửi thông báo qua NotificationService."""
+        """Hàm chạy ngầm để gửi thông báo qua UnifiedNotificationDispatcher."""
         try:
             display_date = event.date
             if event.date:
                 try:
-                    from datetime import datetime
-
                     dt = datetime.fromisoformat(event.date)
                     if dt.hour == 0 and dt.minute == 0:
                         display_date = dt.strftime("%d/%m/%Y")
@@ -61,16 +62,17 @@ class ViolationNotificationHandler(EventHandler):
                 content=(
                     f"Chào **{event.user_name or 'bạn'}**!\n"
                     f"Bạn vừa bị ghi nhận 01 biên bản vi phạm mới trong hệ thống.\n"
-                    f"Vui lòng kiểm tra và rút kinh nghiệm lần sau."
+                    f"Lý do: **{event.reason}**.\n"
+                    f"Vui lòng kiểm tra và rút kinh nghiệm."
                 ),
                 category=NotificationCategory.VIOLATION,
                 level=NotificationLevel.CRITICAL,
                 image_asset="meme-doi-no-2.jpg",
                 fields=fields,
-                action_url=None,
+                action_url="/violations",
             )
 
-            await self.notification_service.send_to_user(payload)
+            await self.dispatcher.dispatch(payload)
             logger.info(f"Sent violation notification for user {event.user_id}")
 
         except Exception as e:

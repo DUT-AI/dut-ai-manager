@@ -5,7 +5,7 @@ Helper to build standardized Discord Rich Embed for task reminders.
 from datetime import UTC, datetime
 from typing import Any
 
-from app.reminder.domain.entity import NotificationLevel, ReminderStage, TaskType
+from app.reminder.domain.entity import ReminderStage, TaskType
 
 
 def format_remaining_time(hours_left: float) -> str:
@@ -45,20 +45,31 @@ def build_reminder_embed(
         TaskType.HOMEWORK: "Bài tập về nhà",
         TaskType.DUTY: "Trực nhật vệ sinh",
         TaskType.MEETING_EVALUATION: "Đánh giá cuộc họp",
+        TaskType.MEETING: "Buổi họp / Sinh hoạt",
     }.get(task_type, "Nhiệm vụ")
-
-    prefix = "🚨 [CẢNH BÁO GẤP]" if is_urgent else "⏰ [NHẮC NHỞ HẠN CHÓT]"
-    title = f"{prefix} {type_name}: {task_title}"
 
     time_left_str = format_remaining_time(hours_left)
 
-    description = (
-        f"Chào bạn! Bạn có nhiệm vụ **{task_title}** sắp đến hạn nộp.\n\n"
-        f"📅 **Hạn chót**: `{deadline_str}` (Giờ VN - UTC+7)\n"
-        f"⏳ **Thời gian còn lại**: **{time_left_str}**\n\n"
-        f"⚠️ *Lưu ý: Vui lòng hoàn thành và nộp trước thời hạn trên để tránh bị hệ thống tự động ghi nhận lỗi vi phạm (Violation) vào cuối ngày.*\n\n"
-        f"👉 [**Bấm vào đây để nộp bài ngay**]({action_url})"
-    )
+    if task_type == TaskType.MEETING:
+        prefix = "🚨 [CẢNH BÁO GẤP]" if is_urgent else "⏰ [NHẮC NHỞ LỊCH HỌP]"
+        title = f"{prefix} Buổi họp / Sinh hoạt: {task_title}"
+        description = (
+            f"Chào bạn! Bạn có lịch tham gia buổi sinh hoạt **{task_title}** sắp diễn ra.\n\n"
+            f"📅 **Thời gian bắt đầu**: `{deadline_str}` (Giờ VN - UTC+7)\n"
+            f"⏳ **Thời gian còn lại**: **{time_left_str}**\n\n"
+            f"⚠️ *Lưu ý: Vui lòng có mặt đúng giờ và hoàn tất điểm danh trước khi bắt đầu buổi sinh hoạt.*\n\n"
+            f"👉 [**Bấm vào đây để xem chi tiết và điểm danh**]({action_url})"
+        )
+    else:
+        prefix = "🚨 [CẢNH BÁO GẤP]" if is_urgent else "⏰ [NHẮC NHỞ HẠN CHÓT]"
+        title = f"{prefix} {type_name}: {task_title}"
+        description = (
+            f"Chào bạn! Bạn có nhiệm vụ **{task_title}** sắp đến hạn nộp.\n\n"
+            f"📅 **Hạn chót**: `{deadline_str}` (Giờ VN - UTC+7)\n"
+            f"⏳ **Thời gian còn lại**: **{time_left_str}**\n\n"
+            f"⚠️ *Lưu ý: Vui lòng hoàn thành và nộp trước thời hạn trên để tránh bị hệ thống tự động ghi nhận lỗi vi phạm (Violation) vào cuối ngày.*\n\n"
+            f"👉 [**Bấm vào đây để nộp bài ngay**]({action_url})"
+        )
 
     return {
         "title": title,

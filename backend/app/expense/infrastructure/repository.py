@@ -132,10 +132,14 @@ class ExpenseRepository:
         if team_id is not None:
             stmt = stmt.where(ExpenseInvoiceModel.team_id == team_id)
 
-        stmt = stmt.order_by(
-            ExpenseInvoiceModel.expense_date.desc(),
-            ExpenseInvoiceModel.created_at.desc(),
-        ).offset(offset).limit(page_size)
+        stmt = (
+            stmt.order_by(
+                ExpenseInvoiceModel.expense_date.desc(),
+                ExpenseInvoiceModel.created_at.desc(),
+            )
+            .offset(offset)
+            .limit(page_size)
+        )
 
         items = self.session.scalars(stmt).all()
         return items, total

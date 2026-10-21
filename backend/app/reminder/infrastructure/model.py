@@ -5,6 +5,7 @@ and internal reminder tracking/deduplication.
 """
 
 from datetime import datetime
+
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -67,8 +68,12 @@ class NotificationModel(Base, SQLAlchemyTimestampMixin):
             read_at=self.read_at,
             task_type=TaskType(self.task_type) if self.task_type else None,
             task_id=self.task_id,
-            reminder_stage=ReminderStage(self.reminder_stage) if self.reminder_stage else None,
-            discord_status=ReminderStatus(self.discord_status) if self.discord_status else None,
+            reminder_stage=ReminderStage(self.reminder_stage)
+            if self.reminder_stage
+            else None,
+            discord_status=ReminderStatus(self.discord_status)
+            if self.discord_status
+            else None,
             error_message=self.error_message,
             created_at=self.created_at,
         )
@@ -87,8 +92,12 @@ class NotificationModel(Base, SQLAlchemyTimestampMixin):
             read_at=entity.read_at,
             task_type=entity.task_type.value if entity.task_type else None,
             task_id=entity.task_id,
-            reminder_stage=entity.reminder_stage.value if entity.reminder_stage else None,
-            discord_status=entity.discord_status.value if entity.discord_status else None,
+            reminder_stage=entity.reminder_stage.value
+            if entity.reminder_stage
+            else None,
+            discord_status=entity.discord_status.value
+            if entity.discord_status
+            else None,
             error_message=entity.error_message,
             created_at=entity.created_at,
         )
@@ -99,6 +108,7 @@ class PushSubscriptionModel(Base, SQLAlchemyTimestampMixin):
     Database ORM mapping cho bảng 'push_subscriptions'.
     Lưu trữ các endpoint VAPID đã đăng ký từ trình duyệt client.
     """
+
     __tablename__ = "push_subscriptions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
@@ -112,9 +122,7 @@ class PushSubscriptionModel(Base, SQLAlchemyTimestampMixin):
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
-    __table_args__ = (
-        Index("idx_push_sub_user_active", "user_id", "is_active"),
-    )
+    __table_args__ = (Index("idx_push_sub_user_active", "user_id", "is_active"),)
 
     def to_entity(self) -> PushSubscription:
         return PushSubscription(
@@ -141,4 +149,3 @@ class PushSubscriptionModel(Base, SQLAlchemyTimestampMixin):
             is_active=entity.is_active,
             last_used_at=entity.last_used_at,
         )
-

@@ -133,4 +133,3 @@ class PermissionRequest(SQLAlchemyTimestampMixin, Base):
             updated_at=e.updated_at,
             is_deleted=e.is_deleted,
         )
-

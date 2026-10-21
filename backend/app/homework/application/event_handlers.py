@@ -5,30 +5,32 @@ from loguru import logger
 from app.homework.domain.value_objects import HomeworkAssigned, HomeworkGraded
 from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.shared.application.event_handler import EventHandler
+from app.shared.infrastructure.notification.dispatcher import (
+    UnifiedNotificationDispatcher,
+)
 from app.shared.infrastructure.notification_payload import (
     NotificationCategory,
     NotificationLevel,
     NotificationPayload,
 )
-from app.shared.infrastructure.notification_service import NotificationService
 from app.user.infrastructure.repository import UserRepository
 
 
 class HomeworkNotificationHandler(EventHandler):
-    """Xử lý gửi thông báo Discord và Zalo khi có bài tập mới."""
+    """Xử lý gửi thông báo đa kênh (In-App DB, Discord, Zalo, Web Push) khi có bài tập mới."""
 
     def __init__(
         self,
-        notification_service: NotificationService,
+        dispatcher: UnifiedNotificationDispatcher,
         homework_repo: HomeworkRepository,
         user_repo: UserRepository,
     ):
-        self.notification_service = notification_service
+        self.dispatcher = dispatcher
         self.homework_repo = homework_repo
         self.user_repo = user_repo
 
     async def handle(self, event: HomeworkAssigned) -> None:
-        """Thông báo cho người dùng trên Discord và Zalo khi họ được giao bài tập mới."""
+        """Thông báo cho người dùng khi họ được giao bài tập mới."""
         try:
             logger.info(f"Handling HomeworkAssigned for homework {event.homework_id}")
             homework = self.homework_repo.get_by_id(event.homework_id)
@@ -50,7 +52,7 @@ class HomeworkNotificationHandler(EventHandler):
             logger.error(f"Error in HomeworkNotificationHandler: {e}")
 
     async def _send_notifications_task(self, homework, users) -> None:
-        """Hàm chạy ngầm để gửi thông báo qua NotificationService."""
+        """Hàm chạy ngầm để gửi thông báo qua UnifiedNotificationDispatcher."""
         try:
             deadline_str = homework.deadline.strftime("%H:%M ngày %d/%m/%Y")
 
@@ -78,9 +80,11 @@ class HomeworkNotificationHandler(EventHandler):
                     level=NotificationLevel.INFO,
                     image_asset="meme-hoc-bai.webp",
                     fields=fields,
-                    action_url=homework.link or None,
+                    action_url=homework.link or f"/homework/{homework.id}",
+                    task_type="HOMEWORK",
+                    task_id=homework.id,
                 )
-                await self.notification_service.send_to_user(payload)
+                await self.dispatcher.dispatch(payload)
 
             logger.info(f"Finished sending notifications for homework {homework.id}")
         except Exception as e:
@@ -90,15 +94,15 @@ class HomeworkNotificationHandler(EventHandler):
 
 
 class HomeworkGradedNotificationHandler(EventHandler):
-    """Xử lý gửi thông báo kết quả chấm điểm (Feedback) qua Discord và Zalo."""
+    """Xử lý gửi thông báo kết quả chấm điểm (Feedback) qua đa kênh."""
 
     def __init__(
         self,
-        notification_service: NotificationService,
+        dispatcher: UnifiedNotificationDispatcher,
         homework_repo: HomeworkRepository,
         user_repo: UserRepository,
     ):
-        self.notification_service = notification_service
+        self.dispatcher = dispatcher
         self.homework_repo = homework_repo
         self.user_repo = user_repo
 
@@ -153,7 +157,7 @@ class HomeworkGradedNotificationHandler(EventHandler):
                 title="✅ KẾT QUẢ CHẤM BÀI TẬP",
                 content=(
                     f"Chào **{user.name}**!\n"
-                    f"Bài tập **{homework.title}** của bạn đã được chấm xong."
+                    f"Bài tập **{homework.title}** của bạn đã được chấm xong. Kết quả: **{score_text}** ({pass_text})."
                 ),
                 category=NotificationCategory.HOMEWORK,
                 level=NotificationLevel.SUCCESS
@@ -161,10 +165,12 @@ class HomeworkGradedNotificationHandler(EventHandler):
                 else NotificationLevel.WARNING,
                 image_asset="meme-lam-viec-2.jpeg",
                 fields=fields,
-                action_url=None,
+                action_url=f"/homework/{homework.id}",
+                task_type="HOMEWORK",
+                task_id=homework.id,
             )
 
-            await self.notification_service.send_to_user(payload)
+            await self.dispatcher.dispatch(payload)
         except Exception as e:
             logger.error(
                 f"Unexpected error in background graded notification task: {e}"

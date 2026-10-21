@@ -4,6 +4,7 @@ Scans today's cleaning duties that are still pending or rejected before 22:00.
 """
 
 from datetime import datetime
+
 from app.duty.domain.entity import DutyStatus
 from app.duty.infrastructure.repository import DutyRepository
 from app.reminder.application.scanners.base_scanner import (
@@ -30,7 +31,10 @@ class DutyTaskScanner(BaseTaskScanner):
         today_duties = self.duty_repo.get_pending_duties_for_date(today_date)
 
         for duty in today_duties:
-            if not duty.id or duty.status not in (DutyStatus.PENDING, DutyStatus.REJECTED):
+            if not duty.id or duty.status not in (
+                DutyStatus.PENDING,
+                DutyStatus.REJECTED,
+            ):
                 continue
 
             duty_deadline_dt = datetime.combine(
@@ -42,7 +46,9 @@ class DutyTaskScanner(BaseTaskScanner):
                 continue
 
             # Lấy danh sách thành viên của ca trực
-            team_ids = duty.team_id if isinstance(duty.team_id, list) else [duty.team_id]
+            team_ids = (
+                duty.team_id if isinstance(duty.team_id, list) else [duty.team_id]
+            )
             duty_user_ids = self.team_repo.get_user_ids_by_teams(team_ids)
 
             for uid in duty_user_ids:

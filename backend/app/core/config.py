@@ -33,6 +33,11 @@ class Settings(BaseSettings):
     BACKEND_PUBLIC_URL: str = "http://localhost:8000"
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
 
+    @property
+    def FRONTEND_URL(self) -> str:
+        """Alias cho FRONTEND_HOST để thống nhất quy ước đặt tên."""
+        return self.FRONTEND_HOST
+
     # MinIO Configuration
     MINIO_ENDPOINT: str = "localhost:9000"
     MINIO_ACCESS_KEY: str = ""

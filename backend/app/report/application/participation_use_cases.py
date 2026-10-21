@@ -4,7 +4,6 @@ from pydantic import BaseModel
 
 from app.meeting.infrastructure.repository import ParticipantRepository
 from app.shared.application.response import UserInfoResponse
-from app.user.infrastructure.monthly_stats_repository import MonthlyUserStatsRepository
 from app.user.infrastructure.repository import UserRepository
 from app.violation.domain.entity import ViolationType
 from app.violation.infrastructure.repository import ViolationRepository
@@ -149,7 +148,9 @@ class GetParticipationLeaderboardUseCase:
         users = self.user_repo.get_active_users()
 
         # 1 query lấy toàn bộ participants check-in trong tháng của tất cả users
-        all_participants = self.participant_repo.get_all_by_month(month=month, year=year)
+        all_participants = self.participant_repo.get_all_by_month(
+            month=month, year=year
+        )
 
         # 1 query lấy toàn bộ violations trong tháng của tất cả users
         all_violations = self.violation_repo.get_by_month(month=month, year=year)
@@ -202,4 +203,3 @@ class GetParticipationLeaderboardUseCase:
                 x.user.name.lower() if x.user and x.user.name else "",
             ),
         )
-

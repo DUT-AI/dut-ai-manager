@@ -2,15 +2,18 @@
 Unit tests for Reminder and Notification Use Cases with Unified Architecture.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 
 from app.duty.domain.entity import CleaningDuty, DutyStatus
 from app.homework.domain.entity import Homework
 from app.meeting.domain.entity import Meeting, MeetingParticipant
 from app.meeting.domain.value_objects import ParticipantStatus
-from app.reminder.application.get_my_notifications_use_case import GetMyNotificationsUseCase
+from app.reminder.application.get_my_notifications_use_case import (
+    GetMyNotificationsUseCase,
+)
 from app.reminder.application.get_unread_notification_count_use_case import (
     GetUnreadNotificationCountUseCase,
 )
@@ -21,13 +24,16 @@ from app.reminder.application.mark_notification_as_read_use_case import (
     MarkNotificationAsReadUseCase,
 )
 from app.reminder.application.reminder_dispatcher import ReminderDispatcher
+from app.reminder.application.scan_and_send_reminders_use_case import (
+    ScanAndSendRemindersUseCase,
+)
 from app.reminder.application.scanners.duty_scanner import DutyTaskScanner
 from app.reminder.application.scanners.homework_scanner import HomeworkTaskScanner
 from app.reminder.application.scanners.meeting_evaluation_scanner import (
     MeetingEvaluationTaskScanner,
 )
-from app.reminder.application.scan_and_send_reminders_use_case import (
-    ScanAndSendRemindersUseCase,
+from app.reminder.application.scanners.upcoming_meeting_scanner import (
+    UpcomingMeetingTaskScanner,
 )
 from app.reminder.domain.entity import (
     Notification,
@@ -36,6 +42,10 @@ from app.reminder.domain.entity import (
     ReminderStage,
     ReminderStatus,
     TaskType,
+)
+from app.shared.infrastructure.notification.channel import (
+    ChannelDeliveryResult,
+    ChannelType,
 )
 
 
@@ -60,8 +70,13 @@ def sample_notification():
 
 
 @pytest.mark.asyncio
-async def test_get_my_notifications_use_case(mock_notification_repo, sample_notification):
-    mock_notification_repo.get_user_notifications.return_value = ([sample_notification], 1)
+async def test_get_my_notifications_use_case(
+    mock_notification_repo, sample_notification
+):
+    mock_notification_repo.get_user_notifications.return_value = (
+        [sample_notification],
+        1,
+    )
     use_case = GetMyNotificationsUseCase(mock_notification_repo)
 
     items, total = await use_case.execute(user_id=10, page=1, page_size=20)
@@ -87,7 +102,9 @@ async def test_get_unread_notification_count_use_case(mock_notification_repo):
 
 
 @pytest.mark.asyncio
-async def test_mark_notification_as_read_use_case(mock_notification_repo, sample_notification):
+async def test_mark_notification_as_read_use_case(
+    mock_notification_repo, sample_notification
+):
     sample_notification.is_read = True
     mock_notification_repo.mark_as_read.return_value = sample_notification
     use_case = MarkNotificationAsReadUseCase(mock_notification_repo)
@@ -96,7 +113,9 @@ async def test_mark_notification_as_read_use_case(mock_notification_repo, sample
 
     assert res is not None
     assert res.is_read is True
-    mock_notification_repo.mark_as_read.assert_called_once_with(notification_id=1, user_id=10)
+    mock_notification_repo.mark_as_read.assert_called_once_with(
+        notification_id=1, user_id=10
+    )
 
 
 @pytest.mark.asyncio
@@ -121,7 +140,9 @@ async def test_scan_and_send_reminders_homework_dry_run():
     discord_service = MagicMock()
     send_web_push_use_case = MagicMock()
 
-    now = datetime(2026, 10, 20, 23, 59, 59)  # Đúng 24 giờ trước deadline 2026-10-21 23:59:59 -> Khớp duy nhất OFFSET_1D
+    now = datetime(
+        2026, 10, 20, 23, 59, 59
+    )  # Đúng 24 giờ trước deadline 2026-10-21 23:59:59 -> Khớp duy nhất OFFSET_1D
     deadline_date = datetime(2026, 10, 21).date()
 
     mock_hw = Homework(
@@ -140,11 +161,18 @@ async def test_scan_and_send_reminders_homework_dry_run():
         homework_assignee_repo=hw_assignee_repo,
         homework_submission_repo=hw_sub_repo,
     )
+    mock_unified_dispatcher = MagicMock()
+    mock_unified_dispatcher.dispatch = AsyncMock(
+        return_value={
+            "discord": ChannelDeliveryResult(
+                channel=ChannelType.DISCORD, success=True, status="SENT"
+            )
+        }
+    )
     dispatcher = ReminderDispatcher(
         notification_repo=notif_repo,
         user_repo=user_repo,
-        discord_service=discord_service,
-        send_web_push_use_case=send_web_push_use_case,
+        unified_dispatcher=mock_unified_dispatcher,
     )
 
     use_case = ScanAndSendRemindersUseCase(
@@ -193,9 +221,14 @@ async def test_duty_task_scanner():
 async def test_reminder_dispatcher_dispatch_success():
     notif_repo = MagicMock()
     user_repo = MagicMock()
-    discord_service = MagicMock()
-    discord_service.send_message_to_user = AsyncMock()
-    send_web_push_use_case = MagicMock()
+    mock_unified_dispatcher = MagicMock()
+    mock_unified_dispatcher.dispatch = AsyncMock(
+        return_value={
+            "discord": ChannelDeliveryResult(
+                channel=ChannelType.DISCORD, success=True, status="SENT"
+            )
+        }
+    )
 
     mock_user = MagicMock()
     mock_user.id = 10
@@ -205,8 +238,7 @@ async def test_reminder_dispatcher_dispatch_success():
     dispatcher = ReminderDispatcher(
         notification_repo=notif_repo,
         user_repo=user_repo,
-        discord_service=discord_service,
-        send_web_push_use_case=send_web_push_use_case,
+        unified_dispatcher=mock_unified_dispatcher,
     )
 
     now = datetime(2026, 10, 21, 20, 0, 0)
@@ -224,10 +256,11 @@ async def test_reminder_dispatcher_dispatch_success():
     )
 
     assert status == ReminderStatus.SENT
-    # Ghi nhận vào bảng notifications duy nhất
-    notif_repo.add.assert_called_once()
-    discord_service.send_message_to_user.assert_called_once()
-    send_web_push_use_case.execute.assert_called_once()
+    mock_unified_dispatcher.dispatch.assert_called_once()
+    payload = mock_unified_dispatcher.dispatch.call_args.args[0]
+    assert payload.user_id == 10
+    assert payload.task_type == "HOMEWORK"
+    assert payload.task_id == 101
 
 
 @pytest.mark.asyncio
@@ -253,7 +286,9 @@ async def test_meeting_evaluation_task_scanner():
     )
     meeting_repo.get_all_with_participants.return_value = [mock_meeting]
 
-    eval_repo.count_evaluations_by_reviewer.side_effect = lambda meeting_id, reviewer_id: 1 if reviewer_id == 1 else 0
+    eval_repo.count_evaluations_by_reviewer.side_effect = (
+        lambda meeting_id, reviewer_id: 1 if reviewer_id == 1 else 0
+    )
 
     scanner = MeetingEvaluationTaskScanner(
         meeting_repo=meeting_repo,
@@ -266,3 +301,56 @@ async def test_meeting_evaluation_task_scanner():
     assert candidates[0].task_type == TaskType.MEETING_EVALUATION
     assert candidates[0].task_id == 77
     assert ReminderStage.OFFSET_1H in candidates[0].stages
+
+
+@pytest.mark.asyncio
+async def test_scan_and_send_reminders_use_case_with_upcoming_meeting():
+    meeting_repo = MagicMock()
+    notification_repo = MagicMock()
+    dispatcher = MagicMock()
+    dispatcher.dispatch = AsyncMock(return_value=ReminderStatus.SENT)
+
+    now = datetime(2026, 10, 21, 14, 0, 0)
+    meeting_start = now + timedelta(hours=1)
+    meeting_end = meeting_start + timedelta(hours=2)
+
+    mock_meeting = Meeting(
+        id=88,
+        title="Họp Khởi Động Dự Án Mới",
+        start_time=meeting_start,
+        end_time=meeting_end,
+        participants=[
+            MeetingParticipant(
+                user_id=5, status=ParticipantStatus.NOT_JOINED, is_deleted=False
+            ),
+            MeetingParticipant(
+                user_id=6, status=ParticipantStatus.ABSENT_EXCUSED, is_deleted=False
+            ),
+        ],
+    )
+    meeting_repo.get_all_with_participants.return_value = [mock_meeting]
+
+    # Chưa từng gửi và không trong cooldown
+    notification_repo.has_reminder_been_sent.return_value = False
+    notification_repo.get_last_reminder_time.return_value = None
+
+    upcoming_scanner = UpcomingMeetingTaskScanner(meeting_repo=meeting_repo)
+    use_case = ScanAndSendRemindersUseCase(
+        scanners=[upcoming_scanner],
+        dispatcher=dispatcher,
+        notification_repo=notification_repo,
+    )
+
+    response = await use_case.execute(dry_run=False, now=now)
+
+    assert response.total_tasks_scanned == 1
+    assert response.total_reminders_sent == 1
+    assert response.total_skipped_already_sent == 0
+    assert response.total_failed == 0
+    assert len(response.details) == 1
+    assert response.details[0].task_type == TaskType.MEETING
+    assert response.details[0].task_id == 88
+    assert response.details[0].user_id == 5
+    assert response.details[0].status == ReminderStatus.SENT
+
+    dispatcher.dispatch.assert_called_once()

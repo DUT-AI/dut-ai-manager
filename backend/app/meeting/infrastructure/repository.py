@@ -641,9 +641,7 @@ class ParticipantRepository(BaseRepository[ORMParticipant, DomainParticipant]):
         )
         return [self._to_domain(orm) for orm in self.session.scalars(stmt).all()]
 
-    def get_all_by_month(
-        self, month: int, year: int
-    ) -> list[DomainParticipant]:
+    def get_all_by_month(self, month: int, year: int) -> list[DomainParticipant]:
         """Lấy tất cả session đã check-in của tất cả user trong tháng trong 1 query duy nhất."""
         stmt = (
             select(ORMParticipant)
@@ -764,18 +762,14 @@ class MeetingOverallEvaluationRepository(
     def _to_domain(self, orm: ORMOverallEvaluation) -> DomainOverallEvaluation:
         return orm.to_entity()
 
-    def save(
-        self, entity: DomainOverallEvaluation
-    ) -> DomainOverallEvaluation:
+    def save(self, entity: DomainOverallEvaluation) -> DomainOverallEvaluation:
         """Lưu hoặc cập nhật đánh giá tổng thể buổi học (quan hệ 1 - 1)."""
-        existing = (
-            self.session.scalars(
-                select(ORMOverallEvaluation).where(
-                    ORMOverallEvaluation.meeting_id == entity.meeting_id,
-                    ORMOverallEvaluation.is_deleted.is_(False),
-                )
-            ).first()
-        )
+        existing = self.session.scalars(
+            select(ORMOverallEvaluation).where(
+                ORMOverallEvaluation.meeting_id == entity.meeting_id,
+                ORMOverallEvaluation.is_deleted.is_(False),
+            )
+        ).first()
         if existing:
             existing.scores = [s.model_dump() for s in entity.scores]
             existing.average_score = entity.average_score
@@ -789,9 +783,7 @@ class MeetingOverallEvaluationRepository(
         self.session.flush()
         return orm.to_entity()
 
-    def get_by_meeting_id(
-        self, meeting_id: int
-    ) -> DomainOverallEvaluation | None:
+    def get_by_meeting_id(self, meeting_id: int) -> DomainOverallEvaluation | None:
         """Lấy đánh giá tổng thể của buổi học kèm thông tin Trainer."""
         stmt = (
             select(ORMOverallEvaluation)

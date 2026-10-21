@@ -1,6 +1,6 @@
 import asyncio
 import sys
-from datetime import datetime, timedelta
+from datetime import timedelta
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
@@ -15,20 +15,17 @@ import app.homework.infrastructure.model  # noqa: F401
 import app.permission_request.infrastructure.model  # noqa: F401
 import app.user.infrastructure.model  # noqa: F401
 import app.violation.infrastructure.model  # noqa: F401
-
 from app.core.config import settings
 from app.meeting.application.get_upcoming_meetings_with_seats_use_case import (
     GetUpcomingMeetingsWithSeatsUseCase,
 )
 from app.meeting.domain.entity import Meeting, MeetingParticipant
-from app.meeting.domain.value_objects import ParticipantStatus
 from app.permission_request.application.create_change_meeting_request_use_case import (
     CreateChangeMeetingRequestUseCase,
 )
 from app.permission_request.application.event_handlers import (
     MeetingParticipantTransferredNotificationHandler,
 )
-from app.permission_request.domain.entity import PermissionRequest
 from app.permission_request.domain.events import (
     MeetingParticipantTransferred,
     PermissionRequestCreated,
@@ -36,7 +33,6 @@ from app.permission_request.domain.events import (
 from app.permission_request.domain.value_objects import RequestCategory
 from app.user.domain.entity import UserEntity as User
 from app.utils.datetime import get_current_utc7_time
-
 
 
 @pytest.mark.asyncio
@@ -71,9 +67,11 @@ async def test_change_meeting_success_from_a_to_b():
     meeting_repo.get_meeting_with_lock.return_value = meeting_b
     meeting_repo.get_with_participants.return_value = meeting_a
     permission_repo.get_absence_user_ids_by_meeting.return_value = set()
+
     def _save_req(req):
         req.id = req.id or 1
         return req
+
     permission_repo.save.side_effect = _save_req
 
     use_case = CreateChangeMeetingRequestUseCase(
@@ -110,7 +108,9 @@ async def test_change_meeting_success_from_a_to_b():
 
     # 5. Kiểm tra phát events
     assert event_bus.publish.call_count == 2
-    published_types = [call[0][0].__class__ for call in event_bus.publish.call_args_list]
+    published_types = [
+        call[0][0].__class__ for call in event_bus.publish.call_args_list
+    ]
     assert MeetingParticipantTransferred in published_types
     assert PermissionRequestCreated in published_types
 
@@ -133,9 +133,11 @@ async def test_change_meeting_new_registration_without_old_meeting():
 
     meeting_repo.get_meeting_with_lock.return_value = meeting_b
     permission_repo.get_absence_user_ids_by_meeting.return_value = set()
+
     def _save_req_new(req):
         req.id = req.id or 1
         return req
+
     permission_repo.save.side_effect = _save_req_new
 
     use_case = CreateChangeMeetingRequestUseCase(
@@ -222,9 +224,11 @@ async def test_change_meeting_considers_absence_requests_as_available_seats():
     meeting_repo.get_meeting_with_lock.return_value = meeting_b
     # User 100 và 101 có đơn ABSENCE
     permission_repo.get_absence_user_ids_by_meeting.return_value = {100, 101}
+
     def _save_req_abs(req):
         req.id = req.id or 1
         return req
+
     permission_repo.save.side_effect = _save_req_abs
 
     use_case = CreateChangeMeetingRequestUseCase(
@@ -349,9 +353,18 @@ def test_get_upcoming_meetings_with_seats():
 
 @pytest.mark.asyncio
 async def test_meeting_participant_transferred_notification_handler():
-    notification_service = MagicMock()
-    notification_service.send_to_user = AsyncMock()
-    notification_service.send_to_room = AsyncMock()
+    from app.shared.infrastructure.notification.channel import (
+        ChannelDeliveryResult,
+        ChannelType,
+    )
+
+    mock_dispatcher = MagicMock()
+    mock_dispatcher.dispatch = AsyncMock(return_value={})
+    mock_dispatcher.dispatch_room = AsyncMock(
+        return_value=ChannelDeliveryResult(
+            channel=ChannelType.DISCORD, success=True, status="SENT"
+        )
+    )
 
     user_repo = MagicMock()
     user = User(
@@ -365,12 +378,19 @@ async def test_meeting_participant_transferred_notification_handler():
 
     meeting_repo = MagicMock()
     now = get_current_utc7_time()
-    m_old = Meeting(id=101, title="Ca Cũ", start_time=now, end_time=now + timedelta(hours=2))
-    m_new = Meeting(id=102, title="Ca Mới", start_time=now + timedelta(days=1), end_time=now + timedelta(days=1, hours=2))
+    m_old = Meeting(
+        id=101, title="Ca Cũ", start_time=now, end_time=now + timedelta(hours=2)
+    )
+    m_new = Meeting(
+        id=102,
+        title="Ca Mới",
+        start_time=now + timedelta(days=1),
+        end_time=now + timedelta(days=1, hours=2),
+    )
     meeting_repo.get_by_id.side_effect = lambda mid: m_old if mid == 101 else m_new
 
     handler = MeetingParticipantTransferredNotificationHandler(
-        notification_service=notification_service,
+        dispatcher=mock_dispatcher,
         user_repo=user_repo,
         meeting_repo=meeting_repo,
     )
@@ -386,5 +406,5 @@ async def test_meeting_participant_transferred_notification_handler():
     await handler.handle(event)
     await asyncio.sleep(0.01)  # Chờ create_task chạy
 
-    assert notification_service.send_to_user.call_count == 1
-    assert notification_service.send_to_room.call_count == 1
+    assert mock_dispatcher.dispatch.call_count == 1
+    assert mock_dispatcher.dispatch_room.call_count == 1

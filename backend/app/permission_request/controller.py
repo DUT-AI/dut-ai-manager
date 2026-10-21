@@ -95,7 +95,6 @@ async def create_permission_request(
     return ApiResponse.success(data=result)
 
 
-
 @router.put("/{request_id}", response_model=ApiResponse[PermissionRequestResponse])
 @inject
 async def update_permission_request(

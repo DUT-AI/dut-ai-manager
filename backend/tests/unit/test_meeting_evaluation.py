@@ -215,10 +215,14 @@ async def test_get_meeting_evaluation_summary_use_case():
 
     # Kiểm tra phân loại evaluation_type trong criteria_breakdown
     trainer_breakdowns = [
-        c for c in result.criteria_breakdown if c.evaluation_type == "TRAINER_TO_TRAINEE"
+        c
+        for c in result.criteria_breakdown
+        if c.evaluation_type == "TRAINER_TO_TRAINEE"
     ]
     trainee_breakdowns = [
-        c for c in result.criteria_breakdown if c.evaluation_type == "TRAINEE_TO_TRAINER"
+        c
+        for c in result.criteria_breakdown
+        if c.evaluation_type == "TRAINEE_TO_TRAINER"
     ]
     assert len(trainer_breakdowns) == 2
     assert len(trainee_breakdowns) == 2
@@ -226,11 +230,11 @@ async def test_get_meeting_evaluation_summary_use_case():
 
 @pytest.mark.asyncio
 async def test_submit_meeting_overall_evaluation_success():
-    from app.meeting.application.submit_meeting_overall_evaluation_use_case import (
-        SubmitMeetingOverallEvaluationUseCase,
-    )
     from app.meeting.application.get_meeting_overall_evaluation_use_case import (
         GetMeetingOverallEvaluationUseCase,
+    )
+    from app.meeting.application.submit_meeting_overall_evaluation_use_case import (
+        SubmitMeetingOverallEvaluationUseCase,
     )
     from app.meeting.domain.entity import MeetingOverallEvaluation
 
@@ -332,4 +336,3 @@ async def test_check_evaluation_deadline_creates_violation_when_trainer_missing(
     assert "Python 101" in saved_violation.reason
     assert mock_meeting.start_time.strftime("%H:%M") in saved_violation.reason
     assert mock_meeting.end_time.strftime("%d/%m/%Y") in saved_violation.reason
-

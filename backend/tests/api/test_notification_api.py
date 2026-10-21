@@ -11,6 +11,7 @@ Tests endpoints:
 """
 
 import pytest
+
 from app.reminder.domain.entity import (
     Notification,
     NotificationCategory,
@@ -62,7 +63,9 @@ def test_get_my_notifications_api(admin_client, test_notification):
     # 3. Lọc theo category khác -> không chứa
     res_other = admin_client.get("/api/v1/notifications/my?category=DUTY")
     assert res_other.status_code == 200
-    assert not any(item["id"] == test_notification.id for item in res_other.json()["data"])
+    assert not any(
+        item["id"] == test_notification.id for item in res_other.json()["data"]
+    )
 
 
 def test_get_unread_count_api(admin_client, test_notification):

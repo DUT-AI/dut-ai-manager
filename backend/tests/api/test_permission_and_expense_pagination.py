@@ -4,8 +4,6 @@ Verifies that endpoints strictly use PaginationParams (page, page_size)
 and return ApiResponse with PaginationMeta.
 """
 
-import pytest
-
 
 def test_get_permission_requests_pagination(admin_client):
     """Kiểm tra phân trang danh sách đơn xin phép qua API."""

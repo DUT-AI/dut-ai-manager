@@ -47,9 +47,7 @@ class HomeworkAssigneeRepository:
         )
         return direct_uids
 
-    def get_assignees_with_user_info(
-        self, homework_id: int
-    ) -> list[AssigneeUserInfo]:
+    def get_assignees_with_user_info(self, homework_id: int) -> list[AssigneeUserInfo]:
         """Lấy danh sách học viên được giao bài tập kèm tên và avatar bằng 1 câu SQL JOIN duy nhất."""
         statement = (
             select(
@@ -67,8 +65,7 @@ class HomeworkAssigneeRepository:
         )
         rows = self.session.execute(statement).all()
         return [
-            AssigneeUserInfo(user_id=r[0], name=r[1], avatar_url=r[2])
-            for r in rows
+            AssigneeUserInfo(user_id=r[0], name=r[1], avatar_url=r[2]) for r in rows
         ]
 
     def get_assigned_homework_ids(self, user_id: int) -> list[int]:

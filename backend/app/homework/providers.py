@@ -6,8 +6,8 @@ from app.homework.application import (
     CreateHomeworkUseCase,
     DeleteHomeworkUseCase,
     GetHomeworkDetailUseCase,
-    GetHomeworkSubmissionStatusUseCase,
     GetHomeworksPagedUseCase,
+    GetHomeworkSubmissionStatusUseCase,
     GetUnsubmittedHomeworkReportUseCase,
     GetUnsubmittedHomeworksForUserUseCase,
     GetUserHomeworkSubmissionsUseCase,
@@ -32,7 +32,9 @@ from app.homework.infrastructure.homework_submission_repository import (
 )
 from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
-from app.shared.infrastructure.notification_service import NotificationService
+from app.shared.infrastructure.notification.dispatcher import (
+    UnifiedNotificationDispatcher,
+)
 from app.user.infrastructure.repository import UserRepository
 
 
@@ -236,21 +238,17 @@ class HomeworkModuleProvider(Provider):
     @provide
     def get_notification_handler(
         self,
-        notification_service: NotificationService,
+        dispatcher: UnifiedNotificationDispatcher,
         homework_repo: HomeworkRepository,
         user_repo: UserRepository,
     ) -> HomeworkNotificationHandler:
-        return HomeworkNotificationHandler(
-            notification_service, homework_repo, user_repo
-        )
+        return HomeworkNotificationHandler(dispatcher, homework_repo, user_repo)
 
     @provide
     def get_graded_notification_handler(
         self,
-        notification_service: NotificationService,
+        dispatcher: UnifiedNotificationDispatcher,
         homework_repo: HomeworkRepository,
         user_repo: UserRepository,
     ) -> HomeworkGradedNotificationHandler:
-        return HomeworkGradedNotificationHandler(
-            notification_service, homework_repo, user_repo
-        )
+        return HomeworkGradedNotificationHandler(dispatcher, homework_repo, user_repo)

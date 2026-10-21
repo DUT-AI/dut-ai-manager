@@ -4,6 +4,7 @@ Unit tests for Web Push Notification Use Cases.
 
 from datetime import datetime
 from unittest.mock import MagicMock
+
 import pytest
 
 from app.reminder.application.dtos import (
@@ -93,7 +94,9 @@ def test_unregister_push_subscription_success(mock_push_repo):
     )
 
 
-def test_send_web_push_success(mock_push_repo, mock_web_push_service, sample_subscription):
+def test_send_web_push_success(
+    mock_push_repo, mock_web_push_service, sample_subscription
+):
     mock_push_repo.get_active_by_user_id.return_value = [sample_subscription]
     mock_web_push_service.send_notification.return_value = True
 
@@ -115,7 +118,9 @@ def test_send_web_push_dead_token_auto_deactivate(
     mock_push_repo, mock_web_push_service, sample_subscription
 ):
     mock_push_repo.get_active_by_user_id.return_value = [sample_subscription]
-    mock_web_push_service.send_notification.side_effect = DeadTokenException("Token 410 Gone")
+    mock_web_push_service.send_notification.side_effect = DeadTokenException(
+        "Token 410 Gone"
+    )
 
     use_case = SendWebPushNotificationUseCase(mock_push_repo, mock_web_push_service)
     sent, failed = use_case.execute(
@@ -126,7 +131,9 @@ def test_send_web_push_dead_token_auto_deactivate(
 
     assert sent == 0
     assert failed == 1
-    mock_push_repo.deactivate_endpoint.assert_called_once_with(sample_subscription.endpoint)
+    mock_push_repo.deactivate_endpoint.assert_called_once_with(
+        sample_subscription.endpoint
+    )
 
 
 def test_send_web_push_no_subscriptions(mock_push_repo, mock_web_push_service):

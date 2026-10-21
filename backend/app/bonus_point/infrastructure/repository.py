@@ -107,7 +107,9 @@ class BonusPointRepository(BaseRepository[BonusPointModel, BonusPoint]):
         )
 
         if query_support:
-            count_stmt = apply_filters_only(count_stmt, BonusPointModel, query_support.filters)
+            count_stmt = apply_filters_only(
+                count_stmt, BonusPointModel, query_support.filters
+            )
             data_stmt = apply_query_support(data_stmt, BonusPointModel, query_support)
             if not query_support.sorting:
                 sort_field = (

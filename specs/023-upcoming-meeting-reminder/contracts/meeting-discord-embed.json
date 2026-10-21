@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "UpcomingMeetingDiscordEmbed",
+  "description": "Standardized Discord Rich Embed structure for upcoming meeting attendance reminder",
+  "type": "object",
+  "required": ["title", "description", "color", "timestamp", "footer"],
+  "properties": {
+    "title": {
+      "type": "string",
+      "example": "⏰ [NHẮC NHỞ LỊCH HỌP] Buổi họp / Sinh hoạt: Họp Lab Định Kỳ Tuần 42"
+    },
+    "description": {
+      "type": "string",
+      "example": "Chào bạn! Bạn có lịch tham gia buổi sinh hoạt **Họp Lab Định Kỳ Tuần 42** sắp diễn ra.\n\n📅 **Thời gian bắt đầu**: `22/10/2026 14:00` (Giờ VN - UTC+7)\n⏳ **Thời gian còn lại**: **1 giờ 0 phút**\n📍 **Địa điểm**: Phòng F302\n\n⚠️ *Lưu ý: Vui lòng có mặt đúng giờ và hoàn tất điểm danh trước khi cửa phòng họp đóng.*\n\n👉 [**Bấm vào đây để xem chi tiết và điểm danh**](https://app.dutai.vn/dashboard/meetings/45)"
+    },
+    "color": {
+      "type": "integer",
+      "description": "0xE74C3C for urgent stages (OFFSET_1H) or 0xF39C12 for warning stages",
+      "example": 15965202
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "footer": {
+      "type": "object",
+      "required": ["text"],
+      "properties": {
+        "text": {
+          "type": "string",
+          "example": "DUT AI Manager • Hệ thống tự động nhắc việc"
+        }
+      }
+    }
+  }
+}

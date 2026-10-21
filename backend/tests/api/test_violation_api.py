@@ -3,7 +3,8 @@ API Tests for Violation Controller (/api/v1/violations).
 Covers CRUD endpoints, filters, bulk delete, restore, and error responses (401, 403, 404, 422).
 """
 
-from datetime import date, timedelta
+from datetime import date
+
 import pytest
 
 
@@ -116,7 +117,9 @@ def test_bulk_delete_violations(admin_client, mock_current_user):
     res = admin_client.post("/api/v1/violations", json=payload)
     item_id = res.json()["data"][0]["id"]
 
-    bulk_res = admin_client.post("/api/v1/violations/bulk-delete", json={"ids": [item_id]})
+    bulk_res = admin_client.post(
+        "/api/v1/violations/bulk-delete", json={"ids": [item_id]}
+    )
     assert bulk_res.status_code == 200
     assert bulk_res.json()["is_success"] is True
 

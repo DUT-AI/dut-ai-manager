@@ -3,7 +3,7 @@ Get Duties Use Case.
 """
 
 from collections import defaultdict
-from datetime import date, timedelta, time
+from datetime import date, time, timedelta
 from typing import Any
 
 from app.duty.application.dtos import DutyResponse, WeeklyDutyClassDto
@@ -63,7 +63,9 @@ class GetDutiesUseCase:
 
         return [DutyResponse.model_validate(e) for e in entities], total
 
-    def get_weekly_schedule(self, target_date: date | None = None) -> list[WeeklyDutyClassDto]:
+    def get_weekly_schedule(
+        self, target_date: date | None = None
+    ) -> list[WeeklyDutyClassDto]:
         """
         Lấy lịch trực nhật động trong tuần:
         - Tự động lấy tất cả các buổi Meeting thực tế trong tuần (thay đổi giờ, ngày linh hoạt).
@@ -136,7 +138,11 @@ class GetDutiesUseCase:
                 f"{m.start_time.strftime('%H:%M')} - {m.end_time.strftime('%H:%M')}"
             )
             m_title_lower = (m.title or "").lower()
-            p_ids = {p.user_id for p in m.participants if not p.is_deleted} if m.participants else set()
+            p_ids = (
+                {p.user_id for p in m.participants if not p.is_deleted}
+                if m.participants
+                else set()
+            )
 
             # Kiểm tra xem meeting có phải của Gen 2 hay thuần Gen 1
             has_gen2_participants = bool(p_ids & all_gen2_user_ids)
@@ -157,22 +163,36 @@ class GetDutiesUseCase:
             if m_duties:
                 # Ưu tiên lấy duty active: PENDING, AWAITING_APPROVAL, REJECTED
                 active_duties = [
-                    d for d in m_duties
-                    if d.status in [DutyStatus.PENDING, DutyStatus.AWAITING_APPROVAL, DutyStatus.REJECTED]
+                    d
+                    for d in m_duties
+                    if d.status
+                    in [
+                        DutyStatus.PENDING,
+                        DutyStatus.AWAITING_APPROVAL,
+                        DutyStatus.REJECTED,
+                    ]
                 ]
                 if active_duties:
                     duty = active_duties[0]
                 else:
-                    cancelled_duties = [d for d in m_duties if d.status == DutyStatus.CANCELLED]
+                    cancelled_duties = [
+                        d for d in m_duties if d.status == DutyStatus.CANCELLED
+                    ]
                     if cancelled_duties:
                         duty = cancelled_duties[0]
                     else:
                         duty = m_duties[0]
 
             if duty:
-                t_ids = duty.team_id if isinstance(duty.team_id, list) else [duty.team_id]
+                t_ids = (
+                    duty.team_id if isinstance(duty.team_id, list) else [duty.team_id]
+                )
                 t_names = [team_by_id[t].team_name for t in t_ids if t in team_by_id]
-                team_name = ", ".join(t_names) if t_names else (duty.team_name or f"Nhóm #{t_ids}")
+                team_name = (
+                    ", ".join(t_names)
+                    if t_names
+                    else (duty.team_name or f"Nhóm #{t_ids}")
+                )
                 team_id = t_ids
                 team_names = t_names
             else:
@@ -198,16 +218,24 @@ class GetDutiesUseCase:
                 if not best_team:
                     for t in gen2_teams:
                         tname_lower = (t.team_name or "").lower()
-                        if any(k in m_title_lower for k in ["thứ 3", "thu 3"]) and ("thứ 3" in tname_lower or "thu 3" in tname_lower):
+                        if any(k in m_title_lower for k in ["thứ 3", "thu 3"]) and (
+                            "thứ 3" in tname_lower or "thu 3" in tname_lower
+                        ):
                             best_team = t
                             break
-                        if any(k in m_title_lower for k in ["thứ 4", "thu 4"]) and ("thứ 4" in tname_lower or "thu 4" in tname_lower):
+                        if any(k in m_title_lower for k in ["thứ 4", "thu 4"]) and (
+                            "thứ 4" in tname_lower or "thu 4" in tname_lower
+                        ):
                             best_team = t
                             break
-                        if any(k in m_title_lower for k in ["thứ 5", "thu 5"]) and ("thứ 5" in tname_lower or "thu 5" in tname_lower):
+                        if any(k in m_title_lower for k in ["thứ 5", "thu 5"]) and (
+                            "thứ 5" in tname_lower or "thu 5" in tname_lower
+                        ):
                             best_team = t
                             break
-                        if any(k in m_title_lower for k in ["thứ 7", "thu 7"]) and ("thứ 7" in tname_lower or "thu 7" in tname_lower):
+                        if any(k in m_title_lower for k in ["thứ 7", "thu 7"]) and (
+                            "thứ 7" in tname_lower or "thu 7" in tname_lower
+                        ):
                             best_team = t
                             break
 
@@ -276,7 +304,9 @@ class GetDutiesUseCase:
                 for t in t_ids
                 if t in team_by_id and team_by_id[t].team_name
             ]
-            team_name = ", ".join(t_names) if t_names else (d.team_name or f"Nhóm #{t_ids}")
+            team_name = (
+                ", ".join(t_names) if t_names else (d.team_name or f"Nhóm #{t_ids}")
+            )
 
             team_name_lower = (team_name or "").lower()
             if "gen 1" in team_name_lower or "gen1" in team_name_lower:
@@ -287,12 +317,14 @@ class GetDutiesUseCase:
                 continue
 
             # Ca tự do: Nếu CANCELLED thì is_scheduled = False (switch OFF) và status = NOT_SCHEDULED
-            is_scheduled = (d.status != DutyStatus.CANCELLED)
+            is_scheduled = d.status != DutyStatus.CANCELLED
             duty_status = d.status.value if is_scheduled else "NOT_SCHEDULED"
 
             free_time_str = None
             if d.start_time and d.end_time:
-                free_time_str = f"{d.start_time.strftime('%H:%M')} - {d.end_time.strftime('%H:%M')}"
+                free_time_str = (
+                    f"{d.start_time.strftime('%H:%M')} - {d.end_time.strftime('%H:%M')}"
+                )
             elif d.start_time:
                 free_time_str = f"{d.start_time.strftime('%H:%M')}"
 
@@ -342,14 +374,14 @@ class GetDutiesUseCase:
                         if s_a and e_a and s_b and e_b:
                             overlap = (s_a < e_b) and (s_b < e_a)
                         elif s_a and s_b:
-                            overlap = (s_a == s_b)
+                            overlap = s_a == s_b
 
                         if overlap:
                             item_a.is_time_conflict = True
                             time_b_str = (
                                 f"{s_b.strftime('%H:%M')} - {e_b.strftime('%H:%M')}"
                                 if (s_b and e_b)
-                                else (s_b.strftime('%H:%M') if s_b else "")
+                                else (s_b.strftime("%H:%M") if s_b else "")
                             )
                             item_a.conflict_message = (
                                 f"Trùng khung giờ với ca trực khác ({time_b_str})"
@@ -359,7 +391,7 @@ class GetDutiesUseCase:
                             time_a_str = (
                                 f"{s_a.strftime('%H:%M')} - {e_a.strftime('%H:%M')}"
                                 if (s_a and e_a)
-                                else (s_a.strftime('%H:%M') if s_a else "")
+                                else (s_a.strftime("%H:%M") if s_a else "")
                             )
                             item_b.conflict_message = (
                                 f"Trùng khung giờ với ca trực khác ({time_a_str})"

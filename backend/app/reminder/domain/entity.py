@@ -5,7 +5,7 @@ Pure Pydantic models with zero framework / ORM dependencies.
 
 from datetime import datetime
 from enum import Enum
-from uuid import UUID
+from typing import Any
 
 from app.shared.domain.base_entity import BaseEntity
 
@@ -14,19 +14,52 @@ class TaskType(str, Enum):
     HOMEWORK = "HOMEWORK"
     DUTY = "DUTY"
     MEETING_EVALUATION = "MEETING_EVALUATION"
+    MEETING = "MEETING"
+
+    @classmethod
+    def _missing_(cls, value: object):
+        if isinstance(value, str):
+            val_upper = value.upper()
+            for member in cls:
+                if member.value.upper() == val_upper or member.name == val_upper:
+                    return member
+        return None
 
 
 class NotificationCategory(str, Enum):
     HOMEWORK = "HOMEWORK"
     DUTY = "DUTY"
     MEETING = "MEETING"
+    VIOLATION = "VIOLATION"
+    BONUS_POINT = "BONUS_POINT"
+    BILLING = "BILLING"
+    PERMISSION_REQUEST = "PERMISSION_REQUEST"
     SYSTEM = "SYSTEM"
+
+    @classmethod
+    def _missing_(cls, value: object):
+        if isinstance(value, str):
+            val_upper = value.upper()
+            for member in cls:
+                if member.value.upper() == val_upper or member.name == val_upper:
+                    return member
+        return None
 
 
 class NotificationLevel(str, Enum):
     INFO = "INFO"
+    SUCCESS = "SUCCESS"
     WARNING = "WARNING"
     CRITICAL = "CRITICAL"
+
+    @classmethod
+    def _missing_(cls, value: object):
+        if isinstance(value, str):
+            val_upper = value.upper()
+            for member in cls:
+                if member.value.upper() == val_upper or member.name == val_upper:
+                    return member
+        return None
 
 
 class ReminderStage(str, Enum):
@@ -46,7 +79,9 @@ class ReminderStage(str, Enum):
         return self in (ReminderStage.OFFSET_1H, ReminderStage.FIXED_2200)
 
     @classmethod
-    def calculate_matching_stages(cls, deadline: datetime, now: datetime) -> list["ReminderStage"]:
+    def calculate_matching_stages(
+        cls, deadline: datetime, now: datetime
+    ) -> list["ReminderStage"]:
         """Xác định danh sách các mốc ReminderStage phù hợp với thời điểm hiện tại và deadline."""
         stages: list[ReminderStage] = []
 
@@ -89,6 +124,8 @@ class ReminderStatus(str, Enum):
     FAILED = "FAILED"
     DM_BLOCKED = "DM_BLOCKED"
     NO_DISCORD_ID = "NO_DISCORD_ID"
+    NO_ZALO_ID = "NO_ZALO_ID"
+    NO_SUBSCRIPTION = "NO_SUBSCRIPTION"
 
 
 class Notification(BaseEntity):
@@ -107,7 +144,10 @@ class Notification(BaseEntity):
     task_id: int | None = None
     reminder_stage: ReminderStage | None = None
     discord_status: ReminderStatus | None = None
+    zalo_status: ReminderStatus | None = None
+    web_push_status: ReminderStatus | None = None
     error_message: str | None = None
+    metadata_json: dict[str, Any] | None = None
     created_at: datetime | None = None
 
     def mark_read(self, read_at: datetime) -> None:
@@ -131,6 +171,31 @@ class Notification(BaseEntity):
         return (now - last_sent_at).total_seconds() < cooldown_hours * 3600
 
     @classmethod
+    def create_event(
+        cls,
+        user_id: int,
+        title: str,
+        content: str,
+        category: NotificationCategory,
+        level: NotificationLevel = NotificationLevel.INFO,
+        action_url: str | None = None,
+        metadata_json: dict[str, Any] | None = None,
+        now: datetime | None = None,
+    ) -> "Notification":
+        """Factory method tạo thông báo tức thời từ Domain Events."""
+        return cls(
+            user_id=user_id,
+            title=title,
+            content=content,
+            category=category,
+            level=level,
+            action_url=action_url,
+            is_read=False,
+            metadata_json=metadata_json,
+            created_at=now,
+        )
+
+    @classmethod
     def create_deadline_reminder(
         cls,
         user_id: int,
@@ -150,19 +215,29 @@ class Notification(BaseEntity):
             TaskType.HOMEWORK: NotificationCategory.HOMEWORK,
             TaskType.DUTY: NotificationCategory.DUTY,
             TaskType.MEETING_EVALUATION: NotificationCategory.MEETING,
+            TaskType.MEETING: NotificationCategory.MEETING,
         }
         level = (
             NotificationLevel.CRITICAL
             if stage.is_critical
             else NotificationLevel.WARNING
         )
-        return cls(
-            user_id=user_id,
-            title=f"Nhắc nhở hạn chót: {task_title}",
-            content=(
+        if task_type == TaskType.MEETING:
+            title = f"Nhắc nhở cuộc họp sắp diễn ra: {task_title}"
+            content = (
+                f"Cuộc họp {task_title} sẽ bắt đầu lúc {deadline_str} "
+                f"(còn lại {time_left_str}). Vui lòng chuẩn bị tham gia và điểm danh đúng giờ."
+            )
+        else:
+            title = f"Nhắc nhở hạn chót: {task_title}"
+            content = (
                 f"Nhiệm vụ {task_title} có hạn chót lúc {deadline_str} "
                 f"(còn lại {time_left_str}). Vui lòng hoàn thành để tránh vi phạm."
-            ),
+            )
+        return cls(
+            user_id=user_id,
+            title=title,
+            content=content,
             category=category_map.get(task_type, NotificationCategory.SYSTEM),
             level=level,
             action_url=action_url,
@@ -180,6 +255,7 @@ class PushSubscription(BaseEntity):
     """
     Domain Entity biểu diễn một đăng ký thiết bị nhận thông báo đẩy Web Push (VAPID RFC 8292).
     """
+
     user_id: int
     endpoint: str
     p256dh: str
@@ -187,4 +263,3 @@ class PushSubscription(BaseEntity):
     user_agent: str | None = None
     is_active: bool = True
     last_used_at: datetime | None = None
-

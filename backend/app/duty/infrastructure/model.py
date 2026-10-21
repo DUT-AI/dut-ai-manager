@@ -5,7 +5,7 @@ Duty ORM Models — SQLAlchemy 2.0.
 from datetime import date, datetime, time
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text, Time
+from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text, Time
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -14,7 +14,6 @@ from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
 
 if TYPE_CHECKING:
     from app.meeting.infrastructure.model import Meeting
-    from app.team.infrastructure.model import TeamModel
     from app.user.infrastructure.model import UserModel
 
 
@@ -27,9 +26,7 @@ class CleaningDutyModel(SQLAlchemyTimestampMixin, Base):
     duty_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     start_time: Mapped[time | None] = mapped_column(Time, nullable=True)
     end_time: Mapped[time | None] = mapped_column(Time, nullable=True)
-    team_id: Mapped[list[int]] = mapped_column(
-        JSONB, nullable=False, default=list
-    )
+    team_id: Mapped[list[int]] = mapped_column(JSONB, nullable=False, default=list)
     meeting_id: Mapped[int | None] = mapped_column(
         ForeignKey("meetings.id", ondelete="SET NULL"), nullable=True, index=True
     )
@@ -38,9 +35,7 @@ class CleaningDutyModel(SQLAlchemyTimestampMixin, Base):
     )
 
     # Nội dung công việc trực nhật hôm đó (mặc định + tạo thêm)
-    checklist: Mapped[list[dict]] = mapped_column(
-        JSONB, nullable=False, default=list
-    )
+    checklist: Mapped[list[dict]] = mapped_column(JSONB, nullable=False, default=list)
 
     # Note & Evidence
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -102,12 +97,18 @@ class CleaningDutyModel(SQLAlchemyTimestampMixin, Base):
             evidence_image_urls=list(self.evidence_image_urls or []),
             submitted_by=self.submitted_by,
             submitted_by_name=submitter_name,
-            submitted_at=self.submitted_at.replace(tzinfo=None) if self.submitted_at else None,
+            submitted_at=self.submitted_at.replace(tzinfo=None)
+            if self.submitted_at
+            else None,
             rejection_reason=self.rejection_reason,
             approved_by=self.approved_by,
-            approved_at=self.approved_at.replace(tzinfo=None) if self.approved_at else None,
+            approved_at=self.approved_at.replace(tzinfo=None)
+            if self.approved_at
+            else None,
             rejected_by=self.rejected_by,
-            rejected_at=self.rejected_at.replace(tzinfo=None) if self.rejected_at else None,
+            rejected_at=self.rejected_at.replace(tzinfo=None)
+            if self.rejected_at
+            else None,
             created_at=self.created_at,
             updated_at=self.updated_at,
             created_by=self.created_by,

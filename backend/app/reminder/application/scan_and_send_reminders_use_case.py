@@ -5,6 +5,7 @@ and delegates dispatching to ReminderDispatcher using unified NotificationReposi
 """
 
 from datetime import datetime
+
 from app.reminder.application.dtos import (
     ReminderScanDetailDto,
     TriggerReminderScanResponseDto,
@@ -13,7 +14,6 @@ from app.reminder.application.reminder_dispatcher import ReminderDispatcher
 from app.reminder.application.scanners.base_scanner import BaseTaskScanner
 from app.reminder.domain.entity import (
     Notification,
-    ReminderStage,
     ReminderStatus,
 )
 from app.reminder.infrastructure.repository import NotificationRepository

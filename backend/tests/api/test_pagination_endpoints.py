@@ -4,8 +4,6 @@ Validates page and page_size query parameters, response pagination envelope meta
 and specialized calendar / options endpoints.
 """
 
-import pytest
-
 
 def test_users_pagination_endpoint(admin_client):
     """GET /api/v1/users with page and page_size returns pagination metadata."""

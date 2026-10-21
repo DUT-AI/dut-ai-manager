@@ -4,6 +4,7 @@ Duty DTOs (Data Transfer Objects).
 
 from datetime import date, datetime, time
 from typing import Any
+
 from pydantic import BaseModel, ConfigDict, field_validator
 
 
@@ -98,8 +99,9 @@ class WeeklyDutyClassDto(BaseModel):
         if v is None:
             return []
         return [int(v)]
+
     day_of_week: int  # 1: Thứ 2, 2: Thứ 3, ..., 6: Thứ 7, 7: CN
-    day_name: str     # "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 7"
+    day_name: str  # "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 7"
     duty_date: date
     start_time: time | None = None
     end_time: time | None = None

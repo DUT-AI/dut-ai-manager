@@ -30,7 +30,6 @@ from app.duty.domain.events import (
     DutyScheduled,
     DutySubmitted,
     DutyUpdated,
-    DutyViolated,
 )
 from app.duty.notification_handler import DutyNotificationHandler
 from app.meeting.domain.entity import Meeting, MeetingParticipant
@@ -76,9 +75,20 @@ def mock_user_repo():
 
 @pytest.fixture
 def mock_notification_service():
+    from app.shared.infrastructure.notification.channel import (
+        ChannelDeliveryResult,
+        ChannelType,
+    )
+
     service = MagicMock()
-    service.send_to_room = AsyncMock(return_value=True)
-    service.send_to_user = AsyncMock(return_value=True)
+    service.dispatch = AsyncMock(return_value={})
+    service.dispatch_room = AsyncMock(
+        return_value=ChannelDeliveryResult(
+            channel=ChannelType.DISCORD, success=True, status="SENT"
+        )
+    )
+    service.send_to_room = service.dispatch_room
+    service.send_to_user = service.dispatch
     return service
 
 
@@ -104,7 +114,9 @@ def mock_event_bus():
 
 
 @pytest.mark.asyncio
-async def test_toggle_duty_schedule_enable(mock_duty_repo, mock_meeting_repo, mock_team_repo, mock_event_bus):
+async def test_toggle_duty_schedule_enable(
+    mock_duty_repo, mock_meeting_repo, mock_team_repo, mock_event_bus
+):
     """Test bật lịch trực nhật cho nhóm Gen 2 khi có meeting."""
     mock_duty_repo.get_by_date_and_team.return_value = None
     mock_meeting = MagicMock()
@@ -136,7 +148,9 @@ async def test_toggle_duty_schedule_enable(mock_duty_repo, mock_meeting_repo, mo
 
 
 @pytest.mark.asyncio
-async def test_toggle_duty_schedule_enable_without_meeting(mock_duty_repo, mock_meeting_repo, mock_team_repo, mock_event_bus):
+async def test_toggle_duty_schedule_enable_without_meeting(
+    mock_duty_repo, mock_meeting_repo, mock_team_repo, mock_event_bus
+):
     """Test bật ca trực tự do thành công ngay cả khi không có lịch meeting."""
     mock_duty_repo.get_by_date_and_team.return_value = None
     mock_meeting_repo.get_by_date.return_value = []
@@ -167,7 +181,9 @@ async def test_toggle_duty_schedule_enable_without_meeting(mock_duty_repo, mock_
 
 
 @pytest.mark.asyncio
-async def test_toggle_duty_schedule_disable(mock_duty_repo, mock_meeting_repo, mock_team_repo):
+async def test_toggle_duty_schedule_disable(
+    mock_duty_repo, mock_meeting_repo, mock_team_repo
+):
     """Test tắt ca trực nhật theo Meeting: chuyển sang CANCELLED để giữ lại trên giao diện Lịch Tuần với Switch OFF."""
     existing_duty = CleaningDuty(
         id=1,
@@ -193,7 +209,9 @@ async def test_toggle_duty_schedule_disable(mock_duty_repo, mock_meeting_repo, m
 
 
 @pytest.mark.asyncio
-async def test_toggle_duty_schedule_disable_free_duty(mock_duty_repo, mock_meeting_repo, mock_team_repo):
+async def test_toggle_duty_schedule_disable_free_duty(
+    mock_duty_repo, mock_meeting_repo, mock_team_repo
+):
     """Test tắt ca trực tự do: chuyển sang CANCELLED chứ không xóa khỏi hệ thống."""
     existing_duty = CleaningDuty(
         id=2,
@@ -219,7 +237,9 @@ async def test_toggle_duty_schedule_disable_free_duty(mock_duty_repo, mock_meeti
 
 
 @pytest.mark.asyncio
-async def test_submit_duty_evidence_success(mock_duty_repo, mock_team_repo, mock_minio_service, mock_event_bus):
+async def test_submit_duty_evidence_success(
+    mock_duty_repo, mock_team_repo, mock_minio_service, mock_event_bus
+):
     """Test 1 người đại diện nộp ảnh và checklist >= 1 -> COMPLETED."""
     duty = CleaningDuty(
         id=1,
@@ -255,7 +275,9 @@ async def test_submit_duty_evidence_success(mock_duty_repo, mock_team_repo, mock
     )
 
     assert result.status == DutyStatus.AWAITING_APPROVAL.value
-    assert any(item["title"] == "Lau sàn" and item["checked"] for item in result.checklist)
+    assert any(
+        item["title"] == "Lau sàn" and item["checked"] for item in result.checklist
+    )
     assert result.note == "Đã quét sàn và lau bàn"
     assert len(result.evidence_image_urls) == 1
 
@@ -264,6 +286,7 @@ async def test_submit_duty_evidence_success(mock_duty_repo, mock_team_repo, mock
 async def test_approve_duty_by_admin(mock_duty_repo, mock_event_bus):
     """Test Admin/HR duyệt ca trực -> Chuyển thành COMPLETED."""
     from app.duty.application.review_duty_use_case import ApproveDutyUseCase
+
     duty = CleaningDuty(
         id=1,
         duty_date=date.today(),
@@ -284,6 +307,7 @@ async def test_approve_duty_by_admin(mock_duty_repo, mock_event_bus):
 async def test_reject_duty_by_admin(mock_duty_repo, mock_event_bus):
     """Test Admin/HR từ chối ca trực -> Chuyển thành REJECTED kèm lý do."""
     from app.duty.application.review_duty_use_case import RejectDutyUseCase
+
     duty = CleaningDuty(
         id=1,
         duty_date=date.today(),
@@ -294,7 +318,9 @@ async def test_reject_duty_by_admin(mock_duty_repo, mock_event_bus):
     mock_duty_repo.save.side_effect = lambda d: d
 
     uc = RejectDutyUseCase(duty_repo=mock_duty_repo, event_bus=mock_event_bus)
-    result = await uc.execute(duty_id=1, admin_id=999, reason="Sàn còn bẩn, chưa lau bàn")
+    result = await uc.execute(
+        duty_id=1, admin_id=999, reason="Sàn còn bẩn, chưa lau bàn"
+    )
 
     assert result.status == DutyStatus.REJECTED.value
     assert result.rejection_reason == "Sàn còn bẩn, chưa lau bàn"
@@ -303,7 +329,11 @@ async def test_reject_duty_by_admin(mock_duty_repo, mock_event_bus):
 
 @pytest.mark.asyncio
 async def test_check_overdue_duties_penalizes_only_checked_in_users(
-    mock_duty_repo, mock_meeting_repo, mock_team_repo, mock_create_violation_use_case, mock_event_bus
+    mock_duty_repo,
+    mock_meeting_repo,
+    mock_team_repo,
+    mock_create_violation_use_case,
+    mock_event_bus,
 ):
     """
     Test lúc 23:59: Buổi học có 3 học viên, nhưng chỉ 2 người check-in.
@@ -510,7 +540,11 @@ async def test_restore_duty_success(mock_duty_repo):
 
 @pytest.mark.asyncio
 async def test_check_overdue_duties_includes_transferred_students_and_excludes_trainers(
-    mock_duty_repo, mock_meeting_repo, mock_team_repo, mock_create_violation_use_case, mock_event_bus
+    mock_duty_repo,
+    mock_meeting_repo,
+    mock_team_repo,
+    mock_create_violation_use_case,
+    mock_event_bus,
 ):
     """
     Test xử lý đúng đối tượng tham gia Meeting:
@@ -538,10 +572,18 @@ async def test_check_overdue_duties_includes_transferred_students_and_excludes_t
         start_time=datetime(2026, 10, 19, 17, 30),
         end_time=datetime(2026, 10, 19, 19, 30),
         participants=[
-            MeetingParticipant(user_id=999, check_in_at=datetime(2026, 10, 19, 17, 20)),  # Trainer
-            MeetingParticipant(user_id=888, check_in_at=datetime(2026, 10, 19, 17, 25)),  # Học viên nhóm khác đổi lớp
-            MeetingParticipant(user_id=101, check_in_at=datetime(2026, 10, 19, 17, 28)),  # Nhóm trực - có mặt
-            MeetingParticipant(user_id=102, check_in_at=datetime(2026, 10, 19, 17, 29)),  # Nhóm trực - có mặt
+            MeetingParticipant(
+                user_id=999, check_in_at=datetime(2026, 10, 19, 17, 20)
+            ),  # Trainer
+            MeetingParticipant(
+                user_id=888, check_in_at=datetime(2026, 10, 19, 17, 25)
+            ),  # Học viên nhóm khác đổi lớp
+            MeetingParticipant(
+                user_id=101, check_in_at=datetime(2026, 10, 19, 17, 28)
+            ),  # Nhóm trực - có mặt
+            MeetingParticipant(
+                user_id=102, check_in_at=datetime(2026, 10, 19, 17, 29)
+            ),  # Nhóm trực - có mặt
             MeetingParticipant(user_id=103, check_in_at=None),  # Nhóm trực - vắng mặt
             MeetingParticipant(
                 user_id=104,
@@ -550,7 +592,7 @@ async def test_check_overdue_duties_includes_transferred_students_and_excludes_t
             ),
         ],
     )
-    setattr(meeting, "created_by", 999)  # Trainer là creator
+    meeting.created_by = 999  # Trainer là creator
     mock_meeting_repo.get_by_id.return_value = meeting
 
     uc = CheckOverdueDutiesUseCase(
@@ -575,7 +617,11 @@ async def test_check_overdue_duties_includes_transferred_students_and_excludes_t
 
 @pytest.mark.asyncio
 async def test_check_overdue_duties_cancels_when_no_attendees_checked_in(
-    mock_duty_repo, mock_meeting_repo, mock_team_repo, mock_create_violation_use_case, mock_event_bus
+    mock_duty_repo,
+    mock_meeting_repo,
+    mock_team_repo,
+    mock_create_violation_use_case,
+    mock_event_bus,
 ):
     """Buổi học không có ai check-in (ví dụ cả lớp nghỉ / buổi học bị hủy) -> Ca chuyển CANCELLED, KHÔNG phạt ai."""
     target_date = date.today()
@@ -597,7 +643,9 @@ async def test_check_overdue_duties_cancels_when_no_attendees_checked_in(
         participants=[
             MeetingParticipant(user_id=101, check_in_at=None),
             MeetingParticipant(user_id=102, check_in_at=None),
-            MeetingParticipant(user_id=888, check_in_at=None, status=ParticipantStatus.ABSENT_EXCUSED),
+            MeetingParticipant(
+                user_id=888, check_in_at=None, status=ParticipantStatus.ABSENT_EXCUSED
+            ),
         ],
     )
     mock_meeting_repo.get_by_id.return_value = meeting
@@ -620,7 +668,11 @@ async def test_check_overdue_duties_cancels_when_no_attendees_checked_in(
 
 @pytest.mark.asyncio
 async def test_check_overdue_duties_standalone_duty_penalizes_team_members(
-    mock_duty_repo, mock_meeting_repo, mock_team_repo, mock_create_violation_use_case, mock_event_bus
+    mock_duty_repo,
+    mock_meeting_repo,
+    mock_team_repo,
+    mock_create_violation_use_case,
+    mock_event_bus,
 ):
     """Ca trực tự do không có meeting: phạt tất cả thành viên trong nhóm trực."""
     target_date = date.today()
@@ -651,7 +703,11 @@ async def test_check_overdue_duties_standalone_duty_penalizes_team_members(
 
 @pytest.mark.asyncio
 async def test_check_overdue_duties_standalone_cancels_if_team_has_no_members(
-    mock_duty_repo, mock_meeting_repo, mock_team_repo, mock_create_violation_use_case, mock_event_bus
+    mock_duty_repo,
+    mock_meeting_repo,
+    mock_team_repo,
+    mock_create_violation_use_case,
+    mock_event_bus,
 ):
     """Ca trực tự do nhưng nhóm không có thành viên nào -> Chuyển CANCELLED."""
     target_date = date.today()
@@ -686,7 +742,11 @@ async def test_check_overdue_duties_standalone_cancels_if_team_has_no_members(
 
 @pytest.mark.asyncio
 async def test_check_overdue_duties_penalizes_rejected_duty_not_resubmitted(
-    mock_duty_repo, mock_meeting_repo, mock_team_repo, mock_create_violation_use_case, mock_event_bus
+    mock_duty_repo,
+    mock_meeting_repo,
+    mock_team_repo,
+    mock_create_violation_use_case,
+    mock_event_bus,
 ):
     """Ca trực bị REJECTED mà đến 23:59 không nộp lại -> bị phạt."""
     target_date = date.today()
@@ -833,20 +893,31 @@ async def test_update_duty_success(mock_duty_repo, mock_team_repo):
     )
     result = await uc.execute(duty_id=1, req=req)
 
-    assert any(item["title"] == "Lau quạt" and item["checked"] for item in result.checklist)
+    assert any(
+        item["title"] == "Lau quạt" and item["checked"] for item in result.checklist
+    )
     assert result.note == "Phân công mới"
 
 
 @pytest.mark.asyncio
 async def test_duty_notification_handler_submitted_event(
-    mock_notification_service, mock_user_repo, mock_team_repo, monkeypatch
+    mock_notification_service,
+    mock_user_repo,
+    mock_team_repo,
+    mock_meeting_repo,
+    mock_duty_repo,
+    monkeypatch,
 ):
     """Test DutyNotificationHandler khi nhận event DutySubmitted."""
-    monkeypatch.setattr("app.duty.notification_handler.settings.DISCORD_PERMISSION_ROOM_ID", "123456789")
+    monkeypatch.setattr(
+        "app.duty.notification_handler.settings.DISCORD_PERMISSION_ROOM_ID", "123456789"
+    )
     handler = DutyNotificationHandler(
-        notification_service=mock_notification_service,
+        dispatcher=mock_notification_service,
         user_repo=mock_user_repo,
         team_repo=mock_team_repo,
+        meeting_repo=mock_meeting_repo,
+        duty_repo=mock_duty_repo,
     )
 
     event = DutySubmitted(
@@ -861,22 +932,30 @@ async def test_duty_notification_handler_submitted_event(
     # Chạy trực tiếp worker task để test sync
     await handler._send_submitted_notification_task(event)
 
-    mock_notification_service.send_to_room.assert_called_once()
-    payload = mock_notification_service.send_to_room.call_args.kwargs["payload"]
+    mock_notification_service.dispatch_room.assert_called_once()
+    payload = mock_notification_service.dispatch_room.call_args.kwargs["payload"]
     assert "Trần Thị Tuyết Trinh" in payload.content
     assert "20/10/2026" in payload.content
 
 
 @pytest.mark.asyncio
 async def test_duty_notification_handler_handles_exceptions_gracefully(
-    mock_notification_service, mock_user_repo, mock_team_repo
+    mock_notification_service,
+    mock_user_repo,
+    mock_team_repo,
+    mock_meeting_repo,
+    mock_duty_repo,
 ):
     """Test DutyNotificationHandler không ném lỗi unhandled khi service fail."""
-    mock_notification_service.send_to_room.side_effect = Exception("Discord network error")
+    mock_notification_service.dispatch_room.side_effect = Exception(
+        "Discord network error"
+    )
     handler = DutyNotificationHandler(
-        notification_service=mock_notification_service,
+        dispatcher=mock_notification_service,
         user_repo=mock_user_repo,
         team_repo=mock_team_repo,
+        meeting_repo=mock_meeting_repo,
+        duty_repo=mock_duty_repo,
     )
 
     event = DutySubmitted(
@@ -894,12 +973,10 @@ async def test_duty_notification_handler_handles_exceptions_gracefully(
 
 @pytest.mark.asyncio
 async def test_violation_notification_handler_sends_user_notification(
-    mock_notification_service
+    mock_notification_service,
 ):
     """Test ViolationNotificationHandler gửi thông báo cá nhân khi có ViolationCreated."""
-    handler = ViolationNotificationHandler(
-        notification_service=mock_notification_service
-    )
+    handler = ViolationNotificationHandler(dispatcher=mock_notification_service)
 
     event = ViolationCreated(
         violation_id=10,
@@ -912,8 +989,8 @@ async def test_violation_notification_handler_sends_user_notification(
 
     await handler._send_notifications_task(event)
 
-    mock_notification_service.send_to_user.assert_called_once()
-    payload = mock_notification_service.send_to_user.call_args.args[0]
+    mock_notification_service.dispatch.assert_called_once()
+    payload = mock_notification_service.dispatch.call_args.args[0]
     assert payload.user_id == 101
     assert "THÔNG BÁO VI PHẠM KỶ LUẬT" in payload.title
     assert "không hoàn thành trực nhật" in payload.fields[0]["value"]
@@ -985,7 +1062,9 @@ async def test_update_duty_use_case_with_time(mock_duty_repo, mock_team_repo):
     assert result.note == "Cập nhật giờ"
 
 
-def test_get_weekly_schedule_detects_time_conflict(mock_duty_repo, mock_team_repo, mock_meeting_repo):
+def test_get_weekly_schedule_detects_time_conflict(
+    mock_duty_repo, mock_team_repo, mock_meeting_repo
+):
     """Test hệ thống phát hiện và gắn cờ is_time_conflict khi 2 ca của cùng 1 nhóm bị trùng khung giờ."""
     # Giả sử trong tuần có 2 ca trực tự do của cùng nhóm 12 vào ngày Thứ 3 (2026-10-20):
     # Ca 1: 17:00 - 18:30
@@ -1034,7 +1113,12 @@ def test_get_weekly_schedule_detects_time_conflict(mock_duty_repo, mock_team_rep
 
 @pytest.mark.asyncio
 async def test_duty_notification_handler_scheduled_event_with_meeting_includes_transferred_students(
-    mock_notification_service, mock_user_repo, mock_team_repo, mock_meeting_repo, mock_duty_repo, monkeypatch
+    mock_notification_service,
+    mock_user_repo,
+    mock_team_repo,
+    mock_meeting_repo,
+    mock_duty_repo,
+    monkeypatch,
 ):
     """
     Test gửi thông báo khi tạo lịch trực nhật có gắn Meeting:
@@ -1043,7 +1127,10 @@ async def test_duty_notification_handler_scheduled_event_with_meeting_includes_t
     - Bỏ qua học viên đã xin nghỉ phép (id=103).
     - Bỏ qua Trainer/Người tạo meeting (id=999).
     """
-    monkeypatch.setattr("app.duty.notification_handler.settings.DISCORD_PERMISSION_ROOM_ID", "room_discord_123")
+    monkeypatch.setattr(
+        "app.duty.notification_handler.settings.DISCORD_PERMISSION_ROOM_ID",
+        "room_discord_123",
+    )
 
     mock_meeting = MagicMock()
     mock_meeting.id = 500
@@ -1077,7 +1164,7 @@ async def test_duty_notification_handler_scheduled_event_with_meeting_includes_t
     mock_duty_repo.get_by_id.return_value = duty
 
     handler = DutyNotificationHandler(
-        notification_service=mock_notification_service,
+        dispatcher=mock_notification_service,
         user_repo=mock_user_repo,
         team_repo=mock_team_repo,
         meeting_repo=mock_meeting_repo,
@@ -1094,21 +1181,28 @@ async def test_duty_notification_handler_scheduled_event_with_meeting_includes_t
 
     await handler._send_scheduled_notification_task(event)
 
-    # Kiểm tra gửi thông báo cá nhân (send_to_user)
-    assert mock_notification_service.send_to_user.call_count == 2
-    sent_user_ids = [call.args[0].user_id for call in mock_notification_service.send_to_user.call_args_list]
+    # Kiểm tra gửi thông báo cá nhân (dispatch)
+    assert mock_notification_service.dispatch.call_count == 2
+    sent_user_ids = [
+        call.args[0].user_id
+        for call in mock_notification_service.dispatch.call_args_list
+    ]
     assert 101 in sent_user_ids
     assert 102 in sent_user_ids  # Học viên đổi ca sang phải nhận được thông báo
     assert 103 not in sent_user_ids  # Nghỉ phép không nhận
     assert 999 not in sent_user_ids  # Trainer không nhận
 
     # Theo yêu cầu: không gửi thông báo tóm tắt lên room Discord quản lý khi lên lịch
-    mock_notification_service.send_to_room.assert_not_called()
+    mock_notification_service.dispatch_room.assert_not_called()
 
 
 @pytest.mark.asyncio
 async def test_duty_notification_handler_scheduled_event_standalone_free_duty(
-    mock_notification_service, mock_user_repo, mock_team_repo, mock_meeting_repo, mock_duty_repo
+    mock_notification_service,
+    mock_user_repo,
+    mock_team_repo,
+    mock_meeting_repo,
+    mock_duty_repo,
 ):
     """Test gửi thông báo khi tạo ca trực tự do (lấy theo thành viên của nhóm)."""
     mock_team = MagicMock()
@@ -1130,7 +1224,7 @@ async def test_duty_notification_handler_scheduled_event_standalone_free_duty(
     mock_duty_repo.get_by_id.return_value = duty
 
     handler = DutyNotificationHandler(
-        notification_service=mock_notification_service,
+        dispatcher=mock_notification_service,
         user_repo=mock_user_repo,
         team_repo=mock_team_repo,
         meeting_repo=mock_meeting_repo,
@@ -1147,14 +1241,19 @@ async def test_duty_notification_handler_scheduled_event_standalone_free_duty(
 
     await handler._send_scheduled_notification_task(event)
 
-    assert mock_notification_service.send_to_user.call_count == 2
-    sent_user_ids = [call.args[0].user_id for call in mock_notification_service.send_to_user.call_args_list]
+    assert mock_notification_service.dispatch.call_count == 2
+    sent_user_ids = [
+        call.args[0].user_id
+        for call in mock_notification_service.dispatch.call_args_list
+    ]
     assert 201 in sent_user_ids
     assert 202 in sent_user_ids
 
 
 @pytest.mark.asyncio
-async def test_update_duty_use_case_publishes_duty_updated(mock_duty_repo, mock_team_repo):
+async def test_update_duty_use_case_publishes_duty_updated(
+    mock_duty_repo, mock_team_repo
+):
     """Kiểm tra UpdateDutyUseCase publish event DutyUpdated khi Admin/HR cập nhật ca trực."""
     mock_event_bus = MagicMock()
     mock_event_bus.publish = AsyncMock()
@@ -1201,7 +1300,11 @@ async def test_update_duty_use_case_publishes_duty_updated(mock_duty_repo, mock_
 
 @pytest.mark.asyncio
 async def test_duty_notification_handler_meeting_updated_reschedules_duty_and_notifies(
-    mock_notification_service, mock_user_repo, mock_team_repo, mock_meeting_repo, mock_duty_repo
+    mock_notification_service,
+    mock_user_repo,
+    mock_team_repo,
+    mock_meeting_repo,
+    mock_duty_repo,
 ):
     """Kiểm tra khi lịch meeting thay đổi ngày/giờ -> tự động cập nhật ca trực liên kết và gửi thông báo mới cho học viên."""
     mock_team = MagicMock()
@@ -1235,7 +1338,7 @@ async def test_duty_notification_handler_meeting_updated_reschedules_duty_and_no
     mock_duty_repo.save.return_value = linked_duty
 
     handler = DutyNotificationHandler(
-        notification_service=mock_notification_service,
+        dispatcher=mock_notification_service,
         user_repo=mock_user_repo,
         team_repo=mock_team_repo,
         meeting_repo=mock_meeting_repo,
@@ -1260,19 +1363,26 @@ async def test_duty_notification_handler_meeting_updated_reschedules_duty_and_no
     assert linked_duty.end_time == time(20, 0)
 
     # 2. Thông báo phải được gửi đến 2 học viên (101, 102), bỏ qua trainer (999)
-    assert mock_notification_service.send_to_user.call_count == 2
-    sent_user_ids = [call.args[0].user_id for call in mock_notification_service.send_to_user.call_args_list]
+    assert mock_notification_service.dispatch.call_count == 2
+    sent_user_ids = [
+        call.args[0].user_id
+        for call in mock_notification_service.dispatch.call_args_list
+    ]
     assert 101 in sent_user_ids
     assert 102 in sent_user_ids
 
-    payload = mock_notification_service.send_to_user.call_args_list[0].args[0]
+    payload = mock_notification_service.dispatch.call_args_list[0].args[0]
     assert "ĐIỀU CHỈNH LỊCH TRỰC NHẬT" in payload.title
     assert "23/10/2026" in payload.content
 
 
 @pytest.mark.asyncio
 async def test_duty_notification_handler_duty_updated_free_schedule(
-    mock_notification_service, mock_user_repo, mock_team_repo, mock_meeting_repo, mock_duty_repo
+    mock_notification_service,
+    mock_user_repo,
+    mock_team_repo,
+    mock_meeting_repo,
+    mock_duty_repo,
 ):
     """Kiểm tra khi ca trực tự do được cập nhật -> gửi thông báo thời gian mới cho học viên trong nhóm."""
     mock_team = MagicMock()
@@ -1295,7 +1405,7 @@ async def test_duty_notification_handler_duty_updated_free_schedule(
     mock_duty_repo.get_by_id.return_value = duty
 
     handler = DutyNotificationHandler(
-        notification_service=mock_notification_service,
+        dispatcher=mock_notification_service,
         user_repo=mock_user_repo,
         team_repo=mock_team_repo,
         meeting_repo=mock_meeting_repo,
@@ -1313,15 +1423,14 @@ async def test_duty_notification_handler_duty_updated_free_schedule(
 
     await handler._send_duty_updated_notification_task(event)
 
-    assert mock_notification_service.send_to_user.call_count == 2
-    sent_user_ids = [call.args[0].user_id for call in mock_notification_service.send_to_user.call_args_list]
+    assert mock_notification_service.dispatch.call_count == 2
+    sent_user_ids = [
+        call.args[0].user_id
+        for call in mock_notification_service.dispatch.call_args_list
+    ]
     assert 301 in sent_user_ids
     assert 302 in sent_user_ids
 
-    payload = mock_notification_service.send_to_user.call_args_list[0].args[0]
+    payload = mock_notification_service.dispatch.call_args_list[0].args[0]
     assert "CẬP NHẬT LỊCH TRỰC NHẬT" in payload.title
     assert "24/10/2026" in payload.content
-
-
-
-

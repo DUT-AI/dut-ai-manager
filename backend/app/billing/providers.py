@@ -12,7 +12,9 @@ from app.billing.application.use_cases import (
     UpdateInvoiceUseCase,
 )
 from app.billing.infrastructure.repository import InvoiceRepository
-from app.shared.infrastructure.notification_service import NotificationService
+from app.shared.infrastructure.notification.dispatcher import (
+    UnifiedNotificationDispatcher,
+)
 from app.team.infrastructure.repository import TeamRepository
 from app.violation.infrastructure.repository import ViolationRepository
 
@@ -61,6 +63,6 @@ class BillingModuleProvider(Provider):
 
     @provide
     def get_billing_notification_handler(
-        self, notification_service: NotificationService
+        self, dispatcher: UnifiedNotificationDispatcher
     ) -> BillingNotificationHandler:
-        return BillingNotificationHandler(notification_service)
+        return BillingNotificationHandler(dispatcher)

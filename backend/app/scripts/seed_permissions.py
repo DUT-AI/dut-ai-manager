@@ -2,6 +2,7 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+import app.meeting.infrastructure.model  # noqa: F401
 from app.auth.infrastructure.model import AccountModel
 from app.core.database import engine
 from app.core.permissions import (
@@ -28,7 +29,6 @@ from app.rbac.infrastructure.model import (
 )
 from app.user.domain.entity import UserStatus
 from app.user.infrastructure.model import UserModel
-import app.meeting.infrastructure.model  # noqa: F401
 from app.utils.password import hash_password
 
 
@@ -49,9 +49,7 @@ def seed_roles():
             existing_role = session.scalars(statement).first()
 
             if existing_role:
-                logger.info(
-                    f"Role '{role_data['name']}' already exists, skipping..."
-                )
+                logger.info(f"Role '{role_data['name']}' already exists, skipping...")
                 continue
 
             # Create new role
@@ -245,7 +243,9 @@ def sync_member_duty_permissions():
                 )
                 for perm in all_duty_perms:
                     if perm.id not in existing_perm_ids:
-                        session.add(RolePermissionModel(role_id=role.id, permission_id=perm.id))
+                        session.add(
+                            RolePermissionModel(role_id=role.id, permission_id=perm.id)
+                        )
                         logger.info(f"Granted {perm.name} to {role.name} role")
                 continue
 
@@ -259,13 +259,17 @@ def sync_member_duty_permissions():
                 ).all()
                 for rp in duty_role_perms:
                     session.delete(rp)
-                    logger.info(f"Revoked duty permission id {rp.permission_id} from LEADER role")
+                    logger.info(
+                        f"Revoked duty permission id {rp.permission_id} from LEADER role"
+                    )
                 continue
 
             # 3. Teammate: ONLY read permission
             if role_name_upper == "TEAMMATE":
                 # Revoke any duty permissions that are NOT duty:read
-                non_read_ids = all_duty_perm_ids - ({duty_read_id} if duty_read_id else set())
+                non_read_ids = all_duty_perm_ids - (
+                    {duty_read_id} if duty_read_id else set()
+                )
                 non_read_duty_perms = session.scalars(
                     select(RolePermissionModel).where(
                         RolePermissionModel.role_id == role.id,
@@ -274,7 +278,9 @@ def sync_member_duty_permissions():
                 ).all()
                 for rp in non_read_duty_perms:
                     session.delete(rp)
-                    logger.info(f"Revoked non-read duty permission id {rp.permission_id} from TEAMMATE role")
+                    logger.info(
+                        f"Revoked non-read duty permission id {rp.permission_id} from TEAMMATE role"
+                    )
 
                 # Grant duty:read if not present
                 existing_perm_ids = set(
@@ -285,7 +291,9 @@ def sync_member_duty_permissions():
                     ).all()
                 )
                 if duty_read_id and duty_read_id not in existing_perm_ids:
-                    session.add(RolePermissionModel(role_id=role.id, permission_id=duty_read_id))
+                    session.add(
+                        RolePermissionModel(role_id=role.id, permission_id=duty_read_id)
+                    )
                     logger.info("Granted duty:read to TEAMMATE role")
                 continue
 
@@ -300,7 +308,9 @@ def sync_member_duty_permissions():
                 session.delete(rp)
 
         session.commit()
-        logger.info("Duty permissions sync completed: Leader has none, Teammate is read-only.")
+        logger.info(
+            "Duty permissions sync completed: Leader has none, Teammate is read-only."
+        )
 
 
 if __name__ == "__main__":

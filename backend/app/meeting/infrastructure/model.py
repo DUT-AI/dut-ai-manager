@@ -3,7 +3,6 @@ Meeting ORM Models — SQLAlchemy 2.0, infrastructure layer.
 """
 
 from datetime import datetime
-from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, String
 from sqlalchemy.dialects import postgresql
@@ -23,9 +22,8 @@ from app.meeting.domain.entity import (
 from app.meeting.domain.entity import MeetingParticipant as MeetingParticipantEntity
 from app.meeting.domain.value_objects import EvaluationType, ParticipantStatus
 from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
-from app.utils.datetime import get_current_utc7_time
-
 from app.user.infrastructure.model import UserModel
+from app.utils.datetime import get_current_utc7_time
 
 
 class Meeting(SQLAlchemyTimestampMixin, Base):

@@ -2,12 +2,14 @@
 Reminder & Notification Dishka Provider.
 """
 
-from collections.abc import AsyncIterable
 from dishka import Provider, Scope, provide
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.duty.infrastructure.repository import DutyRepository
-from app.homework.infrastructure.homework_assignee_repository import HomeworkAssigneeRepository
+from app.homework.infrastructure.homework_assignee_repository import (
+    HomeworkAssigneeRepository,
+)
 from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.homework.infrastructure.homework_submission_repository import (
     HomeworkSubmissionRepository,
@@ -16,7 +18,9 @@ from app.meeting.infrastructure.repository import (
     MeetingEvaluationRepository,
     MeetingRepository,
 )
-from app.reminder.application.get_my_notifications_use_case import GetMyNotificationsUseCase
+from app.reminder.application.get_my_notifications_use_case import (
+    GetMyNotificationsUseCase,
+)
 from app.reminder.application.get_unread_notification_count_use_case import (
     GetUnreadNotificationCountUseCase,
 )
@@ -29,29 +33,33 @@ from app.reminder.application.mark_notification_as_read_use_case import (
 from app.reminder.application.register_push_subscription_use_case import (
     RegisterPushSubscriptionUseCase,
 )
+from app.reminder.application.reminder_dispatcher import ReminderDispatcher
+from app.reminder.application.scan_and_send_reminders_use_case import (
+    ScanAndSendRemindersUseCase,
+)
+from app.reminder.application.scanners.duty_scanner import DutyTaskScanner
+from app.reminder.application.scanners.homework_scanner import HomeworkTaskScanner
+from app.reminder.application.scanners.meeting_evaluation_scanner import (
+    MeetingEvaluationTaskScanner,
+)
+from app.reminder.application.scanners.upcoming_meeting_scanner import (
+    UpcomingMeetingTaskScanner,
+)
 from app.reminder.application.send_web_push_notification_use_case import (
     SendWebPushNotificationUseCase,
 )
 from app.reminder.application.unregister_push_subscription_use_case import (
     UnregisterPushSubscriptionUseCase,
 )
-from app.reminder.application.reminder_dispatcher import ReminderDispatcher
-from app.reminder.application.scanners.duty_scanner import DutyTaskScanner
-from app.reminder.application.scanners.homework_scanner import HomeworkTaskScanner
-from app.reminder.application.scanners.meeting_evaluation_scanner import (
-    MeetingEvaluationTaskScanner,
-)
-from app.reminder.application.scan_and_send_reminders_use_case import (
-    ScanAndSendRemindersUseCase,
-)
-from app.core.config import settings
 from app.reminder.domain.repository import PushSubscriptionRepository
 from app.reminder.infrastructure.repository import (
     NotificationRepository,
     PushSubscriptionRepositoryImpl,
 )
 from app.reminder.infrastructure.web_push_service import WebPushService
-from app.shared.infrastructure.discord_service import DiscordService
+from app.shared.infrastructure.notification.dispatcher import (
+    UnifiedNotificationDispatcher,
+)
 from app.team.infrastructure.repository import TeamRepository
 from app.user.infrastructure.repository import UserRepository
 
@@ -157,18 +165,25 @@ class ReminderModuleProvider(Provider):
         )
 
     @provide
+    def get_upcoming_meeting_scanner(
+        self,
+        meeting_repo: MeetingRepository,
+    ) -> UpcomingMeetingTaskScanner:
+        return UpcomingMeetingTaskScanner(
+            meeting_repo=meeting_repo,
+        )
+
+    @provide
     def get_reminder_dispatcher(
         self,
         notification_repo: NotificationRepository,
         user_repo: UserRepository,
-        discord_service: DiscordService,
-        send_web_push_use_case: SendWebPushNotificationUseCase,
+        unified_dispatcher: UnifiedNotificationDispatcher,
     ) -> ReminderDispatcher:
         return ReminderDispatcher(
             notification_repo=notification_repo,
             user_repo=user_repo,
-            discord_service=discord_service,
-            send_web_push_use_case=send_web_push_use_case,
+            unified_dispatcher=unified_dispatcher,
         )
 
     @provide
@@ -177,11 +192,17 @@ class ReminderModuleProvider(Provider):
         homework_scanner: HomeworkTaskScanner,
         duty_scanner: DutyTaskScanner,
         meeting_evaluation_scanner: MeetingEvaluationTaskScanner,
+        upcoming_meeting_scanner: UpcomingMeetingTaskScanner,
         dispatcher: ReminderDispatcher,
         notification_repo: NotificationRepository,
     ) -> ScanAndSendRemindersUseCase:
         return ScanAndSendRemindersUseCase(
-            scanners=[homework_scanner, duty_scanner, meeting_evaluation_scanner],
+            scanners=[
+                homework_scanner,
+                duty_scanner,
+                meeting_evaluation_scanner,
+                upcoming_meeting_scanner,
+            ],
             dispatcher=dispatcher,
             notification_repo=notification_repo,
         )

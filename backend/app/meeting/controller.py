@@ -2,7 +2,16 @@ from datetime import date, datetime
 from typing import Annotated
 
 from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Response,
+    UploadFile,
+    status,
+)
 from fastapi.responses import StreamingResponse
 
 from app.core.deps import CurrentUser, hasPermission
@@ -44,14 +53,20 @@ from app.meeting.schemas import (
     UpdateParticipantStatusRequest,
 )
 from app.shared.application.pagination import PaginationParams
-from app.shared.application.response import ApiResponse, BadRequestException, PaginationMeta
+from app.shared.application.response import (
+    ApiResponse,
+    BadRequestException,
+    PaginationMeta,
+)
 from app.shared.infrastructure.sse import sse_broadcaster
 from app.utils.text import remove_vietnamese_tones
 
 router = APIRouter(prefix="/meetings", tags=["Meetings"])
 
 
-@router.get("/available-seats", response_model=ApiResponse[list[MeetingSeatAvailabilityDto]])
+@router.get(
+    "/available-seats", response_model=ApiResponse[list[MeetingSeatAvailabilityDto]]
+)
 @inject
 async def get_upcoming_meetings_with_seats(
     uc: FromDishka[GetUpcomingMeetingsWithSeatsUseCase],
@@ -61,7 +76,6 @@ async def get_upcoming_meetings_with_seats(
     """Lấy danh sách các buổi họp sắp tới kèm số lượng ghế khả dụng"""
     results = uc.execute(from_date=from_date)
     return ApiResponse.success(data=results)
-
 
 
 @router.post(

@@ -1,4 +1,5 @@
 import pytest
+
 from app.core.principal import AuthPrincipal, PrincipalType
 from app.shared.application.response import BadRequestException
 

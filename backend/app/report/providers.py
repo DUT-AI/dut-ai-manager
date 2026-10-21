@@ -128,7 +128,9 @@ class ReportModuleProvider(Provider):
         participant_repo: ParticipantRepository,
         violation_repo: ViolationRepository,
     ) -> GetParticipationLeaderboardUseCase:
-        return GetParticipationLeaderboardUseCase(user_repo, participant_repo, violation_repo)
+        return GetParticipationLeaderboardUseCase(
+            user_repo, participant_repo, violation_repo
+        )
 
     @provide
     def get_activity_trend_uc(

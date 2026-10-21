@@ -4,6 +4,7 @@ Tuân thủ chuẩn VAPID RFC 8292 để gửi thông báo đẩy an toàn tới
 """
 
 import json
+
 from loguru import logger
 
 try:
@@ -18,11 +19,13 @@ from app.reminder.domain.entity import PushSubscription
 
 class WebPushServiceException(Exception):
     """Lỗi cơ bản khi gửi Web Push."""
+
     pass
 
 
 class DeadTokenException(WebPushServiceException):
     """Token hết hạn hoặc thiết bị đã hủy nhận thông báo (HTTP 404 / 410 Gone)."""
+
     pass
 
 
@@ -84,14 +87,22 @@ class WebPushService:
             )
             return True
         except WebPushException as ex:
-            status_code = getattr(ex.response, "status_code", None) if hasattr(ex, "response") and ex.response else None
+            status_code = (
+                getattr(ex.response, "status_code", None)
+                if hasattr(ex, "response") and ex.response
+                else None
+            )
             logger.warning(
                 f"Lỗi khi gửi Web Push tới endpoint {subscription.endpoint[:40]}...: "
                 f"status={status_code}, error={str(ex)}"
             )
             if status_code in (404, 410):
-                raise DeadTokenException(f"Token expired or device unsubscribed: status {status_code}") from ex
-            raise WebPushServiceException(f"Web Push delivery failed: {str(ex)}") from ex
+                raise DeadTokenException(
+                    f"Token expired or device unsubscribed: status {status_code}"
+                ) from ex
+            raise WebPushServiceException(
+                f"Web Push delivery failed: {str(ex)}"
+            ) from ex
         except Exception as e:
             logger.error(f"Lỗi không xác định khi gửi Web Push: {str(e)}")
             raise WebPushServiceException(f"Unexpected Web Push error: {str(e)}") from e

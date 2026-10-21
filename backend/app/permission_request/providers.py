@@ -18,7 +18,9 @@ from app.permission_request.application.use_cases import (
     UpdatePermissionRequestUseCase,
 )
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
-from app.shared.infrastructure.notification_service import NotificationService
+from app.shared.infrastructure.notification.dispatcher import (
+    UnifiedNotificationDispatcher,
+)
 from app.user.infrastructure.repository import UserRepository
 
 
@@ -77,24 +79,23 @@ class PermissionRequestModuleProvider(Provider):
     @provide
     def get_notification_handler(
         self,
-        notification_service: NotificationService,
+        dispatcher: UnifiedNotificationDispatcher,
         user_repo: UserRepository,
     ) -> PermissionRequestNotificationHandler:
         return PermissionRequestNotificationHandler(
-            notification_service=notification_service,
+            dispatcher=dispatcher,
             user_repo=user_repo,
         )
 
     @provide
     def get_meeting_participant_transferred_notification_handler(
         self,
-        notification_service: NotificationService,
+        dispatcher: UnifiedNotificationDispatcher,
         user_repo: UserRepository,
         meeting_repo: MeetingRepository,
     ) -> MeetingParticipantTransferredNotificationHandler:
         return MeetingParticipantTransferredNotificationHandler(
-            notification_service=notification_service,
+            dispatcher=dispatcher,
             user_repo=user_repo,
             meeting_repo=meeting_repo,
         )
-

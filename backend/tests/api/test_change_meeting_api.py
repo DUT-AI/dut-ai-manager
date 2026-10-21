@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta, timezone
-import pytest
+from datetime import UTC, datetime, timedelta
+
 from sqlalchemy import text
 
 
@@ -20,7 +20,7 @@ def test_api_change_meeting_full_flow(api_client, mock_current_user, db_engine):
     - Kiểm tra: User bị rút khỏi A, thêm vào B, đơn vắng cũ bị huỷ, đơn đổi ca mới được tạo.
     """
     user_id = mock_current_user.id
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     start_a = now + timedelta(days=10)
     end_a = start_a + timedelta(hours=2)
     start_b = now + timedelta(days=11)
@@ -121,11 +121,15 @@ def test_api_change_meeting_full_flow(api_client, mock_current_user, db_engine):
         with db_engine.begin() as conn:
             if meeting_a_id and meeting_b_id:
                 conn.execute(
-                    text("DELETE FROM permission_requests WHERE meeting_id IN (:ma, :mb) OR id = :pid"),
+                    text(
+                        "DELETE FROM permission_requests WHERE meeting_id IN (:ma, :mb) OR id = :pid"
+                    ),
                     {"ma": meeting_a_id, "mb": meeting_b_id, "pid": old_perm_id or 0},
                 )
                 conn.execute(
-                    text("DELETE FROM meeting_participants WHERE meeting_id IN (:ma, :mb)"),
+                    text(
+                        "DELETE FROM meeting_participants WHERE meeting_id IN (:ma, :mb)"
+                    ),
                     {"ma": meeting_a_id, "mb": meeting_b_id},
                 )
                 conn.execute(
@@ -137,14 +141,21 @@ def test_api_change_meeting_full_flow(api_client, mock_current_user, db_engine):
 def test_api_change_meeting_validation_errors(api_client):
     """Kiểm thử validation lỗi nghiệp vụ trả về đúng HTTP 400."""
     # 1. Thiếu meeting_id
-    res1 = api_client.post("/api/v1/permissions", json={"category": "CHANGE_MEETING", "note": "Test"})
+    res1 = api_client.post(
+        "/api/v1/permissions", json={"category": "CHANGE_MEETING", "note": "Test"}
+    )
     assert res1.status_code == 400
     assert "Vui lòng chọn buổi họp đích" in res1.json()["message"]
 
     # 2. Trùng meeting_id với old_meeting_id
     res2 = api_client.post(
         "/api/v1/permissions",
-        json={"category": "CHANGE_MEETING", "meeting_id": 99999, "old_meeting_id": 99999, "note": "Test"},
+        json={
+            "category": "CHANGE_MEETING",
+            "meeting_id": 99999,
+            "old_meeting_id": 99999,
+            "note": "Test",
+        },
     )
     assert res2.status_code == 400
     assert "Không thể đổi sang cùng một buổi họp" in res2.json()["message"]

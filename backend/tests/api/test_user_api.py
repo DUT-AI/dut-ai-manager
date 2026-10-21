@@ -3,8 +3,6 @@ API Tests for User Controller (/api/v1/users).
 Covers success responses, 401 Unauthorized, 403 Forbidden, and 404 Not Found.
 """
 
-import pytest
-
 
 def test_list_users_as_admin_success(admin_client):
     """Admin có thể xem danh sách toàn bộ users."""
@@ -41,7 +39,10 @@ def test_download_user_import_template_success(admin_client):
     """Tải template Excel import user trả về file binary hợp lệ."""
     res = admin_client.get("/api/v1/users/template")
     assert res.status_code == 200
-    assert "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" in res.headers["content-type"]
+    assert (
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        in res.headers["content-type"]
+    )
 
 
 def test_get_user_by_id_success(admin_client, mock_current_user):

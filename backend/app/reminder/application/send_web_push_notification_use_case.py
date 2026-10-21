@@ -40,7 +40,9 @@ class SendWebPushNotificationUseCase:
         """
         subscriptions = self.repo.get_active_by_user_id(user_id)
         if not subscriptions:
-            logger.debug(f"User {user_id} không có thiết bị Web Push nào đang hoạt động.")
+            logger.debug(
+                f"User {user_id} không có thiết bị Web Push nào đang hoạt động."
+            )
             return 0, 0
 
         payload = {

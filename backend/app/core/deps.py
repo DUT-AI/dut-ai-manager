@@ -60,11 +60,15 @@ def get_current_principal(
                 break
 
         if not matched_key:
-            raise BadRequestException("Invalid API Key", status_code=status.HTTP_401_UNAUTHORIZED)
+            raise BadRequestException(
+                "Invalid API Key", status_code=status.HTTP_401_UNAUTHORIZED
+            )
 
         role = matched_key.role
         if not role:
-            raise BadRequestException("Role not found", status_code=status.HTTP_401_UNAUTHORIZED)
+            raise BadRequestException(
+                "Role not found", status_code=status.HTTP_401_UNAUTHORIZED
+            )
 
         full_role = RoleRepository(session).get_role_with_permissions(
             cast(int, role.id)

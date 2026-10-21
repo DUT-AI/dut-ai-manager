@@ -3,6 +3,7 @@ Duty Repository — Data Access Layer.
 """
 
 from datetime import date
+
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
@@ -15,12 +16,9 @@ class DutyRepository:
         self.session = session
 
     def get_by_id(self, duty_id: int) -> CleaningDuty | None:
-        stmt = (
-            select(CleaningDutyModel)
-            .where(
-                CleaningDutyModel.id == duty_id,
-                CleaningDutyModel.is_deleted.is_(False),
-            )
+        stmt = select(CleaningDutyModel).where(
+            CleaningDutyModel.id == duty_id,
+            CleaningDutyModel.is_deleted.is_(False),
         )
         model = self.session.scalars(stmt).first()
         return model.to_entity() if model else None
@@ -36,7 +34,6 @@ class DutyRepository:
         )
         models = self.session.scalars(stmt).all()
         return [m.to_entity() for m in models]
-
 
     def get_by_date_and_team(
         self, duty_date: date, team_id: int | list[int]
@@ -78,11 +75,13 @@ class DutyRepository:
             stmt = stmt.where(CleaningDutyModel.status == status)
         else:
             stmt = stmt.where(
-                CleaningDutyModel.status.in_([
-                    DutyStatus.COMPLETED.value,
-                    DutyStatus.VIOLATED.value,
-                    DutyStatus.CANCELLED.value,
-                ])
+                CleaningDutyModel.status.in_(
+                    [
+                        DutyStatus.COMPLETED.value,
+                        DutyStatus.VIOLATED.value,
+                        DutyStatus.CANCELLED.value,
+                    ]
+                )
             )
 
         # Count total
@@ -91,7 +90,9 @@ class DutyRepository:
 
         # Pagination & ordering (newest date first)
         stmt = (
-            stmt.order_by(CleaningDutyModel.duty_date.desc(), CleaningDutyModel.id.desc())
+            stmt.order_by(
+                CleaningDutyModel.duty_date.desc(), CleaningDutyModel.id.desc()
+            )
             .offset((page - 1) * page_size)
             .limit(page_size)
         )
@@ -106,15 +107,15 @@ class DutyRepository:
         """
         stmt = select(CleaningDutyModel).where(
             CleaningDutyModel.duty_date == target_date,
-            CleaningDutyModel.status.in_([DutyStatus.PENDING.value, DutyStatus.REJECTED.value]),
+            CleaningDutyModel.status.in_(
+                [DutyStatus.PENDING.value, DutyStatus.REJECTED.value]
+            ),
             CleaningDutyModel.is_deleted.is_(False),
         )
         models = self.session.scalars(stmt).all()
         return [m.to_entity() for m in models]
 
-    def get_by_date_range(
-        self, start_date: date, end_date: date
-    ) -> list[CleaningDuty]:
+    def get_by_date_range(self, start_date: date, end_date: date) -> list[CleaningDuty]:
         stmt = (
             select(CleaningDutyModel)
             .where(

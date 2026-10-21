@@ -1,6 +1,6 @@
 from app.meeting.domain.value_objects import (
-    EvaluationType,
     EvaluationGroupSummary,
+    EvaluationType,
 )
 from app.meeting.infrastructure.repository import (
     MeetingEvaluationRepository,
@@ -93,7 +93,9 @@ class GetMeetingEvaluationSummaryUseCase:
         if self.overall_eval_repo:
             overall_entity = self.overall_eval_repo.get_by_meeting_id(meeting_id)
             if overall_entity:
-                overall_eval_dto = MeetingOverallEvaluationResponse.from_domain(overall_entity)
+                overall_eval_dto = MeetingOverallEvaluationResponse.from_domain(
+                    overall_entity
+                )
 
         return MeetingEvaluationSummaryResponse(
             meeting_id=meeting_id,
@@ -108,4 +110,3 @@ class GetMeetingEvaluationSummaryUseCase:
             my_evaluation=my_eval_dto,
             overall_evaluation=overall_eval_dto,
         )
-

@@ -12,7 +12,9 @@ from app.bonus_point.application import (
 from app.bonus_point.infrastructure.repository import BonusPointRepository
 from app.bonus_point.notification_handler import BonusPointNotificationHandler
 from app.meeting.infrastructure.repository import ParticipantRepository
-from app.shared.infrastructure.notification_service import NotificationService
+from app.shared.infrastructure.notification.dispatcher import (
+    UnifiedNotificationDispatcher,
+)
 
 
 class BonusPointModuleProvider(Provider):
@@ -61,6 +63,6 @@ class BonusPointModuleProvider(Provider):
     @provide
     def get_notification_handler(
         self,
-        notification_service: NotificationService,
+        dispatcher: UnifiedNotificationDispatcher,
     ) -> BonusPointNotificationHandler:
-        return BonusPointNotificationHandler(notification_service)
+        return BonusPointNotificationHandler(dispatcher)

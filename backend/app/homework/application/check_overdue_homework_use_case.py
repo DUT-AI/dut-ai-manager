@@ -124,11 +124,15 @@ class CheckOverdueHomeworkUseCase:
                 if req_coding:
                     db_coding = False
                     if (
-                        hasattr(self.homework_submission_repo, "get_submitted_exercise_ids")
+                        hasattr(
+                            self.homework_submission_repo, "get_submitted_exercise_ids"
+                        )
                         and required_exercise_ids
                     ):
-                        submitted_ids = self.homework_submission_repo.get_submitted_exercise_ids(
-                            homework.id, user_id, homework.deadline
+                        submitted_ids = (
+                            self.homework_submission_repo.get_submitted_exercise_ids(
+                                homework.id, user_id, homework.deadline
+                            )
                         )
                         db_coding = required_exercise_ids.issubset(submitted_ids)
                     elif hasattr(self.homework_submission_repo, "has_valid_submission"):
@@ -144,7 +148,7 @@ class CheckOverdueHomeworkUseCase:
 
                 # 2. Kiểm tra mục Game (nếu bài yêu cầu)
                 game_ok = True
-                if req_game:                   
+                if req_game:
                     res = self.homework_submission_repo.has_valid_submission(
                         homework.id, user_id, SubmissionType.GAME, homework.deadline
                     )

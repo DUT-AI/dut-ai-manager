@@ -5,6 +5,7 @@ and identifies participants who have not yet submitted their evaluation.
 """
 
 from datetime import datetime, timedelta
+
 from app.meeting.domain.value_objects import ParticipantStatus
 from app.meeting.infrastructure.repository import (
     MeetingEvaluationRepository,
@@ -55,9 +56,11 @@ class MeetingEvaluationTaskScanner(BaseTaskScanner):
 
             # Các thành viên hợp lệ cần đánh giá: tham gia buổi họp (JOINED/COMPLETED)
             valid_participants = [
-                p for p in meeting.participants
+                p
+                for p in meeting.participants
                 if not p.is_deleted
-                and p.status in (
+                and p.status
+                in (
                     ParticipantStatus.JOINED,
                     ParticipantStatus.COMPLETED,
                     ParticipantStatus.LATE_EXCUSED,

@@ -5,23 +5,22 @@ Handles HTTP routes and mapping requests to Use Cases.
 """
 
 from datetime import date
-
 from typing import Annotated
 
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.bonus_point.application.dtos import (
-    BonusPointCreate,
-    BonusPointResponse,
-    BonusPointUpdate,
-)
 from app.bonus_point.application import (
     CreateBonusPointsUseCase,
     DeleteBonusPointUseCase,
     GetBonusPointsUseCase,
     RestoreBonusPointUseCase,
     UpdateBonusPointUseCase,
+)
+from app.bonus_point.application.dtos import (
+    BonusPointCreate,
+    BonusPointResponse,
+    BonusPointUpdate,
 )
 from app.bonus_point.domain.value_objects import BonusPointType
 from app.core.deps import CurrentUser, hasPermission, hasTeamLeaderAccess

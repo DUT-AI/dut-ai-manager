@@ -1,13 +1,10 @@
-from app.utils.datetime import get_current_utc7_time
 from datetime import datetime
 from enum import StrEnum
 
-import httpx
-from loguru import logger
-
-from app.core.config import settings
-from app.shared.domain.base_entity import BaseEntity
 from app.homework.domain.value_objects import SubmissionEvaluation
+from app.shared.domain.base_entity import BaseEntity
+from app.utils.datetime import get_current_utc7_time
+
 
 class SubmissionType(StrEnum):
     CODING = "CODING"
@@ -69,9 +66,17 @@ class Homework(BaseEntity):
 
     def get_effective_deadline(self, postpone_time: datetime | None) -> datetime:
         """Domain Rule: Xác định deadline hiệu lực của học viên khi có đơn xin gia hạn."""
-        base_dl = self.deadline.replace(tzinfo=None) if self.deadline.tzinfo else self.deadline
+        base_dl = (
+            self.deadline.replace(tzinfo=None)
+            if self.deadline.tzinfo
+            else self.deadline
+        )
         if postpone_time:
-            post_time = postpone_time.replace(tzinfo=None) if postpone_time.tzinfo else postpone_time
+            post_time = (
+                postpone_time.replace(tzinfo=None)
+                if postpone_time.tzinfo
+                else postpone_time
+            )
             if post_time > base_dl:
                 return post_time
         return base_dl
@@ -89,23 +94,35 @@ class Homework(BaseEntity):
 
     def index_submissions(
         self, submissions: list["HomeworkSubmission"]
-    ) -> tuple[dict[tuple[int, str], "HomeworkSubmission"], dict[int, "HomeworkSubmission"], dict[int, "HomeworkSubmission"]]:
+    ) -> tuple[
+        dict[tuple[int, str], "HomeworkSubmission"],
+        dict[int, "HomeworkSubmission"],
+        dict[int, "HomeworkSubmission"],
+    ]:
         """Aggregate Root: Phân loại và lập chỉ mục các bài nộp theo học viên và bài tập con."""
         exercise_map: dict[tuple[int, str], HomeworkSubmission] = {}
         coding_general_map: dict[int, HomeworkSubmission] = {}
         game_map: dict[int, HomeworkSubmission] = {}
 
         for sub in submissions:
-            stype = str(sub.submission_type).upper() if sub.submission_type else "CODING"
+            stype = (
+                str(sub.submission_type).upper() if sub.submission_type else "CODING"
+            )
             if stype == "CODING":
                 if sub.exercise_id:
                     key = (sub.user_id, str(sub.exercise_id))
-                    if key not in exercise_map or (sub.is_passed and not exercise_map[key].is_passed):
+                    if key not in exercise_map or (
+                        sub.is_passed and not exercise_map[key].is_passed
+                    ):
                         exercise_map[key] = sub
-                if sub.user_id not in coding_general_map or (sub.is_passed and not coding_general_map[sub.user_id].is_passed):
+                if sub.user_id not in coding_general_map or (
+                    sub.is_passed and not coding_general_map[sub.user_id].is_passed
+                ):
                     coding_general_map[sub.user_id] = sub
             elif stype == "GAME":
-                if sub.user_id not in game_map or (sub.is_passed and not game_map[sub.user_id].is_passed):
+                if sub.user_id not in game_map or (
+                    sub.is_passed and not game_map[sub.user_id].is_passed
+                ):
                     game_map[sub.user_id] = sub
 
         return exercise_map, coding_general_map, game_map
@@ -127,7 +144,11 @@ class HomeworkSubmission(BaseEntity):
 
     def is_late_for(self, deadline: datetime) -> bool:
         """Domain Rule: Xác định bài nộp có bị trễ so với deadline hiệu lực không."""
-        sub_time = self.submitted_at.replace(tzinfo=None) if self.submitted_at.tzinfo else self.submitted_at
+        sub_time = (
+            self.submitted_at.replace(tzinfo=None)
+            if self.submitted_at.tzinfo
+            else self.submitted_at
+        )
         dl_time = deadline.replace(tzinfo=None) if deadline.tzinfo else deadline
         return sub_time > dl_time
 

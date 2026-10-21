@@ -3,9 +3,10 @@ from enum import StrEnum
 from typing import Any, ClassVar, Union
 
 from sqlalchemy import and_, or_
+from sqlalchemy.orm import joinedload
 
 from app.core.queries.query_support.exceptions import PaginationError
-from sqlalchemy.orm import joinedload
+
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class OffsetPaginationParams:
@@ -35,7 +36,9 @@ class OffsetPaginationParams:
     @classmethod
     def from_page(cls, page: int, page_size: int) -> "OffsetPaginationParams":
         if page < 1:
-            raise PaginationError(f"Page must be greater than or equal to 1, got {page}")
+            raise PaginationError(
+                f"Page must be greater than or equal to 1, got {page}"
+            )
         offset = (page - 1) * page_size
         return cls(limit=page_size, offset=offset)
 

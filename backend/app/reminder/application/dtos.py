@@ -3,6 +3,7 @@ DTOs for Reminder & Notification application use cases.
 """
 
 from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict
 
 from app.reminder.domain.entity import (
@@ -26,6 +27,8 @@ class NotificationDto(BaseModel):
     action_url: str | None = None
     is_read: bool = False
     read_at: datetime | None = None
+    image_url: str | None = None
+    metadata_json: dict | None = None
     created_at: datetime
 
 
@@ -87,4 +90,3 @@ class UnregisterPushSubscriptionRequestDto(BaseModel):
 class TestPushResponseDto(BaseModel):
     sent_count: int
     failed_count: int
-

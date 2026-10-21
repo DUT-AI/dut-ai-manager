@@ -83,9 +83,13 @@ class BaseRepository(Generic[TModel, TEntity]):
     ) -> tuple[list[TEntity], int]:
         """Get paginated models and total count with optimized COUNT query."""
         # 1. Optimized Count Query: Filter only, no sorting or eager joins
-        count_stmt = select(func.count(self.model.id)).where(self.model.is_deleted == deleted)
+        count_stmt = select(func.count(self.model.id)).where(
+            self.model.is_deleted == deleted
+        )
         if query_support and query_support.filters:
-            count_stmt = apply_filters_only(count_stmt, self.model, query_support.filters)
+            count_stmt = apply_filters_only(
+                count_stmt, self.model, query_support.filters
+            )
         total = self.session.scalar(count_stmt) or 0
 
         # 2. Select Query: Full query support (include, filter, sorting, pagination)

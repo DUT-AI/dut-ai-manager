@@ -4,6 +4,7 @@ Decoupled from UserEntity domain entity.
 """
 
 from enum import Enum
+
 from fastapi import status
 from pydantic import BaseModel, ConfigDict, Field
 

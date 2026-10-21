@@ -10,6 +10,7 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+
 from alembic import op
 
 # revision identifiers, used by Alembic.
@@ -79,18 +80,10 @@ def upgrade() -> None:
             nullable=False,
             server_default=sa.text("false"),
         ),
-        sa.ForeignKeyConstraint(
-            ["meeting_id"], ["meetings.id"], ondelete="SET NULL"
-        ),
-        sa.ForeignKeyConstraint(
-            ["submitted_by"], ["users.id"], ondelete="SET NULL"
-        ),
-        sa.ForeignKeyConstraint(
-            ["approved_by"], ["users.id"], ondelete="SET NULL"
-        ),
-        sa.ForeignKeyConstraint(
-            ["rejected_by"], ["users.id"], ondelete="SET NULL"
-        ),
+        sa.ForeignKeyConstraint(["meeting_id"], ["meetings.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(["submitted_by"], ["users.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(["approved_by"], ["users.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(["rejected_by"], ["users.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(

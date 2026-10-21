@@ -28,7 +28,9 @@ class TeamRepository:
     ) -> tuple[list[TeamEntity], int]:
         from sqlalchemy import func
 
-        count_stmt = select(func.count(TeamModel.id)).where(TeamModel.is_deleted == False)
+        count_stmt = select(func.count(TeamModel.id)).where(
+            TeamModel.is_deleted == False
+        )
         total = self.session.scalar(count_stmt) or 0
 
         offset = (page - 1) * page_size

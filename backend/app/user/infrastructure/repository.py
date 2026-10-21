@@ -4,14 +4,14 @@ User Repository — infrastructure layer.
 
 from typing import cast
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.rbac.infrastructure.model import RoleModel, RolePermissionModel
 from app.shared.infrastructure.base_repository import BaseRepository
 from app.user.domain.entity import UserEntity, UserStatus
 from app.user.infrastructure.model import UserModel
-from sqlalchemy import func
+
 
 class UserRepository(BaseRepository[UserModel, UserEntity]):
     def __init__(self, session: Session):
@@ -126,7 +126,9 @@ class UserRepository(BaseRepository[UserModel, UserEntity]):
     ) -> tuple[list[UserEntity], int]:
         """Get paginated users with eager loaded roles/permissions and total count."""
 
-        count_stmt = select(func.count(UserModel.id)).where(UserModel.is_deleted.is_(False))
+        count_stmt = select(func.count(UserModel.id)).where(
+            UserModel.is_deleted.is_(False)
+        )
         if keyword:
             count_stmt = count_stmt.where(
                 or_(

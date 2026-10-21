@@ -3,8 +3,6 @@ API Tests for Team Controller (/api/v1/teams).
 Covers success responses, 401 Unauthorized, 403 Forbidden, 404 Not Found, and 422 Bad Request.
 """
 
-import pytest
-
 
 def test_list_teams_as_admin_success(admin_client):
     """Admin có quyền TeamPermission.READ lấy được danh sách các teams."""

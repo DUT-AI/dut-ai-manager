@@ -152,11 +152,13 @@ class SyncHomeworkFromQuizUseCase:
                             if not sub_time:
                                 continue
 
-                            existing = self.homework_submission_repo.find_submission_match(
-                                homework.id,
-                                uid,
-                                SubmissionType.CODING,
-                                submitted_at=sub_time,
+                            existing = (
+                                self.homework_submission_repo.find_submission_match(
+                                    homework.id,
+                                    uid,
+                                    SubmissionType.CODING,
+                                    submitted_at=sub_time,
+                                )
                             )
                             if not existing:
                                 self.homework_submission_repo.add_submission(
@@ -265,11 +267,13 @@ class SyncHomeworkFromQuizUseCase:
                                 if not sub_time:
                                     continue
 
-                                existing = self.homework_submission_repo.find_submission_match(
-                                    homework.id,
-                                    uid,
-                                    SubmissionType.GAME,
-                                    submitted_at=sub_time,
+                                existing = (
+                                    self.homework_submission_repo.find_submission_match(
+                                        homework.id,
+                                        uid,
+                                        SubmissionType.GAME,
+                                        submitted_at=sub_time,
+                                    )
                                 )
                                 if not existing:
                                     self.homework_submission_repo.add_submission(

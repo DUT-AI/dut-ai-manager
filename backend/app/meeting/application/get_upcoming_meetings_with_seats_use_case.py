@@ -38,14 +38,18 @@ class GetUpcomingMeetingsWithSeatsUseCase:
             all_meetings = self.meeting_repo.get_all_with_participants(limit=100)
             if isinstance(all_meetings, list):
                 upcoming = [
-                    m for m in all_meetings if m.start_time and m.start_time >= start_threshold
+                    m
+                    for m in all_meetings
+                    if m.start_time and m.start_time >= start_threshold
                 ]
 
         upcoming.sort(key=lambda m: m.start_time)
         results = []
         for m in upcoming:
             meeting_id = m.id if m.id is not None else 0
-            absence_ids = self.permission_repo.get_absence_user_ids_by_meeting(meeting_id)
+            absence_ids = self.permission_repo.get_absence_user_ids_by_meeting(
+                meeting_id
+            )
             available = m.calculate_available_seats(
                 max_seats=settings.MAX_SEATS,
                 absence_user_ids=absence_ids,

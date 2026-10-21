@@ -21,6 +21,7 @@ from .mark_all_notifications_as_read_use_case import MarkAllNotificationsAsReadU
 from .mark_notification_as_read_use_case import MarkNotificationAsReadUseCase
 from .register_push_subscription_use_case import RegisterPushSubscriptionUseCase
 from .scan_and_send_reminders_use_case import ScanAndSendRemindersUseCase
+from .scanners.upcoming_meeting_scanner import UpcomingMeetingTaskScanner
 from .send_web_push_notification_use_case import SendWebPushNotificationUseCase
 from .unregister_push_subscription_use_case import UnregisterPushSubscriptionUseCase
 
@@ -33,6 +34,7 @@ __all__ = [
     "ScanAndSendRemindersUseCase",
     "SendWebPushNotificationUseCase",
     "UnregisterPushSubscriptionUseCase",
+    "UpcomingMeetingTaskScanner",
     "NotificationDto",
     "UnreadCountDto",
     "ReminderScanDetailDto",

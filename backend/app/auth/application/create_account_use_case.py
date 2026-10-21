@@ -12,7 +12,9 @@ from app.utils.password import hash_password
 class CreateAccountUseCase:
     """Creates a new DB account and strong random password. Typically used internally by User generation."""
 
-    def __init__(self, account_repo: AccountRepository, user_repo: UserRepository | None = None):
+    def __init__(
+        self, account_repo: AccountRepository, user_repo: UserRepository | None = None
+    ):
         self.account_repo = account_repo
         self.user_repo = user_repo
 

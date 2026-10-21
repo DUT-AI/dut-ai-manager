@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MeetingNotificationDto",
+  "description": "Schema of meeting notification item returned to web frontend and mobile client",
+  "type": "object",
+  "required": ["id", "user_id", "title", "content", "category", "level", "action_url", "is_read", "created_at"],
+  "properties": {
+    "id": {
+      "type": "integer",
+      "example": 105
+    },
+    "user_id": {
+      "type": "integer",
+      "example": 12
+    },
+    "title": {
+      "type": "string",
+      "example": "Nhắc nhở cuộc họp sắp diễn ra: Sinh hoạt chuyên đề AI"
+    },
+    "content": {
+      "type": "string",
+      "example": "Cuộc họp Sinh hoạt chuyên đề AI sẽ bắt đầu lúc 22/10/2026 09:00 (còn lại 1 giờ 0 phút). Vui lòng chuẩn bị tham gia và điểm danh đúng giờ."
+    },
+    "category": {
+      "type": "string",
+      "enum": ["HOMEWORK", "DUTY", "MEETING", "SYSTEM"],
+      "example": "MEETING"
+    },
+    "level": {
+      "type": "string",
+      "enum": ["INFO", "WARNING", "CRITICAL"],
+      "example": "CRITICAL"
+    },
+    "action_url": {
+      "type": "string",
+      "example": "/dashboard/meetings/35"
+    },
+    "is_read": {
+      "type": "boolean",
+      "example": false
+    },
+    "read_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

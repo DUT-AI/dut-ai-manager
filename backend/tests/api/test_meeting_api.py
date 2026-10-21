@@ -4,17 +4,18 @@ Covers CRUD endpoints, check-in with card, form check-in, check-out, capacity st
 and evaluation endpoints for both success and error branches (401, 403, 404, 422).
 """
 
-from datetime import datetime, timedelta
 import io
-from unittest.mock import AsyncMock, patch
 import uuid
+from datetime import datetime, timedelta
+from unittest.mock import AsyncMock, patch
+
 import pytest
 from sqlalchemy import text
-
 
 # ---------------------------------------------------------------------------
 # FIXTURES
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def test_meeting(admin_client, mock_current_user):
@@ -67,6 +68,7 @@ def active_meeting_for_checkin(admin_client, mock_current_user, db_session):
 # AVAILABLE SEATS & CAPACITY
 # ---------------------------------------------------------------------------
 
+
 def test_get_available_seats_unauthenticated(unauth_client):
     """Chưa đăng nhập truy cập available-seats trả về 401."""
     res = unauth_client.get("/api/v1/meetings/available-seats")
@@ -110,6 +112,7 @@ def test_get_capacity_forecast_success(admin_client):
 # ---------------------------------------------------------------------------
 # CREATE MEETING
 # ---------------------------------------------------------------------------
+
 
 def test_create_meeting_unauthenticated(unauth_client):
     """Chưa đăng nhập không được phép tạo meeting (401)."""
@@ -162,6 +165,7 @@ def test_create_meeting_as_admin_success(admin_client, mock_current_user):
 # LIST & GET MEETING
 # ---------------------------------------------------------------------------
 
+
 def test_list_meetings_unauthenticated(unauth_client):
     """Chưa đăng nhập không được lấy danh sách meetings (401)."""
     res = unauth_client.get("/api/v1/meetings")
@@ -204,6 +208,7 @@ def test_get_meeting_detail_success(admin_client, test_meeting):
 # UPDATE MEETING & PARTICIPANT STATUS
 # ---------------------------------------------------------------------------
 
+
 def test_update_meeting_as_member_returns_403(member_client, test_meeting):
     """Member không có quyền sửa meeting (403 Forbidden)."""
     payload = {"title": "Attempted update"}
@@ -228,7 +233,9 @@ def test_update_meeting_success(admin_client, test_meeting):
     assert data["data"]["title"] == "Updated Title Meeting"
 
 
-def test_update_participant_status_success(admin_client, test_meeting, mock_current_user):
+def test_update_participant_status_success(
+    admin_client, test_meeting, mock_current_user
+):
     """Admin cập nhật thủ công trạng thái của một người tham gia meeting."""
     payload = {
         "status": "JOINED",
@@ -259,9 +266,12 @@ def test_update_participant_status_not_found(admin_client, test_meeting):
 # CHECK-IN WITH CARD (RFID/CARD CODE)
 # ---------------------------------------------------------------------------
 
+
 def test_check_in_with_card_unauthenticated(unauth_client):
     """Endpoint quẹt thẻ yêu cầu quyền MeetingPermission.CHECK_IN (401 khi chưa login)."""
-    res = unauth_client.post("/api/v1/meetings/check-in-with-card", json={"card_code": "CARD_123"})
+    res = unauth_client.post(
+        "/api/v1/meetings/check-in-with-card", json={"card_code": "CARD_123"}
+    )
     assert res.status_code == 401
 
 
@@ -330,7 +340,11 @@ def test_check_in_with_card_success_flow(
 # CHECK-IN (FORM & FILE) AND CHECK-OUT
 # ---------------------------------------------------------------------------
 
-@patch("app.shared.infrastructure.minio_service.MinioService.upload_file", new_callable=AsyncMock)
+
+@patch(
+    "app.shared.infrastructure.minio_service.MinioService.upload_file",
+    new_callable=AsyncMock,
+)
 def test_check_in_form_success(
     mock_upload, admin_client, mock_current_user, active_meeting_for_checkin
 ):
@@ -365,9 +379,7 @@ def test_check_out_not_checked_in_returns_400(
     assert "Không tìm thấy buổi họp nào đang tham gia" in err_text
 
 
-def test_check_out_success(
-    admin_client, mock_current_user, active_meeting_for_checkin
-):
+def test_check_out_success(admin_client, mock_current_user, active_meeting_for_checkin):
     """Check-out khỏi buổi họp thành công sau khi đã điểm danh."""
     # Bước 1: Set trạng thái sang JOINED có check_in_at
     admin_client.put(
@@ -390,6 +402,7 @@ def test_check_out_success(
 # EVALUATIONS & DELETE
 # ---------------------------------------------------------------------------
 
+
 def test_get_meeting_evaluation_summary(admin_client, test_meeting):
     """Lấy báo cáo tổng hợp kết quả đánh giá của buổi học."""
     res = admin_client.get(f"/api/v1/meetings/{test_meeting['id']}/evaluations/summary")
@@ -401,7 +414,9 @@ def test_get_meeting_evaluation_summary(admin_client, test_meeting):
 
 def test_get_my_evaluation_result_locked_without_review(admin_client, test_meeting):
     """Khi chưa hoàn thành đánh giá Trainer, Trainee bị khóa xem kết quả (403 Forbidden)."""
-    res = admin_client.get(f"/api/v1/meetings/{test_meeting['id']}/evaluations/my-result")
+    res = admin_client.get(
+        f"/api/v1/meetings/{test_meeting['id']}/evaluations/my-result"
+    )
     assert res.status_code == 403
     err_text = res.json().get("message") or res.json().get("detail") or ""
     assert "Bạn cần hoàn thành đánh giá Trainer" in err_text
@@ -428,7 +443,9 @@ def test_get_my_evaluation_result_disabled_evaluation(admin_client, mock_current
         admin_client.delete(f"/api/v1/meetings/{meeting_id}")
 
 
-def test_submit_evaluation_before_start_returns_400(admin_client, test_meeting, mock_current_user):
+def test_submit_evaluation_before_start_returns_400(
+    admin_client, test_meeting, mock_current_user
+):
     """Buổi học chưa bắt đầu không thể gửi đánh giá (400 Bad Request)."""
     payload = {
         "target_user_id": mock_current_user.id,

@@ -5,6 +5,7 @@ Base Task Scanner interface and Candidate Task Item model.
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
+
 from app.reminder.domain.entity import ReminderStage, TaskType
 
 

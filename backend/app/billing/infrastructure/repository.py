@@ -85,7 +85,9 @@ class InvoiceRepository(BaseRepository[InvoiceModel, Invoice]):
     ) -> tuple[list[Invoice], int]:
         from sqlalchemy import func
 
-        count_stmt = select(func.count(InvoiceModel.id)).where(InvoiceModel.is_deleted == False)
+        count_stmt = select(func.count(InvoiceModel.id)).where(
+            InvoiceModel.is_deleted == False
+        )
         if user_id is not None:
             count_stmt = count_stmt.where(InvoiceModel.user_id == user_id)
         if team_id is not None:
@@ -117,7 +119,9 @@ class InvoiceRepository(BaseRepository[InvoiceModel, Invoice]):
             .offset(offset)
             .limit(page_size)
         )
-        return [m.to_entity() for m in self.session.scalars(statement).unique().all()], total
+        return [
+            m.to_entity() for m in self.session.scalars(statement).unique().all()
+        ], total
 
     def get_matrix_report(
         self,
