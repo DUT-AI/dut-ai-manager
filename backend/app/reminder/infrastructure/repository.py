@@ -10,11 +10,16 @@ from sqlalchemy.orm import Session
 from app.reminder.domain.entity import (
     Notification,
     NotificationCategory,
+    PushSubscription,
     ReminderStage,
     ReminderStatus,
     TaskType,
 )
-from app.reminder.infrastructure.model import NotificationModel
+from app.reminder.domain.repository import PushSubscriptionRepository
+from app.reminder.infrastructure.model import (
+    NotificationModel,
+    PushSubscriptionModel,
+)
 from app.shared.infrastructure.base_repository import BaseRepository
 from app.utils.datetime import get_current_utc7_time
 
@@ -146,3 +151,94 @@ class NotificationRepository(BaseRepository[NotificationModel, Notification]):
     ) -> Notification:
         """Thêm bản ghi thông báo nhắc nhở vào database."""
         return self.add(notification)
+
+
+class PushSubscriptionRepositoryImpl(
+    BaseRepository[PushSubscriptionModel, PushSubscription],
+    PushSubscriptionRepository,
+):
+    """Hiện thực PushSubscriptionRepository sử dụng SQLAlchemy 2.0 ORM."""
+
+    def __init__(self, session: Session):
+        super().__init__(session, PushSubscriptionModel)
+
+    def save_or_update(
+        self,
+        user_id: int,
+        endpoint: str,
+        p256dh: str,
+        auth: str,
+        user_agent: str | None = None,
+    ) -> PushSubscription:
+        """Lưu mới hoặc cập nhật thông tin thiết bị đã đăng ký Web Push."""
+        stmt = select(self.model).where(self.model.endpoint == endpoint)
+        existing = self.session.execute(stmt).scalar_one_or_none()
+
+        now = get_current_utc7_time()
+        if existing:
+            existing.user_id = user_id
+            existing.p256dh = p256dh
+            existing.auth = auth
+            existing.user_agent = user_agent
+            existing.is_active = True
+            existing.updated_at = now
+            self.session.commit()
+            self.session.refresh(existing)
+            return existing.to_entity()
+
+        new_sub = PushSubscriptionModel(
+            user_id=user_id,
+            endpoint=endpoint,
+            p256dh=p256dh,
+            auth=auth,
+            user_agent=user_agent,
+            is_active=True,
+            created_at=now,
+            updated_at=now,
+        )
+        self.session.add(new_sub)
+        self.session.commit()
+        self.session.refresh(new_sub)
+        return new_sub.to_entity()
+
+    def get_by_endpoint(self, endpoint: str) -> PushSubscription | None:
+        stmt = select(self.model).where(self.model.endpoint == endpoint)
+        record = self.session.execute(stmt).scalar_one_or_none()
+        return record.to_entity() if record else None
+
+    def get_active_by_user_id(self, user_id: int) -> list[PushSubscription]:
+        stmt = select(self.model).where(
+            self.model.user_id == user_id,
+            self.model.is_active == True,  # noqa: E712
+        )
+        records = self.session.execute(stmt).scalars().all()
+        return [r.to_entity() for r in records]
+
+    def deactivate_endpoint(self, endpoint: str) -> bool:
+        stmt = (
+            update(self.model)
+            .where(self.model.endpoint == endpoint)
+            .values(is_active=False, updated_at=get_current_utc7_time())
+        )
+        result = self.session.execute(stmt)
+        self.session.commit()
+        return result.rowcount > 0
+
+    def update_last_used(self, subscription_id: int) -> None:
+        stmt = (
+            update(self.model)
+            .where(self.model.id == subscription_id)
+            .values(last_used_at=get_current_utc7_time())
+        )
+        self.session.execute(stmt)
+        self.session.commit()
+
+    def delete_endpoint(self, endpoint: str) -> bool:
+        stmt = select(self.model).where(self.model.endpoint == endpoint)
+        record = self.session.execute(stmt).scalar_one_or_none()
+        if record:
+            self.session.delete(record)
+            self.session.commit()
+            return True
+        return False
+

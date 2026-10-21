@@ -58,3 +58,33 @@ class PendingTaskDto(BaseModel):
     hours_remaining: float
     urgency_level: str
     action_url: str
+
+
+class PushPublicKeyDto(BaseModel):
+    public_key: str
+
+
+class PushSubscriptionKeysDto(BaseModel):
+    p256dh: str
+    auth: str
+
+
+class PushSubscriptionRequestDto(BaseModel):
+    endpoint: str
+    keys: PushSubscriptionKeysDto
+    user_agent: str | None = None
+
+
+class PushSubscriptionResponseDto(BaseModel):
+    subscription_id: int
+    is_active: bool = True
+
+
+class UnregisterPushSubscriptionRequestDto(BaseModel):
+    endpoint: str
+
+
+class TestPushResponseDto(BaseModel):
+    sent_count: int
+    failed_count: int
+

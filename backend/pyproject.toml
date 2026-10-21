@@ -28,6 +28,7 @@ dependencies = [
     "uvicorn[standard]>=0.40.0",
     "dishka>=1.9.1",
     "sqlmodel>=0.0.38",
+    "pywebpush>=2.0.0",
 ]
 
 [tool.pylint.main]

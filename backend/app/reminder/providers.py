@@ -26,6 +26,15 @@ from app.reminder.application.mark_all_notifications_as_read_use_case import (
 from app.reminder.application.mark_notification_as_read_use_case import (
     MarkNotificationAsReadUseCase,
 )
+from app.reminder.application.register_push_subscription_use_case import (
+    RegisterPushSubscriptionUseCase,
+)
+from app.reminder.application.send_web_push_notification_use_case import (
+    SendWebPushNotificationUseCase,
+)
+from app.reminder.application.unregister_push_subscription_use_case import (
+    UnregisterPushSubscriptionUseCase,
+)
 from app.reminder.application.reminder_dispatcher import ReminderDispatcher
 from app.reminder.application.scanners.duty_scanner import DutyTaskScanner
 from app.reminder.application.scanners.homework_scanner import HomeworkTaskScanner
@@ -35,7 +44,13 @@ from app.reminder.application.scanners.meeting_evaluation_scanner import (
 from app.reminder.application.scan_and_send_reminders_use_case import (
     ScanAndSendRemindersUseCase,
 )
-from app.reminder.infrastructure.repository import NotificationRepository
+from app.core.config import settings
+from app.reminder.domain.repository import PushSubscriptionRepository
+from app.reminder.infrastructure.repository import (
+    NotificationRepository,
+    PushSubscriptionRepositoryImpl,
+)
+from app.reminder.infrastructure.web_push_service import WebPushService
 from app.shared.infrastructure.discord_service import DiscordService
 from app.team.infrastructure.repository import TeamRepository
 from app.user.infrastructure.repository import UserRepository
@@ -44,10 +59,21 @@ from app.user.infrastructure.repository import UserRepository
 class ReminderModuleProvider(Provider):
     scope = Scope.REQUEST
 
-    # Repository
+    # Repositories
     @provide
     def get_notification_repo(self, session: Session) -> NotificationRepository:
         return NotificationRepository(session)
+
+    @provide
+    def get_push_subscription_repo(
+        self, session: Session
+    ) -> PushSubscriptionRepository:
+        return PushSubscriptionRepositoryImpl(session)
+
+    # External Web Push Service
+    @provide(scope=Scope.APP)
+    def get_web_push_service(self) -> WebPushService:
+        return WebPushService(settings)
 
     # Use Cases
     @provide
@@ -73,6 +99,26 @@ class ReminderModuleProvider(Provider):
         self, repo: NotificationRepository
     ) -> MarkAllNotificationsAsReadUseCase:
         return MarkAllNotificationsAsReadUseCase(repo)
+
+    @provide
+    def register_push_sub_use_case(
+        self, repo: PushSubscriptionRepository
+    ) -> RegisterPushSubscriptionUseCase:
+        return RegisterPushSubscriptionUseCase(repo)
+
+    @provide
+    def unregister_push_sub_use_case(
+        self, repo: PushSubscriptionRepository
+    ) -> UnregisterPushSubscriptionUseCase:
+        return UnregisterPushSubscriptionUseCase(repo)
+
+    @provide
+    def send_web_push_notification_use_case(
+        self,
+        repo: PushSubscriptionRepository,
+        web_push_service: WebPushService,
+    ) -> SendWebPushNotificationUseCase:
+        return SendWebPushNotificationUseCase(repo, web_push_service)
 
     # Scanners & Dispatcher
     @provide
@@ -116,11 +162,13 @@ class ReminderModuleProvider(Provider):
         notification_repo: NotificationRepository,
         user_repo: UserRepository,
         discord_service: DiscordService,
+        send_web_push_use_case: SendWebPushNotificationUseCase,
     ) -> ReminderDispatcher:
         return ReminderDispatcher(
             notification_repo=notification_repo,
             user_repo=user_repo,
             discord_service=discord_service,
+            send_web_push_use_case=send_web_push_use_case,
         )
 
     @provide

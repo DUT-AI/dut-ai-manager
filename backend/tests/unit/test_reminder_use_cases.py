@@ -119,6 +119,7 @@ async def test_scan_and_send_reminders_homework_dry_run():
     notif_repo = MagicMock()
     user_repo = MagicMock()
     discord_service = MagicMock()
+    send_web_push_use_case = MagicMock()
 
     now = datetime(2026, 10, 20, 23, 59, 59)  # Đúng 24 giờ trước deadline 2026-10-21 23:59:59 -> Khớp duy nhất OFFSET_1D
     deadline_date = datetime(2026, 10, 21).date()
@@ -143,6 +144,7 @@ async def test_scan_and_send_reminders_homework_dry_run():
         notification_repo=notif_repo,
         user_repo=user_repo,
         discord_service=discord_service,
+        send_web_push_use_case=send_web_push_use_case,
     )
 
     use_case = ScanAndSendRemindersUseCase(
@@ -193,6 +195,7 @@ async def test_reminder_dispatcher_dispatch_success():
     user_repo = MagicMock()
     discord_service = MagicMock()
     discord_service.send_message_to_user = AsyncMock()
+    send_web_push_use_case = MagicMock()
 
     mock_user = MagicMock()
     mock_user.id = 10
@@ -203,6 +206,7 @@ async def test_reminder_dispatcher_dispatch_success():
         notification_repo=notif_repo,
         user_repo=user_repo,
         discord_service=discord_service,
+        send_web_push_use_case=send_web_push_use_case,
     )
 
     now = datetime(2026, 10, 21, 20, 0, 0)
@@ -223,6 +227,7 @@ async def test_reminder_dispatcher_dispatch_success():
     # Ghi nhận vào bảng notifications duy nhất
     notif_repo.add.assert_called_once()
     discord_service.send_message_to_user.assert_called_once()
+    send_web_push_use_case.execute.assert_called_once()
 
 
 @pytest.mark.asyncio

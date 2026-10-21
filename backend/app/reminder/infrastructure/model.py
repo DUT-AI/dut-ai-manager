@@ -12,6 +12,7 @@ from app.reminder.domain.entity import (
     Notification,
     NotificationCategory,
     NotificationLevel,
+    PushSubscription,
     ReminderStage,
     ReminderStatus,
     TaskType,
@@ -91,3 +92,53 @@ class NotificationModel(Base, SQLAlchemyTimestampMixin):
             error_message=entity.error_message,
             created_at=entity.created_at,
         )
+
+
+class PushSubscriptionModel(Base, SQLAlchemyTimestampMixin):
+    """
+    Database ORM mapping cho bảng 'push_subscriptions'.
+    Lưu trữ các endpoint VAPID đã đăng ký từ trình duyệt client.
+    """
+    __tablename__ = "push_subscriptions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    endpoint: Mapped[str] = mapped_column(Text, nullable=False, unique=True, index=True)
+    p256dh: Mapped[str] = mapped_column(Text, nullable=False)
+    auth: Mapped[str] = mapped_column(Text, nullable=False)
+    user_agent: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    __table_args__ = (
+        Index("idx_push_sub_user_active", "user_id", "is_active"),
+    )
+
+    def to_entity(self) -> PushSubscription:
+        return PushSubscription(
+            id=self.id,
+            user_id=self.user_id,
+            endpoint=self.endpoint,
+            p256dh=self.p256dh,
+            auth=self.auth,
+            user_agent=self.user_agent,
+            is_active=self.is_active,
+            created_at=self.created_at,
+            last_used_at=self.last_used_at,
+        )
+
+    @classmethod
+    def from_entity(cls, entity: PushSubscription) -> "PushSubscriptionModel":
+        return cls(
+            id=entity.id,
+            user_id=entity.user_id,
+            endpoint=entity.endpoint,
+            p256dh=entity.p256dh,
+            auth=entity.auth,
+            user_agent=entity.user_agent,
+            is_active=entity.is_active,
+            last_used_at=entity.last_used_at,
+        )
+

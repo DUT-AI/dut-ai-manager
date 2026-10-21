@@ -8,6 +8,9 @@ from loguru import logger
 
 from app.core.config import settings
 from app.reminder.application.embed_builder import build_reminder_embed, format_remaining_time
+from app.reminder.application.send_web_push_notification_use_case import (
+    SendWebPushNotificationUseCase,
+)
 from app.reminder.domain.entity import (
     Notification,
     ReminderStage,
@@ -25,10 +28,12 @@ class ReminderDispatcher:
         notification_repo: NotificationRepository,
         user_repo: UserRepository,
         discord_service: DiscordService,
+        send_web_push_use_case: SendWebPushNotificationUseCase,
     ):
         self.notification_repo = notification_repo
         self.user_repo = user_repo
         self.discord_service = discord_service
+        self.send_web_push_use_case = send_web_push_use_case
 
     async def dispatch(
         self,
@@ -95,5 +100,18 @@ class ReminderDispatcher:
             error_message=err_msg,
         )
         self.notification_repo.add(notif_entity)
+
+        # 3. Gửi thông báo đẩy Web Push tới thiết bị di động (PWA)
+        try:
+            self.send_web_push_use_case.execute(
+                user_id=user_id,
+                title=f"Nhắc nhở hạn chót: {task_title}",
+                body=f"Nhiệm vụ {task_title} có hạn chót lúc {deadline_str} (còn lại {time_left_str}).",
+                action_url=action_url,
+                tag=f"{task_type.value.lower()}-{task_id}",
+                category=notif_entity.category.value,
+            )
+        except Exception as e:
+            logger.warning(f"Lỗi khi dispatch Web Push cho user {user_id}: {e}")
 
         return status

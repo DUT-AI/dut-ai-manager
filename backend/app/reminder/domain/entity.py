@@ -5,6 +5,7 @@ Pure Pydantic models with zero framework / ORM dependencies.
 
 from datetime import datetime
 from enum import Enum
+from uuid import UUID
 
 from app.shared.domain.base_entity import BaseEntity
 
@@ -173,3 +174,17 @@ class Notification(BaseEntity):
             error_message=error_message,
             created_at=now,
         )
+
+
+class PushSubscription(BaseEntity):
+    """
+    Domain Entity biểu diễn một đăng ký thiết bị nhận thông báo đẩy Web Push (VAPID RFC 8292).
+    """
+    user_id: int
+    endpoint: str
+    p256dh: str
+    auth: str
+    user_agent: str | None = None
+    is_active: bool = True
+    last_used_at: datetime | None = None
+

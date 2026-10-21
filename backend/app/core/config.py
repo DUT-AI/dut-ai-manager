@@ -70,6 +70,11 @@ class Settings(BaseSettings):
     SEPAY_ACCOUNT_NAME: str = ""
     SEPAY_WEBHOOK_SECRET: str = ""
 
+    # Web Push / VAPID Configuration (RFC 8292)
+    VAPID_PUBLIC_KEY: str = ""
+    VAPID_PRIVATE_KEY: str = ""
+    VAPID_CLAIMS_SUB: str = "mailto:admin@dutai.vn"
+
     BACKEND_CORS_ORIGINS: Annotated[
         list[AnyUrl] | str, BeforeValidator(parse_cors)
     ] = []
