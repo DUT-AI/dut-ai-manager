@@ -1,3 +1,5 @@
+from sqlalchemy import text
+from app.shared.infrastructure.audio_utils import downsample_wav_to_16k_mono
 from datetime import timedelta
 from typing import cast
 
@@ -50,11 +52,12 @@ class CheckInWithCardUseCase:
             )
             return msg, audio
 
-        user = self.user_repo.get_by_check_in_card_code(code)
+        # 1. Lấy thông tin user tóm tắt (chỉ id, name, code) để tránh N+1 Role/Permission
+        user = self.user_repo.get_summary_by_card_code(code)
         if not user:
-            msg = "Thẻ chưa được đăng ký trong hệ thống"
+            msg = f"{code}"
             audio = await self._synthesize_message(
-                msg, cache_key="tts/system/card_not_registered.wav"
+                "Hãy đăng ký thẻ trên hệ thống với code hiển thị ở màn hình", cache_key="tts/system/card_not_registered_v2.wav"
             )
             return msg, audio
 
@@ -66,6 +69,7 @@ class CheckInWithCardUseCase:
         window_start = now - half_hour
         window_end = now + half_hour
 
+        # 2. Tìm participant kèm meeting đã được JOIN sẵn (không cần query lại bảng meetings)
         participant = self.participant_repo.find_participation_in_time_window(
             uid, window_start, window_end, now
         )
@@ -92,11 +96,11 @@ class CheckInWithCardUseCase:
             ParticipantStatus.COMPLETED,
         ):
             msg = (
-                f"Xin chào {user.name}, bạn đã điểm danh cho buổi họp "
-                f"{meeting.title} rồi"
+                f"Xin chào {user.name}, bạn đã điểm danh cho buổi họp rồi"
             )
             audio = await self._synthesize_message(
-                msg, cache_key=f"tts/users/user_{uid}_already_checked_in.wav"
+                msg,
+                cache_key=f"tts/users/user_{uid}_already_checked_in_v2.wav"
             )
             return msg, audio
 
@@ -135,11 +139,14 @@ class CheckInWithCardUseCase:
         """Helper chuyển câu thông báo sang audio bytes sử dụng cache MinIO."""
         try:
             if cache_key:
-                return await self.tts_service.synthesize_with_cache(
+                audio_bytes = await self.tts_service.synthesize_with_cache(
                     text=text,
                     cache_key=cache_key,
                     minio_service=self.minio_service,
                 )
+                if audio_bytes:
+                    audio_bytes = downsample_wav_to_16k_mono(audio_bytes, target_rate=14000, target_bits=8)
+                return audio_bytes
             return await self.tts_service.synthesize(text=text)
         except Exception as exc:
             logger.error(f"Failed to synthesize speech for message '{text}': {exc}")

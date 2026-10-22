@@ -62,6 +62,7 @@ def test_check_in_with_card_use_case_returns_speech_audio():
 
     user = UserEntity(id=1, name="Nguyễn Phước Nguyên", email="nguyen@example.com")
     user_repo.get_by_check_in_card_code.return_value = user
+    user_repo.get_summary_by_card_code.return_value = user
 
     now = datetime.now()
     meeting = Meeting(

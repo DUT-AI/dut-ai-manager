@@ -113,6 +113,24 @@ class UserRepository(BaseRepository[UserModel, UserEntity]):
         model = self.session.scalars(statement).unique().first()
         return model.to_entity() if model else None
 
+    def get_summary_by_card_code(self, code: str) -> UserEntity | None:
+        """Lấy thông tin User tối giản theo mã thẻ (chỉ id, name, code) để tránh N+1 Role/Permission query."""
+        stmt = (
+            select(UserModel.id, UserModel.name, UserModel.check_in_card_code, UserModel.email, UserModel.status)
+            .where(UserModel.check_in_card_code == code, UserModel.is_deleted.is_(False))
+            .limit(1)
+        )
+        row = self.session.execute(stmt).first()
+        if not row:
+            return None
+        return UserEntity(
+            id=row.id,
+            name=row.name,
+            email=row.email,
+            check_in_card_code=row.check_in_card_code,
+            status=row.status,
+        )
+
     def get_active_users(self) -> list[UserEntity]:
         statement = self._get_base_query().where(
             UserModel.status == UserStatus.ACTIVE,

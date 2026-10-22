@@ -58,6 +58,7 @@ from app.shared.application.response import (
     BadRequestException,
     PaginationMeta,
 )
+from app.shared.infrastructure.audio_utils import downsample_wav_to_16k_mono
 from app.shared.infrastructure.sse import sse_broadcaster
 from app.utils.text import remove_vietnamese_tones
 
@@ -248,6 +249,7 @@ async def check_in_with_card(
     Trả về dữ liệu âm thanh (WAV) thông báo kết quả điểm danh để thiết bị phát ra loa.
     """
     message, audio_bytes = await uc.execute(card_code=body.card_code)
+
     return Response(
         content=audio_bytes,
         media_type="audio/wav",
@@ -486,8 +488,7 @@ async def get_my_evaluation_result(
     current_user: CurrentUser,
 ):
     """Trainee xem kết quả đánh giá mà Trainer dành cho mình (khóa nếu chưa đánh giá Trainer)."""
-    if current_user.id is None:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    result = await uc.execute(meeting_id=meeting_id, current_user_id=current_user.id)
+
+    result = await uc.execute(meeting_id=meeting_id, current_user_id=current_user.user_id)
     data = EvaluationResponse.from_domain(result) if result else None
     return ApiResponse.success(data=data)

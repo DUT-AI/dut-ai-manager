@@ -127,6 +127,11 @@ String getCardUID() {
   return uid;
 }
 
+// --- CẤU HÌNH ÂM LƯỢNG ---
+#define TTS_VOLUME_GAIN      5.0f  // Khuếch đại giọng nói TTS (gấp đôi mức cũ để loa kêu to rõ)
+#define BEEP_HIGH            146   // Mức cao tiếng bíp (giảm nhẹ để bíp êm tai, thanh thoát, không lấn át tiếng nói)
+#define BEEP_LOW             110   // Mức thấp tiếng bíp
+
 // Hàm phát âm thanh dạng xung tần số qua DAC GPIO 26 (thay thế còi Buzzer)
 void playToneDAC(uint8_t pin, unsigned int freq, unsigned int durationMs) {
   if (freq == 0 || durationMs == 0) return;
@@ -154,97 +159,147 @@ void playErrorSound() {
   playToneDAC(SPEAKER_PIN, 400, 400);
 }
 
-// 3. Phát âm thanh WAV trực tiếp từ luồng HTTP nhận về từ Server qua DAC GPIO 26
-void playWavStream(Stream* stream, int totalBytes) {
-  if (!stream) return;
-
-  // Đọc 44 bytes header của file WAV
-  uint8_t header[44];
-  size_t bytesRead = stream->readBytes(header, 44);
-  if (bytesRead < 44) {
-    Serial.println("Loi: Header WAV khong du 44 bytes");
-    return;
-  }
+// 3. Phát âm thanh WAV trực tiếp từ mảng RAM qua DAC GPIO 26 (chống giật lag, rè rè do mạng)
+void playWavFromRAM(const uint8_t* wav, size_t totalBytes) {
+  if (!wav || totalBytes < 44) return;
 
   // Kiểm tra định dạng RIFF và WAVE
-  if (header[0] != 'R' || header[1] != 'I' || header[2] != 'F' || header[3] != 'F' ||
-      header[8] != 'W' || header[9] != 'A' || header[10] != 'V' || header[11] != 'E') {
-    Serial.println("Loi: Khong phai file WAV hop le");
+  if (wav[0] != 'R' || wav[1] != 'I' || wav[2] != 'F' || wav[3] != 'F' ||
+      wav[8] != 'W' || wav[9] != 'A' || wav[10] != 'V' || wav[11] != 'E') {
+    Serial.println("Loi: Du lieu khong phai file WAV hop le");
     return;
   }
 
-  // Trích xuất Sample Rate (mặc định 48000 Hz, 24000 Hz hoặc 16000 Hz)
-  uint32_t sampleRate = (uint32_t)header[24] | ((uint32_t)header[25] << 8) |
-                        ((uint32_t)header[26] << 16) | ((uint32_t)header[27] << 24);
-  uint16_t numChannels = (uint16_t)header[22] | ((uint16_t)header[23] << 8);
-  uint16_t bitsPerSample = (uint16_t)header[34] | ((uint16_t)header[35] << 8);
+  uint16_t audioFormat = 1; // 1 = PCM
+  uint16_t numChannels = 1;
+  uint32_t sampleRate = 24000;
+  uint16_t bitsPerSample = 16;
+  size_t dataOffset = 0;
+  size_t dataSize = 0;
 
-  if (sampleRate == 0 || sampleRate > 96000) sampleRate = 48000;
+  // Quét chính xác vị trí chunk "fmt " và "data" (tránh lệch byte gây tiếng xào xạc / rè)
+  size_t offset = 12;
+  while (offset + 8 <= totalBytes) {
+    char chunkId[5];
+    memcpy(chunkId, &wav[offset], 4);
+    chunkId[4] = '\0';
+    uint32_t chunkSize = (uint32_t)wav[offset + 4] |
+                         ((uint32_t)wav[offset + 5] << 8) |
+                         ((uint32_t)wav[offset + 6] << 16) |
+                         ((uint32_t)wav[offset + 7] << 24);
+
+    if (strcmp(chunkId, "fmt ") == 0 && offset + 8 + 14 <= totalBytes) {
+      audioFormat   = (uint16_t)wav[offset + 8] | ((uint16_t)wav[offset + 9] << 8);
+      numChannels   = (uint16_t)wav[offset + 10] | ((uint16_t)wav[offset + 11] << 8);
+      sampleRate    = (uint32_t)wav[offset + 12] | ((uint32_t)wav[offset + 13] << 8) |
+                      ((uint32_t)wav[offset + 14] << 16) | ((uint32_t)wav[offset + 15] << 24);
+      if (offset + 8 + 16 <= totalBytes) {
+        bitsPerSample = (uint16_t)wav[offset + 22] | ((uint16_t)wav[offset + 23] << 8);
+      }
+    } else if (strcmp(chunkId, "data") == 0) {
+      dataOffset = offset + 8;
+      dataSize = chunkSize;
+      break;
+    }
+
+    offset += 8 + chunkSize;
+    if (chunkSize & 1) offset++; // Padding byte nếu chunkSize là số lẻ (chuẩn RIFF)
+  }
+
+  // Fallback nếu không quét được chunk data
+  if (dataOffset == 0 || dataOffset >= totalBytes) {
+    dataOffset = 44;
+    dataSize = totalBytes > 44 ? totalBytes - 44 : 0;
+  }
+  if (dataOffset + dataSize > totalBytes) {
+    dataSize = totalBytes - dataOffset;
+  }
+
+  if (sampleRate == 0 || sampleRate > 96000) sampleRate = 24000;
   if (numChannels == 0) numChannels = 1;
   if (bitsPerSample == 0) bitsPerSample = 16;
 
-  Serial.printf("Phat audio WAV: %u Hz, %u channels, %u bits\n", sampleRate, numChannels, bitsPerSample);
+  Serial.printf("Phat audio tu RAM: %u Hz, %u channels, %u bits, Data size: %u bytes\n",
+                sampleRate, numChannels, bitsPerSample, dataSize);
 
   unsigned long sampleIntervalUs = 1000000UL / sampleRate;
 
-  // Khử tiếng bụp loa: Fade-in nhẹ từ 0 lên mức 128 (DC bias của DAC)
+  // Khử tiếng bụp loa: Fade-in nhẹ từ 0 lên mức trung tính 128 (DC bias)
   for (int v = 0; v <= 128; v += 4) {
     dacWrite(SPEAKER_PIN, v);
     delayMicroseconds(50);
   }
 
-  const size_t BUF_SIZE = 512;
-  uint8_t buffer[BUF_SIZE];
+  const uint8_t* pData = &wav[dataOffset];
   uint8_t lastSample = 128;
+  unsigned long nextMicros = micros();
 
-  int remainingBytes = totalBytes > 44 ? totalBytes - 44 : -1;
-  unsigned long lastDataTime = millis();
+  if (bitsPerSample == 16) {
+    size_t bytesPerFrame = 2 * numChannels;
+    size_t totalFrames = dataSize / bytesPerFrame;
 
-  while ((remainingBytes > 0 || remainingBytes == -1) && (millis() - lastDataTime < 2000)) {
-    if (stream->available() == 0) {
-      delay(1);
-      continue;
-    }
+    for (size_t f = 0; f < totalFrames; f++) {
+      size_t idx = f * bytesPerFrame;
+      int32_t sample16 = 0;
 
-    size_t toRead = sizeof(buffer);
-    if (remainingBytes > 0 && (int)toRead > remainingBytes) {
-      toRead = remainingBytes;
-    }
-
-    size_t n = stream->readBytes(buffer, toRead);
-    if (n == 0) continue;
-    
-    lastDataTime = millis();
-    if (remainingBytes > 0) remainingBytes -= n;
-
-    // Thiết lập mốc thời gian phát cho từng chunk
-    unsigned long nextMicros = micros();
-
-    if (bitsPerSample == 16) {
-      size_t step = 2 * numChannels;
-      for (size_t i = 0; i + 1 < n; i += step) {
-        int16_t sample16 = (int16_t)(buffer[i] | (buffer[i + 1] << 8));
-        // Chuyển đổi 16-bit signed (-32768 đến 32767) sang 8-bit unsigned (0 đến 255)
-        uint8_t dacVal = (uint8_t)((sample16 + 32768) >> 8);
-        dacWrite(SPEAKER_PIN, dacVal);
-        lastSample = dacVal;
-
-        nextMicros += sampleIntervalUs;
-        while ((long)(micros() - nextMicros) < 0) {
-          // Chờ đúng thời gian phát mẫu tiếp theo
-        }
+      if (numChannels == 1) {
+        sample16 = (int16_t)(pData[idx] | (pData[idx + 1] << 8));
+      } else {
+        int16_t left  = (int16_t)(pData[idx] | (pData[idx + 1] << 8));
+        int16_t right = (int16_t)(pData[idx + 2] | (pData[idx + 3] << 8));
+        sample16 = ((int32_t)left + (int32_t)right) / 2;
       }
-    } else {
-      // 8-bit audio
-      for (size_t i = 0; i < n; i += numChannels) {
-        uint8_t dacVal = buffer[i];
-        dacWrite(SPEAKER_PIN, dacVal);
-        lastSample = dacVal;
 
-        nextMicros += sampleIntervalUs;
-        while ((long)(micros() - nextMicros) < 0) {
-          // Chờ đúng thời gian phát mẫu tiếp theo
-        }
+      // Khuếch đại âm lượng giọng nói TTS (Digital Pre-amp)
+      int32_t boosted = (int32_t)(sample16 * TTS_VOLUME_GAIN);
+      if (boosted > 32767) boosted = 32767;
+      else if (boosted < -32768) boosted = -32768;
+
+      int32_t dacVal32 = 128 + (boosted >> 8);
+      if (dacVal32 < 0) dacVal32 = 0;
+      else if (dacVal32 > 255) dacVal32 = 255;
+
+      dacWrite(SPEAKER_PIN, (uint8_t)dacVal32);
+      lastSample = (uint8_t)dacVal32;
+
+      nextMicros += sampleIntervalUs;
+      while ((long)(micros() - nextMicros) < 0) {
+        // Canh chuẩn micro-giây
+      }
+
+      // Định kỳ yield() reset watchdog để không bị crash khi audio dài
+      if ((f & 0x3FF) == 0) {
+        yield();
+        nextMicros = micros();
+      }
+    }
+  } else {
+    // 8-bit unsigned PCM
+    size_t bytesPerFrame = numChannels;
+    size_t totalFrames = dataSize / bytesPerFrame;
+
+    for (size_t f = 0; f < totalFrames; f++) {
+      size_t idx = f * bytesPerFrame;
+      int32_t sample8 = (int32_t)pData[idx] - 128;
+      sample8 = (int32_t)(sample8 * TTS_VOLUME_GAIN);
+      if (sample8 > 127) sample8 = 127;
+      else if (sample8 < -128) sample8 = -128;
+
+      int32_t dacVal32 = 128 + sample8;
+      if (dacVal32 < 0) dacVal32 = 0;
+      else if (dacVal32 > 255) dacVal32 = 255;
+
+      dacWrite(SPEAKER_PIN, (uint8_t)dacVal32);
+      lastSample = (uint8_t)dacVal32;
+
+      nextMicros += sampleIntervalUs;
+      while ((long)(micros() - nextMicros) < 0) {
+        // Canh chuẩn micro-giây
+      }
+
+      if ((f & 0x3FF) == 0) {
+        yield();
+        nextMicros = micros();
       }
     }
   }
@@ -254,7 +309,87 @@ void playWavStream(Stream* stream, int totalBytes) {
     dacWrite(SPEAKER_PIN, v);
     delayMicroseconds(50);
   }
-  dacWrite(SPEAKER_PIN, 0); // Đưa về 0V để chống nóng loa và tiết kiệm năng lượng
+  dacWrite(SPEAKER_PIN, 0); // Ngắt điện áp DC trên loa để chống nóng và rè
+}
+
+// Tải toàn bộ file WAV từ server vào bộ nhớ RAM rồi mới phát (giải quyết triệt để giật/rè do mạng)
+void downloadAndPlayWav(HTTPClient &http) {
+  int totalBytes = http.getSize();
+  Stream* stream = http.getStreamPtr();
+  if (!stream) {
+    Serial.println("Loi: Stream audio khong kha dung");
+    return;
+  }
+
+  const size_t MAX_AUDIO_SIZE = 250 * 1024; // Giới hạn tối đa 250KB RAM
+  if (totalBytes > (int)MAX_AUDIO_SIZE) {
+    Serial.printf("Canh bao: File audio qua lon (%d bytes), vuot gioi han RAM\n", totalBytes);
+    playFallbackSuccessSound();
+    return;
+  }
+
+  size_t allocSize = (totalBytes > 0) ? (size_t)totalBytes : MAX_AUDIO_SIZE;
+
+  // Kiểm tra heap trống (giữ lại tối thiểu 25KB cho hệ điều hành)
+  size_t freeHeap = ESP.getFreeHeap();
+  Serial.printf("Free Heap truoc khi tai Audio: %u bytes (Can: %u bytes)\n", freeHeap, allocSize);
+  if (freeHeap < allocSize + 25000) {
+    Serial.println("Loi: Khong du RAM de chua toan bo file audio!");
+    playFallbackSuccessSound();
+    return;
+  }
+
+  uint8_t* audioBuf = (uint8_t*)malloc(allocSize);
+  if (!audioBuf) {
+    Serial.printf("Loi: malloc that bai! Khoi nho lien tuc lon nhat (MaxAllocHeap): %u bytes\n", ESP.getMaxAllocHeap());
+    playFallbackSuccessSound();
+    return;
+  }
+
+  // Tải toàn bộ luồng audio vào RAM
+  size_t bytesLoaded = 0;
+  unsigned long startDownload = millis();
+  unsigned long lastDataTime = millis();
+
+  while ((totalBytes <= 0 || (int)bytesLoaded < totalBytes) && (millis() - lastDataTime < 4000)) {
+    if (stream->available() > 0) {
+      size_t toRead = stream->available();
+      if (totalBytes > 0 && bytesLoaded + toRead > (size_t)totalBytes) {
+        toRead = (size_t)totalBytes - bytesLoaded;
+      } else if (totalBytes <= 0 && bytesLoaded + toRead > MAX_AUDIO_SIZE) {
+        toRead = MAX_AUDIO_SIZE - bytesLoaded;
+      }
+
+      size_t n = stream->readBytes((char*)(audioBuf + bytesLoaded), toRead);
+      if (n > 0) {
+        bytesLoaded += n;
+        lastDataTime = millis();
+      }
+    } else {
+      delay(1);
+    }
+
+    if (totalBytes <= 0 && !http.connected() && stream->available() == 0) {
+      break;
+    }
+  }
+
+  Serial.printf("Da tai %u bytes WAV vao RAM trong %lu ms\n", bytesLoaded, millis() - startDownload);
+
+  // Đóng kết nối HTTP trước khi phát để giải phóng tài nguyên SSL/mạng cho CPU
+  http.end();
+
+  // Phát audio mượt mà từ RAM
+  if (bytesLoaded >= 44) {
+    playWavFromRAM(audioBuf, bytesLoaded);
+  } else {
+    Serial.println("Loi: Du lieu audio tai ve qua ngan (< 44 bytes)");
+    playFallbackSuccessSound();
+  }
+
+  // Giải phóng RAM
+  free(audioBuf);
+  Serial.printf("Free Heap sau khi phat audio: %u bytes\n", ESP.getFreeHeap());
 }
 
 // 4. Âm thanh dự phòng nếu không có audio từ server (2 tiếng bíp vui tai)
@@ -347,10 +482,9 @@ void checkCardAPI(String id) {
         lcd.print(serverMessage.substring(16, 32));
       }
       
-      // Phát trực tiếp luồng Audio WAV nhận về từ Server qua DAC GPIO 26
+      // Tải toàn bộ audio WAV vào RAM rồi phát qua DAC GPIO 26
       if (contentType.indexOf("audio") >= 0 || contentType.indexOf("wav") >= 0 || http.getSize() > 100) {
-        Stream* stream = http.getStreamPtr();
-        playWavStream(stream, http.getSize());
+        downloadAndPlayWav(http);
       } else {
         playFallbackSuccessSound();
       }
@@ -368,9 +502,8 @@ void checkCardAPI(String id) {
           lcd.print(serverMessage.substring(16, 32));
         }
 
-        if (contentType.indexOf("audio") >= 0 || contentType.indexOf("wav") >= 0) {
-          Stream* stream = http.getStreamPtr();
-          playWavStream(stream, http.getSize());
+        if (contentType.indexOf("audio") >= 0 || contentType.indexOf("wav") >= 0 || http.getSize() > 100) {
+          downloadAndPlayWav(http);
         } else {
           playErrorSound();
         }
