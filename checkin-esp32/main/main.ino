@@ -352,8 +352,9 @@ void downloadAndPlayWav(HTTPClient &http) {
   unsigned long lastDataTime = millis();
 
   while ((totalBytes <= 0 || (int)bytesLoaded < totalBytes) && (millis() - lastDataTime < 4000)) {
-    if (stream->available() > 0) {
-      size_t toRead = stream->available();
+    int avail = stream->available();
+    if (avail > 0) {
+      size_t toRead = (size_t)avail;
       if (totalBytes > 0 && bytesLoaded + toRead > (size_t)totalBytes) {
         toRead = (size_t)totalBytes - bytesLoaded;
       } else if (totalBytes <= 0 && bytesLoaded + toRead > MAX_AUDIO_SIZE) {
@@ -366,7 +367,7 @@ void downloadAndPlayWav(HTTPClient &http) {
         lastDataTime = millis();
       }
     } else {
-      delay(1);
+      yield(); // Nhường CPU cho WiFi/TCP stack xử lý gói tin mới mà không bị block 1ms
     }
 
     if (totalBytes <= 0 && !http.connected() && stream->available() == 0) {
