@@ -117,6 +117,13 @@ class CreatePermissionRequestUseCase:
 
         saved = self.repo.save(request)
 
+        # Cập nhật trạng thái participant sang ABSENT_EXCUSED nếu có meeting_id
+        if category == RequestCategory.ABSENCE and meeting_id and current_user_id:
+            try:
+                self.repo.mark_participant_excused(meeting_id, current_user_id)
+            except Exception:
+                pass
+
         # Publish event for (1) Notification and (2) Violation checking
         await self.event_bus.publish(
             cast(
@@ -194,6 +201,19 @@ class DeletePermissionRequestUseCase:
         self.repo = repo
 
     def execute(self, request_id: int) -> bool:
+        entity = self.repo.get_by_id(request_id)
+        if (
+            entity
+            and entity.category == RequestCategory.ABSENCE
+            and entity.meeting_id
+            and entity.user_id
+        ):
+            try:
+                self.repo.revert_participant_excused(
+                    entity.meeting_id, entity.user_id
+                )
+            except Exception:
+                pass
         return self.repo.delete(request_id)
 
 

@@ -453,8 +453,8 @@ export const WeeklyDutyCalendar: React.FC<WeeklyDutyCalendarProps> = ({
 
                 {/* Nút hành động */}
                 <div className="flex gap-2 pt-1 border-t border-gray-100">
-                  {/* Nếu bị từ chối: Chỉ người quản lý/Admin/HR mới thao tác nộp lại */}
-                  {canManage && isRejected && item.duty_id && (
+                  {/* Nếu bị từ chối: Quản lý hoặc thành viên trong nhóm trực thao tác nộp lại */}
+                  {isRejected && item.duty_id && (
                     <Button
                       type="primary"
                       danger
@@ -467,7 +467,7 @@ export const WeeklyDutyCalendar: React.FC<WeeklyDutyCalendarProps> = ({
                     </Button>
                   )}
 
-                  {canManage && isScheduled && !isCompleted && !isAwaitingApproval && !isRejected && item.duty_id && (
+                  {isScheduled && !isCompleted && !isAwaitingApproval && !isRejected && item.duty_id && (
                     <Button
                       type="primary"
                       size="small"
