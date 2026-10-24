@@ -255,3 +255,50 @@ async def test_update_homework_validation(mock_homework_repo, mock_quiz_api):
             ),
         )
     assert "chưa có bài tập coding" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_update_homework_uncheck_game_success(mock_homework_repo, mock_quiz_api):
+    """Cập nhật bài tập: bỏ chọn requires_game thành công khi ban đầu có cả coding và game."""
+    existing_hw = Homework(
+        id=1,
+        title="Existing HW",
+        deadline=datetime.now(UTC) + timedelta(days=2),
+        slug="test-slug",
+        requires_coding=True,
+        requires_game=True,
+    )
+    mock_homework_repo.get_by_id = MagicMock(return_value=existing_hw)
+    mock_homework_repo.save = MagicMock(side_effect=lambda hw: hw)
+
+    mock_quiz_api.get_lesson_metadata = AsyncMock(
+        return_value={
+            "slug": "test-slug",
+            "name": "Test Lesson",
+            "has_coding": True,
+            "has_game": False,
+            "is_ready": True,
+        }
+    )
+
+    mock_assignee_repo = MagicMock()
+    use_case = UpdateHomeworkUseCase(
+        homework_repo=mock_homework_repo,
+        homework_assignee_repo=mock_assignee_repo,
+        quiz_api=mock_quiz_api,
+    )
+
+    result = await use_case.execute(
+        homework_id=1,
+        data=HomeworkUpdate(
+            requires_game=False,
+        ),
+    )
+
+    assert result.requires_game is False
+    assert result.requires_coding is True
+    mock_homework_repo.save.assert_called_once()
+    saved_entity = mock_homework_repo.save.call_args[0][0]
+    assert saved_entity.requires_game is False
+    assert saved_entity.requires_coding is True
+

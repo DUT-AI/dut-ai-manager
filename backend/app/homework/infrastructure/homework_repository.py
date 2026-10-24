@@ -188,6 +188,8 @@ class HomeworkRepository:
             model.deadline = homework.deadline
             model.link = homework.link
             model.slug = homework.slug
+            model.requires_coding = homework.requires_coding
+            model.requires_game = homework.requires_game
             self.session.add(model)
             self.session.flush()
             return model.to_entity()

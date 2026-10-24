@@ -90,8 +90,8 @@ class UpdateHomeworkUseCase:
                     "deadline": data.deadline,
                     "link": data.link,
                     "slug": extracted_slug,
-                    "requires_coding": data.requires_coding,
-                    "requires_game": data.requires_game,
+                    "requires_coding": effective_coding,
+                    "requires_game": effective_game,
                 }.items()
                 if v is not None
             }

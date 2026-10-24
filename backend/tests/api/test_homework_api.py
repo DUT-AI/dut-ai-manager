@@ -260,7 +260,8 @@ def test_update_homework_not_found(admin_client):
 
 
 def test_update_homework_success(admin_client, test_homework):
-    """Cập nhật thông tin bài tập thành công."""
+    """Cập nhật thông tin bài tập thành công (bỏ chọn requires_game)."""
+    assert test_homework["requires_game"] is True
     payload = {
         "title": "Updated Homework Title",
         "requires_game": False,
@@ -270,6 +271,15 @@ def test_update_homework_success(admin_client, test_homework):
     data = res.json()
     assert data["is_success"] is True
     assert data["data"]["title"] == "Updated Homework Title"
+    assert data["data"]["requires_game"] is False
+    assert data["data"]["requires_coding"] is True
+
+    # Kiểm tra truy vấn GET lại để đảm bảo DB đã lưu thay đổi requires_game=False
+    get_res = admin_client.get(f"/api/v1/homeworks/{test_homework['id']}")
+    assert get_res.status_code == 200
+    get_data = get_res.json()["data"]
+    assert get_data["requires_game"] is False
+    assert get_data["requires_coding"] is True
 
 
 def test_delete_homework_as_member_returns_403(member_client, test_homework):
