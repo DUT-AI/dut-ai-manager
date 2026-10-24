@@ -33,6 +33,9 @@ from app.shared.infrastructure.minio_service import MinioService
 from app.shared.infrastructure.notification.dispatcher import (
     UnifiedNotificationDispatcher,
 )
+from app.permission_request.infrastructure.repository import (
+    PermissionRequestRepository,
+)
 from app.team.infrastructure.repository import TeamRepository
 from app.user.infrastructure.repository import UserRepository
 from app.violation.application.create_violation_use_case import (
@@ -118,11 +121,13 @@ class DutyModuleProvider(Provider):
         duty_repo: DutyRepository,
         team_repo: TeamRepository,
         minio_service: MinioService,
+        meeting_repo: MeetingRepository,
     ) -> SubmitDutyEvidenceUseCase:
         return SubmitDutyEvidenceUseCase(
             duty_repo=duty_repo,
             team_repo=team_repo,
             minio_service=minio_service,
+            meeting_repo=meeting_repo,
             event_bus=EventBus,
         )
 
@@ -160,6 +165,7 @@ class DutyModuleProvider(Provider):
         team_repo: TeamRepository,
         meeting_repo: MeetingRepository,
         duty_repo: DutyRepository,
+        permission_repo: PermissionRequestRepository,
     ) -> DutyNotificationHandler:
         return DutyNotificationHandler(
             dispatcher=dispatcher,
@@ -167,4 +173,5 @@ class DutyModuleProvider(Provider):
             team_repo=team_repo,
             meeting_repo=meeting_repo,
             duty_repo=duty_repo,
+            permission_repo=permission_repo,
         )

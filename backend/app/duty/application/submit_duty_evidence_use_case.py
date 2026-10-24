@@ -11,6 +11,8 @@ from app.duty.application.dtos import DutyResponse
 from app.duty.domain.entity import DutyStatus
 from app.duty.domain.events import DutySubmitted
 from app.duty.infrastructure.repository import DutyRepository
+from app.meeting.domain.value_objects import ParticipantStatus
+from app.meeting.infrastructure.repository import MeetingRepository
 from app.shared.domain.event_bus import DomainEvent, EventBus
 from app.shared.infrastructure.minio_service import MinioService
 from app.team.infrastructure.repository import TeamRepository
@@ -25,11 +27,13 @@ class SubmitDutyEvidenceUseCase:
         duty_repo: DutyRepository,
         team_repo: TeamRepository,
         minio_service: MinioService,
+        meeting_repo: MeetingRepository | None = None,
         event_bus: type[EventBus] = EventBus,
     ):
         self.duty_repo = duty_repo
         self.team_repo = team_repo
         self.minio_service = minio_service
+        self.meeting_repo = meeting_repo
         self.event_bus = event_bus
 
     async def execute(
@@ -58,19 +62,37 @@ class SubmitDutyEvidenceUseCase:
                 detail=f"Đã quá hạn nộp minh chứng trực nhật (Hạn chót: 22:00 ngày {duty.duty_date.strftime('%d/%m/%Y')})",
             )
 
-        # Kiểm tra thành viên nhóm (nếu không phải admin / HR)
+        # Kiểm tra quyền nộp (nếu không phải admin / HR)
         if not is_admin:
             t_ids = duty.team_id if isinstance(duty.team_id, list) else [duty.team_id]
-            is_member = False
+            is_authorized = False
+
+            # 1. Thành viên chính thức của nhóm trực nhật
             for t_id in t_ids:
                 team = self.team_repo.get_by_id(t_id)
                 if team and user_id in team.member_ids:
-                    is_member = True
+                    is_authorized = True
                     break
-            if not is_member:
+
+            # 2. Hoặc học viên tham gia buổi sinh hoạt hôm đó (bao gồm cả bạn đổi ca sang)
+            if not is_authorized and duty.meeting_id and self.meeting_repo:
+                meeting = self.meeting_repo.get_by_id(duty.meeting_id)
+                if meeting and meeting.participants:
+                    is_authorized = any(
+                        p.user_id == user_id
+                        and not getattr(p, "is_deleted", False)
+                        and p.status
+                        not in (
+                            ParticipantStatus.ABSENT_EXCUSED,
+                            ParticipantStatus.ABSENT_UNEXCUSED,
+                        )
+                        for p in meeting.participants
+                    )
+
+            if not is_authorized:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Bạn không thuộc nhóm trực nhật phụ trách ca này",
+                    detail="Bạn không thuộc nhóm trực nhật hoặc buổi sinh hoạt phụ trách ca này",
                 )
 
         # Kiểm tra ít nhất 1 việc và ít nhất 1 ảnh (nếu ca chưa có ảnh)

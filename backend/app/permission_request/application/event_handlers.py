@@ -18,6 +18,7 @@ from app.shared.infrastructure.notification_payload import (
     NotificationLevel,
     NotificationPayload,
 )
+from app.duty.infrastructure.repository import DutyRepository
 from app.user.infrastructure.repository import UserRepository
 
 
@@ -128,10 +129,12 @@ class MeetingParticipantTransferredNotificationHandler(
         dispatcher: UnifiedNotificationDispatcher,
         user_repo: UserRepository,
         meeting_repo: MeetingRepository,
+        duty_repo: DutyRepository | None = None,
     ):
         self.dispatcher = dispatcher
         self.user_repo = user_repo
         self.meeting_repo = meeting_repo
+        self.duty_repo = duty_repo
 
     async def handle(self, event: MeetingParticipantTransferred) -> None:
         try:
@@ -178,6 +181,38 @@ class MeetingParticipantTransferredNotificationHandler(
                 else "Chưa có buổi học (Đăng ký mới)"
             )
 
+            # Kiểm tra xem buổi sinh hoạt mới có ca trực nhật không
+            active_duties = []
+            duty_team_name = ""
+            if self.duty_repo and new_meeting.id:
+                duties = self.duty_repo.get_by_meeting_id(new_meeting.id)
+                active_duties = [
+                    d
+                    for d in duties
+                    if getattr(d, "status", None) in ("PENDING", "AWAITING_APPROVAL")
+                ]
+                if active_duties:
+                    duty_team_name = ", ".join(
+                        d.team_name or "Nhóm trực" for d in active_duties if d.team_name
+                    )
+
+            fields = [
+                {"name": "🔄 Ca cũ", "value": old_title, "inline": False},
+                {
+                    "name": "🎯 Ca mới",
+                    "value": f"{new_meeting.title} ({new_time_str})",
+                    "inline": False,
+                },
+            ]
+            if active_duties:
+                fields.append(
+                    {
+                        "name": "🧹 Lịch trực nhật phòng Lab",
+                        "value": f"Buổi này có phân công trực nhật phòng Lab ({duty_team_name or 'Theo phân công'}). Bạn cùng tham gia trực nhật với nhóm nhé!",
+                        "inline": False,
+                    }
+                )
+
             # 1. Gửi thông báo xác nhận cho cá nhân học viên
             user_payload = NotificationPayload(
                 user_id=event.user_id,
@@ -188,16 +223,41 @@ class MeetingParticipantTransferredNotificationHandler(
                 ),
                 category=NotificationCategory.MEETING,
                 level=NotificationLevel.SUCCESS,
-                fields=[
-                    {"name": "🔄 Ca cũ", "value": old_title, "inline": False},
-                    {
-                        "name": "🎯 Ca mới",
-                        "value": f"{new_meeting.title} ({new_time_str})",
-                        "inline": False,
-                    },
-                ],
+                fields=fields,
             )
             await self.dispatcher.dispatch(user_payload)
+
+            # 1b. Nếu có ca trực nhật, gửi thêm thông báo phân công trực nhật cho học viên
+            if active_duties:
+                duty_date_str = new_meeting.start_time.strftime("%d/%m/%Y")
+                duty_payload = NotificationPayload(
+                    user_id=event.user_id,
+                    title="🧹 [TRỰC NHẬT] PHÂN CÔNG TRỰC NHẬT PHÒNG LAB",
+                    content=(
+                        f"Chào **{user.name}**!\n"
+                        f"Buổi sinh hoạt mới của bạn (**{new_meeting.title}** - {new_time_str}) "
+                        f"có lịch phân công trực nhật phòng Lab do **{duty_team_name or 'Nhóm trực'}** phụ trách.\n"
+                        f"👉 Bạn cùng tham gia quét dọn phòng Lab và nộp ảnh minh chứng cùng nhóm nhé!"
+                    ),
+                    category=NotificationCategory.DUTY,
+                    level=NotificationLevel.INFO,
+                    image_asset="meme-lam-viec.webp",
+                    fields=[
+                        {
+                            "name": "👥 Nhóm phụ trách",
+                            "value": duty_team_name or "Theo phân công",
+                            "inline": True,
+                        },
+                        {"name": "📅 Ngày trực", "value": duty_date_str, "inline": True},
+                        {
+                            "name": "📌 Lưu ý",
+                            "value": "Nộp ảnh minh chứng hoàn thành trước 22:00 cùng ngày để tránh bị phạt vi phạm.",
+                            "inline": False,
+                        },
+                    ],
+                    action_url=f"{settings.FRONTEND_URL}/dashboard/duties",
+                )
+                await self.dispatcher.dispatch(duty_payload)
 
             # 2. Gửi thông báo đến Room quản lý Discord / Zalo
             room_id = settings.DISCORD_PERMISSION_ROOM_ID

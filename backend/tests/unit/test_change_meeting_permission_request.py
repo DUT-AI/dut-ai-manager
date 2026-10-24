@@ -352,7 +352,11 @@ def test_get_upcoming_meetings_with_seats():
 
 
 @pytest.mark.asyncio
-async def test_meeting_participant_transferred_notification_handler():
+async def test_meeting_participant_transferred_notification_handler(monkeypatch):
+    monkeypatch.setattr(
+        "app.permission_request.application.event_handlers.settings.DISCORD_PERMISSION_ROOM_ID",
+        "123456789",
+    )
     from app.shared.infrastructure.notification.channel import (
         ChannelDeliveryResult,
         ChannelType,
@@ -408,3 +412,76 @@ async def test_meeting_participant_transferred_notification_handler():
 
     assert mock_dispatcher.dispatch.call_count == 1
     assert mock_dispatcher.dispatch_room.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_meeting_participant_transferred_notifies_duty_schedule(monkeypatch):
+    """
+    Kiểm tra khi học viên đổi sang meeting ĐÃ CÓ ca trực nhật:
+    - Nhận tin xác nhận đổi ca (có field trực nhật)
+    - Nhận thêm tin phân công trực nhật phòng Lab
+    """
+    monkeypatch.setattr(
+        "app.permission_request.application.event_handlers.settings.DISCORD_PERMISSION_ROOM_ID",
+        "123456789",
+    )
+    mock_dispatcher = AsyncMock()
+
+    user_repo = MagicMock()
+    user = User(
+        id=10,
+        name="Bạn A",
+        email="a@example.com",
+    )
+    user_repo.get_by_id.return_value = user
+
+    meeting_repo = MagicMock()
+    now = get_current_utc7_time()
+    m_old = Meeting(id=101, title="Nhóm 2", start_time=now, end_time=now + timedelta(hours=2))
+    m_new = Meeting(
+        id=102,
+        title="Nhóm 1",
+        start_time=now + timedelta(days=1),
+        end_time=now + timedelta(days=1, hours=2),
+    )
+    meeting_repo.get_by_id.side_effect = lambda mid: m_old if mid == 101 else m_new
+
+    duty_repo = MagicMock()
+    from app.duty.domain.entity import CleaningDuty, DutyStatus
+    duty_repo.get_by_meeting_id.return_value = [
+        CleaningDuty(
+            id=50,
+            duty_date=(now + timedelta(days=1)).date(),
+            team_id=[1],
+            team_name="Nhóm 1 Gen 2",
+            meeting_id=102,
+            status=DutyStatus.PENDING,
+        )
+    ]
+
+    handler = MeetingParticipantTransferredNotificationHandler(
+        dispatcher=mock_dispatcher,
+        user_repo=user_repo,
+        meeting_repo=meeting_repo,
+        duty_repo=duty_repo,
+    )
+
+    event = MeetingParticipantTransferred(
+        request_id=1,
+        user_id=10,
+        old_meeting_id=101,
+        new_meeting_id=102,
+        note="Đổi sang học cùng nhóm 1",
+    )
+
+    await handler.handle(event)
+    await asyncio.sleep(0.01)
+
+    # Dispatch: 1 xác nhận đổi ca + 1 thông báo phân công trực nhật = 2
+    assert mock_dispatcher.dispatch.call_count == 2
+    titles = [call.args[0].title for call in mock_dispatcher.dispatch.call_args_list]
+    assert any("XÁC NHẬN ĐỔI CA" in t for t in titles)
+    assert any("PHÂN CÔNG TRỰC NHẬT" in t for t in titles)
+    # Room dispatch: 1
+    assert mock_dispatcher.dispatch_room.call_count == 1
+

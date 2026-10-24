@@ -21,6 +21,9 @@ from app.shared.infrastructure.notification_payload import (
     NotificationLevel,
     NotificationPayload,
 )
+from app.permission_request.infrastructure.repository import (
+    PermissionRequestRepository,
+)
 from app.team.infrastructure.repository import TeamRepository
 from app.user.infrastructure.repository import UserRepository
 
@@ -41,12 +44,14 @@ class DutyNotificationHandler(EventHandler):
         team_repo: TeamRepository,
         meeting_repo: MeetingRepository,
         duty_repo: DutyRepository,
+        permission_repo: PermissionRequestRepository | None = None,
     ):
         self.dispatcher = dispatcher
         self.user_repo = user_repo
         self.team_repo = team_repo
         self.meeting_repo = meeting_repo
         self.duty_repo = duty_repo
+        self.permission_repo = permission_repo
 
     async def handle(
         self, event: DutySubmitted | DutyScheduled | DutyUpdated | MeetingUpdated
@@ -96,19 +101,56 @@ class DutyNotificationHandler(EventHandler):
             return f"Từ {start_t.strftime('%H:%M')}"
         return fallback
 
-    @staticmethod
-    def _extract_meeting_participant_ids(meeting: Meeting | None) -> list[int]:
-        """Trích xuất ID các học viên hợp lệ từ buổi meeting (loại trừ người tạo và người xin phép nghỉ)."""
-        if not meeting or not meeting.participants:
+    def _extract_meeting_participant_ids(self, meeting: Meeting | None) -> list[int]:
+        """
+        Trích xuất ID các học viên hợp lệ từ buổi meeting:
+        - Loại trừ người tạo/trainer.
+        - Loại trừ học viên có đơn xin vắng (ABSENCE) hoặc đổi buổi chuyển đi (CHANGE_MEETING).
+        - Loại trừ học viên có trạng thái vắng (ABSENT_EXCUSED, ABSENT_UNEXCUSED).
+        - Bổ sung học viên đổi buổi chuyển ĐẾN meeting này.
+        """
+        if not meeting:
             return []
+
+        excluded_user_ids: set[int] = set()
         creator_id = getattr(meeting, "created_by", None)
-        return [
-            p.user_id
-            for p in meeting.participants
-            if not getattr(p, "is_deleted", False)
-            and not (creator_id and p.user_id == creator_id)
-            and p.status != ParticipantStatus.ABSENT_EXCUSED
-        ]
+        if creator_id:
+            excluded_user_ids.add(creator_id)
+
+        # Lấy danh sách xin vắng hoặc đổi buổi chuyển đi từ permission_repo
+        if self.permission_repo and meeting.id:
+            excluded_user_ids.update(
+                self.permission_repo.get_all_excused_or_transferred_out_user_ids(
+                    meeting.id
+                )
+            )
+
+        valid_ids: list[int] = []
+        if meeting.participants:
+            for p in meeting.participants:
+                if getattr(p, "is_deleted", False):
+                    continue
+                if p.user_id in excluded_user_ids:
+                    continue
+                if p.status in (
+                    ParticipantStatus.ABSENT_EXCUSED,
+                    ParticipantStatus.ABSENT_UNEXCUSED,
+                ):
+                    continue
+                valid_ids.append(p.user_id)
+
+        # Bổ sung các bạn đổi buổi chuyển ĐẾN meeting này
+        if self.permission_repo and meeting.id:
+            transferred_in_ids = (
+                self.permission_repo.get_transferred_in_user_ids_by_meeting(
+                    meeting.id
+                )
+            )
+            for uid in transferred_in_ids:
+                if uid not in valid_ids and uid not in excluded_user_ids:
+                    valid_ids.append(uid)
+
+        return valid_ids
 
     def _extract_team_member_ids(self, team_ids: int | list[int]) -> list[int]:
         """Lấy tất cả member_id từ danh sách nhóm."""
@@ -122,6 +164,8 @@ class DutyNotificationHandler(EventHandler):
                 member_ids.extend(team.member_ids)
             elif team.members:
                 member_ids.extend(m.user_id for m in team.members if m.user_id)
+            elif team.users:
+                member_ids.extend(u.id for u in team.users if u.id)
         return member_ids
 
     def _resolve_target_user_ids(
@@ -134,6 +178,15 @@ class DutyNotificationHandler(EventHandler):
         candidate_ids = self._extract_meeting_participant_ids(meeting)
         if not candidate_ids:
             candidate_ids = self._extract_team_member_ids(fallback_team_ids)
+            # Nếu có meeting gắn với ca trực, loại trừ các bạn vắng / đổi buổi
+            if meeting and meeting.id and self.permission_repo:
+                excluded = (
+                    self.permission_repo.get_all_excused_or_transferred_out_user_ids(
+                        meeting.id
+                    )
+                )
+                candidate_ids = [uid for uid in candidate_ids if uid not in excluded]
+
         return list(dict.fromkeys(candidate_ids))
 
     async def _dispatch_to_users(
@@ -223,6 +276,10 @@ class DutyNotificationHandler(EventHandler):
             duty = self.duty_repo.get_by_id(event.duty_id)
             meeting_id = event.meeting_id or (duty.meeting_id if duty else None)
             meeting = self.meeting_repo.get_by_id(meeting_id) if meeting_id else None
+            if not meeting and duty and duty.duty_date:
+                meetings = self.meeting_repo.get_by_date(duty.duty_date)
+                if meetings:
+                    meeting = meetings[0]
 
             target_user_ids = self._resolve_target_user_ids(
                 duty=duty, meeting=meeting, fallback_team_ids=event.team_id
@@ -319,7 +376,16 @@ class DutyNotificationHandler(EventHandler):
             meeting = self.meeting_repo.get_by_id(event.meeting_id)
             candidate_user_ids = self._extract_meeting_participant_ids(meeting)
             if not candidate_user_ids and event.user_ids:
-                candidate_user_ids.extend(event.user_ids)
+                excluded_user_ids: set[int] = set()
+                if self.permission_repo and event.meeting_id:
+                    excluded_user_ids.update(
+                        self.permission_repo.get_all_excused_or_transferred_out_user_ids(
+                            event.meeting_id
+                        )
+                    )
+                candidate_user_ids = [
+                    uid for uid in event.user_ids if uid not in excluded_user_ids
+                ]
 
             p_ids = set(candidate_user_ids)
             teams = self.team_repo.get_all_with_members()
