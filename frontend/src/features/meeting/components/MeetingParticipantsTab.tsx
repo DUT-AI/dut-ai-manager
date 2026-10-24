@@ -47,10 +47,11 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
   );
 
   const currentUserId = user?.id;
-  const isTrainer =
-    (meeting?.created_by ? currentUserId === meeting.created_by : false) ||
-    (meeting?.trainer?.id ? currentUserId === meeting.trainer.id : false) ||
-    (user?.role_names?.some((r) => ['admin', 'leader', 'superadmin', 'manager'].includes(r.toLowerCase())) ?? false);
+  const isTrainer = Boolean(
+    (meeting?.created_by != null && currentUserId != null && Number(currentUserId) === Number(meeting.created_by)) ||
+    (meeting?.trainer?.id != null && currentUserId != null && Number(currentUserId) === Number(meeting.trainer.id)) ||
+    (user?.role_names?.some((r) => ['admin', 'leader', 'superadmin', 'manager'].includes(r.toLowerCase())) ?? false)
+  );
 
   const isEnded = meeting ? dayjs().isAfter(dayjs(meeting.end_time)) : false;
   const totalParticipants = meeting?.participants?.length || 0;

@@ -304,6 +304,8 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         orm.require_check_in = domain.require_check_in
         orm.enable_evaluation = domain.enable_evaluation
         orm.evaluation_deadline = domain.evaluation_deadline
+        if domain.created_by is not None:
+            orm.created_by = domain.created_by
 
         self.session.add(orm)
         self.session.flush()

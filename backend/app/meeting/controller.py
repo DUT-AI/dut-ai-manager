@@ -86,7 +86,7 @@ async def get_upcoming_meetings_with_seats(
 async def create_meeting(
     data: MeetingCreate,
     uc: FromDishka[CreateMeetingUseCase],
-    _: Annotated[CurrentUser, hasPermission(MeetingPermission.CREATE)],
+    current_user: Annotated[CurrentUser, hasPermission(MeetingPermission.CREATE)],
 ):
     """Tạo mới buổi họp (Admin/Leader)"""
     meeting = await uc.execute(
@@ -97,6 +97,7 @@ async def create_meeting(
         require_check_in=data.require_check_in,
         enable_evaluation=data.enable_evaluation,
         user_ids=data.user_ids,
+        creator_id=current_user.id,
     )
     return ApiResponse.success(
         data=MeetingResponse.from_domain(meeting),
@@ -161,9 +162,19 @@ async def check_meeting_ownership(
     current_user: CurrentUser,
     uc: FromDishka[GetMeetingsUseCase],
 ):
-    """Kiểm tra xem người dùng hiện tại có quyền sở hữu cuộc họp (hoặc là Admin) không"""
+    """Kiểm tra xem người dùng hiện tại có quyền sở hữu cuộc họp (hoặc là Admin/Leader) không"""
+    is_admin = any(
+        r.lower() in ["admin", "superadmin", "leader", "manager"]
+        for r in (current_user.role_names or [])
+    )
+    if is_admin:
+        return
+
     meeting = uc.get_by_id(meeting_id)
-    if "admin" not in current_user.role_names and meeting.created_by != current_user.id:
+    if not meeting:
+        raise BadRequestException("Không tìm thấy buổi học", status_code=status.HTTP_404_NOT_FOUND)
+
+    if meeting.created_by != current_user.id:
         raise BadRequestException(
             message="Bạn không có quyền chỉnh sửa hoặc xóa buổi họp này",
             status_code=status.HTTP_403_FORBIDDEN,
@@ -362,6 +373,43 @@ async def get_capacity_forecast(
 # ==========================================
 
 
+@inject
+async def check_meeting_evaluation_permission(
+    meeting_id: int,
+    current_user: CurrentUser,
+    uc: FromDishka[GetMeetingsUseCase],
+):
+    """Kiểm tra xem người dùng hiện tại có quyền đánh giá cuộc họp không (Admin, Creator, hoặc Trainer)."""
+    if current_user.id is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+
+    is_admin = any(
+        r.lower() in ["admin", "superadmin", "leader", "manager"]
+        for r in (current_user.role_names or [])
+    ) or (
+        MeetingPermission.CREATE in (current_user.permissions or set())
+        or MeetingPermission.UPDATE in (current_user.permissions or set())
+    )
+
+    if is_admin:
+        return
+
+    meeting = uc.get_by_id(meeting_id)
+    if not meeting:
+        raise BadRequestException("Không tìm thấy buổi học", status_code=status.HTTP_404_NOT_FOUND)
+
+    is_creator = meeting.created_by is not None and meeting.created_by == current_user.id
+    is_trainer = (
+        meeting.creator is not None and meeting.creator.id == current_user.id
+    )
+
+    if not (is_creator or is_trainer):
+        raise BadRequestException(
+            message="Bạn không có quyền đánh giá buổi học này",
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+
+
 @router.post(
     "/{meeting_id}/evaluations/overall",
     response_model=ApiResponse[MeetingOverallEvaluationResponse],
@@ -372,7 +420,8 @@ async def submit_meeting_overall_evaluation(
     meeting_id: int,
     data: SubmitMeetingOverallEvaluationRequest,
     uc: FromDishka[SubmitMeetingOverallEvaluationUseCase],
-    current_user: Annotated[CurrentUser, hasPermission(MeetingPermission.CREATE)],
+    current_user: CurrentUser,
+    _: Annotated[None, Depends(check_meeting_evaluation_permission)],
 ):
     """Trainer gửi đánh giá tổng thể cho toàn bộ buổi học (quan hệ 1 - 1 với Meeting)."""
     if current_user.id is None:
@@ -415,7 +464,8 @@ async def submit_trainer_evaluation(
     meeting_id: int,
     data: TrainerSubmitEvaluationRequest,
     uc: FromDishka[SubmitTrainerEvaluationUseCase],
-    current_user: Annotated[CurrentUser, hasPermission(MeetingPermission.CREATE)],
+    current_user: CurrentUser,
+    _: Annotated[None, Depends(check_meeting_evaluation_permission)],
 ):
     """Trainer gửi đánh giá cho 1 Trainee cụ thể trong buổi học."""
     if current_user.id is None:

@@ -88,9 +88,11 @@ const MeetingDetailPage: React.FC = () => {
     );
   }
 
-  const isTrainer =
-    user?.id !== undefined &&
-    (meeting.trainer?.id === user.id || meeting.created_by === user.id);
+  const isTrainer = Boolean(
+    user?.id != null &&
+    ((meeting.created_by != null && Number(meeting.created_by) === Number(user.id)) ||
+     (meeting.trainer?.id != null && Number(meeting.trainer.id) === Number(user.id)))
+  );
 
   // Tìm đánh giá cá nhân của Trainee gửi cho Trainer nếu có
   const myEvalForTrainer =

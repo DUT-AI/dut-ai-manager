@@ -29,6 +29,7 @@ class CreateMeetingUseCase:
         require_check_in: bool = True,
         enable_evaluation: bool = False,
         user_ids: list[int] | None = None,
+        creator_id: int | None = None,
     ) -> Meeting:
         all_user_ids = set(user_ids or [])
         user_ids_list = list(all_user_ids)
@@ -54,6 +55,7 @@ class CreateMeetingUseCase:
             require_check_in=require_check_in,
             enable_evaluation=enable_evaluation,
             participants=participants,
+            created_by=creator_id,
         )
 
         saved_meeting = self.repo.save(meeting)

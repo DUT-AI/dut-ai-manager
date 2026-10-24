@@ -564,3 +564,22 @@ def test_delete_meeting_success(admin_client, mock_current_user):
     del_res = admin_client.delete(f"/api/v1/meetings/{meeting_id}")
     assert del_res.status_code == 200
     assert del_res.json()["is_success"] is True
+
+
+def test_member_submit_overall_evaluation_returns_403(member_client, test_meeting):
+    """Member không phải người tạo/trainer/admin bị chặn 403 khi đánh giá buổi học."""
+    payload = {
+        "scores": [
+            {"criteria_code": "ORGANIZATION", "score": 5},
+            {"criteria_code": "TRAINEE_ENGAGEMENT", "score": 5},
+        ],
+        "general_feedback": "Đánh giá trái phép",
+    }
+    res = member_client.post(
+        f"/api/v1/meetings/{test_meeting['id']}/evaluations/overall",
+        json=payload,
+    )
+    assert res.status_code == 403
+    err_text = res.json().get("message") or res.json().get("detail") or ""
+    assert "Bạn không có quyền đánh giá buổi học này" in err_text
+

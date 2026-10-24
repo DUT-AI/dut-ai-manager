@@ -155,6 +155,7 @@ class MeetingResponse(BaseModel):
     require_check_in: bool
     enable_evaluation: bool = False
     evaluation_deadline: datetime | None = None
+    created_by: int | None = None
     trainer: UserRefDto | None = None
     created_at: datetime
     updated_at: datetime
@@ -198,6 +199,7 @@ class MeetingResponse(BaseModel):
             if m.enable_evaluation is not None
             else False,
             evaluation_deadline=m.evaluation_deadline,
+            created_by=m.created_by,
             trainer=trainer_dto,
             created_at=m.created_at,
             updated_at=m.updated_at,

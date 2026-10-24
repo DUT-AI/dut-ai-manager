@@ -336,3 +336,73 @@ async def test_check_evaluation_deadline_creates_violation_when_trainer_missing(
     assert "Python 101" in saved_violation.reason
     assert mock_meeting.start_time.strftime("%H:%M") in saved_violation.reason
     assert mock_meeting.end_time.strftime("%d/%m/%Y") in saved_violation.reason
+
+
+@pytest.mark.asyncio
+async def test_check_meeting_evaluation_permission_creator_success():
+    from app.meeting.controller import check_meeting_evaluation_permission
+    from app.core.deps import CurrentUser
+
+    # User 10 là người tạo cuộc họp, không có role admin
+    non_admin_creator = CurrentUser(
+        id=10,
+        username="trainer_user",
+        name="Trainer User",
+        email="trainer@dut.udn.vn",
+        is_active=True,
+        role_names=["member"],
+        permissions=set(),
+    )
+
+    uc = MagicMock()
+    uc.get_by_id.return_value = Meeting(
+        id=105,
+        title="AI Workshop",
+        start_time=datetime.now() - timedelta(hours=2),
+        end_time=datetime.now() - timedelta(hours=1),
+        enable_evaluation=True,
+        created_by=10,
+    )
+
+    # Không raise exception
+    await check_meeting_evaluation_permission(
+        meeting_id=105,
+        current_user=non_admin_creator,
+        uc=uc,
+    )
+
+
+@pytest.mark.asyncio
+async def test_check_meeting_evaluation_permission_unauthorized():
+    from app.meeting.controller import check_meeting_evaluation_permission
+    from app.core.deps import CurrentUser
+
+    # User 99 không phải admin, không phải người tạo
+    unauthorized_user = CurrentUser(
+        id=99,
+        username="trainee_user",
+        name="Trainee User",
+        email="trainee@dut.udn.vn",
+        is_active=True,
+        role_names=["member"],
+        permissions=set(),
+    )
+
+    uc = MagicMock()
+    uc.get_by_id.return_value = Meeting(
+        id=105,
+        title="AI Workshop",
+        start_time=datetime.now() - timedelta(hours=2),
+        end_time=datetime.now() - timedelta(hours=1),
+        enable_evaluation=True,
+        created_by=10,
+    )
+
+    with pytest.raises(BadRequestException) as exc_info:
+        await check_meeting_evaluation_permission(
+            meeting_id=105,
+            current_user=unauthorized_user,
+            uc=uc,
+        )
+    assert exc_info.value.status_code == 403
+
