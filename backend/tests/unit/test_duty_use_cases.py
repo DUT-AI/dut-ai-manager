@@ -1434,3 +1434,157 @@ async def test_duty_notification_handler_duty_updated_free_schedule(
     payload = mock_notification_service.dispatch.call_args_list[0].args[0]
     assert "CẬP NHẬT LỊCH TRỰC NHẬT" in payload.title
     assert "24/10/2026" in payload.content
+
+
+@pytest.mark.asyncio
+async def test_meeting_rescheduled_excludes_absent_and_transferred_students(
+    mock_notification_service,
+    mock_user_repo,
+    mock_team_repo,
+    mock_meeting_repo,
+    mock_duty_repo,
+):
+    """
+    Kiểm tra logic nghiệp vụ:
+    - Khi meeting bị dời lịch, hệ thống chỉ gửi thông báo ca trực nhật cho những học viên thực tế tham gia.
+    - Học viên đã xin phép vắng (ABSENCE) hoặc đã đổi buổi chuyển đi (CHANGE_MEETING) KHÔNG được nhận thông báo.
+    - Học viên đổi buổi chuyển ĐẾN meeting này ĐƯỢC nhận thông báo.
+    """
+    # Buổi meeting gồm user 101, 102, 103 (xin vắng), 104 (chuyển đi)
+    mock_meeting = MagicMock()
+    mock_meeting.id = 600
+    mock_meeting.title = "Sinh hoạt Gen 2 thứ 3"
+    mock_meeting.created_by = 999  # Trainer
+    mock_p1 = MagicMock(user_id=101, is_deleted=False, status=ParticipantStatus.NOT_JOINED)
+    mock_p2 = MagicMock(user_id=102, is_deleted=False, status=ParticipantStatus.NOT_JOINED)
+    mock_p3 = MagicMock(user_id=103, is_deleted=False, status=ParticipantStatus.NOT_JOINED)
+    mock_p4 = MagicMock(user_id=104, is_deleted=False, status=ParticipantStatus.NOT_JOINED)
+    mock_meeting.participants = [mock_p1, mock_p2, mock_p3, mock_p4]
+    mock_meeting_repo.get_by_id.return_value = mock_meeting
+
+    linked_duty = CleaningDuty(
+        id=77,
+        duty_date=date(2026, 10, 20),
+        start_time=time(17, 30),
+        end_time=time(19, 30),
+        team_id=[12],
+        team_name="Gen 2 - thứ 3",
+        meeting_id=600,
+        status=DutyStatus.PENDING,
+    )
+    mock_duty_repo.get_by_meeting_id.return_value = [linked_duty]
+    mock_duty_repo.save.return_value = linked_duty
+
+    # Mock permission_repo: user 103 xin vắng, user 104 chuyển đi, user 105 chuyển đến
+    mock_permission_repo = MagicMock()
+    mock_permission_repo.get_all_excused_or_transferred_out_user_ids.return_value = {103, 104}
+    mock_permission_repo.get_transferred_in_user_ids_by_meeting.return_value = {105}
+
+    handler = DutyNotificationHandler(
+        dispatcher=mock_notification_service,
+        user_repo=mock_user_repo,
+        team_repo=mock_team_repo,
+        meeting_repo=mock_meeting_repo,
+        duty_repo=mock_duty_repo,
+        permission_repo=mock_permission_repo,
+    )
+
+    event = MeetingUpdated(
+        meeting_id=600,
+        title="Sinh hoạt Gen 2 thứ 3",
+        user_ids=[101, 102, 103, 104],
+        start_time="2026-10-23T18:00:00",
+        end_time="2026-10-23T20:00:00",
+    )
+
+    await handler._send_meeting_rescheduled_notification_task(event)
+
+    # Phải gửi cho 101, 102 và 105. Tuyệt đối KHÔNG gửi cho 103 (xin vắng) và 104 (chuyển đi)
+    sent_user_ids = [
+        call.args[0].user_id
+        for call in mock_notification_service.dispatch.call_args_list
+    ]
+    assert 101 in sent_user_ids
+    assert 102 in sent_user_ids
+    assert 105 in sent_user_ids
+    assert 103 not in sent_user_ids, "User xin vắng không được nhận thông báo ca trực nhật"
+    assert 104 not in sent_user_ids, "User chuyển buổi không được nhận thông báo ca trực nhật"
+    assert mock_notification_service.dispatch.call_count == 3
+
+
+@pytest.mark.asyncio
+async def test_submit_duty_evidence_allows_transferred_in_student(
+    mock_duty_repo, mock_team_repo, mock_meeting_repo, monkeypatch
+):
+    """
+    Kiểm tra: Bạn A thuộc Nhóm 2 nhưng chuyển ca sinh hoạt sang Nhóm 1.
+    Khi nộp minh chứng ca trực nhật gắn với buổi họp của Nhóm 1:
+    Bạn A ĐƯỢC PHÉP nộp minh chứng thành công vì có tên trong danh sách tham gia buổi họp đó.
+    """
+    monkeypatch.setattr(
+        "app.duty.application.submit_duty_evidence_use_case.get_current_utc7_time",
+        lambda: datetime(2026, 10, 24, 20, 0, 0),
+    )
+    from app.duty.application.submit_duty_evidence_use_case import (
+        SubmitDutyEvidenceUseCase,
+    )
+
+    # Nhóm 1 chỉ gồm các user [201, 202]
+    mock_team = MagicMock()
+    mock_team.id = 11
+    mock_team.member_ids = [201, 202]
+    mock_team_repo.get_by_id.return_value = mock_team
+
+    # Buổi họp của Nhóm 1 gồm 201, 202 và Bạn A (user_id=105 chuyển từ Nhóm 2 sang)
+    mock_meeting = MagicMock()
+    mock_meeting.id = 700
+    p1 = MagicMock(user_id=201, is_deleted=False, status=ParticipantStatus.NOT_JOINED)
+    p2 = MagicMock(user_id=202, is_deleted=False, status=ParticipantStatus.NOT_JOINED)
+    p_transferred = MagicMock(user_id=105, is_deleted=False, status=ParticipantStatus.NOT_JOINED)
+    mock_meeting.participants = [p1, p2, p_transferred]
+    mock_meeting_repo.get_by_id.return_value = mock_meeting
+
+    duty = CleaningDuty(
+        id=99,
+        duty_date=date(2026, 10, 24),
+        team_id=[11],
+        meeting_id=700,
+        status=DutyStatus.PENDING,
+        checklist=[{"task": "Quét sàn", "checked": True}],
+    )
+    mock_duty_repo.get_by_id.return_value = duty
+    mock_duty_repo.save.return_value = duty
+
+    mock_minio = MagicMock()
+    mock_minio.upload_file = AsyncMock(return_value="https://minio.dut.vn/evidence.jpg")
+
+    mock_event_bus = MagicMock()
+    mock_event_bus.publish = AsyncMock()
+
+    use_case = SubmitDutyEvidenceUseCase(
+        duty_repo=mock_duty_repo,
+        team_repo=mock_team_repo,
+        minio_service=mock_minio,
+        meeting_repo=mock_meeting_repo,
+        event_bus=mock_event_bus,
+    )
+
+    mock_file = MagicMock()
+    mock_file.filename = "evidence.jpg"
+    mock_file.read = AsyncMock(return_value=b"image_bytes")
+
+    # Bạn A (105) nộp minh chứng
+    result = await use_case.execute(
+        duty_id=99,
+        user_id=105,
+        files=[mock_file],
+        checklist=[{"task": "Quét sàn", "checked": True}],
+        note="Bạn A nhóm 2 học bù nộp thay",
+        is_admin=False,
+    )
+
+    assert result.status == DutyStatus.AWAITING_APPROVAL
+    assert mock_duty_repo.save.call_count == 1
+    assert mock_event_bus.publish.call_count == 1
+
+

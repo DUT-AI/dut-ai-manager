@@ -45,11 +45,11 @@ router = APIRouter(prefix="/duties", tags=["Duties"])
 @router.get(
     "/weekly",
     response_model=ApiResponse[list[WeeklyDutyClassDto]],
-    dependencies=[hasPermission(DutyPermission.READ)],
 )
 @inject
 async def get_weekly_schedule(
     uc: FromDishka[GetDutiesUseCase],
+    _current_user: CurrentUser,
     target_date: date | None = None,
 ):
     """
@@ -66,12 +66,12 @@ async def get_weekly_schedule(
 @router.get(
     "",
     response_model=ApiResponse[list[DutyResponse]],
-    dependencies=[hasPermission(DutyPermission.READ)],
 )
 @inject
 async def get_duties(
     uc: FromDishka[GetDutiesUseCase],
     pagination: Annotated[PaginationParams, Depends()],
+    _current_user: CurrentUser,
     start_date: date | None = None,
     end_date: date | None = None,
     team_id: int | None = None,
@@ -104,12 +104,12 @@ async def get_duties(
 @router.get(
     "/{duty_id}",
     response_model=ApiResponse[DutyResponse],
-    dependencies=[hasPermission(DutyPermission.READ)],
 )
 @inject
 async def get_duty_by_id(
     duty_id: int,
     uc: FromDishka[GetDutiesUseCase],
+    _current_user: CurrentUser,
 ):
     """Lấy chi tiết một ca trực nhật."""
     duty = uc.get_by_id(duty_id)
@@ -124,7 +124,6 @@ async def get_duty_by_id(
 @router.post(
     "/toggle-schedule",
     response_model=ApiResponse[DutyResponse | None],
-    dependencies=[hasPermission(DutyPermission.CREATE)],
 )
 @inject
 async def toggle_duty_schedule(
@@ -134,7 +133,7 @@ async def toggle_duty_schedule(
 ):
     """
     Bật hoặc tắt lịch trực nhật cho một ngày và nhóm Gen 2 cụ thể.
-    Dành cho Admin và HR (hoặc role được ủy quyền).
+    Dành cho người có quyền duty:create (Admin / HR).
     """
     result = await uc.execute(
         duty_date=body.duty_date,
@@ -156,7 +155,6 @@ async def toggle_duty_schedule(
 @router.post(
     "/batch-schedule",
     response_model=ApiResponse[list[DutyResponse]],
-    dependencies=[hasPermission(DutyPermission.CREATE)],
 )
 @inject
 async def batch_create_duties(
@@ -166,7 +164,7 @@ async def batch_create_duties(
 ):
     """
     Tạo lịch trực nhật tự do cho một hoặc nhiều nhóm phụ trách cùng lúc.
-    Dành cho Admin và HR.
+    Dành cho người có quyền duty:create (Admin / HR).
     """
     result = await uc.execute(
         team_ids=body.team_ids,
@@ -185,7 +183,6 @@ async def batch_create_duties(
 @router.put(
     "/{duty_id}",
     response_model=ApiResponse[DutyResponse],
-    dependencies=[hasPermission(DutyPermission.UPDATE)],
 )
 @inject
 async def update_duty(
@@ -196,7 +193,7 @@ async def update_duty(
 ):
     """
     Cập nhật checklist nội dung hoặc ghi chú phân công ca trực nhật.
-    Dành cho Admin và HR.
+    Dành cho người có quyền duty:update (Admin / HR).
     """
     result = await uc.execute(duty_id=duty_id, req=body)
     return ApiResponse.success(
@@ -208,7 +205,6 @@ async def update_duty(
 @router.delete(
     "/{duty_id}",
     response_model=ApiResponse[None],
-    dependencies=[hasPermission(DutyPermission.DELETE)],
 )
 @inject
 async def delete_duty(
@@ -218,7 +214,7 @@ async def delete_duty(
 ):
     """
     Xóa ca trực nhật (soft delete).
-    Dành cho Admin và HR.
+    Dành cho người có quyền duty:delete (Admin / HR).
     """
     await uc.execute(duty_id=duty_id)
     return ApiResponse.success(
@@ -230,13 +226,12 @@ async def delete_duty(
 @router.post(
     "/{duty_id}/submit",
     response_model=ApiResponse[DutyResponse],
-    dependencies=[hasPermission(DutyPermission.SUBMIT)],
 )
 @inject
 async def submit_duty_evidence(
     duty_id: int,
     uc: FromDishka[SubmitDutyEvidenceUseCase],
-    current_user: Annotated[CurrentUser, hasPermission(DutyPermission.SUBMIT)],
+    current_user: CurrentUser,
     files: list[UploadFile] = File(...),
     checklist: str | None = Form(None),
     custom_checklist: str | None = Form(None),
@@ -248,7 +243,11 @@ async def submit_duty_evidence(
     """
 
     roles_lower = [r.lower() for r in current_user.role_names]
-    is_admin = any(r in ["admin", "hr"] for r in roles_lower)
+    is_admin = (
+        current_user.has_permission(DutyPermission.UPDATE.value)
+        or current_user.has_permission(DutyPermission.CREATE.value)
+        or any(r in ["admin", "hr"] for r in roles_lower)
+    )
 
     raw_checklist = checklist or custom_checklist
     parsed_checklist = None
@@ -275,7 +274,6 @@ async def submit_duty_evidence(
 @router.post(
     "/{duty_id}/approve",
     response_model=ApiResponse[DutyResponse],
-    dependencies=[hasPermission(DutyPermission.UPDATE)],
 )
 @inject
 async def approve_duty(
@@ -284,7 +282,8 @@ async def approve_duty(
     current_user: Annotated[CurrentUser, hasPermission(DutyPermission.UPDATE)],
 ):
     """
-    Admin hoặc HR duyệt minh chứng trực nhật -> chuyển thành COMPLETED.
+    Duyệt minh chứng trực nhật -> chuyển thành COMPLETED.
+    Chỉ người có quyền duty:update (Admin / HR) mới được duyệt. Teammate KHÔNG có quyền này.
     """
     result = await uc.execute(duty_id=duty_id, admin_id=current_user.id or 0)
     return ApiResponse.success(
@@ -296,7 +295,6 @@ async def approve_duty(
 @router.post(
     "/{duty_id}/reject",
     response_model=ApiResponse[DutyResponse],
-    dependencies=[hasPermission(DutyPermission.UPDATE)],
 )
 @inject
 async def reject_duty(
@@ -306,7 +304,8 @@ async def reject_duty(
     current_user: Annotated[CurrentUser, hasPermission(DutyPermission.UPDATE)],
 ):
     """
-    Admin hoặc HR từ chối minh chứng trực nhật kèm lý do để học viên làm lại.
+    Từ chối minh chứng trực nhật kèm lý do để học viên làm lại.
+    Chỉ người có quyền duty:update (Admin / HR) mới được từ chối. Teammate KHÔNG có quyền này.
     """
     result = await uc.execute(
         duty_id=duty_id,
@@ -322,18 +321,21 @@ async def reject_duty(
 @router.post(
     "/{duty_id}/restore",
     response_model=ApiResponse[DutyResponse],
-    dependencies=[hasPermission(DutyPermission.UPDATE)],
 )
 @inject
 async def restore_duty(
     duty_id: int,
     uc: FromDishka[RestoreDutyUseCase],
+    _current_user: Annotated[CurrentUser, hasPermission(DutyPermission.UPDATE)],
 ):
     """
-    Admin hoặc HR hồi phục ca trực nhật đã bị hủy (CANCELLED) về lại trạng thái PENDING.
+    Hồi phục ca trực nhật đã bị hủy (CANCELLED) về lại trạng thái PENDING.
+    Dành cho người có quyền duty:update (Admin / HR).
     """
     result = await uc.execute(duty_id=duty_id)
     return ApiResponse.success(
         data=result,
         message="Hồi phục ca trực nhật thành công",
     )
+
+

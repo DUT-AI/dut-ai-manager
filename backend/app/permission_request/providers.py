@@ -21,6 +21,7 @@ from app.permission_request.infrastructure.repository import PermissionRequestRe
 from app.shared.infrastructure.notification.dispatcher import (
     UnifiedNotificationDispatcher,
 )
+from app.duty.infrastructure.repository import DutyRepository
 from app.user.infrastructure.repository import UserRepository
 
 
@@ -93,9 +94,11 @@ class PermissionRequestModuleProvider(Provider):
         dispatcher: UnifiedNotificationDispatcher,
         user_repo: UserRepository,
         meeting_repo: MeetingRepository,
+        duty_repo: DutyRepository,
     ) -> MeetingParticipantTransferredNotificationHandler:
         return MeetingParticipantTransferredNotificationHandler(
             dispatcher=dispatcher,
             user_repo=user_repo,
             meeting_repo=meeting_repo,
+            duty_repo=duty_repo,
         )

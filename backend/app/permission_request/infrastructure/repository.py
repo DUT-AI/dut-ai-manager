@@ -248,6 +248,66 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         rows = self.session.scalars(stmt).all()
         return {r for r in rows if r is not None}
 
+    def get_transferred_out_user_ids_by_meeting(self, meeting_id: int) -> set[int]:
+        """Lấy danh sách các user_id có đơn đổi buổi chuyển ĐI khỏi meeting này (old_meeting_id == meeting_id)."""
+        stmt = select(ORMModel.created_by).where(
+            ORMModel.old_meeting_id == meeting_id,
+            ORMModel.category == RequestCategory.CHANGE_MEETING,
+            ORMModel.is_deleted.is_(False),
+        )
+        rows = self.session.scalars(stmt).all()
+        return {r for r in rows if r is not None}
+
+    def get_transferred_in_user_ids_by_meeting(self, meeting_id: int) -> set[int]:
+        """Lấy danh sách các user_id có đơn đổi buổi chuyển ĐẾN meeting này (meeting_id == meeting_id)."""
+        stmt = select(ORMModel.created_by).where(
+            ORMModel.meeting_id == meeting_id,
+            ORMModel.category == RequestCategory.CHANGE_MEETING,
+            ORMModel.is_deleted.is_(False),
+        )
+        rows = self.session.scalars(stmt).all()
+        return {r for r in rows if r is not None}
+
+    def get_all_excused_or_transferred_out_user_ids(self, meeting_id: int) -> set[int]:
+        """Lấy toàn bộ user_id không tham gia meeting: hoặc xin vắng (ABSENCE), hoặc đã chuyển sang buổi khác (CHANGE_MEETING)."""
+        return self.get_absence_user_ids_by_meeting(
+            meeting_id
+        ) | self.get_transferred_out_user_ids_by_meeting(meeting_id)
+
+    def mark_participant_excused(self, meeting_id: int, user_id: int) -> None:
+        """Đánh dấu participant trong meeting_participants thành ABSENT_EXCUSED."""
+        from app.meeting.domain.value_objects import ParticipantStatus
+        from app.meeting.infrastructure.model import (
+            MeetingParticipant as ORMParticipant,
+        )
+
+        stmt = select(ORMParticipant).where(
+            ORMParticipant.meeting_id == meeting_id,
+            ORMParticipant.user_id == user_id,
+            ORMParticipant.is_deleted.is_(False),
+        )
+        p = self.session.scalars(stmt).first()
+        if p:
+            p.status = ParticipantStatus.ABSENT_EXCUSED
+            self.session.flush()
+
+    def revert_participant_excused(self, meeting_id: int, user_id: int) -> None:
+        """Khôi phục participant trong meeting_participants về NOT_JOINED nếu không còn đơn vắng khác."""
+        from app.meeting.domain.value_objects import ParticipantStatus
+        from app.meeting.infrastructure.model import (
+            MeetingParticipant as ORMParticipant,
+        )
+
+        stmt = select(ORMParticipant).where(
+            ORMParticipant.meeting_id == meeting_id,
+            ORMParticipant.user_id == user_id,
+            ORMParticipant.is_deleted.is_(False),
+        )
+        p = self.session.scalars(stmt).first()
+        if p and p.status == ParticipantStatus.ABSENT_EXCUSED:
+            p.status = ParticipantStatus.NOT_JOINED
+            self.session.flush()
+
     def cancel_active_requests_by_meeting(self, user_id: int, meeting_id: int) -> int:
         """Hủy mềm (is_deleted = True) các đơn xin vắng/trễ cũ của user tại meeting_id."""
         stmt = select(ORMModel).where(
