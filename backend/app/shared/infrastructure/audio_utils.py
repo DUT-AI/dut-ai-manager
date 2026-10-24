@@ -8,18 +8,19 @@ from loguru import logger
 
 def downsample_wav_to_16k_mono(
     wav_bytes: bytes,
-    target_rate: int = 16000,
+    target_rate: float = 16000,
     target_bits: int = 8,
+    speed: float = 1.0,
 ) -> bytes:
     """
-    Downsample a PCM WAV byte stream to target sample rate (default: 16kHz)
-    and target bit-depth (default: 8-bit unsigned PCM) mono.
+    Downsample and speed-adjust a PCM WAV byte stream to target sample rate,
+    target bit-depth (default: 8-bit unsigned PCM) mono, and playback speed multiplier.
 
-    Why 8-bit?
+    Why 8-bit & speed multiplier?
     1. ESP32 internal DAC is hardware 8-bit (0-255).
-    2. Reduces file size by 50% compared to 16-bit!
-       A 4.3s TTS speech drops from ~415KB down to only ~69KB.
-    3. Guarantees ESP32 malloc (< 70KB) always succeeds easily without heap fragmentation.
+    2. Reduces file size substantially, freeing RAM.
+    3. Increasing speed (e.g. 1.25x - 1.35x) shortens playback duration and
+       further shrinks WAV size by ~25-30%, allowing fast download to ESP32!
     """
     if not wav_bytes or len(wav_bytes) < 44:
         return wav_bytes
@@ -52,13 +53,16 @@ def downsample_wav_to_16k_mono(
             logger.warning(f"Unsupported channel count {n_channels}")
             return wav_bytes
 
-        # Resample sample rate
-        if src_rate == target_rate:
+        # Calculate effective ratio with speed adjustment
+        # speed > 1.0 skips through samples faster, reducing total output frames
+        effective_speed = max(0.5, min(3.0, speed))
+        ratio = (src_rate / target_rate) * effective_speed
+        out_frames = int(n_frames / (ratio if ratio > 0 else 1.0))
+
+        if ratio == 1.0 and src_rate == target_rate:
             resampled_samples = mono_samples
         else:
-            out_frames = int(n_frames * target_rate / src_rate)
             resampled_samples = []
-            ratio = src_rate / target_rate
             total_mono = len(mono_samples)
 
             for i in range(out_frames):

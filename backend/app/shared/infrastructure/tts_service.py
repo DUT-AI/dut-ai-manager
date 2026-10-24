@@ -1,7 +1,4 @@
 """Text-to-Speech (TTS) Service using external Zerotts API."""
-
-from collections.abc import AsyncIterator
-from pathlib import Path
 from typing import Any
 
 import aiohttp
@@ -14,7 +11,7 @@ DEFAULT_TTS_API_URL = "https://tts.dutai.io.vn/v1/audio/speech"
 DEFAULT_MODEL = "zerotts"
 DEFAULT_VOICE = "hamy"
 DEFAULT_RESPONSE_FORMAT = "wav"
-DEFAULT_SPEED = 1.0
+DEFAULT_SPEED = 3
 DEFAULT_NORMALIZE_TEXT = True
 DEFAULT_CFG_SCALE = 1.0
 DEFAULT_AUDIO_TEMPERATURE = 0.8
@@ -22,9 +19,6 @@ DEFAULT_AUDIO_TOPK = 25
 DEFAULT_AUDIO_TOPP = 0.95
 DEFAULT_AUDIO_REPETITION_PENALTY = 1.2
 DEFAULT_TIMEOUT_SECONDS = 60.0
-
-import uuid
-from datetime import datetime
 
 class TTSServiceError(Exception):
     """Custom exception for TTS service errors."""

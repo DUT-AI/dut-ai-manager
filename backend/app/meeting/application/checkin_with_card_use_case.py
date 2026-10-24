@@ -44,6 +44,7 @@ class CheckInWithCardUseCase:
         Returns:
             tuple[str, bytes]: (Thông báo dạng chữ, Dữ liệu audio WAV)
         """
+        version_cache = f"{8}"
         code = (card_code or "").strip()
         if not code:
             msg = "Mã thẻ không hợp lệ"
@@ -57,7 +58,7 @@ class CheckInWithCardUseCase:
         if not user:
             msg = f"{code}"
             audio = await self._synthesize_message(
-                "Hãy đăng ký thẻ trên hệ thống với code hiển thị ở màn hình", cache_key="tts/system/card_not_registered_v2.wav"
+                "Hãy đăng ký thẻ trên hệ thống với code hiển thị ở màn hình", cache_key=f"tts/system/card_not_registered_v{version_cache}.wav"
             )
             return msg, audio
 
@@ -74,20 +75,23 @@ class CheckInWithCardUseCase:
             uid, window_start, window_end, now
         )
         if not participant or participant.meeting_id is None:
-            msg = (
+            msg = "không có buổi họp nào trong vòng 30 phút"
+            
+            text_to_speech = (
                 f"Xin chào {user.name}, hiện tại bạn không có buổi họp nào "
                 f"trong vòng 30 phút"
             )
             audio = await self._synthesize_message(
-                msg, cache_key=f"tts/users/user_{uid}_no_meeting.wav"
+                text_to_speech, cache_key=f"tts/users/user_{uid}_no_meeting_v{version_cache}.wav"
             )
             return msg, audio
 
         meeting = self.meeting_repo.get_domain_for_check_in(participant.meeting_id)
         if not meeting:
-            msg = f"Xin chào {user.name}, không tìm thấy thông tin buổi họp"
+            msg = "không tìm thấy thông tin buổi họp"
+            text_to_speech = f"Xin chào {user.name}, không tìm thấy thông tin buổi họp"
             audio = await self._synthesize_message(
-                msg, cache_key=f"tts/users/user_{uid}_no_meeting.wav"
+                text_to_speech, cache_key=f"tts/users/user_{uid}_no_meeting_v{version_cache}.wav"
             )
             return msg, audio
 
@@ -95,12 +99,13 @@ class CheckInWithCardUseCase:
             ParticipantStatus.JOINED,
             ParticipantStatus.COMPLETED,
         ):
-            msg = (
+            msg = "bạn đã điểm danh cho buổi họp rồi"
+            text_to_speech = (
                 f"Xin chào {user.name}, bạn đã điểm danh cho buổi họp rồi"
             )
             audio = await self._synthesize_message(
-                msg,
-                cache_key=f"tts/users/user_{uid}_already_checked_in_v2.wav"
+                text_to_speech,
+                cache_key=f"tts/users/user_{uid}_already_checked_in_v{version_cache}.wav"
             )
             return msg, audio
 
@@ -128,9 +133,10 @@ class CheckInWithCardUseCase:
         )
 
         # Lời chào check-in thành công cho từng người (Cache trên MinIO theo user_id)
-        msg = f"Xin chào {user.name}, bạn đã điểm danh thành công"
-        user_cache_key = f"tts/users/user_{uid}_checkin.wav"
-        audio = await self._synthesize_message(msg, cache_key=user_cache_key)
+        msg = "bạn đã điểm danh thành công"
+        text_to_speech = f"Xin chào {user.name}, bạn đã điểm danh thành công"
+        user_cache_key = f"tts/users/user_{uid}_checkin_v{version_cache}.wav"
+        audio = await self._synthesize_message(text_to_speech, cache_key=user_cache_key)
         return msg, audio
 
     async def _synthesize_message(
@@ -145,9 +151,16 @@ class CheckInWithCardUseCase:
                     minio_service=self.minio_service,
                 )
                 if audio_bytes:
-                    audio_bytes = downsample_wav_to_16k_mono(audio_bytes, target_rate=14000, target_bits=8)
+                    audio_bytes = downsample_wav_to_16k_mono(
+                        audio_bytes, target_rate=11025, target_bits=8, speed=1.25
+                    )
                 return audio_bytes
-            return await self.tts_service.synthesize(text=text)
+            raw_audio = await self.tts_service.synthesize(text=text)
+            if raw_audio:
+                return downsample_wav_to_16k_mono(
+                    raw_audio, target_rate=11025, target_bits=8, speed=1.25
+                )
+            return raw_audio
         except Exception as exc:
             logger.error(f"Failed to synthesize speech for message '{text}': {exc}")
             return b""

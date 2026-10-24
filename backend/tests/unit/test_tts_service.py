@@ -94,13 +94,12 @@ def test_check_in_with_card_use_case_returns_speech_audio():
 
     msg, audio_bytes = asyncio.run(use_case.execute(card_code="CARD_123456"))
 
-    assert "Nguyễn Phước Nguyên" in msg
     assert "thành công" in msg
     assert audio_bytes == b"RIFF_FAKE_AUDIO_BYTES"
     tts_service.synthesize_with_cache.assert_called_once()
     assert (
-        tts_service.synthesize_with_cache.call_args.kwargs["cache_key"]
-        == "tts/users/user_1_checkin.wav"
+        "tts/users/user_1_checkin"
+        in tts_service.synthesize_with_cache.call_args.kwargs["cache_key"]
     )
     event_bus.publish.assert_called_once()
 

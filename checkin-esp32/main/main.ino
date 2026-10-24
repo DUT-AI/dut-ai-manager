@@ -26,6 +26,25 @@ const String authCode = AUTH_CODE;
 MFRC522 mfrc522(SS_PIN, RST_PIN);
 LiquidCrystal_I2C lcd(0x27, 16, 2); // Khởi tạo mặc định, sẽ tự quét lại ở setup
 
+// Đối tượng HTTP Client dùng chung để duy trì kết nối Keep-Alive (tránh bắt tay TLS lại mỗi lần quẹt thẻ)
+WiFiClientSecure client;
+HTTPClient http;
+bool isHttpInitialized = false;
+
+void initHttpClient() {
+  client.setInsecure(); // Bỏ qua xác thực chứng chỉ CA
+  client.setHandshakeTimeout(10); // Giảm timeout bắt tay xuống 10s (Fast-fail)
+  client.setTimeout(10);
+
+  http.setTimeout(10000); // 10s timeout cho mỗi request
+  http.setReuse(true);    // BẬT HTTP KEEP-ALIVE (Tái sử dụng TCP/TLS socket)
+  http.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+  
+  const char* headerKeys[] = {"X-Message", "x-message", "Content-Type", "Content-Length", "Connection"};
+  http.collectHeaders(headerKeys, 5);
+  isHttpInitialized = true;
+}
+
 // Hàm tự động quét tìm địa chỉ I2C của màn hình LCD (0x27 hoặc 0x3F)
 uint8_t findI2CLCDAddress() {
   Wire.begin();
@@ -73,7 +92,11 @@ void setup() {
     delay(500);
     Serial.print(".");
   }
+  WiFi.setSleep(false); // Củng cố tắt sleep sau khi WiFi đã liên kết IP
   Serial.println("\nWiFi connected! IP: " + WiFi.localIP().toString());
+
+  // Khởi tạo trước cấu hình HTTP Keep-Alive
+  initHttpClient();
 
   // Khởi tạo SPI và RFID
   SPI.begin();
@@ -377,8 +400,7 @@ void downloadAndPlayWav(HTTPClient &http) {
 
   Serial.printf("Da tai %u bytes WAV vao RAM trong %lu ms\n", bytesLoaded, millis() - startDownload);
 
-  // Đóng kết nối HTTP trước khi phát để giải phóng tài nguyên SSL/mạng cho CPU
-  http.end();
+  // Lưu ý: KHÔNG gọi http.end() ở đây để giữ kết nối HTTP Keep-Alive cho lần quẹt thẻ sau!
 
   // Phát audio mượt mà từ RAM
   if (bytesLoaded >= 44) {
@@ -416,42 +438,57 @@ void setIdleState() {
 // Hàm gọi API và xử lý Response
 void checkCardAPI(String id) {
   if (WiFi.status() == WL_CONNECTED) {
-    WiFiClientSecure client;
-    client.setInsecure(); // Cho phép HTTPS không cần nạp chứng chỉ SSL CA
-    client.setHandshakeTimeout(45); 
-    client.setTimeout(45);
-
-    HTTPClient http;
-    http.setTimeout(45000); // 45000ms
-    http.setReuse(false);
+    if (!isHttpInitialized) {
+      initHttpClient();
+    }
 
     Serial.println("\n--- [START API REQUEST] ---");
     Serial.printf("Free Heap RAM truoc khi goi API: %u bytes\n", ESP.getFreeHeap());
     Serial.println("Target URL: " + apiUrl);
 
-    if (!http.begin(client, apiUrl)) {
-      Serial.println("Loi: Khong the khoi tao HTTP Client");
-      lcd.clear();
-      lcd.print("Loi ket noi!");
-      playErrorSound();
-      delay(2000);
-      return;
+    // Kiểm tra kết nối Keep-Alive: nếu socket bị ngắt hoặc chưa kết nối thì kết nối lại
+    bool reused = client.connected();
+    if (!reused) {
+      Serial.println("[Keep-Alive] Ket noi cu da dong, khoi tao phien TLS moi...");
+      http.end();
+      if (!http.begin(client, apiUrl)) {
+        Serial.println("Loi: Khong the khoi tao HTTP Client");
+        lcd.clear();
+        lcd.print("Loi ket noi!");
+        playErrorSound();
+        delay(2000);
+        return;
+      }
+    } else {
+      Serial.println("[Keep-Alive] ⚡ TAI SU DUNG KET NOI TLS CO SAN (Bo qua 3-way handshake)!");
     }
 
-    // Thiết lập User-Agent trình duyệt để Cloudflare không chặn mã lỗi 1010
-    http.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
     http.addHeader("Authorization", "Bearer " + authCode);
     http.addHeader("Content-Type", "application/json");
-
-    // Thu thập các Header tùy chỉnh trả về từ Server
-    const char* headerKeys[] = {"X-Message", "x-message", "Content-Type", "Content-Length"};
-    http.collectHeaders(headerKeys, 4);
+    http.addHeader("Connection", "keep-alive"); // Header yêu cầu server giữ kết nối
     
     String jsonBody = "{\"card_code\":\"" + id + "\"}";
     Serial.println("Request Body: " + jsonBody);
     
+    unsigned long startReq = millis();
     int httpResponseCode = http.POST(jsonBody);
-    Serial.printf("HTTP Response Code: %d (%s)\n", httpResponseCode, http.errorToString(httpResponseCode).c_str());
+    Serial.printf("HTTP Response Code: %d (%s) trong %lu ms\n", 
+                  httpResponseCode, http.errorToString(httpResponseCode).c_str(), millis() - startReq);
+
+    // Nếu tái sử dụng kết nối cũ mà server vừa đóng socket (lỗi -1, -5), thử lại ngay 1 lần với kết nối mới
+    if (httpResponseCode < 0 && reused) {
+      Serial.println("[Keep-Alive] Socket cu bi server dong ngam, thu lai ngay voi ket noi moi...");
+      http.end();
+      if (http.begin(client, apiUrl)) {
+        http.addHeader("Authorization", "Bearer " + authCode);
+        http.addHeader("Content-Type", "application/json");
+        http.addHeader("Connection", "keep-alive");
+        startReq = millis();
+        httpResponseCode = http.POST(jsonBody);
+        Serial.printf("Retry HTTP Response Code: %d (%s) trong %lu ms\n", 
+                      httpResponseCode, http.errorToString(httpResponseCode).c_str(), millis() - startReq);
+      }
+    }
 
     String contentType = http.header("Content-Type");
     String serverMessage = http.header("X-Message");
@@ -538,13 +575,13 @@ void checkCardAPI(String id) {
         Serial.println("Server Response Payload: " + payload);
       } else {
         Serial.printf("HTTP Client Error Detail: %s (Mã lỗi: %d)\n", http.errorToString(httpResponseCode).c_str(), httpResponseCode);
+        http.end(); // Chỉ đóng socket khi lỗi mạng nghiêm trọng
       }
       
       playErrorSound();
       delay(3000); 
     }
     
-    http.end();
     Serial.println("--- [END API REQUEST] ---\n");
   } else {
     lcd.clear();
