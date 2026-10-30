@@ -3,6 +3,8 @@ In-App Notification Channel Adapter.
 Persists notifications to the database 'notifications' table via NotificationRepository.
 """
 
+from datetime import datetime, timezone
+
 from loguru import logger
 
 from app.reminder.domain.entity import (
@@ -24,7 +26,6 @@ from app.shared.infrastructure.notification.channel import (
 )
 from app.shared.infrastructure.notification_payload import NotificationPayload
 from app.user.domain.entity import UserEntity as User
-from app.utils.datetime import get_current_utc7_time
 
 
 class InAppNotificationChannel(NotificationChannel):
@@ -42,7 +43,7 @@ class InAppNotificationChannel(NotificationChannel):
     ) -> ChannelDeliveryResult:
         try:
             assert user.id is not None
-            now = get_current_utc7_time()
+            now = datetime.now(timezone.utc)
 
             cat_str = (
                 payload.category.value

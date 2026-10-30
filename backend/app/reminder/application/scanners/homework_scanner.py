@@ -3,7 +3,8 @@ Homework Task Scanner.
 Scans upcoming homeworks and filters out completed submissions.
 """
 
-from datetime import datetime
+from datetime import date, datetime, timezone
+from zoneinfo import ZoneInfo
 
 from app.homework.infrastructure.homework_assignee_repository import (
     HomeworkAssigneeRepository,
@@ -35,23 +36,50 @@ class HomeworkTaskScanner(BaseTaskScanner):
         candidates: list[ScannedCandidateTask] = []
         all_homeworks = self.homework_repo.get_all(limit=200)
 
+        vn_tz = ZoneInfo("Asia/Ho_Chi_Minh")
+        now_utc = (
+            now
+            if now.tzinfo is not None
+            else now.replace(tzinfo=vn_tz).astimezone(timezone.utc)
+        )
+
         for hw in all_homeworks:
             if not hw.id or not hw.deadline:
                 continue
 
-            # Homework deadline là dạng Date, quy ước hạn chót là 23:59:59 của ngày deadline
-            hw_deadline_dt = datetime.combine(hw.deadline, datetime.min.time()).replace(
-                hour=23, minute=59, second=59
-            )
+            if isinstance(hw.deadline, datetime):
+                if (
+                    hw.deadline.hour == 0
+                    and hw.deadline.minute == 0
+                    and hw.deadline.second == 0
+                ):
+                    hw_deadline_dt = hw.deadline.replace(
+                        hour=23,
+                        minute=59,
+                        second=59,
+                        tzinfo=hw.deadline.tzinfo or vn_tz,
+                    ).astimezone(timezone.utc)
+                else:
+                    hw_deadline_dt = (
+                        hw.deadline
+                        if hw.deadline.tzinfo is not None
+                        else hw.deadline.replace(tzinfo=vn_tz).astimezone(timezone.utc)
+                    )
+            else:
+                hw_deadline_dt = datetime.combine(
+                    hw.deadline, datetime.min.time()
+                ).replace(
+                    hour=23, minute=59, second=59, tzinfo=vn_tz
+                ).astimezone(timezone.utc)
 
             # Chỉ xét task có deadline trong tương lai và cách tối đa 3 ngày
             if (
-                hw_deadline_dt < now
-                or (hw_deadline_dt - now).total_seconds() > 3 * 86400
+                hw_deadline_dt < now_utc
+                or (hw_deadline_dt - now_utc).total_seconds() > 3 * 86400
             ):
                 continue
 
-            stages = calculate_matching_stages(hw_deadline_dt, now)
+            stages = calculate_matching_stages(hw_deadline_dt, now_utc)
             if not stages:
                 continue
 

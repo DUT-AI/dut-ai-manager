@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Any
 
 from loguru import logger
@@ -10,7 +11,7 @@ from app.homework.infrastructure.homework_submission_repository import (
 )
 from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.shared.application.response import BadRequestException
-from app.utils.datetime import get_current_utc7_time, to_utc7_naive
+from app.shared.domain.datetime_types import parse_datetime_to_utc
 
 
 class SyncHomeworkFromQuizUseCase:
@@ -37,7 +38,7 @@ class SyncHomeworkFromQuizUseCase:
                 "Bài tập không có đường dẫn/slug hợp lệ để đồng bộ từ Quiz"
             )
 
-        now = get_current_utc7_time()
+        now = datetime.now(timezone.utc)
         synced_coding = 0
         updated_coding = 0
         synced_game = 0
@@ -57,7 +58,7 @@ class SyncHomeworkFromQuizUseCase:
                             continue
 
                         raw_sub_at = sub.get("submitted_at")
-                        sub_time = to_utc7_naive(raw_sub_at)
+                        sub_time = parse_datetime_to_utc(raw_sub_at)
                         if not sub_time:
                             logger.warning(
                                 f"[SyncFromQuiz] Bỏ qua bài nộp Coding user_id={uid} (slug='{slug}') "
@@ -148,7 +149,7 @@ class SyncHomeworkFromQuizUseCase:
                             raw_sub_at = entry.get("submitted_at") or entry.get(
                                 "completed_at"
                             )
-                            sub_time = to_utc7_naive(raw_sub_at)
+                            sub_time = parse_datetime_to_utc(raw_sub_at)
                             if not sub_time:
                                 continue
 
@@ -198,7 +199,7 @@ class SyncHomeworkFromQuizUseCase:
                             continue
 
                         raw_sub_at = s.get("completed_at")
-                        sub_time = to_utc7_naive(raw_sub_at)
+                        sub_time = parse_datetime_to_utc(raw_sub_at)
                         if not sub_time:
                             logger.warning(
                                 f"[SyncFromQuiz] Bỏ qua Game session user_id={uid} (slug='{slug}') "
@@ -263,7 +264,7 @@ class SyncHomeworkFromQuizUseCase:
                                 raw_sub_at = row.get("completed_at") or row.get(
                                     "submitted_at"
                                 )
-                                sub_time = to_utc7_naive(raw_sub_at)
+                                sub_time = parse_datetime_to_utc(raw_sub_at)
                                 if not sub_time:
                                     continue
 

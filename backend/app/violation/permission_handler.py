@@ -1,8 +1,10 @@
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+
 from loguru import logger
 
 from app.permission_request.domain.events import PermissionRequestCreated
 from app.permission_request.domain.value_objects import RequestCategory
-from app.utils.datetime import get_current_utc7_time
 from app.violation.application import CreateViolationUseCase
 
 
@@ -18,9 +20,15 @@ class PermissionViolationHandler:
         if event.category not in [RequestCategory.ABSENCE, RequestCategory.POSTPONE]:
             return
 
-        target_time = event.start_time or get_current_utc7_time()
-        month = target_time.month
-        year = target_time.year
+        raw_target = event.start_time or datetime.now(timezone.utc)
+        vn_tz = ZoneInfo("Asia/Ho_Chi_Minh")
+        target_vn = (
+            raw_target.astimezone(vn_tz)
+            if raw_target.tzinfo
+            else raw_target.replace(tzinfo=vn_tz)
+        )
+        month = target_vn.month
+        year = target_vn.year
 
         # Đếm số lượng yêu cầu TRƯỚC ĐÓ trong tháng (không tính yêu cầu vừa tạo - id đã có)
         # Tuy nhiên trong logic cũ, nó đếm tất cả bao gồm cả cái vừa tạo.
@@ -48,7 +56,7 @@ class PermissionViolationHandler:
             await self.create_violation_uc.execute(
                 user_ids=[event.user_id],
                 reason=reason,
-                date=get_current_utc7_time(),
+                date=datetime.now(timezone.utc),
                 is_system=True,
                 system_user_id=None,
             )

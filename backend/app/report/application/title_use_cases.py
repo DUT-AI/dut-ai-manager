@@ -1,4 +1,5 @@
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from loguru import logger
 from pydantic import BaseModel
@@ -11,7 +12,6 @@ from app.shared.application.response import UserInfoResponse
 from app.user.domain.monthly_stats import MonthlyUserStats
 from app.user.infrastructure.monthly_stats_repository import MonthlyUserStatsRepository
 from app.user.infrastructure.repository import UserRepository
-from app.utils.datetime import get_current_utc7_time
 from app.violation.domain.entity import ViolationType
 from app.violation.infrastructure.repository import ViolationRepository
 
@@ -95,7 +95,7 @@ class AssignMonthlyTitlesUseCase:
         target_year: int | None = None,
     ) -> int:
 
-        now = get_current_utc7_time()
+        now = datetime.now(timezone.utc).astimezone(ZoneInfo("Asia/Ho_Chi_Minh"))
 
         if target_month is None or target_year is None:
             first_day_of_month = now.replace(day=1)

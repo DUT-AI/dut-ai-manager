@@ -1,7 +1,7 @@
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from typing import cast
 
-from app.meeting.application.checkin_use_case import parse_client_time_to_utc7_naive
+from app.meeting.application.checkin_use_case import parse_client_time_to_utc
 from app.meeting.domain.entity import MeetingParticipant
 from app.meeting.domain.events import ParticipantCheckedOut
 from app.meeting.domain.value_objects import ParticipantStatus
@@ -11,7 +11,6 @@ from app.meeting.infrastructure.repository import (
 )
 from app.shared.application.response import BadRequestException
 from app.shared.domain.event_bus import DomainEvent, EventBus
-from app.utils.datetime import get_current_utc7_time
 
 
 class CheckOutUseCase:
@@ -33,11 +32,11 @@ class CheckOutUseCase:
         client_time: str | None = None,
         client_event_id: str | None = None,
     ) -> list[MeetingParticipant]:
-        now = get_current_utc7_time()
+        now = datetime.now(timezone.utc)
 
         check_out_dt = now
         if client_time:
-            check_out_dt = parse_client_time_to_utc7_naive(client_time)
+            check_out_dt = parse_client_time_to_utc(client_time)
 
         half_hour = timedelta(minutes=30)
         window_start = now - half_hour

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
 import pytest
@@ -303,26 +303,19 @@ async def test_check_evaluation_deadline_creates_violation_when_trainer_missing(
     overall_repo = MagicMock()
     violation_repo = MagicMock()
 
-    # Giả lập meeting đã kết thúc > 24h
-    orm_meeting = MagicMock()
-    orm_meeting.id = 1
-    meeting_repo.session.scalars.return_value.all.return_value = [orm_meeting]
-
     mock_meeting = Meeting(
         id=1,
         title="Python 101",
-        start_time=datetime.now() - timedelta(hours=30),
-        end_time=datetime.now() - timedelta(hours=28),
+        start_time=datetime.now(timezone.utc) - timedelta(hours=30),
+        end_time=datetime.now(timezone.utc) - timedelta(hours=28),
         enable_evaluation=True,
         created_by=10,
         participants=[],
     )
-    meeting_repo._to_domain.return_value = mock_meeting
+    meeting_repo.get_meetings_for_evaluation_deadline_check.return_value = [mock_meeting]
     eval_repo.get_evaluations_by_meeting.return_value = []
     overall_repo.exists_for_meeting.return_value = False  # Trainer chưa đánh giá
-
-    # Mock _has_existing_violation
-    violation_repo.session.scalars.return_value.first.return_value = None
+    violation_repo.exists_by_user_and_reason.return_value = False
 
     job = CheckEvaluationDeadlineJobUseCase(
         meeting_repo, eval_repo, overall_repo, violation_repo
@@ -331,6 +324,8 @@ async def test_check_evaluation_deadline_creates_violation_when_trainer_missing(
 
     assert res["meetings_scanned"] == 1
     assert res["trainer_violations_created"] == 1
+    meeting_repo.get_meetings_for_evaluation_deadline_check.assert_called_once()
+    violation_repo.exists_by_user_and_reason.assert_called_once()
     violation_repo.save.assert_called_once()
     saved_violation = violation_repo.save.call_args[0][0]
     assert "Python 101" in saved_violation.reason
@@ -339,17 +334,61 @@ async def test_check_evaluation_deadline_creates_violation_when_trainer_missing(
 
 
 @pytest.mark.asyncio
+async def test_check_evaluation_deadline_creates_violation_when_trainee_missing():
+    from app.meeting.application.check_evaluation_deadline_job_use_case import (
+        CheckEvaluationDeadlineJobUseCase,
+    )
+
+    meeting_repo = MagicMock()
+    eval_repo = MagicMock()
+    overall_repo = MagicMock()
+    violation_repo = MagicMock()
+
+    trainee = MeetingParticipant(
+        id=1,
+        user_id=20,
+        meeting_id=1,
+        status=ParticipantStatus.JOINED,
+    )
+    mock_meeting = Meeting(
+        id=1,
+        title="Python 101",
+        start_time=datetime.now(timezone.utc) - timedelta(hours=30),
+        end_time=datetime.now(timezone.utc) - timedelta(hours=28),
+        enable_evaluation=True,
+        created_by=10,
+        participants=[trainee],
+    )
+    meeting_repo.get_meetings_for_evaluation_deadline_check.return_value = [mock_meeting]
+    eval_repo.get_evaluations_by_meeting.return_value = []  # Trainee chưa đánh giá
+    overall_repo.exists_for_meeting.return_value = True  # Trainer đã đánh giá
+    violation_repo.exists_by_user_and_reason.return_value = False
+
+    job = CheckEvaluationDeadlineJobUseCase(
+        meeting_repo, eval_repo, overall_repo, violation_repo
+    )
+    res = await job.execute()
+
+    assert res["meetings_scanned"] == 1
+    assert res["trainee_violations_created"] == 1
+    assert res["trainer_violations_created"] == 0
+    violation_repo.save.assert_called_once()
+    saved_violation = violation_repo.save.call_args[0][0]
+    assert saved_violation.user_id == 20
+    assert "Chưa hoàn thành đánh giá Trainer" in saved_violation.reason
+
+
+@pytest.mark.asyncio
 async def test_check_meeting_evaluation_permission_creator_success():
+    from app.core.principal import AuthPrincipal, PrincipalType
     from app.meeting.controller import check_meeting_evaluation_permission
-    from app.core.deps import CurrentUser
 
     # User 10 là người tạo cuộc họp, không có role admin
-    non_admin_creator = CurrentUser(
-        id=10,
-        username="trainer_user",
+    non_admin_creator = AuthPrincipal(
+        actor_id=10,
+        actor_type=PrincipalType.USER,
         name="Trainer User",
         email="trainer@dut.udn.vn",
-        is_active=True,
         role_names=["member"],
         permissions=set(),
     )
@@ -358,14 +397,19 @@ async def test_check_meeting_evaluation_permission_creator_success():
     uc.get_by_id.return_value = Meeting(
         id=105,
         title="AI Workshop",
-        start_time=datetime.now() - timedelta(hours=2),
-        end_time=datetime.now() - timedelta(hours=1),
+        start_time=datetime.now(timezone.utc) - timedelta(hours=2),
+        end_time=datetime.now(timezone.utc) - timedelta(hours=1),
         enable_evaluation=True,
         created_by=10,
     )
 
     # Không raise exception
-    await check_meeting_evaluation_permission(
+    func = getattr(
+        check_meeting_evaluation_permission,
+        "__dishka_orig_func__",
+        check_meeting_evaluation_permission,
+    )
+    await func(
         meeting_id=105,
         current_user=non_admin_creator,
         uc=uc,
@@ -374,16 +418,15 @@ async def test_check_meeting_evaluation_permission_creator_success():
 
 @pytest.mark.asyncio
 async def test_check_meeting_evaluation_permission_unauthorized():
+    from app.core.principal import AuthPrincipal, PrincipalType
     from app.meeting.controller import check_meeting_evaluation_permission
-    from app.core.deps import CurrentUser
 
     # User 99 không phải admin, không phải người tạo
-    unauthorized_user = CurrentUser(
-        id=99,
-        username="trainee_user",
+    unauthorized_user = AuthPrincipal(
+        actor_id=99,
+        actor_type=PrincipalType.USER,
         name="Trainee User",
         email="trainee@dut.udn.vn",
-        is_active=True,
         role_names=["member"],
         permissions=set(),
     )
@@ -392,14 +435,19 @@ async def test_check_meeting_evaluation_permission_unauthorized():
     uc.get_by_id.return_value = Meeting(
         id=105,
         title="AI Workshop",
-        start_time=datetime.now() - timedelta(hours=2),
-        end_time=datetime.now() - timedelta(hours=1),
+        start_time=datetime.now(timezone.utc) - timedelta(hours=2),
+        end_time=datetime.now(timezone.utc) - timedelta(hours=1),
         enable_evaluation=True,
         created_by=10,
     )
 
+    func = getattr(
+        check_meeting_evaluation_permission,
+        "__dishka_orig_func__",
+        check_meeting_evaluation_permission,
+    )
     with pytest.raises(BadRequestException) as exc_info:
-        await check_meeting_evaluation_permission(
+        await func(
             meeting_id=105,
             current_user=unauthorized_user,
             uc=uc,

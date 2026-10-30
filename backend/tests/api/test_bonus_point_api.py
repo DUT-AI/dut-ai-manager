@@ -144,3 +144,60 @@ def test_delete_and_restore_bonus_point(admin_client, mock_current_user):
 
     # Cleanup
     admin_client.delete(f"/api/v1/bonus-points/{item_id}")
+
+
+def test_create_and_update_bonus_point_as_trainer_success(
+    mock_current_user,
+):
+    """Trainer (non-admin) có quyền tạo và cập nhật điểm thưởng thành công."""
+    from fastapi.testclient import TestClient
+
+    from app.core.deps import get_current_user
+    from app.main import create_app
+    from app.user.domain.entity import UserEntity, UserStatus
+
+    trainer_user = UserEntity(
+        id=mock_current_user.id,
+        name="Trainer User",
+        email="trainer@dutai.site",
+        status=UserStatus.ACTIVE,
+        role_names=["Trainer"],
+        permissions={
+            "bonus_point:create",
+            "bonus_point:read",
+            "bonus_point:update",
+            "bonus_point:delete",
+        },
+    )
+    app = create_app()
+    app.dependency_overrides[get_current_user] = lambda: trainer_user
+    client = TestClient(app, raise_server_exceptions=False)
+
+    payload = {
+        "user_ids": [mock_current_user.id],
+        "points": 3,
+        "reason": "Hoạt động sinh hoạt câu lạc bộ",
+        "date": date.today().isoformat(),
+        "type": "CLUB_ACTIVITY",
+    }
+    create_res = client.post("/api/v1/bonus-points", json=payload)
+    assert create_res.status_code == 200
+    data = create_res.json()
+    assert data["is_success"] is True
+    created_id = data["data"][0]["id"]
+
+    # Test update
+    update_res = client.put(
+        f"/api/v1/bonus-points/{created_id}",
+        json={"reason": "Trainer cập nhật lý do", "points": 5},
+    )
+    assert update_res.status_code == 200
+    update_data = update_res.json()
+    assert update_data["is_success"] is True
+    assert update_data["data"]["reason"] == "Trainer cập nhật lý do"
+
+    # Cleanup
+    client.delete(f"/api/v1/bonus-points/{created_id}")
+    app.dependency_overrides.clear()
+
+

@@ -133,7 +133,6 @@ class UserRepository(BaseRepository[UserModel, UserEntity]):
 
     def get_active_users(self) -> list[UserEntity]:
         statement = self._get_base_query().where(
-            UserModel.status == UserStatus.ACTIVE,
             UserModel.is_deleted.is_(False),
         )
         models = self.session.scalars(statement).unique().all()

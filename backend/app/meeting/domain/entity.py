@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.meeting.domain.value_objects import EvaluationType, ParticipantStatus
 from app.shared.domain.base_entity import BaseEntity
+from app.shared.domain.datetime_types import ensure_utc
 
 
 class UserRef(BaseModel):
@@ -28,6 +29,64 @@ class MeetingParticipant(BaseEntity):
     client_event_id: str | None = None
     user: UserRef | None = None
 
+    def record_check_in(
+        self,
+        check_in_time: datetime,
+        meeting_start_time: datetime,
+        image_url: str | None = None,
+        client_event_id: str | None = None,
+    ) -> tuple[bool, str, bool]:
+        """
+        Ghi nhận điểm danh cho thành viên theo chuẩn Domain-Driven Design Invariants.
+        
+        Quy tắc nghiệp vụ:
+        1. Nếu đã COMPLETED -> Từ chối ghi nhận điểm danh đè.
+        2. Xác định is_late: check_in_time > meeting_start_time.
+        3. Xác định trạng thái:
+           - Nếu đang là LATE_EXCUSED (có đơn xin trễ đã duyệt) -> Bảo lưu LATE_EXCUSED.
+           - Nếu đang là JOINED hoặc LATE_UNEXCUSED -> Giữ nguyên trạng thái (cho phép cập nhật ảnh/idempotency).
+           - Nếu đang là NOT_JOINED (hoặc trạng thái khác):
+             - is_late == True  -> LATE_UNEXCUSED.
+             - is_late == False -> JOINED.
+        4. Ghi nhận mốc thời gian check_in_at:
+           - Nếu chưa có check_in_at -> Gán check_in_time (đảm bảo UTC).
+           - Nếu đã có check_in_at -> Giữ mốc ban đầu để bảo vệ dữ liệu gốc.
+        5. Cập nhật link_image (nếu được cung cấp) và client_event_id (nếu được cung cấp).
+        
+        Returns:
+            tuple[bool, str, bool]: (success, message, is_late)
+        """
+        check_in_time_utc = ensure_utc(check_in_time)
+        meeting_start_time_utc = ensure_utc(meeting_start_time)
+
+        if self.status == ParticipantStatus.COMPLETED:
+            return False, "Thành viên đã hoàn thành buổi họp, không thể điểm danh lại", False
+
+        is_late = check_in_time_utc > meeting_start_time_utc
+
+        if self.status == ParticipantStatus.LATE_EXCUSED:
+            # Đã có đơn xin đi trễ được duyệt trước đó -> Bảo lưu quyền có phép
+            pass
+        elif self.status in (ParticipantStatus.JOINED, ParticipantStatus.LATE_UNEXCUSED):
+            # Đã điểm danh trước đó, giữ nguyên trạng thái
+            pass
+        elif is_late:
+            self.status = ParticipantStatus.LATE_UNEXCUSED
+        else:
+            self.status = ParticipantStatus.JOINED
+
+        if self.check_in_at is None:
+            self.check_in_at = check_in_time_utc
+
+        if image_url:
+            self.link_image = image_url
+
+        if client_event_id:
+            self.client_event_id = client_event_id
+
+        msg = "Điểm danh thành công (đi trễ)" if is_late else "Điểm danh thành công"
+        return True, msg, is_late
+
     def check_in(
         self,
         check_in_time: datetime,
@@ -35,15 +94,11 @@ class MeetingParticipant(BaseEntity):
         status: ParticipantStatus = ParticipantStatus.JOINED,
     ):
         """Thực hiện check-in cho thành viên (image_url tùy chọn, ví dụ quẹt thẻ)."""
-        if self.status in (
-            ParticipantStatus.JOINED,
-            ParticipantStatus.LATE_EXCUSED,
-            ParticipantStatus.LATE_UNEXCUSED,
-            ParticipantStatus.COMPLETED,
-        ):
-            return True, "Checkin thanh cong"
+        if self.status == ParticipantStatus.COMPLETED:
+            return False, "Da checkout"
 
-        self.check_in_at = check_in_time
+        if self.check_in_at is None:
+            self.check_in_at = ensure_utc(check_in_time)
         self.status = status
         if image_url:
             self.link_image = image_url
@@ -165,7 +220,7 @@ class Meeting(BaseEntity):
         """Kiểm tra điều kiện mở cổng đánh giá 2 chiều (Domain Business Rule)."""
         if not self.enable_evaluation:
             return False, "Buổi học không kích hoạt tính năng đánh giá 2 chiều."
-        if current_time < self.start_time:
+        if ensure_utc(current_time) < ensure_utc(self.start_time):
             return False, "Buổi học chưa bắt đầu, chưa thể gửi đánh giá."
         return True, "Cổng đánh giá đang mở."
 
@@ -174,21 +229,26 @@ class Meeting(BaseEntity):
         if not self.enable_evaluation:
             return False
         deadline = self.evaluation_deadline
-        return deadline is not None and current_time > deadline
+        return deadline is not None and ensure_utc(current_time) > ensure_utc(
+            deadline
+        )
 
     def is_ongoing(self, current_time: datetime) -> bool:
         """Kiểm tra xem buổi họp có đang diễn ra hay không"""
-        return self.start_time <= current_time <= self.end_time
+        cur = ensure_utc(current_time)
+        return ensure_utc(self.start_time) <= cur <= ensure_utc(self.end_time)
 
     def is_finished(self, current_time: datetime) -> bool:
         """Kiểm tra xem buổi họp đã kết thúc chưa"""
-        return current_time > self.end_time
+        return ensure_utc(current_time) > ensure_utc(self.end_time)
 
     def is_late(self, check_in_time: datetime) -> bool:
         """Kiểm tra xem việc check-in có bị trễ hay không"""
         if not self.require_check_in:
             return False
-        return check_in_time > (self.start_time + timedelta(minutes=5))
+        ci = ensure_utc(check_in_time)
+        st = ensure_utc(self.start_time)
+        return ci > (st + timedelta(minutes=5))
 
     def calculate_available_seats(
         self,

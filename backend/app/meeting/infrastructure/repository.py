@@ -89,6 +89,26 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         orms = self.session.scalars(statement).all()
         return [self._to_domain(orm) for orm in orms]
 
+    def get_meetings_for_evaluation_deadline_check(
+        self, start_bound: datetime, end_bound: datetime
+    ) -> list[DomainMeeting]:
+        """Lấy danh sách các buổi học đã kết thúc trong khoảng [start_bound, end_bound] có bật đánh giá để quét vi phạm quá hạn."""
+        statement = (
+            select(ORMMeeting)
+            .where(
+                ORMMeeting.is_deleted.is_(False),
+                ORMMeeting.enable_evaluation.is_(True),
+                ORMMeeting.end_time >= start_bound,
+                ORMMeeting.end_time <= end_bound,
+            )
+            .options(
+                selectinload(ORMMeeting.participants).joinedload(ORMParticipant.user),
+                joinedload(ORMMeeting.creator),
+            )
+        )
+        orms = self.session.scalars(statement).all()
+        return [self._to_domain(orm) for orm in orms]
+
     def get_all_with_participants(
         self,
         query_support: QuerySupport | None = None,
@@ -546,6 +566,7 @@ class ParticipantRepository(BaseRepository[ORMParticipant, DomainParticipant]):
         orm.check_in_at = domain.check_in_at
         orm.check_out_at = domain.check_out_at
         orm.link_image = domain.link_image
+        orm.client_event_id = domain.client_event_id
 
         self.session.add(orm)
         self.session.flush()

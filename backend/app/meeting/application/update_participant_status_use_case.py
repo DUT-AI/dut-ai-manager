@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import status
 
@@ -9,7 +9,7 @@ from app.meeting.infrastructure.repository import (
     ParticipantRepository,
 )
 from app.shared.application.response import BadRequestException
-from app.utils.datetime import get_current_utc7_time, to_utc7_naive
+from app.shared.domain.datetime_types import parse_datetime_to_utc
 
 
 class UpdateParticipantStatusUseCase:
@@ -46,15 +46,19 @@ class UpdateParticipantStatusUseCase:
                 status_code=status.HTTP_404_NOT_FOUND,
             )
 
-        # Chuẩn hóa múi giờ sang UTC+7 naive datetime
-        normalized_check_in_at = to_utc7_naive(check_in_at)
-        normalized_check_out_at = to_utc7_naive(check_out_at)
+        # Chuẩn hóa múi giờ sang UTC aware datetime
+        normalized_check_in_at = (
+            parse_datetime_to_utc(check_in_at) if check_in_at else None
+        )
+        normalized_check_out_at = (
+            parse_datetime_to_utc(check_out_at) if check_out_at else None
+        )
 
-        now_utc7 = get_current_utc7_time()
+        now = datetime.now(timezone.utc)
         # Default start time khi điểm danh nhanh là giờ hiện tại nếu đang trong buổi học, hoặc start_time
         default_check_in_time = (
-            now_utc7
-            if meeting.start_time <= now_utc7 <= meeting.end_time
+            now
+            if meeting.start_time <= now <= meeting.end_time
             else meeting.start_time
         )
 

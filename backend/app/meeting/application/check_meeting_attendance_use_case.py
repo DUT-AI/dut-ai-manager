@@ -1,5 +1,6 @@
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import cast
+from zoneinfo import ZoneInfo
 
 from app.meeting.domain.events import (
     ParticipantAbsenceRecorded,
@@ -11,7 +12,6 @@ from app.meeting.infrastructure.repository import (
     ParticipantRepository,
 )
 from app.shared.domain.event_bus import DomainEvent, EventBus
-from app.utils.datetime import get_current_utc7_time
 
 
 class CheckMeetingAttendanceUseCase:
@@ -33,8 +33,8 @@ class CheckMeetingAttendanceUseCase:
 
     async def execute(self, target_date: date | None = None) -> int:
         if target_date is None:
-            now = get_current_utc7_time()
-            target_date = now.date()
+            now = datetime.now(timezone.utc)
+            target_date = now.astimezone(ZoneInfo("Asia/Ho_Chi_Minh")).date()
 
         meetings = self.meeting_repo.get_by_date(target_date)
         if not meetings:

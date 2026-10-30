@@ -5,7 +5,8 @@ Handles daily background job (23:59) checking for overdue homework submissions
 and publishing domain events (HomeworkOverdueDetected) for decoupled violation processing.
 """
 
-from datetime import date
+from datetime import date, datetime, timezone
+from zoneinfo import ZoneInfo
 from typing import cast
 
 from loguru import logger
@@ -24,7 +25,6 @@ from app.homework.infrastructure.homework_submission_repository import (
 from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.shared.domain.event_bus import DomainEvent, EventBus
 from app.user.infrastructure.repository import UserRepository
-from app.utils.datetime import get_current_utc7_time
 
 
 class CheckOverdueHomeworkUseCase:
@@ -59,8 +59,8 @@ class CheckOverdueHomeworkUseCase:
         3. Nếu CHƯA hoàn thành -> Phát sự kiện HomeworkOverdueDetected lên EventBus.
         """
         if target_date is None:
-            now = get_current_utc7_time()
-            target_date = now.date()
+            now = datetime.now(timezone.utc)
+            target_date = now.astimezone(ZoneInfo("Asia/Ho_Chi_Minh")).date()
 
         due_homeworks = self.homework_repo.get_by_deadline_date(target_date)
         if not due_homeworks:

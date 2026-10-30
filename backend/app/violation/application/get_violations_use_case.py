@@ -1,4 +1,5 @@
 from datetime import date, datetime, time
+from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException
 
@@ -84,8 +85,9 @@ class GetViolationsUseCase:
         end_date: date | None = None,
     ) -> list[Violation]:
         if not month and not year and not start_date and not end_date and not user_id:
-            month = datetime.now().month
-            year = datetime.now().year
+            now_vn = datetime.now(ZoneInfo("Asia/Ho_Chi_Minh"))
+            month = now_vn.month
+            year = now_vn.year
 
         return self.repo.get_by_month(
             month=month,

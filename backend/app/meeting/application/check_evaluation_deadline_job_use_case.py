@@ -1,18 +1,18 @@
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
+from app.meeting.domain.entity import Meeting, MeetingParticipant
 from app.meeting.domain.value_objects import EvaluationType, ParticipantStatus
 from app.meeting.infrastructure.repository import (
     MeetingEvaluationRepository,
     MeetingOverallEvaluationRepository,
     MeetingRepository,
 )
-from app.utils.datetime import get_current_utc7_time
 from app.violation.domain.entity import Violation
 from app.violation.infrastructure.repository import ViolationRepository
 
 
 class CheckEvaluationDeadlineJobUseCase:
-    """Tác vụ định kỳ kiểm tra các buổi học kết thúc quá 24h và tự động tạo vi phạm cho người chưa hoàn thành đánh giá."""
+    """Tác vụ định kỳ kiểm tra các buổi học kết thúc quá 24h và tạo vi phạm."""
 
     def __init__(
         self,
@@ -27,107 +27,95 @@ class CheckEvaluationDeadlineJobUseCase:
         self.violation_repo = violation_repo
 
     async def execute(self) -> dict:
-        now = get_current_utc7_time()
-        # Tìm các meeting đã kết thúc, có bật evaluation
-        # Lấy các buổi họp trong vòng 7 ngày qua để tránh quét toàn bộ lịch sử
-        from sqlalchemy import select
-
-        from app.meeting.infrastructure.model import Meeting as ORMMeeting
-
+        now = datetime.now(UTC)
         seven_days_ago = now - timedelta(days=7)
         twenty_four_hours_ago = now - timedelta(hours=24)
 
-        stmt = select(ORMMeeting).where(
-            ORMMeeting.is_deleted.is_(False),
-            ORMMeeting.enable_evaluation.is_(True),
-            ORMMeeting.end_time <= twenty_four_hours_ago,
-            ORMMeeting.end_time >= seven_days_ago,
+        meetings = self.meeting_repo.get_meetings_for_evaluation_deadline_check(
+            start_bound=seven_days_ago,
+            end_bound=twenty_four_hours_ago,
         )
-        orm_meetings = self.meeting_repo.session.scalars(stmt).all()
-        meetings = [self.meeting_repo._to_domain(m) for m in orm_meetings]
 
-        trainee_violations_created = 0
-        trainer_violations_created = 0
+        trainee_violations = 0
+        trainer_violations = 0
 
         for meeting in meetings:
             if not meeting.id:
                 continue
 
-            meeting_evals = self.evaluation_repo.get_evaluations_by_meeting(meeting.id)
+            time_str = self._format_meeting_time(meeting)
+            evals = self.evaluation_repo.get_evaluations_by_meeting(meeting.id)
 
-            # 1. Kiểm tra Trainee: Những ai có tham gia (JOINED / COMPLETED) nhưng chưa đánh giá Trainer
-            joined_participants = [
-                p
-                for p in meeting.participants
-                if p.status
-                in (
-                    ParticipantStatus.JOINED,
-                    ParticipantStatus.LATE_EXCUSED,
-                    ParticipantStatus.LATE_UNEXCUSED,
-                    ParticipantStatus.COMPLETED,
-                )
-            ]
-
-            trainee_eval_reviewers = {
-                e.reviewer_id
-                for e in meeting_evals
-                if e.evaluation_type == EvaluationType.TRAINEE_TO_TRAINER
-            }
-
-            time_str = ""
-            if meeting.start_time and meeting.end_time:
-                time_str = f" ({meeting.start_time.strftime('%H:%M')} - {meeting.end_time.strftime('%H:%M %d/%m/%Y')})"
-            elif meeting.start_time:
-                time_str = f" ({meeting.start_time.strftime('%H:%M %d/%m/%Y')})"
-
-            for participant in joined_participants:
-                if participant.user_id not in trainee_eval_reviewers:
-                    reason = f"Chưa hoàn thành đánh giá Trainer cho buổi học '{meeting.title}'{time_str} trong vòng 24h"
-                    # Kiểm tra xem đã tạo vi phạm này chưa
-                    existing_violation = self._has_existing_violation(
-                        participant.user_id, reason
-                    )
-                    if not existing_violation:
-                        v = Violation.create_system_violation(
-                            user_id=participant.user_id,
-                            reason=reason,
-                            date=now,
-                        )
-                        self.violation_repo.save(v)
-                        trainee_violations_created += 1
-
-            # 2. Kiểm tra Trainer (người tạo meeting / host): Chỉ cần 01 bản ghi MeetingOverallEvaluation cho meeting đó (quan hệ 1-1)
-            trainer_id = meeting.created_by
-            if trainer_id:
-                has_overall_eval = self.overall_eval_repo.exists_for_meeting(meeting.id)
-                if not has_overall_eval:
-                    reason = f"Trainer chưa hoàn tất đánh giá tổng thể buổi học '{meeting.title}'{time_str} trong vòng 24h"
-                    existing_violation = self._has_existing_violation(
-                        trainer_id, reason
-                    )
-                    if not existing_violation:
-                        v = Violation.create_system_violation(
-                            user_id=trainer_id,
-                            reason=reason,
-                            date=now,
-                        )
-                        self.violation_repo.save(v)
-                        trainer_violations_created += 1
+            trainee_violations += self._check_trainees(meeting, evals, now, time_str)
+            trainer_violations += self._check_trainer(meeting, now, time_str)
 
         return {
             "meetings_scanned": len(meetings),
-            "trainee_violations_created": trainee_violations_created,
-            "trainer_violations_created": trainer_violations_created,
+            "trainee_violations_created": trainee_violations,
+            "trainer_violations_created": trainer_violations,
         }
 
-    def _has_existing_violation(self, user_id: int, reason: str) -> bool:
-        from sqlalchemy import select
+    def _format_meeting_time(self, meeting: Meeting) -> str:
+        if meeting.start_time and meeting.end_time:
+            st = meeting.start_time.strftime("%H:%M")
+            et = meeting.end_time.strftime("%H:%M %d/%m/%Y")
+            return f" ({st} - {et})"
+        if meeting.start_time:
+            return f" ({meeting.start_time.strftime('%H:%M %d/%m/%Y')})"
+        return ""
 
-        from app.violation.infrastructure.model import ViolationModel
+    def _check_trainees(
+        self, meeting: Meeting, evals: list, now: datetime, time_str: str
+    ) -> int:
+        joined_participants = [
+            p for p in meeting.participants if self._is_joined(p)
+        ]
+        reviewers = {
+            e.reviewer_id
+            for e in evals
+            if e.evaluation_type == EvaluationType.TRAINEE_TO_TRAINER
+        }
 
-        stmt = select(ViolationModel).where(
-            ViolationModel.user_id == user_id,
-            ViolationModel.reason == reason,
-            ViolationModel.is_deleted.is_(False),
+        created = 0
+        for p in joined_participants:
+            if p.user_id not in reviewers:
+                reason = (
+                    f"Chưa hoàn thành đánh giá Trainer cho buổi học "
+                    f"'{meeting.title}'{time_str} trong vòng 24h"
+                )
+                if not self.violation_repo.exists_by_user_and_reason(
+                    p.user_id, reason
+                ):
+                    v = Violation.create_system_violation(
+                        user_id=p.user_id, reason=reason, date=now
+                    )
+                    self.violation_repo.save(v)
+                    created += 1
+        return created
+
+    def _check_trainer(self, meeting: Meeting, now: datetime, time_str: str) -> int:
+        trainer_id = meeting.created_by
+        if not trainer_id or not meeting.id:
+            return 0
+
+        if not self.overall_eval_repo.exists_for_meeting(meeting.id):
+            reason = (
+                f"Trainer chưa hoàn tất đánh giá tổng thể buổi học "
+                f"'{meeting.title}'{time_str} trong vòng 24h"
+            )
+            if not self.violation_repo.exists_by_user_and_reason(trainer_id, reason):
+                v = Violation.create_system_violation(
+                    user_id=trainer_id, reason=reason, date=now
+                )
+                self.violation_repo.save(v)
+                return 1
+        return 0
+
+    @staticmethod
+    def _is_joined(p: MeetingParticipant) -> bool:
+        return p.status in (
+            ParticipantStatus.JOINED,
+            ParticipantStatus.LATE_EXCUSED,
+            ParticipantStatus.LATE_UNEXCUSED,
+            ParticipantStatus.COMPLETED,
         )
-        return self.violation_repo.session.scalars(stmt).first() is not None

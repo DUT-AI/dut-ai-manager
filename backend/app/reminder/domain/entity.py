@@ -3,9 +3,10 @@ Reminder & In-App Notification Domain Entities & Value Objects.
 Pure Pydantic models with zero framework / ORM dependencies.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from app.shared.domain.base_entity import BaseEntity
 
@@ -85,9 +86,24 @@ class ReminderStage(str, Enum):
         """Xác định danh sách các mốc ReminderStage phù hợp với thời điểm hiện tại và deadline."""
         stages: list[ReminderStage] = []
 
-        # 1. Khung giờ cố định trong ngày (+/- 20 phút của khung giờ)
-        hour = now.hour
-        minute = now.minute
+        vn_tz = ZoneInfo("Asia/Ho_Chi_Minh")
+
+        # Chuẩn hóa về UTC aware cho phép so sánh khoảng thời gian
+        now_utc = (
+            now
+            if now.tzinfo is not None
+            else now.replace(tzinfo=vn_tz).astimezone(timezone.utc)
+        )
+        deadline_utc = (
+            deadline
+            if deadline.tzinfo is not None
+            else deadline.replace(tzinfo=vn_tz).astimezone(timezone.utc)
+        )
+
+        # 1. Khung giờ cố định trong ngày quy chiếu theo giờ Việt Nam
+        now_vn = now_utc.astimezone(vn_tz)
+        hour = now_vn.hour
+        minute = now_vn.minute
 
         # 08:00 (7:45 - 8:20)
         if (hour == 8 and minute <= 20) or (hour == 7 and minute >= 45):
@@ -103,7 +119,7 @@ class ReminderStage(str, Enum):
             stages.append(cls.FIXED_2200)
 
         # 2. Mốc đếm ngược động theo deadline
-        diff_hours = (deadline - now).total_seconds() / 3600.0
+        diff_hours = (deadline_utc - now_utc).total_seconds() / 3600.0
 
         if 46.0 <= diff_hours <= 50.0:
             stages.append(cls.OFFSET_2D)

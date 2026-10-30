@@ -52,7 +52,7 @@ export const ParticipantActionButtons: React.FC<Props> = ({
           userId: record.user_id,
           payload: {
             status: ParticipantStatus.JOINED,
-            check_in_at: dayjs().format('YYYY-MM-DDTHH:mm:ss'),
+            check_in_at: dayjs().toISOString(),
           },
         });
         message.success(`Đã điểm danh cho ${record.user_name || 'học viên'}`);

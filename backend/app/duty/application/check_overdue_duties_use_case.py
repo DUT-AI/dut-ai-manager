@@ -2,8 +2,9 @@
 Check Overdue Duties Use Case (for Daily Scheduled Job at 23:59).
 """
 
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import cast
+from zoneinfo import ZoneInfo
 
 from loguru import logger
 
@@ -14,7 +15,6 @@ from app.meeting.domain.value_objects import ParticipantStatus
 from app.meeting.infrastructure.repository import MeetingRepository
 from app.shared.domain.event_bus import DomainEvent, EventBus
 from app.team.infrastructure.repository import TeamRepository
-from app.utils.datetime import get_current_utc7_time
 from app.violation.application.create_violation_use_case import CreateViolationUseCase
 
 
@@ -41,7 +41,11 @@ class CheckOverdueDutiesUseCase:
 
     async def execute(self, target_date: date | None = None) -> int:
         if target_date is None:
-            target_date = get_current_utc7_time().date()
+            target_date = (
+                datetime.now(timezone.utc)
+                .astimezone(ZoneInfo("Asia/Ho_Chi_Minh"))
+                .date()
+            )
 
         pending_duties = self.duty_repo.get_pending_duties_for_date(target_date)
         if not pending_duties:
@@ -131,7 +135,7 @@ class CheckOverdueDutiesUseCase:
                 logger.warning(
                     f"Tạo vi phạm cho {len(penalized_user_ids)} học viên vì không trực nhật ca {duty.id}"
                 )
-                now_dt = get_current_utc7_time()
+                now_dt = datetime.now(timezone.utc)
                 await self.create_violation_use_case.execute(
                     user_ids=penalized_user_ids,
                     reason=reason,

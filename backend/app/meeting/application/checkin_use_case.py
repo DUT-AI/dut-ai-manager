@@ -5,26 +5,21 @@ from fastapi import UploadFile
 
 from app.meeting.domain.entity import MeetingParticipant
 from app.meeting.domain.events import ParticipantCheckedIn
-from app.meeting.domain.value_objects import ParticipantStatus
 from app.meeting.infrastructure.repository import (
     MeetingRepository,
     ParticipantRepository,
 )
 from app.shared.application.response import BadRequestException
+from app.shared.domain.datetime_types import parse_datetime_to_utc
 from app.shared.domain.event_bus import DomainEvent, EventBus
 from app.shared.infrastructure.minio_service import MinioService
-from app.utils.datetime import get_current_utc7_time
 
 
-def parse_client_time_to_utc7_naive(client_time: str) -> datetime:
-    """Chuyển client_time (ISO string) thành datetime naive múi giờ UTC+7."""
+def parse_client_time_to_utc(client_time: str) -> datetime:
+    """Chuyển client_time (ISO string) thành datetime UTC aware."""
     try:
-        dt = datetime.fromisoformat(client_time.replace("Z", "+00:00"))
-        if dt.tzinfo is not None:
-            utc7_tz = timezone(timedelta(hours=7))
-            dt = dt.astimezone(utc7_tz).replace(tzinfo=None)
-        return dt
-    except ValueError as err:
+        return parse_datetime_to_utc(client_time)
+    except Exception as err:
         raise BadRequestException("Invalid occurred_at") from err
 
 
@@ -50,11 +45,11 @@ class CheckInUseCase:
         client_time: str | None = None,
         client_event_id: str | None = None,
     ) -> tuple[list[MeetingParticipant], str]:
-        now = get_current_utc7_time()
+        now = datetime.now(timezone.utc)
 
         check_in_dt = now
         if client_time:
-            check_in_dt = parse_client_time_to_utc7_naive(client_time)
+            check_in_dt = parse_client_time_to_utc(client_time)
 
         file_content = await image.read()
         timestamp = now.strftime("%Y%m%d_%H%M%S")
@@ -67,8 +62,8 @@ class CheckInUseCase:
         )
 
         half_hour = timedelta(minutes=30)
-        window_start = now - half_hour
-        window_end = now + half_hour
+        window_start = check_in_dt - half_hour
+        window_end = check_in_dt + half_hour
 
         updated_participants = []
         messages = []
@@ -76,7 +71,7 @@ class CheckInUseCase:
         for user_id in user_ids:
             participations = (
                 self.participant_repo.find_all_participations_in_time_window(
-                    user_id, window_start, window_end, now
+                    user_id, window_start, window_end, check_in_dt
                 )
             )
 
@@ -95,34 +90,26 @@ class CheckInUseCase:
                 if not meeting:
                     continue
 
-                if participant.status in (
-                    ParticipantStatus.JOINED,
-                    ParticipantStatus.COMPLETED,
+                if (
+                    client_event_id
+                    and participant.client_event_id == client_event_id
                 ):
-                    if (
-                        client_event_id
-                        and participant.client_event_id == client_event_id
-                    ):
-                        messages.append(
-                            f"Yêu cầu trùng lặp (client_event_id), đã bỏ qua cho '{meeting.title}'"
-                        )
-                        continue
                     messages.append(
-                        f"Người dùng {participant.user.name if participant.user else user_id} đã điểm danh cho '{meeting.title}'"
+                        f"Yêu cầu trùng lặp (client_event_id), đã bỏ qua cho '{meeting.title}'"
                     )
                     continue
 
-                is_late = meeting.is_late(check_in_dt)
-                success, msg = participant.check_in(
-                    check_in_dt, image_url, status=ParticipantStatus.JOINED
+                # Ủy quyền 100% quy tắc nghiệp vụ kiểm tra trạng thái và mốc thời gian cho Domain Entity
+                success, msg, is_late = participant.record_check_in(
+                    check_in_time=check_in_dt,
+                    meeting_start_time=meeting.start_time,
+                    image_url=image_url,
+                    client_event_id=client_event_id,
                 )
                 if not success:
                     messages.append(msg)
                     updated_participants.append(participant)
                     continue
-
-                if client_event_id:
-                    participant.client_event_id = client_event_id
 
                 saved_p = self.participant_repo.save(participant)
                 updated_participants.append(saved_p)
@@ -136,7 +123,7 @@ class CheckInUseCase:
                         ParticipantCheckedIn(
                             meeting_id=meeting_id,
                             user_id=user_id,
-                            check_in_at=check_in_dt,
+                            check_in_at=saved_p.check_in_at or check_in_dt,
                             is_late=is_late,
                             meeting_title=meeting.title,
                         ),

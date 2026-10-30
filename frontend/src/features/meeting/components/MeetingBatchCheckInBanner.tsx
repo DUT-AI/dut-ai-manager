@@ -37,13 +37,14 @@ export const MeetingBatchCheckInBanner: React.FC<Props> = ({ meetingId }) => {
   const handleQuickCheckInAll = async () => {
     try {
       setIsCheckingInAll(true);
+      const nowIso = dayjs().toISOString();
       const promises = unjoinedParticipants.map((p) =>
         updateParticipantStatusMutation.mutateAsync({
           meetingId: meeting.id,
           userId: p.user_id,
           payload: {
             status: ParticipantStatus.JOINED,
-            check_in_at: dayjs().format('YYYY-MM-DDTHH:mm:ss'),
+            check_in_at: nowIso,
           },
         })
       );

@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict
 from app.homework.application.dtos import HomeworkResponse
 from app.meeting.schemas import MeetingResponse
 from app.permission_request.domain.value_objects import RequestCategory
+from app.shared.domain.datetime_types import UtcDateTime
 from app.shared.domain.value_objects import UserRef
 
 
@@ -14,7 +15,7 @@ class PermissionRequestBase(BaseModel):
     homework_id: int | None = None
     meeting_id: int | None = None
     old_meeting_id: int | None = None
-    start_time: datetime | None = None
+    start_time: UtcDateTime | None = None
 
 
 class PermissionRequestCreate(PermissionRequestBase):
@@ -27,7 +28,7 @@ class PermissionRequestUpdate(BaseModel):
     homework_id: int | None = None
     meeting_id: int | None = None
     old_meeting_id: int | None = None
-    start_time: datetime | None = None
+    start_time: UtcDateTime | None = None
 
 
 class PermissionRequestResponse(PermissionRequestBase):

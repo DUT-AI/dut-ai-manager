@@ -5,14 +5,13 @@ Uses flush() instead of commit(). Session commits at middleware level.
 Mapping delegated to ViolationModel.to_entity() / .from_entity().
 """
 
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timezone
 from typing import Any
 
 from sqlalchemy import desc, extract, select, update
 from sqlalchemy.orm import Session, joinedload
 
 from app.shared.infrastructure.base_repository import BaseRepository
-from app.utils.datetime import get_current_utc7_time
 from app.violation.domain.entity import Violation
 from app.violation.infrastructure.model import ViolationModel
 
@@ -287,8 +286,21 @@ class ViolationRepository(BaseRepository[ViolationModel, Violation]):
         statement = (
             update(ViolationModel)
             .where(ViolationModel.id.in_(ids), ViolationModel.is_deleted == False)  # noqa: E712
-            .values(is_deleted=True, updated_at=get_current_utc7_time())
+            .values(is_deleted=True, updated_at=datetime.now(timezone.utc))
         )
         result = self.session.execute(statement)
         self.session.flush()
         return getattr(result, "rowcount", 0) or 0
+
+    def exists_by_user_and_reason(self, user_id: int, reason: str) -> bool:
+        """Kiểm tra người dùng đã bị ghi nhận vi phạm với cùng lý do hay chưa (loại trừ đã xóa)."""
+        statement = (
+            select(ViolationModel.id)
+            .where(
+                ViolationModel.user_id == user_id,
+                ViolationModel.reason == reason,
+                ViolationModel.is_deleted.is_(False),
+            )
+            .limit(1)
+        )
+        return self.session.scalar(statement) is not None

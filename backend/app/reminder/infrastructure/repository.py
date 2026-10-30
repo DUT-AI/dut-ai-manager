@@ -3,7 +3,7 @@ NotificationRepository for storing, querying, updating notifications,
 and managing reminder deduplication / cooldowns.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import desc, func, select, update
 from sqlalchemy.orm import Session
@@ -21,7 +21,6 @@ from app.reminder.infrastructure.model import (
     PushSubscriptionModel,
 )
 from app.shared.infrastructure.base_repository import BaseRepository
-from app.utils.datetime import get_current_utc7_time
 
 
 class NotificationRepository(BaseRepository[NotificationModel, Notification]):
@@ -71,7 +70,7 @@ class NotificationRepository(BaseRepository[NotificationModel, Notification]):
 
     def mark_as_read(self, notification_id: int, user_id: int) -> Notification | None:
         """Đánh dấu 1 thông báo là đã đọc (bảo vệ quyền sở hữu của user)."""
-        now = get_current_utc7_time()
+        now = datetime.now(timezone.utc)
         stmt = (
             update(self.model)
             .where(
@@ -89,7 +88,7 @@ class NotificationRepository(BaseRepository[NotificationModel, Notification]):
 
     def mark_all_as_read(self, user_id: int) -> int:
         """Đánh dấu tất cả thông báo của user là đã đọc."""
-        now = get_current_utc7_time()
+        now = datetime.now(timezone.utc)
         stmt = (
             update(self.model)
             .where(
@@ -173,7 +172,7 @@ class PushSubscriptionRepositoryImpl(
         stmt = select(self.model).where(self.model.endpoint == endpoint)
         existing = self.session.execute(stmt).scalar_one_or_none()
 
-        now = get_current_utc7_time()
+        now = datetime.now(timezone.utc)
         if existing:
             existing.user_id = user_id
             existing.p256dh = p256dh
@@ -217,7 +216,7 @@ class PushSubscriptionRepositoryImpl(
         stmt = (
             update(self.model)
             .where(self.model.endpoint == endpoint)
-            .values(is_active=False, updated_at=get_current_utc7_time())
+            .values(is_active=False, updated_at=datetime.now(timezone.utc))
         )
         result = self.session.execute(stmt)
         self.session.commit()
@@ -227,7 +226,7 @@ class PushSubscriptionRepositoryImpl(
         stmt = (
             update(self.model)
             .where(self.model.id == subscription_id)
-            .values(last_used_at=get_current_utc7_time())
+            .values(last_used_at=datetime.now(timezone.utc))
         )
         self.session.execute(stmt)
         self.session.commit()

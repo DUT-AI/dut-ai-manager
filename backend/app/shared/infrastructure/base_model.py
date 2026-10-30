@@ -4,13 +4,11 @@ Base ORM model and mixin for both SQLModel and pure SQLAlchemy 2.0 entities.
 Allows incremental migration from SQLModel to SQLAlchemy 2.0.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-
-from app.utils.datetime import get_current_utc7_time
 
 
 class Base(DeclarativeBase):
@@ -26,12 +24,16 @@ class SQLAlchemyTimestampMixin:
     """Mixin for created_at, updated_at timestamps and creator tracking using SQLAlchemy 2.0."""
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=get_current_utc7_time, index=True
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        server_default=func.now(),
+        index=True,
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=get_current_utc7_time,
-        onupdate=get_current_utc7_time,
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        server_default=func.now(),
+        onupdate=lambda: datetime.now(timezone.utc),
     )
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
     created_by: Mapped[int | None] = mapped_column(

@@ -23,7 +23,7 @@ from app.bonus_point.application.dtos import (
     BonusPointUpdate,
 )
 from app.bonus_point.domain.value_objects import BonusPointType
-from app.core.deps import CurrentUser, hasPermission, hasTeamLeaderAccess
+from app.core.deps import CurrentUser, hasPermission
 from app.core.permissions import BonusPointPermission
 from app.shared.application.pagination import PaginationParams
 from app.shared.application.response import ApiResponse, PaginationMeta
@@ -69,10 +69,7 @@ async def get_bonus_points(
 @router.post(
     "",
     response_model=ApiResponse[list[BonusPointResponse]],
-    dependencies=[
-        hasPermission(BonusPointPermission.CREATE),
-        hasTeamLeaderAccess("user_ids"),
-    ],
+    dependencies=[hasPermission(BonusPointPermission.CREATE)],
 )
 @inject
 async def create_bonus_point(
@@ -88,10 +85,7 @@ async def create_bonus_point(
 @router.put(
     "/{item_id}",
     response_model=ApiResponse[BonusPointResponse],
-    dependencies=[
-        hasPermission(BonusPointPermission.UPDATE),
-        hasTeamLeaderAccess("user_id"),
-    ],
+    dependencies=[hasPermission(BonusPointPermission.UPDATE)],
 )
 @inject
 async def update_bonus_point(

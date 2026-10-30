@@ -4,12 +4,13 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.homework.domain.entity import SubmissionType
+from app.shared.domain.datetime_types import UtcDateTime
 from app.shared.domain.value_objects import UserRef
 
 
 class HomeworkBase(BaseModel):
     title: str
-    deadline: datetime
+    deadline: UtcDateTime
     link: str | None = None
     slug: str | None = None
     requires_coding: bool = False
@@ -22,7 +23,7 @@ class HomeworkCreate(HomeworkBase):
 
 class HomeworkUpdate(BaseModel):
     title: str | None = None
-    deadline: datetime | None = None
+    deadline: UtcDateTime | None = None
     link: str | None = None
     slug: str | None = None
     requires_coding: bool | None = None

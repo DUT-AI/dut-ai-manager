@@ -9,7 +9,7 @@ from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.homework.infrastructure.homework_submission_repository import (
     HomeworkSubmissionRepository,
 )
-from app.utils.datetime import to_utc7_naive
+from app.shared.domain.datetime_types import UtcDateTime
 
 
 class HomeworkSubmissionWebhookIn(BaseModel):
@@ -18,7 +18,7 @@ class HomeworkSubmissionWebhookIn(BaseModel):
     lesson_slug: str
     user_id: int
     type: SubmissionType
-    submitted_at: datetime
+    submitted_at: UtcDateTime
     is_passed: bool = True
 
     # Chi tiết bài tập con (dành cho CODING)
@@ -76,8 +76,8 @@ class RecordHomeworkSubmissionUseCase:
                 "reason": f"Homework not found for slug '{payload.lesson_slug}'",
             }
 
-        # 3. Chuẩn hóa submitted_at về naive ICT datetime, bỏ qua nếu không hợp lệ
-        submitted_at = to_utc7_naive(payload.submitted_at)
+        # 3. Chuẩn hóa submitted_at về UTC aware datetime
+        submitted_at = payload.submitted_at
         if not submitted_at:
             logger.warning(
                 f"[Webhook] Bỏ qua submission user_id={payload.user_id} cho slug='{payload.lesson_slug}' "

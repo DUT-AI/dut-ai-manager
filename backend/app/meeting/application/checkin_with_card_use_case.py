@@ -1,6 +1,4 @@
-from sqlalchemy import text
-from app.shared.infrastructure.audio_utils import downsample_wav_to_16k_mono
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from typing import cast
 
 from loguru import logger
@@ -12,10 +10,10 @@ from app.meeting.infrastructure.repository import (
     ParticipantRepository,
 )
 from app.shared.domain.event_bus import DomainEvent, EventBus
+from app.shared.infrastructure.audio_utils import downsample_wav_to_16k_mono
 from app.shared.infrastructure.minio_service import MinioService
 from app.shared.infrastructure.tts_service import TTSService
 from app.user.infrastructure.repository import UserRepository
-from app.utils.datetime import get_current_utc7_time
 
 
 class CheckInWithCardUseCase:
@@ -65,7 +63,7 @@ class CheckInWithCardUseCase:
         uid = user.id
         assert uid is not None
 
-        now = get_current_utc7_time()
+        now = datetime.now(timezone.utc)
         half_hour = timedelta(minutes=30)
         window_start = now - half_hour
         window_end = now + half_hour
@@ -95,9 +93,9 @@ class CheckInWithCardUseCase:
             )
             return msg, audio
 
-        if participant.status in (
-            ParticipantStatus.JOINED,
-            ParticipantStatus.COMPLETED,
+        if participant.status == ParticipantStatus.COMPLETED or (
+            participant.status in (ParticipantStatus.JOINED, ParticipantStatus.LATE_UNEXCUSED)
+            and participant.check_in_at is not None
         ):
             msg = "bạn đã điểm danh cho buổi họp rồi"
             text_to_speech = (
@@ -109,8 +107,9 @@ class CheckInWithCardUseCase:
             )
             return msg, audio
 
-        success, err_msg = participant.check_in(
-            now, None, status=ParticipantStatus.JOINED
+        success, err_msg, is_late = participant.record_check_in(
+            check_in_time=now,
+            meeting_start_time=meeting.start_time,
         )
         if not success:
             msg = f"Xin chào {user.name}, {err_msg}"
@@ -118,14 +117,13 @@ class CheckInWithCardUseCase:
             return msg, audio
 
         self.participant_repo.save(participant)
-        is_late = meeting.is_late(now)
         await self.event_bus.publish(
             cast(
                 DomainEvent,
                 ParticipantCheckedIn(
                     meeting_id=participant.meeting_id,
                     user_id=uid,
-                    check_in_at=now,
+                    check_in_at=participant.check_in_at or now,
                     is_late=is_late,
                     meeting_title=meeting.title,
                 ),

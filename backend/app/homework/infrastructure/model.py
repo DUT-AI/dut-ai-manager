@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import (
     JSON,
@@ -19,7 +19,6 @@ from app.homework.domain.entity import (
     HomeworkSubmission as HomeworkSubmissionEntity,
 )
 from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
-from app.utils.datetime import get_current_utc7_time
 
 
 class HomeworkModel(SQLAlchemyTimestampMixin, Base):
@@ -29,7 +28,7 @@ class HomeworkModel(SQLAlchemyTimestampMixin, Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(255), index=True)
-    deadline: Mapped[datetime] = mapped_column(index=True)
+    deadline: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     link: Mapped[str | None] = mapped_column(String(500), default=None, nullable=True)
     slug: Mapped[str | None] = mapped_column(String(255), default=None, nullable=True)
     requires_coding: Mapped[bool] = mapped_column(
@@ -113,7 +112,7 @@ class HomeworkSubmissionModel(Base):
         Integer, default=1, server_default="1", nullable=False
     )
     submitted_at: Mapped[datetime] = mapped_column(
-        DateTime, default=get_current_utc7_time, nullable=False
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
     is_passed: Mapped[bool] = mapped_column(
         Boolean, default=True, server_default="true", nullable=False
@@ -122,7 +121,7 @@ class HomeworkSubmissionModel(Base):
         JSON, default=dict, server_default="{}", nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=get_current_utc7_time, nullable=False
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
 
     homework: Mapped[HomeworkModel] = relationship(back_populates="submissions")

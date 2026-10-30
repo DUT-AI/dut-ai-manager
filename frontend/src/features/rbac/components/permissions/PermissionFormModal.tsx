@@ -69,18 +69,22 @@ export const PermissionFormModal: React.FC<PermissionFormModalProps> = ({
             let finalStartTime: string | undefined = undefined;
             if (values.start_time) {
                 if (values.category === 'POSTPONE') {
-                    finalStartTime = values.start_time.format('YYYY-MM-DDTHH:mm:ss');
+                    finalStartTime = values.start_time.toISOString();
                 } else if (values.category === 'LATE' && values.meeting_id) {
                     const meeting = meetings.find((m: any) => m.id === values.meeting_id);
                     if (meeting && meeting.start_time) {
-                        const dateStr = dayjs(meeting.start_time).format('YYYY-MM-DD');
-                        const timeStr = values.start_time.format('HH:mm:ss');
-                        finalStartTime = `${dateStr}T${timeStr}`;
+                        const meetingDate = dayjs(meeting.start_time);
+                        const combined = meetingDate
+                            .hour(values.start_time.hour())
+                            .minute(values.start_time.minute())
+                            .second(values.start_time.second() || 0)
+                            .millisecond(0);
+                        finalStartTime = combined.toISOString();
                     } else {
-                        finalStartTime = values.start_time.format('YYYY-MM-DDTHH:mm:ss');
+                        finalStartTime = values.start_time.toISOString();
                     }
                 } else {
-                    finalStartTime = values.start_time.format('YYYY-MM-DDTHH:mm:ss');
+                    finalStartTime = values.start_time.toISOString();
                 }
             }
 

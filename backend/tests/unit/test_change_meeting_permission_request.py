@@ -1,6 +1,6 @@
 import asyncio
 import sys
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
@@ -32,7 +32,6 @@ from app.permission_request.domain.events import (
 )
 from app.permission_request.domain.value_objects import RequestCategory
 from app.user.domain.entity import UserEntity as User
-from app.utils.datetime import get_current_utc7_time
 
 
 @pytest.mark.asyncio
@@ -42,7 +41,7 @@ async def test_change_meeting_success_from_a_to_b():
     event_bus = MagicMock()
     event_bus.publish = AsyncMock()
 
-    now = get_current_utc7_time()
+    now = datetime.now(timezone.utc)
     start_b = now + timedelta(days=2)
     end_b = start_b + timedelta(hours=2)
 
@@ -122,7 +121,7 @@ async def test_change_meeting_new_registration_without_old_meeting():
     event_bus = MagicMock()
     event_bus.publish = AsyncMock()
 
-    now = get_current_utc7_time()
+    now = datetime.now(timezone.utc)
     meeting_b = Meeting(
         id=102,
         title="Meeting B (Ca Chiều CN)",
@@ -165,7 +164,7 @@ async def test_change_meeting_rejects_when_meeting_b_is_full():
     meeting_repo = MagicMock()
     event_bus = MagicMock()
 
-    now = get_current_utc7_time()
+    now = datetime.now(timezone.utc)
     # Meeting B có đủ MAX_SEATS = 35 participants
     participants = [
         MeetingParticipant(id=i, user_id=100 + i, meeting_id=103)
@@ -207,7 +206,7 @@ async def test_change_meeting_considers_absence_requests_as_available_seats():
     event_bus = MagicMock()
     event_bus.publish = AsyncMock()
 
-    now = get_current_utc7_time()
+    now = datetime.now(timezone.utc)
     # Meeting B có đủ 35 participants nhưng có 2 người nộp đơn ABSENCE
     participants = [
         MeetingParticipant(id=i, user_id=100 + i, meeting_id=104)
@@ -255,7 +254,7 @@ async def test_change_meeting_rejects_when_meeting_b_in_past():
     meeting_repo = MagicMock()
     event_bus = MagicMock()
 
-    now = get_current_utc7_time()
+    now = datetime.now(timezone.utc)
     meeting_b = Meeting(
         id=105,
         title="Meeting B in Past",
@@ -312,7 +311,7 @@ def test_get_upcoming_meetings_with_seats():
     meeting_repo = MagicMock()
     permission_repo = MagicMock()
 
-    now = get_current_utc7_time()
+    now = datetime.now(timezone.utc)
     m1 = Meeting(
         id=1,
         title="Meeting 1",
@@ -381,7 +380,7 @@ async def test_meeting_participant_transferred_notification_handler(monkeypatch)
     user_repo.get_by_id.return_value = user
 
     meeting_repo = MagicMock()
-    now = get_current_utc7_time()
+    now = datetime.now(timezone.utc)
     m_old = Meeting(
         id=101, title="Ca Cũ", start_time=now, end_time=now + timedelta(hours=2)
     )
@@ -436,7 +435,7 @@ async def test_meeting_participant_transferred_notifies_duty_schedule(monkeypatc
     user_repo.get_by_id.return_value = user
 
     meeting_repo = MagicMock()
-    now = get_current_utc7_time()
+    now = datetime.now(timezone.utc)
     m_old = Meeting(id=101, title="Nhóm 2", start_time=now, end_time=now + timedelta(hours=2))
     m_new = Meeting(
         id=102,

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from app.homework.application.dtos import (
@@ -24,7 +24,6 @@ from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.permission_request.domain.entity import PermissionRequest
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
 from app.user.infrastructure.repository import UserRepository
-from app.utils.datetime import get_current_utc7_time
 
 
 class GetHomeworkSubmissionStatusUseCase:
@@ -74,7 +73,7 @@ class GetHomeworkSubmissionStatusUseCase:
         coding_exercises = self._extract_coding_exercises(db_exercise_map, submissions)
 
         # 4. Đánh giá trạng thái từng học viên
-        now = get_current_utc7_time().replace(tzinfo=None)
+        now = datetime.now(timezone.utc)
         students = [
             self._evaluate_student(
                 assignee=assignee,

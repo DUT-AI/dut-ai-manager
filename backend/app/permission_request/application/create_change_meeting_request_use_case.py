@@ -1,4 +1,6 @@
+from datetime import datetime, timezone
 from typing import cast
+from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException
 
@@ -15,7 +17,6 @@ from app.permission_request.domain.events import (
 from app.permission_request.domain.value_objects import RequestCategory
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
 from app.shared.domain.event_bus import DomainEvent, EventBus
-from app.utils.datetime import get_current_utc7_time
 
 
 class CreateChangeMeetingRequestUseCase:
@@ -56,7 +57,7 @@ class CreateChangeMeetingRequestUseCase:
                 status_code=400, detail="Không thể đổi sang cùng một buổi họp"
             )
 
-        now = get_current_utc7_time()
+        now = datetime.now(timezone.utc)
 
         # 1. Khóa và lấy thông tin Meeting B (Meeting đích)
         meeting_b = self.meeting_repo.get_meeting_with_lock(meeting_id)
@@ -64,7 +65,14 @@ class CreateChangeMeetingRequestUseCase:
             raise HTTPException(status_code=404, detail="Không tìm thấy buổi họp đích")
 
         # 2. Kiểm tra thời hạn: Buổi B phải chưa bắt đầu
-        if now >= meeting_b.start_time:
+        target_start = (
+            meeting_b.start_time
+            if meeting_b.start_time.tzinfo is not None
+            else meeting_b.start_time.replace(
+                tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")
+            ).astimezone(timezone.utc)
+        )
+        if now >= target_start:
             raise HTTPException(
                 status_code=400,
                 detail="Không thể đổi sang buổi họp đã bắt đầu hoặc đã kết thúc",

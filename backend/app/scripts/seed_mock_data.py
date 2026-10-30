@@ -68,7 +68,7 @@ def seed_mock_data():
         user_b = created_users[1]
         user_c = created_users[2]
 
-        now = datetime.datetime.now()
+        now = datetime.datetime.now(datetime.timezone.utc)
         current_month = now.month
         current_year = now.year
 
@@ -80,7 +80,9 @@ def seed_mock_data():
 
         # Helper to create meeting
         def create_meeting(month, year, day, name):
-            date = datetime.datetime(year, month, day, 18, 0, 0)
+            date = datetime.datetime(
+                year, month, day, 18, 0, 0, tzinfo=datetime.timezone.utc
+            )
             meeting = Meeting(
                 title=name,
                 content="Mock meeting",

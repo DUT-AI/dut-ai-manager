@@ -98,7 +98,7 @@ if __name__ == "__main__":
     target_date = None
     if args.date:
         try:
-            target_date = datetime.strptime(args.date, "%Y-%m-%d").date()
+            target_date = date.fromisoformat(args.date)
         except ValueError:
             logger.error("❌ Invalid date format. Please use YYYY-MM-DD.")
             sys.exit(1)

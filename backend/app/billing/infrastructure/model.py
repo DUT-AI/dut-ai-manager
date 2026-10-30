@@ -2,7 +2,7 @@
 Billing ORM Models — SQLAlchemy 2.0, infrastructure layer.
 """
 
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Date, ForeignKey, Integer, String
@@ -15,7 +15,6 @@ from app.billing.domain.entity import (
     InvoiceStatus,
 )
 from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
-from app.utils.datetime import get_current_utc7_time
 
 if TYPE_CHECKING:
     from app.team.infrastructure.model import TeamModel
@@ -90,8 +89,8 @@ class InvoiceModel(SQLAlchemyTimestampMixin, Base):
             payment_method=entity.payment_method,
             transaction_id=entity.transaction_id,
             billing_period=entity.billing_period,
-            created_at=entity.created_at or get_current_utc7_time(),
-            updated_at=entity.updated_at or get_current_utc7_time(),
+            created_at=entity.created_at or datetime.now(timezone.utc),
+            updated_at=entity.updated_at or datetime.now(timezone.utc),
             created_by=entity.created_by,
             updated_by=entity.updated_by,
             is_deleted=entity.is_deleted,
@@ -139,8 +138,8 @@ class InvoiceItemModel(SQLAlchemyTimestampMixin, Base):
             reference_id=entity.reference_id,
             amount=entity.amount,
             note=entity.note,
-            created_at=entity.created_at or get_current_utc7_time(),
-            updated_at=entity.updated_at or get_current_utc7_time(),
+            created_at=entity.created_at or datetime.now(timezone.utc),
+            updated_at=entity.updated_at or datetime.now(timezone.utc),
             created_by=entity.created_by,
             updated_by=entity.updated_by,
             is_deleted=entity.is_deleted,

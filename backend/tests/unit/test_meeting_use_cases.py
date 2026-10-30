@@ -283,6 +283,180 @@ def test_update_meeting_without_user_ids_preserves_participants():
     assert updated_meeting.participants[0].status == ParticipantStatus.JOINED
 
 
+def test_participant_repository_save_persists_all_fields():
+    """Kiểm tra ParticipantRepository.save ánh xạ và lưu đầy đủ các trường bao gồm client_event_id."""
+    from datetime import timezone
+    from app.meeting.infrastructure.model import MeetingParticipant as ORMParticipant
+    from app.meeting.infrastructure.repository import ParticipantRepository
+
+    session = MagicMock()
+    orm_p = ORMParticipant(id=1, meeting_id=10, user_id=101)
+    session.get.return_value = orm_p
+
+    repo = ParticipantRepository(session=session)
+
+    check_in_dt = datetime(2026, 10, 30, 12, 10, tzinfo=timezone.utc)
+    domain_p = MeetingParticipant(
+        id=1,
+        meeting_id=10,
+        user_id=101,
+        status=ParticipantStatus.LATE_UNEXCUSED,
+        check_in_at=check_in_dt,
+        link_image="https://minio/proof.jpg",
+        client_event_id="evt_test_123",
+    )
+
+    saved = repo.save(domain_p)
+
+    assert saved.id == 1
+    assert orm_p.status == ParticipantStatus.LATE_UNEXCUSED
+    assert orm_p.check_in_at == check_in_dt
+    assert orm_p.link_image == "https://minio/proof.jpg"
+    assert orm_p.client_event_id == "evt_test_123"
+    session.add.assert_called_once_with(orm_p)
+    session.flush.assert_called_once()
+
+
+def test_checkin_use_case_delegates_to_domain_and_preserves_late_excused():
+    """Kiểm tra CheckInUseCase ủy quyền cho Domain Entity, bảo lưu LATE_EXCUSED và ghi nhận check_in_at."""
+    from datetime import timezone
+    from unittest.mock import AsyncMock, MagicMock
+    from app.meeting.application.checkin_use_case import CheckInUseCase
+    from app.meeting.domain.events import ParticipantCheckedIn
+
+    meeting_repo = MagicMock()
+    participant_repo = MagicMock()
+    minio_service = MagicMock()
+    minio_service.upload_file = AsyncMock(return_value="https://minio/bulk_face.jpg")
+    event_bus = MagicMock()
+    event_bus.publish = AsyncMock()
+
+    meeting_start = datetime(2026, 10, 30, 12, 0, tzinfo=timezone.utc)
+    meeting_end = datetime(2026, 10, 30, 14, 0, tzinfo=timezone.utc)
+    check_in_time = datetime(2026, 10, 30, 12, 20, tzinfo=timezone.utc)
+
+    dummy_meeting = Meeting(
+        id=10,
+        title="Buổi sinh hoạt DDD",
+        start_time=meeting_start,
+        end_time=meeting_end,
+    )
+    meeting_repo.get_domain_for_check_in.return_value = dummy_meeting
+
+    participant = MeetingParticipant(
+        id=1,
+        meeting_id=10,
+        user_id=101,
+        status=ParticipantStatus.LATE_EXCUSED,
+        check_in_at=None,
+    )
+    participant_repo.find_all_participations_in_time_window.return_value = [participant]
+    participant_repo.save.side_effect = lambda p: p
+
+    mock_image = MagicMock()
+    mock_image.read = AsyncMock(return_value=b"fake-image-bytes")
+    mock_image.filename = "cam.jpg"
+    mock_image.content_type = "image/jpeg"
+
+    uc = CheckInUseCase(
+        meeting_repo=meeting_repo,
+        participant_repo=participant_repo,
+        minio_service=minio_service,
+        event_bus=event_bus,
+    )
+
+    updated_participants, msg = asyncio.run(
+        uc.execute(
+            user_ids=[101],
+            image=mock_image,
+            client_time="2026-10-30T12:20:00Z",
+            client_event_id="evt_bulk_99",
+        )
+    )
+
+    assert len(updated_participants) == 1
+    p = updated_participants[0]
+    assert p.status == ParticipantStatus.LATE_EXCUSED
+    assert p.check_in_at == check_in_time
+    assert p.link_image == "https://minio/bulk_face.jpg"
+    assert p.client_event_id == "evt_bulk_99"
+
+    event_bus.publish.assert_called_once()
+    published_event = event_bus.publish.call_args[0][0]
+    assert isinstance(published_event, ParticipantCheckedIn)
+    assert published_event.user_id == 101
+    assert published_event.meeting_id == 10
+    assert published_event.is_late is True
+    assert published_event.check_in_at == check_in_time
+
+
+def test_checkin_with_card_use_case_delegates_to_domain_and_preserves_late_excused():
+    """Kiểm tra CheckInWithCardUseCase ủy quyền cho Domain Entity, bảo lưu LATE_EXCUSED và ghi nhận check_in_at."""
+    from datetime import timezone
+    from unittest.mock import AsyncMock, MagicMock
+    from app.meeting.application.checkin_with_card_use_case import CheckInWithCardUseCase
+    from app.meeting.domain.events import ParticipantCheckedIn
+
+    user_repo = MagicMock()
+    meeting_repo = MagicMock()
+    participant_repo = MagicMock()
+    tts_service = MagicMock()
+    tts_service.synthesize_with_cache = AsyncMock(return_value=b"RIFF_FAKE_AUDIO_BYTES")
+    minio_service = MagicMock()
+    minio_service.get_file = AsyncMock(return_value=None)
+    minio_service.upload_file = AsyncMock(return_value="https://minio/tts.wav")
+    event_bus = MagicMock()
+    event_bus.publish = AsyncMock()
+
+    meeting_start = datetime(2026, 10, 30, 12, 0, tzinfo=timezone.utc)
+    meeting_end = datetime(2026, 10, 30, 14, 0, tzinfo=timezone.utc)
+
+    dummy_user = MagicMock()
+    dummy_user.id = 101
+    dummy_user.name = "Nguyen Van A"
+    user_repo.get_summary_by_card_code.return_value = dummy_user
+
+    dummy_meeting = Meeting(
+        id=10,
+        title="Buổi sinh hoạt Card",
+        start_time=meeting_start,
+        end_time=meeting_end,
+    )
+    meeting_repo.get_domain_for_check_in.return_value = dummy_meeting
+
+    participant = MeetingParticipant(
+        id=1,
+        meeting_id=10,
+        user_id=101,
+        status=ParticipantStatus.LATE_EXCUSED,
+        check_in_at=None,
+    )
+    participant_repo.find_participation_in_time_window.return_value = participant
+    participant_repo.save.side_effect = lambda p: p
+
+    uc = CheckInWithCardUseCase(
+        user_repo=user_repo,
+        meeting_repo=meeting_repo,
+        participant_repo=participant_repo,
+        tts_service=tts_service,
+        minio_service=minio_service,
+        event_bus=event_bus,
+    )
+
+    msg, audio = asyncio.run(uc.execute(card_code="CARD_123456"))
+
+    assert "thành công" in msg
+    assert audio == b"RIFF_FAKE_AUDIO_BYTES"
+    assert participant.status == ParticipantStatus.LATE_EXCUSED
+    assert participant.check_in_at is not None
+
+    event_bus.publish.assert_called_once()
+    published_event = event_bus.publish.call_args[0][0]
+    assert isinstance(published_event, ParticipantCheckedIn)
+    assert published_event.user_id == 101
+    assert published_event.meeting_id == 10
+
+
 if __name__ == "__main__":
     test_check_meeting_attendance_decoupled_job()
     test_meeting_repository_save_hard_deletes_removed_participants()

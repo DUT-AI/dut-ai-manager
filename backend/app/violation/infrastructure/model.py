@@ -5,7 +5,7 @@ Only used for database mapping and entity conversion.
 Domain entity: app.violation.domain.entity.Violation
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import DateTime, ForeignKey, String
@@ -26,7 +26,7 @@ class ViolationModel(SQLAlchemyTimestampMixin, Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     reason: Mapped[str] = mapped_column(String(500))
-    date: Mapped[datetime] = mapped_column(DateTime, index=True)
+    date: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
 
     # Foreign keys
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
@@ -101,7 +101,7 @@ class ViolationModel(SQLAlchemyTimestampMixin, Base):
         return cls(
             id=entity.id,
             reason=entity.reason,
-            date=entity.date or datetime.now(),
+            date=entity.date or datetime.now(timezone.utc),
             user_id=entity.user_id,
             created_by=entity.created_by,
             updated_by=entity.updated_by,

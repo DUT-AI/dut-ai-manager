@@ -1,16 +1,11 @@
 <!--
 Sync Impact Report:
-- Version: v1.4.0 -> v1.5.0
+- Version: v1.5.0 -> v1.6.0
 - Ratification Date: 2026-09-25
-- Last Amended: 2026-10-18
+- Last Amended: 2026-10-30
 - Principles enhanced / modified:
-  - I. Clean Architecture & Practical DDD Boundaries (MUST) -> Clarified strict boundary between Repositories/Domain Services and Use Cases. Repositories handle data retrieval/persistence; Use Cases orchestrate business flows.
-  - VII. Strict Single-Responsibility Use Cases (One Public Execute Per Class) (MUST) -> Strengthened enforcement: Each Use Case file MUST contain exactly ONE use case class with a single primary entrypoint method (`execute` or domain-specific action). Grouping multiple distinct queries/commands into a single use case class (e.g. `get_all`, `get_paged`, `get_assigned_to_user`, `get_unsubmitted_report` in one class) is strictly prohibited.
-  - VIII. Frontend Component Modularity & Clean Hook Consumption (MUST) -> Mandated direct consumption of canonical hooks/services; prohibited redundant inline mutations, wrappers, or duplicate state logic.
-  - IX. Pure Composition & Domain Services Over Base Use Cases (MUST) -> Maintained zero-base-use-case rule and explicit Dishka injection.
-- Principles added:
-  - X. Zero Redundant Backward Compatibility & No Duplicate API Surface (MUST) -> Strictly forbids creating duplicate aliases, dual-named functions/hooks, or obsolete compatibility layers that pollute the codebase (e.g., `useSyncHomework = useSyncHomeworkFromQuiz`). When renaming or refactoring, all call sites MUST be updated directly to use the canonical identifier.
-- Rationale: Eliminating monolithic multi-method use cases, enforcing single responsibility across backend queries, and preventing codebase rot caused by needless backward compatibility aliases.
+  - III. Enterprise UTC Storage & Vietnam Display Integrity (MUST) -> Upgraded from naive ICT datetime to Enterprise UTC Architecture: All database tables (TIMESTAMPTZ), ORM models, domain entities, and use cases operate strictly on Timezone-Aware UTC (`timezone.utc`). Banned naive datetimes via Ruff `DTZ`. Inbound request DTOs auto-detect naive strings as Vietnam local time (`Asia/Ho_Chi_Minh`) via `UtcDateTime`.
+- Rationale: Standardizing enterprise backend persistence to UTC, eliminating time calculation bugs and legacy `get_current_utc7_time` dependencies while preserving perfect user experience for Vietnam timezone.
 -->
 
 # DUT AI Manager Constitution
@@ -27,8 +22,12 @@ Every business domain in `dut-ai-manager` (Meeting, Homework, Violation, Report,
 ### II. Dependency Injection with Dishka (MUST)
 All dependencies (Repositories, Use Cases, External Services) MUST be registered in Dishka providers (`providers.py`) and resolved using `@inject` with `FromDishka[...]` in FastAPI controllers or async job containers. Direct ad-hoc instantiation of services/repositories inside controllers or application logic is strictly forbidden.
 
-### III. Unified UTC+7 Timezone & DateTime Integrity (MUST)
-All business operations, attendance checks, deadline calculations, and cron jobs MUST operate on the **UTC+7 (Asia/Ho_Chi_Minh)** timezone. Code MUST use `app.utils.datetime.get_current_utc7_time()` or parse client ISO strings to naive UTC+7 before performing domain comparisons.
+### III. Enterprise UTC Storage & Vietnam Display Integrity (MUST)
+All backend models, domain entities, background jobs, and database tables MUST store, process, and compare timestamps using **Timezone-Aware UTC** (`datetime.now(timezone.utc)` and `DateTime(timezone=True)` / `TIMESTAMPTZ`).
+- **Zero Naive Datetimes**: Naive datetime usage is strictly prohibited across application code and enforced via the Ruff `DTZ` linter.
+- **Client Ingestion**: Inbound API requests accept naive or aware strings. Naive inputs are interpreted as Vietnam local time (`Asia/Ho_Chi_Minh`, UTC+7) and normalized into timezone-aware UTC via `UtcDateTime` DTOs (`app.shared.domain.datetime_types`).
+- **Date/Month Calculations**: Periodic jobs and daily scheduling querying local days/months MUST explicitly project from UTC to Vietnam timezone: `datetime.now(timezone.utc).astimezone(ZoneInfo("Asia/Ho_Chi_Minh")).date()`.
+- **Display Layer**: Dates are returned in ISO 8601 UTC or formatted to `Asia/Ho_Chi_Minh` on client interfaces and notification channels.
 
 ### IV. Event-Driven Decoupling & Asynchronous Handlers (MUST)
 Side effects such as third-party notifications (Discord bot webhooks/messages, Zalo Mini App messages), audit logs, and real-time SSE broadcasts MUST be triggered asynchronously via `EventBus` (`DomainEvent` and `EventHandler`). Synchronous blocking calls to external notification APIs inside transaction paths are prohibited.
@@ -86,4 +85,4 @@ Both backend and frontend codebases MUST NOT retain redundant backward-compatibi
    - **MINOR**: Addition of new principles or major workflow standards.
    - **PATCH**: Non-semantic clarifications and wording updates.
 
-**Version**: 1.5.0 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-10-18
+**Version**: 1.6.0 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-10-30

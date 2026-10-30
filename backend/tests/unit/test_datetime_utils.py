@@ -1,58 +1,31 @@
-from datetime import UTC, datetime
+"""Tests for datetime utilities in app.utils.datetime."""
 
-from app.utils.datetime import to_utc7_naive
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
-
-def test_to_utc7_naive_none():
-    assert to_utc7_naive(None) is None
-
-
-def test_to_utc7_naive_empty_or_invalid_string():
-    assert to_utc7_naive("") is None
-    assert to_utc7_naive("   ") is None
-    assert to_utc7_naive("invalid-date-string") is None
+from app.utils.datetime import (
+    ICT_TZ,
+    VIETNAM_TZ,
+    parse_datetime_to_utc,
+    to_vietnam_time,
+)
 
 
-def test_to_utc7_naive_with_iso_z_string():
-    # 2026-10-06 10:00:00 UTC -> 2026-10-06 17:00:00 ICT
-    res = to_utc7_naive("2026-10-06T10:00:00Z")
-    assert res is not None
-    assert res.tzinfo is None
-    assert res == datetime(2026, 10, 6, 17, 0, 0)
+def test_vietnam_timezone_constant():
+    assert VIETNAM_TZ == ZoneInfo("Asia/Ho_Chi_Minh")
+    assert ICT_TZ is not None
 
 
-def test_to_utc7_naive_with_iso_offset_string():
-    # 2026-10-06 10:00:00+00:00 -> 2026-10-06 17:00:00 ICT
-    res = to_utc7_naive("2026-10-06T10:00:00+00:00")
-    assert res is not None
-    assert res.tzinfo is None
-    assert res == datetime(2026, 10, 6, 17, 0, 0)
-
-    # 2026-10-06 17:00:00+07:00 -> 2026-10-06 17:00:00 ICT
-    res7 = to_utc7_naive("2026-10-06T17:00:00+07:00")
-    assert res7 is not None
-    assert res7.tzinfo is None
-    assert res7 == datetime(2026, 10, 6, 17, 0, 0)
+def test_parse_datetime_to_utc():
+    # Naive assumed Asia/Ho_Chi_Minh (+07:00)
+    naive = datetime(2026, 10, 31, 14, 0, 0)
+    utc_dt = parse_datetime_to_utc(naive)
+    assert utc_dt.tzinfo == timezone.utc
+    assert utc_dt == datetime(2026, 10, 31, 7, 0, 0, tzinfo=timezone.utc)
 
 
-def test_to_utc7_naive_with_naive_string():
-    res = to_utc7_naive("2026-10-06 18:30:00")
-    assert res is not None
-    assert res.tzinfo is None
-    assert res == datetime(2026, 10, 6, 18, 30, 0)
-
-
-def test_to_utc7_naive_with_aware_datetime():
-    utc_dt = datetime(2026, 10, 6, 10, 0, 0, tzinfo=UTC)
-    res = to_utc7_naive(utc_dt)
-    assert res is not None
-    assert res.tzinfo is None
-    assert res == datetime(2026, 10, 6, 17, 0, 0)
-
-
-def test_to_utc7_naive_with_naive_datetime():
-    naive_dt = datetime(2026, 10, 6, 18, 30, 0)
-    res = to_utc7_naive(naive_dt)
-    assert res is not None
-    assert res.tzinfo is None
-    assert res == naive_dt
+def test_to_vietnam_time():
+    utc_dt = datetime(2026, 10, 31, 7, 0, 0, tzinfo=timezone.utc)
+    vn_dt = to_vietnam_time(utc_dt)
+    assert vn_dt.hour == 14
+    assert vn_dt.day == 31

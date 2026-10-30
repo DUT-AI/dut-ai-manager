@@ -2,7 +2,7 @@
 Unit tests for Duty Use Cases.
 """
 
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -1522,8 +1522,13 @@ async def test_submit_duty_evidence_allows_transferred_in_student(
     Bạn A ĐƯỢC PHÉP nộp minh chứng thành công vì có tên trong danh sách tham gia buổi họp đó.
     """
     monkeypatch.setattr(
-        "app.duty.application.submit_duty_evidence_use_case.get_current_utc7_time",
-        lambda: datetime(2026, 10, 24, 20, 0, 0),
+        "app.duty.application.submit_duty_evidence_use_case.datetime",
+        MagicMock(
+            now=MagicMock(
+                return_value=datetime(2026, 10, 24, 13, 0, 0, tzinfo=timezone.utc)
+            ),
+            combine=datetime.combine,
+        ),
     )
     from app.duty.application.submit_duty_evidence_use_case import (
         SubmitDutyEvidenceUseCase,

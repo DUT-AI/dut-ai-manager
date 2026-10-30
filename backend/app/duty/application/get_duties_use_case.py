@@ -3,8 +3,9 @@ Get Duties Use Case.
 """
 
 from collections import defaultdict
-from datetime import date, time, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from app.duty.application.dtos import DutyResponse, WeeklyDutyClassDto
 from app.duty.domain.entity import CleaningDuty, DutyStatus
@@ -72,7 +73,7 @@ class GetDutiesUseCase:
         - Bao gồm các ca trực nhật tự do do Admin/HR tạo (không ràng buộc bởi meeting).
         """
         if not target_date:
-            target_date = date.today()
+            target_date = datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).date()
 
         # Tìm thứ 2 và chủ nhật trong tuần
         monday = target_date - timedelta(days=target_date.weekday())

@@ -1,10 +1,9 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from app.bonus_point.domain.entity import BonusPoint
 from app.bonus_point.domain.value_objects import BonusPointType
 from app.bonus_point.infrastructure.repository import BonusPointRepository
 from app.meeting.infrastructure.repository import ParticipantRepository
-from app.utils.datetime import get_current_utc7_time
 
 
 class CalculateActivityPointsUseCase:
@@ -18,7 +17,7 @@ class CalculateActivityPointsUseCase:
 
     def execute(self, since: datetime | None = None) -> int:
         if since is None:
-            since = get_current_utc7_time() - timedelta(hours=1)
+            since = datetime.now(timezone.utc) - timedelta(hours=1)
 
         participants = self.participant_repo.get_completed_since(since)
 
@@ -41,7 +40,7 @@ class CalculateActivityPointsUseCase:
                             user_id=p.user_id,
                             points=points,
                             reason=f"Hoạt động tại CLB: {hours:.2f} giờ",
-                            date=get_current_utc7_time(),
+                            date=datetime.now(timezone.utc),
                             type=BonusPointType.CLUB_ACTIVITY,
                         )
                         self.bonus_point_repo.add(bonus)

@@ -4,14 +4,13 @@ Violation Domain Entity — pure Pydantic, NO ORM dependency.
 Contains business rules and validation for violations.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 from pydantic import field_validator
 
 from app.shared.domain.base_entity import BaseEntity
 from app.shared.domain.value_objects import UserRef
-from app.utils.datetime import get_current_utc7_time
 
 
 class ViolationType(str, Enum):
@@ -61,8 +60,8 @@ class Violation(BaseEntity):
             user_id=user_id,
             created_by=system_user_id,
             updated_by=system_user_id,
-            created_at=get_current_utc7_time(),
-            updated_at=get_current_utc7_time(),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
         )
 
     @property

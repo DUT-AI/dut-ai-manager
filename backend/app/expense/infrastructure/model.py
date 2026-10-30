@@ -3,7 +3,7 @@ Expense ORM Models — SQLAlchemy 2.0, infrastructure layer.
 """
 
 import uuid
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Date, ForeignKey, Integer, String
@@ -11,7 +11,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.expense.domain.entity import ExpenseInvoice, ExpenseStatus
 from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
-from app.utils.datetime import get_current_utc7_time
 
 if TYPE_CHECKING:
     from app.team.infrastructure.model import TeamModel
@@ -83,8 +82,8 @@ class ExpenseInvoiceModel(SQLAlchemyTimestampMixin, Base):
             else entity.status,
             payment_date=entity.payment_date,
             note=entity.note,
-            created_at=entity.created_at or get_current_utc7_time(),
-            updated_at=entity.updated_at or get_current_utc7_time(),
+            created_at=entity.created_at or datetime.now(timezone.utc),
+            updated_at=entity.updated_at or datetime.now(timezone.utc),
             created_by=entity.created_by,
             updated_by=entity.updated_by,
             is_deleted=entity.is_deleted,

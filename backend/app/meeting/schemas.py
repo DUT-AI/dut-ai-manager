@@ -1,9 +1,10 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
+from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.utils.datetime import get_current_utc7_time
+from app.shared.domain.datetime_types import UtcDateTime
 
 from .domain.value_objects import (
     CriteriaBreakdownSummary,
@@ -56,8 +57,8 @@ class ParticipantResponse(BaseModel):
     user_id: int
     user_name: str
     user_avatar_url: str | None = None
-    check_in_at: datetime | None = None
-    check_out_at: datetime | None = None
+    check_in_at: UtcDateTime | None = None
+    check_out_at: UtcDateTime | None = None
     status: ParticipantStatus
     link_image: str | None = None
 
@@ -112,8 +113,8 @@ class ParticipantResponse(BaseModel):
 
 class UpdateParticipantStatusRequest(BaseModel):
     status: ParticipantStatus
-    check_in_at: datetime | None = None
-    check_out_at: datetime | None = None
+    check_in_at: UtcDateTime | None = None
+    check_out_at: UtcDateTime | None = None
 
 
 class UserRefDto(BaseModel):
@@ -127,8 +128,8 @@ class UserRefDto(BaseModel):
 class MeetingCreate(BaseModel):
     title: str = Field(..., max_length=255)
     content: str | None = Field(None, max_length=1000)
-    start_time: datetime
-    end_time: datetime
+    start_time: UtcDateTime
+    end_time: UtcDateTime
     require_check_in: bool = True
     enable_evaluation: bool = False
     user_ids: list[int] = []
@@ -137,8 +138,8 @@ class MeetingCreate(BaseModel):
 class MeetingUpdate(BaseModel):
     title: str | None = Field(None, max_length=255)
     content: str | None = Field(None, max_length=1000)
-    start_time: datetime | None = None
-    end_time: datetime | None = None
+    start_time: UtcDateTime | None = None
+    end_time: UtcDateTime | None = None
     require_check_in: bool | None = None
     enable_evaluation: bool | None = None
     user_ids: list[int] | None = None
@@ -215,8 +216,15 @@ class MeetingDetailResponse(MeetingResponse):
     def from_domain(cls, m: "DomainMeeting") -> "MeetingDetailResponse":
         """Map domain Meeting → detail schema (kèm participants)."""
         base_res = MeetingResponse.from_domain(m)
-        now = get_current_utc7_time()
-        is_ended = now > m.end_time
+        now = datetime.now(timezone.utc)
+        end_time_utc = (
+            m.end_time
+            if m.end_time.tzinfo is not None
+            else m.end_time.replace(tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")).astimezone(
+                timezone.utc
+            )
+        )
+        is_ended = now > end_time_utc
 
         participants_raw = getattr(m, "participants", []) or []
         participants: list[ParticipantResponse] = []
@@ -350,7 +358,7 @@ class MeetingOverallEvaluationResponse(BaseModel):
             average_score=getattr(e, "average_score", 0.0),
             general_feedback=getattr(e, "general_feedback", None),
             trainer=trainer_dto,
-            created_at=getattr(e, "created_at", None) or datetime.now(),
+            created_at=getattr(e, "created_at", None) or datetime.now(timezone.utc),
         )
 
 
@@ -453,7 +461,7 @@ class EvaluationResponse(BaseModel):
             feedback_text=getattr(e, "feedback_text", None),
             reviewer=reviewer_dto,
             target_user=target_dto,
-            created_at=getattr(e, "created_at", None) or datetime.now(),
+            created_at=getattr(e, "created_at", None) or datetime.now(timezone.utc),
         )
 
 

@@ -85,7 +85,7 @@ class DutyNotificationHandler(EventHandler):
             return ""
         if isinstance(d, str):
             try:
-                return datetime.strptime(d, "%Y-%m-%d").strftime("%d/%m/%Y")
+                return date.fromisoformat(d).strftime("%d/%m/%Y")
             except ValueError:
                 return d
         return d.strftime("%d/%m/%Y")

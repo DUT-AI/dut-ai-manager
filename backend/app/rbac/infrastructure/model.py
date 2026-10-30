@@ -2,6 +2,7 @@
 RBAC ORM Models — SQLAlchemy 2.0, infrastructure layer.
 """
 
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import Boolean, ForeignKey, String
@@ -9,7 +10,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.rbac.domain.entity import Permission, Role, RoleApiKey, RolePermission
 from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
-from app.utils.datetime import get_current_utc7_time
 
 if TYPE_CHECKING:
     from app.user.infrastructure.model import UserModel
@@ -50,8 +50,8 @@ class PermissionModel(SQLAlchemyTimestampMixin, Base):
             description=entity.description,
             resource=entity.resource,
             action=entity.action,
-            created_at=entity.created_at or get_current_utc7_time(),
-            updated_at=entity.updated_at or get_current_utc7_time(),
+            created_at=entity.created_at or datetime.now(timezone.utc),
+            updated_at=entity.updated_at or datetime.now(timezone.utc),
             is_deleted=entity.is_deleted or False,
         )
 
@@ -99,8 +99,8 @@ class RoleApiKeyModel(SQLAlchemyTimestampMixin, Base):
             prefix=entity.prefix,
             is_active=entity.is_active,
             role_id=entity.role_id,
-            created_at=entity.created_at or get_current_utc7_time(),
-            updated_at=entity.updated_at or get_current_utc7_time(),
+            created_at=entity.created_at or datetime.now(timezone.utc),
+            updated_at=entity.updated_at or datetime.now(timezone.utc),
             is_deleted=entity.is_deleted or False,
         )
 
@@ -142,8 +142,8 @@ class RolePermissionModel(SQLAlchemyTimestampMixin, Base):
             id=entity.id,
             role_id=entity.role_id,
             permission_id=entity.permission_id,
-            created_at=entity.created_at or get_current_utc7_time(),
-            updated_at=entity.updated_at or get_current_utc7_time(),
+            created_at=entity.created_at or datetime.now(timezone.utc),
+            updated_at=entity.updated_at or datetime.now(timezone.utc),
             is_deleted=entity.is_deleted or False,
         )
 
@@ -194,7 +194,7 @@ class RoleModel(SQLAlchemyTimestampMixin, Base):
             id=entity.id,
             name=entity.name,
             description=entity.description,
-            created_at=entity.created_at or get_current_utc7_time(),
-            updated_at=entity.updated_at or get_current_utc7_time(),
+            created_at=entity.created_at or datetime.now(timezone.utc),
+            updated_at=entity.updated_at or datetime.now(timezone.utc),
             is_deleted=entity.is_deleted or False,
         )

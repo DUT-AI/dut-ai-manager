@@ -1,9 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import StrEnum
 
 from app.homework.domain.value_objects import SubmissionEvaluation
 from app.shared.domain.base_entity import BaseEntity
-from app.utils.datetime import get_current_utc7_time
+from app.shared.domain.datetime_types import ensure_utc
 
 
 class SubmissionType(StrEnum):
@@ -53,8 +53,8 @@ class Homework(BaseEntity):
         is_submitted = (not has_coding or coding_submitted) and (
             not has_game or game_submitted
         )
-        now = reference_time or get_current_utc7_time()
-        is_overdue = not is_submitted and (self.deadline < now)
+        now = ensure_utc(reference_time) if reference_time else datetime.now(timezone.utc)
+        is_overdue = not is_submitted and (ensure_utc(self.deadline) < now)
 
         return SubmissionEvaluation(
             is_submitted=is_submitted,
@@ -66,17 +66,9 @@ class Homework(BaseEntity):
 
     def get_effective_deadline(self, postpone_time: datetime | None) -> datetime:
         """Domain Rule: Xác định deadline hiệu lực của học viên khi có đơn xin gia hạn."""
-        base_dl = (
-            self.deadline.replace(tzinfo=None)
-            if self.deadline.tzinfo
-            else self.deadline
-        )
+        base_dl = ensure_utc(self.deadline)
         if postpone_time:
-            post_time = (
-                postpone_time.replace(tzinfo=None)
-                if postpone_time.tzinfo
-                else postpone_time
-            )
+            post_time = ensure_utc(postpone_time)
             if post_time > base_dl:
                 return post_time
         return base_dl
@@ -144,13 +136,7 @@ class HomeworkSubmission(BaseEntity):
 
     def is_late_for(self, deadline: datetime) -> bool:
         """Domain Rule: Xác định bài nộp có bị trễ so với deadline hiệu lực không."""
-        sub_time = (
-            self.submitted_at.replace(tzinfo=None)
-            if self.submitted_at.tzinfo
-            else self.submitted_at
-        )
-        dl_time = deadline.replace(tzinfo=None) if deadline.tzinfo else deadline
-        return sub_time > dl_time
+        return ensure_utc(self.submitted_at) > ensure_utc(deadline)
 
     @property
     def is_coding(self) -> bool:

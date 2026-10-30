@@ -32,10 +32,20 @@ export const PermissionRequestModal = ({ open, editingItem, initialDate, homewor
     const handleFinish = (values: any) => {
         let finalStartTime = undefined;
         if (values.start_time) {
-            // Since this modal creates from a specific date day, we maintain that date part
-            const dateStr = initialDate.format('YYYY-MM-DD');
-            const timeStr = values.start_time.format('HH:mm:ss');
-            finalStartTime = `${dateStr}T${timeStr}`;
+            const timeDayjs = dayjs(values.start_time);
+            let baseDate = initialDate;
+            if (values.category === 'LATE' && values.meeting_id) {
+                const meeting = meetings.find((m) => m.id === values.meeting_id);
+                if (meeting && meeting.start_time) {
+                    baseDate = dayjs(meeting.start_time);
+                }
+            }
+            const fullDateTime = baseDate
+                .hour(timeDayjs.hour())
+                .minute(timeDayjs.minute())
+                .second(timeDayjs.second())
+                .millisecond(0);
+            finalStartTime = fullDateTime.toISOString();
         }
 
         const formattedValues = {

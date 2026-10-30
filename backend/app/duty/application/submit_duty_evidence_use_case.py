@@ -2,8 +2,9 @@
 Submit Duty Evidence Use Case.
 """
 
-from datetime import datetime, time
+from datetime import datetime, time, timezone
 from typing import cast
+from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException, UploadFile, status
 
@@ -16,7 +17,6 @@ from app.meeting.infrastructure.repository import MeetingRepository
 from app.shared.domain.event_bus import DomainEvent, EventBus
 from app.shared.infrastructure.minio_service import MinioService
 from app.team.infrastructure.repository import TeamRepository
-from app.utils.datetime import get_current_utc7_time
 
 
 class SubmitDutyEvidenceUseCase:
@@ -52,10 +52,12 @@ class SubmitDutyEvidenceUseCase:
                 detail="Ca trực nhật không tồn tại",
             )
 
-        now = get_current_utc7_time()
+        now = datetime.now(timezone.utc)
 
         # Kiểm tra deadline: 22:00 cùng ngày (Admin/HR có quyền nộp thử hoặc nộp thay)
-        deadline_dt = datetime.combine(duty.duty_date, time(22, 0, 0))
+        deadline_dt = datetime.combine(
+            duty.duty_date, time(22, 0, 0), tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")
+        ).astimezone(timezone.utc)
         if not is_admin and now > deadline_dt and duty.status != DutyStatus.COMPLETED:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

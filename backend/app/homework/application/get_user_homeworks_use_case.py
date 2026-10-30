@@ -1,9 +1,10 @@
+from datetime import datetime, timezone
+
 from app.homework.application.dtos import HomeworkResponse
 from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.homework.infrastructure.homework_submission_repository import (
     HomeworkSubmissionRepository,
 )
-from app.utils.datetime import get_current_utc7_time
 
 
 class GetUserHomeworksUseCase:
@@ -33,7 +34,7 @@ class GetUserHomeworksUseCase:
         if not paged_hw:
             return [], total
 
-        now = get_current_utc7_time()
+        now = datetime.now(timezone.utc)
 
         # Query all submissions of user_id for the paged homeworks from database
         paged_hw_ids = [hw.id for hw in paged_hw if hw.id is not None]

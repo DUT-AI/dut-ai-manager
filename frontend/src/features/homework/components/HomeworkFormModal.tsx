@@ -174,7 +174,7 @@ export const HomeworkFormModal = ({
         try {
             const payload = {
                 title: values.title.trim(),
-                deadline: values.deadline.format('YYYY-MM-DDTHH:mm:ss'),
+                deadline: values.deadline.toISOString(),
                 link: values.link?.trim() || '',
                 slug: values.slug?.trim() || null,
                 requires_coding: !!values.requires_coding,

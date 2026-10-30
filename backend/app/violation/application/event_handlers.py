@@ -1,3 +1,6 @@
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+
 from loguru import logger
 
 from app.homework.domain.value_objects import HomeworkOverdueDetected
@@ -11,7 +14,6 @@ from app.meeting.infrastructure.repository import ParticipantRepository
 from app.permission_request.domain.value_objects import RequestCategory
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
 from app.shared.application.event_handler import EventHandler
-from app.utils.datetime import get_current_utc7_time
 from app.violation.application.create_violation_use_case import CreateViolationUseCase
 
 
@@ -44,7 +46,7 @@ class AutomatedViolationHandler(EventHandler):
         self, event: ParticipantAbsenceRecorded | MeetingAbsenceDetected
     ):
         """Xử lý vắng họp: tra cứu đơn xin vắng, cập nhật trạng thái và tạo vi phạm nếu không phép."""
-        now = get_current_utc7_time()
+        now = datetime.now(timezone.utc)
         logger.info(
             f"🔍 [ViolationHandler] Processing absence for user {event.user_id} in meeting {event.meeting_id}"
         )
@@ -97,7 +99,7 @@ class AutomatedViolationHandler(EventHandler):
 
     async def _handle_meeting_late(self, event: ParticipantLateRecorded):
         """Xử lý đi trễ: tra cứu đơn xin trễ, đối soát thời gian và tạo vi phạm nếu trễ không phép."""
-        now = get_current_utc7_time()
+        now = datetime.now(timezone.utc)
         logger.info(
             f"🔍 [ViolationHandler] Processing late arrival for user {event.user_id} in meeting {event.meeting_id}"
         )
@@ -198,7 +200,7 @@ class AutomatedViolationHandler(EventHandler):
 
     async def _handle_homework_overdue(self, event: HomeworkOverdueDetected):
         """Xử lý bài tập quá hạn: kiểm tra đơn xin hoãn (POSTPONE) và tạo vi phạm nếu không hợp lệ."""
-        now = get_current_utc7_time()
+        now = datetime.now(timezone.utc)
         logger.info(
             f"🔍 [ViolationHandler] Processing overdue homework for user {event.user_id} in homework {event.homework_id}"
         )
@@ -208,15 +210,16 @@ class AutomatedViolationHandler(EventHandler):
         )
         postpone_req = next(iter(postpone_requests), None)
 
-        now_naive = now.replace(tzinfo=None)
         has_valid_postpone = False
         if postpone_req and postpone_req.start_time:
             req_time = (
-                postpone_req.start_time.replace(tzinfo=None)
+                postpone_req.start_time
                 if postpone_req.start_time.tzinfo is not None
-                else postpone_req.start_time
+                else postpone_req.start_time.replace(
+                    tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")
+                ).astimezone(timezone.utc)
             )
-            if now_naive <= req_time:
+            if now <= req_time:
                 has_valid_postpone = True
 
         if has_valid_postpone:

@@ -61,9 +61,10 @@ class MonthlyUserStatsRepository(
 
     def get_current_title(self, user_id: int) -> str | None:
         """Lấy danh hiệu hiện tại (xét tháng trước, áp dụng tháng này)."""
-        from app.utils.datetime import get_current_utc7_time
+        from datetime import datetime, timezone
+        from zoneinfo import ZoneInfo
 
-        now = get_current_utc7_time()
+        now = datetime.now(timezone.utc).astimezone(ZoneInfo("Asia/Ho_Chi_Minh"))
 
         # Lấy danh hiệu của tháng trước
         first_day = now.replace(day=1)

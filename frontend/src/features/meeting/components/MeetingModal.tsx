@@ -236,8 +236,8 @@ export const MeetingModal = ({ open, editingItem, initialDate, confirmLoading, o
         const formattedValues = {
             title: values.title.trim(),
             content: values.content?.trim() || '',
-            start_time: start.format('YYYY-MM-DDTHH:mm:ss'),
-            end_time: end.format('YYYY-MM-DDTHH:mm:ss'),
+            start_time: start.toISOString(),
+            end_time: end.toISOString(),
             require_check_in: values.require_check_in ?? true,
             enable_evaluation: values.enable_evaluation ?? false,
             user_ids: finalUserIds,

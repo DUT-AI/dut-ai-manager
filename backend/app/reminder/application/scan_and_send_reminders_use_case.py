@@ -4,7 +4,7 @@ Orchestrates candidate task scanners, applies deduplication/cooldown filters,
 and delegates dispatching to ReminderDispatcher using unified NotificationRepository.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.reminder.application.dtos import (
     ReminderScanDetailDto,
@@ -17,7 +17,6 @@ from app.reminder.domain.entity import (
     ReminderStatus,
 )
 from app.reminder.infrastructure.repository import NotificationRepository
-from app.utils.datetime import get_current_utc7_time
 
 
 class ScanAndSendRemindersUseCase:
@@ -37,7 +36,7 @@ class ScanAndSendRemindersUseCase:
         now: datetime | None = None,
     ) -> TriggerReminderScanResponseDto:
         if now is None:
-            now = get_current_utc7_time()
+            now = datetime.now(timezone.utc)
 
         total_scanned = 0
         total_sent = 0

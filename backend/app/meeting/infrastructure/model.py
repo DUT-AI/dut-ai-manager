@@ -2,7 +2,7 @@
 Meeting ORM Models — SQLAlchemy 2.0, infrastructure layer.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, String
 from sqlalchemy.dialects import postgresql
@@ -23,7 +23,6 @@ from app.meeting.domain.entity import MeetingParticipant as MeetingParticipantEn
 from app.meeting.domain.value_objects import EvaluationType, ParticipantStatus
 from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
 from app.user.infrastructure.model import UserModel
-from app.utils.datetime import get_current_utc7_time
 
 
 class Meeting(SQLAlchemyTimestampMixin, Base):
@@ -34,11 +33,13 @@ class Meeting(SQLAlchemyTimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(255))
     content: Mapped[str | None] = mapped_column(String(1000), default=None)
-    start_time: Mapped[datetime] = mapped_column(DateTime, index=True)
-    end_time: Mapped[datetime] = mapped_column(DateTime, index=True)
+    start_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    end_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     require_check_in: Mapped[bool] = mapped_column(Boolean, default=True)
     enable_evaluation: Mapped[bool] = mapped_column(Boolean, default=False)
-    evaluation_deadline: Mapped[datetime | None] = mapped_column(DateTime, default=None)
+    evaluation_deadline: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=None
+    )
 
     participants: Mapped[list["MeetingParticipant"]] = relationship(
         back_populates="meeting",
@@ -83,7 +84,8 @@ class Meeting(SQLAlchemyTimestampMixin, Base):
             sorted_participants = sorted(
                 active_participants,
                 key=lambda p: (
-                    getattr(p, "created_at", None) or datetime.min,
+                    getattr(p, "created_at", None)
+                    or datetime.min.replace(tzinfo=timezone.utc),
                     getattr(p, "id", None) or 0,
                 ),
                 reverse=True,
@@ -104,8 +106,8 @@ class Meeting(SQLAlchemyTimestampMixin, Base):
             ),
             participants=participants_list,
             creator=creator_ref,
-            created_at=self.created_at or get_current_utc7_time(),
-            updated_at=self.updated_at or get_current_utc7_time(),
+            created_at=self.created_at or datetime.now(timezone.utc),
+            updated_at=self.updated_at or datetime.now(timezone.utc),
             created_by=self.created_by,
             updated_by=self.updated_by,
             is_deleted=self.is_deleted if self.is_deleted is not None else False,
@@ -132,8 +134,12 @@ class MeetingParticipant(SQLAlchemyTimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     meeting_id: Mapped[int] = mapped_column(ForeignKey("meetings.id"), index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
-    check_in_at: Mapped[datetime | None] = mapped_column(DateTime, default=None)
-    check_out_at: Mapped[datetime | None] = mapped_column(DateTime, default=None)
+    check_in_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=None
+    )
+    check_out_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=None
+    )
     status: Mapped[ParticipantStatus] = mapped_column(
         String(50), default=ParticipantStatus.NOT_JOINED
     )
@@ -167,8 +173,8 @@ class MeetingParticipant(SQLAlchemyTimestampMixin, Base):
             link_image=self.link_image,
             client_event_id=self.client_event_id,
             user=user_ref,
-            created_at=self.created_at or get_current_utc7_time(),
-            updated_at=self.updated_at or get_current_utc7_time(),
+            created_at=self.created_at or datetime.now(timezone.utc),
+            updated_at=self.updated_at or datetime.now(timezone.utc),
             created_by=self.created_by,
             updated_by=self.updated_by,
         )
@@ -247,8 +253,8 @@ class MeetingEvaluation(SQLAlchemyTimestampMixin, Base):
             feedback_text=self.feedback_text,
             reviewer=reviewer_ref,
             target_user=target_ref,
-            created_at=self.created_at or get_current_utc7_time(),
-            updated_at=self.updated_at or get_current_utc7_time(),
+            created_at=self.created_at or datetime.now(timezone.utc),
+            updated_at=self.updated_at or datetime.now(timezone.utc),
             created_by=self.created_by,
             updated_by=self.updated_by,
             is_deleted=self.is_deleted if self.is_deleted is not None else False,
@@ -315,8 +321,8 @@ class MeetingOverallEvaluation(SQLAlchemyTimestampMixin, Base):
             average_score=self.average_score,
             general_feedback=self.general_feedback,
             trainer=trainer_ref,
-            created_at=self.created_at or get_current_utc7_time(),
-            updated_at=self.updated_at or get_current_utc7_time(),
+            created_at=self.created_at or datetime.now(timezone.utc),
+            updated_at=self.updated_at or datetime.now(timezone.utc),
             created_by=self.created_by,
             updated_by=self.updated_by,
             is_deleted=self.is_deleted if self.is_deleted is not None else False,
