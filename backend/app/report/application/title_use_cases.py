@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from loguru import logger
@@ -95,7 +95,7 @@ class AssignMonthlyTitlesUseCase:
         target_year: int | None = None,
     ) -> int:
 
-        now = datetime.now(timezone.utc).astimezone(ZoneInfo("Asia/Ho_Chi_Minh"))
+        now = datetime.now(UTC).astimezone(ZoneInfo("Asia/Ho_Chi_Minh"))
 
         if target_month is None or target_year is None:
             first_day_of_month = now.replace(day=1)

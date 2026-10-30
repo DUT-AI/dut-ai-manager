@@ -2,7 +2,7 @@
 Meeting ORM Models — SQLAlchemy 2.0, infrastructure layer.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, String
 from sqlalchemy.dialects import postgresql
@@ -76,16 +76,15 @@ class Meeting(SQLAlchemyTimestampMixin, Base):
             )
 
         participants_list = []
-        raw_participants = getattr(self, "participants", None)
-        if raw_participants:
+        if "participants" in self.__dict__ and self.participants:
             active_participants = [
-                p for p in raw_participants if not getattr(p, "is_deleted", False)
+                p for p in self.participants if not getattr(p, "is_deleted", False)
             ]
             sorted_participants = sorted(
                 active_participants,
                 key=lambda p: (
                     getattr(p, "created_at", None)
-                    or datetime.min.replace(tzinfo=timezone.utc),
+                    or datetime.min.replace(tzinfo=UTC),
                     getattr(p, "id", None) or 0,
                 ),
                 reverse=True,
@@ -106,8 +105,8 @@ class Meeting(SQLAlchemyTimestampMixin, Base):
             ),
             participants=participants_list,
             creator=creator_ref,
-            created_at=self.created_at or datetime.now(timezone.utc),
-            updated_at=self.updated_at or datetime.now(timezone.utc),
+            created_at=self.created_at or datetime.now(UTC),
+            updated_at=self.updated_at or datetime.now(UTC),
             created_by=self.created_by,
             updated_by=self.updated_by,
             is_deleted=self.is_deleted if self.is_deleted is not None else False,
@@ -173,8 +172,8 @@ class MeetingParticipant(SQLAlchemyTimestampMixin, Base):
             link_image=self.link_image,
             client_event_id=self.client_event_id,
             user=user_ref,
-            created_at=self.created_at or datetime.now(timezone.utc),
-            updated_at=self.updated_at or datetime.now(timezone.utc),
+            created_at=self.created_at or datetime.now(UTC),
+            updated_at=self.updated_at or datetime.now(UTC),
             created_by=self.created_by,
             updated_by=self.updated_by,
         )
@@ -253,8 +252,8 @@ class MeetingEvaluation(SQLAlchemyTimestampMixin, Base):
             feedback_text=self.feedback_text,
             reviewer=reviewer_ref,
             target_user=target_ref,
-            created_at=self.created_at or datetime.now(timezone.utc),
-            updated_at=self.updated_at or datetime.now(timezone.utc),
+            created_at=self.created_at or datetime.now(UTC),
+            updated_at=self.updated_at or datetime.now(UTC),
             created_by=self.created_by,
             updated_by=self.updated_by,
             is_deleted=self.is_deleted if self.is_deleted is not None else False,
@@ -321,8 +320,8 @@ class MeetingOverallEvaluation(SQLAlchemyTimestampMixin, Base):
             average_score=self.average_score,
             general_feedback=self.general_feedback,
             trainer=trainer_ref,
-            created_at=self.created_at or datetime.now(timezone.utc),
-            updated_at=self.updated_at or datetime.now(timezone.utc),
+            created_at=self.created_at or datetime.now(UTC),
+            updated_at=self.updated_at or datetime.now(UTC),
             created_by=self.created_by,
             updated_by=self.updated_by,
             is_deleted=self.is_deleted if self.is_deleted is not None else False,

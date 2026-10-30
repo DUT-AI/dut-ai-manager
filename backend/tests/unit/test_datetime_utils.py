@@ -1,6 +1,6 @@
 """Tests for datetime utilities in app.utils.datetime."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
 from app.utils.datetime import (
@@ -20,12 +20,12 @@ def test_parse_datetime_to_utc():
     # Naive assumed Asia/Ho_Chi_Minh (+07:00)
     naive = datetime(2026, 10, 31, 14, 0, 0)
     utc_dt = parse_datetime_to_utc(naive)
-    assert utc_dt.tzinfo == timezone.utc
-    assert utc_dt == datetime(2026, 10, 31, 7, 0, 0, tzinfo=timezone.utc)
+    assert utc_dt.tzinfo == UTC
+    assert utc_dt == datetime(2026, 10, 31, 7, 0, 0, tzinfo=UTC)
 
 
 def test_to_vietnam_time():
-    utc_dt = datetime(2026, 10, 31, 7, 0, 0, tzinfo=timezone.utc)
+    utc_dt = datetime(2026, 10, 31, 7, 0, 0, tzinfo=UTC)
     vn_dt = to_vietnam_time(utc_dt)
     assert vn_dt.hour == 14
     assert vn_dt.day == 31

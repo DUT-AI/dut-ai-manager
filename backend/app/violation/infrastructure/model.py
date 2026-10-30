@@ -5,7 +5,7 @@ Only used for database mapping and entity conversion.
 Domain entity: app.violation.domain.entity.Violation
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import DateTime, ForeignKey, String
@@ -101,7 +101,7 @@ class ViolationModel(SQLAlchemyTimestampMixin, Base):
         return cls(
             id=entity.id,
             reason=entity.reason,
-            date=entity.date or datetime.now(timezone.utc),
+            date=entity.date or datetime.now(UTC),
             user_id=entity.user_id,
             created_by=entity.created_by,
             updated_by=entity.updated_by,

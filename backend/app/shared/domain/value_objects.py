@@ -19,7 +19,7 @@ class UserRef(BaseModel):
         meeting.creator    → who scheduled the meeting
     """
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, from_attributes=True)
 
     id: int
     name: str = ""

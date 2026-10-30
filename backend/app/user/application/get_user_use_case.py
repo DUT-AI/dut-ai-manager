@@ -2,7 +2,7 @@ from fastapi import HTTPException
 
 from app.shared.application.query_support_utils import build_query_support
 from app.shared.domain.query_support import FilterCriterion, FilterOperator
-from app.user.domain.entity import UserEntity
+from app.user.domain.entity import UserEntity, UserStatus
 from app.user.infrastructure.repository import UserRepository
 
 
@@ -44,10 +44,19 @@ class GetUserUseCase:
         return self.repo.search_user(keyword)
 
     def get_paged(
-        self, page: int = 1, page_size: int = 20, keyword: str | None = None
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        keyword: str | None = None,
+        role: str | None = None,
+        status: UserStatus | None = None,
     ) -> tuple[list[UserEntity], int]:
         return self.repo.get_paged_users(
-            page=page, page_size=page_size, keyword=keyword
+            page=page,
+            page_size=page_size,
+            keyword=keyword,
+            role=role,
+            status=status,
         )
 
     def get_active_users(self) -> list[UserEntity]:

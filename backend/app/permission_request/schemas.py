@@ -37,9 +37,15 @@ class PermissionRequestResponse(PermissionRequestBase):
     updated_at: datetime
 
     # Related objects
-    owner: UserRef | None = None
     creator: UserRef | None = None
     updater: UserRef | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PermissionRequestDetailResponse(PermissionRequestResponse):
+    """Detailed view with eagerly fetched related resources."""
+
     homework: HomeworkResponse | None = None
     meeting: MeetingResponse | None = None
     old_meeting: MeetingResponse | None = None

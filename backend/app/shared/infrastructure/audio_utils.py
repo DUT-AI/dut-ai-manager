@@ -3,6 +3,7 @@
 import io
 import struct
 import wave
+
 from loguru import logger
 
 
@@ -70,7 +71,9 @@ def downsample_wav_to_16k_mono(
                 idx = int(src_pos)
                 frac = src_pos - idx
                 if idx + 1 < total_mono:
-                    s = int(mono_samples[idx] * (1.0 - frac) + mono_samples[idx + 1] * frac)
+                    s = int(
+                        mono_samples[idx] * (1.0 - frac) + mono_samples[idx + 1] * frac
+                    )
                 elif idx < total_mono:
                     s = mono_samples[idx]
                 else:
@@ -114,7 +117,7 @@ def downsample_wav_to_16k_mono(
 
         resampled_bytes = out_io.getvalue()
         logger.info(
-            f"Downsampled audio: {src_rate}Hz/{sampwidth*8}bit ({n_channels}ch, {len(wav_bytes)}B) -> "
+            f"Downsampled audio: {src_rate}Hz/{sampwidth * 8}bit ({n_channels}ch, {len(wav_bytes)}B) -> "
             f"{target_rate}Hz/{target_bits}bit (1ch, {len(resampled_bytes)}B, peak={max_val})"
         )
         return resampled_bytes

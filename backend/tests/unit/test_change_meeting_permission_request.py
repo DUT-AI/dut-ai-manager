@@ -1,15 +1,9 @@
 import asyncio
-import sys
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import HTTPException
-
-backend_dir = Path(__file__).resolve().parent.parent
-if str(backend_dir) not in sys.path:
-    sys.path.insert(0, str(backend_dir))
 
 import app.homework.infrastructure.model  # noqa: F401
 import app.permission_request.infrastructure.model  # noqa: F401
@@ -20,11 +14,15 @@ from app.meeting.application.get_upcoming_meetings_with_seats_use_case import (
     GetUpcomingMeetingsWithSeatsUseCase,
 )
 from app.meeting.domain.entity import Meeting, MeetingParticipant
-from app.permission_request.application.create_change_meeting_request_use_case import (
-    CreateChangeMeetingRequestUseCase,
+from app.permission_request.application.create_permission_request_use_case import (
+    CreatePermissionRequestUseCase,
 )
 from app.permission_request.application.event_handlers import (
     MeetingParticipantTransferredNotificationHandler,
+)
+from app.permission_request.application.strategies import (
+    ChangeMeetingStrategy,
+    PermissionStrategyRegistry,
 )
 from app.permission_request.domain.events import (
     MeetingParticipantTransferred,
@@ -34,6 +32,21 @@ from app.permission_request.domain.value_objects import RequestCategory
 from app.user.domain.entity import UserEntity as User
 
 
+def _create_change_meeting_uc(permission_repo, meeting_repo, event_bus=None):
+    bus = event_bus or MagicMock()
+    strategy = ChangeMeetingStrategy(
+        permission_repo=permission_repo,
+        meeting_repo=meeting_repo,
+        event_bus=bus,
+    )
+    registry = PermissionStrategyRegistry([strategy])
+    return CreatePermissionRequestUseCase(
+        repo=permission_repo,
+        strategy_registry=registry,
+        event_bus=bus,
+    )
+
+
 @pytest.mark.asyncio
 async def test_change_meeting_success_from_a_to_b():
     permission_repo = MagicMock()
@@ -41,7 +54,7 @@ async def test_change_meeting_success_from_a_to_b():
     event_bus = MagicMock()
     event_bus.publish = AsyncMock()
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     start_b = now + timedelta(days=2)
     end_b = start_b + timedelta(hours=2)
 
@@ -73,13 +86,14 @@ async def test_change_meeting_success_from_a_to_b():
 
     permission_repo.save.side_effect = _save_req
 
-    use_case = CreateChangeMeetingRequestUseCase(
+    use_case = _create_change_meeting_uc(
         permission_repo=permission_repo,
         meeting_repo=meeting_repo,
         event_bus=event_bus,
     )
 
     result = await use_case.execute(
+        category=RequestCategory.CHANGE_MEETING,
         note="Xin đổi ca do bận lịch thi",
         meeting_id=102,
         old_meeting_id=101,
@@ -121,7 +135,7 @@ async def test_change_meeting_new_registration_without_old_meeting():
     event_bus = MagicMock()
     event_bus.publish = AsyncMock()
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     meeting_b = Meeting(
         id=102,
         title="Meeting B (Ca Chiều CN)",
@@ -139,13 +153,14 @@ async def test_change_meeting_new_registration_without_old_meeting():
 
     permission_repo.save.side_effect = _save_req_new
 
-    use_case = CreateChangeMeetingRequestUseCase(
+    use_case = _create_change_meeting_uc(
         permission_repo=permission_repo,
         meeting_repo=meeting_repo,
         event_bus=event_bus,
     )
 
     result = await use_case.execute(
+        category=RequestCategory.CHANGE_MEETING,
         note="Học viên mới đăng ký vào ca",
         meeting_id=102,
         old_meeting_id=None,
@@ -164,7 +179,7 @@ async def test_change_meeting_rejects_when_meeting_b_is_full():
     meeting_repo = MagicMock()
     event_bus = MagicMock()
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     # Meeting B có đủ MAX_SEATS = 35 participants
     participants = [
         MeetingParticipant(id=i, user_id=100 + i, meeting_id=103)
@@ -181,7 +196,7 @@ async def test_change_meeting_rejects_when_meeting_b_is_full():
     meeting_repo.get_meeting_with_lock.return_value = meeting_b
     permission_repo.get_absence_user_ids_by_meeting.return_value = set()
 
-    use_case = CreateChangeMeetingRequestUseCase(
+    use_case = _create_change_meeting_uc(
         permission_repo=permission_repo,
         meeting_repo=meeting_repo,
         event_bus=event_bus,
@@ -189,6 +204,7 @@ async def test_change_meeting_rejects_when_meeting_b_is_full():
 
     with pytest.raises(HTTPException) as exc_info:
         await use_case.execute(
+            category=RequestCategory.CHANGE_MEETING,
             note="Xin vào ca",
             meeting_id=103,
             old_meeting_id=None,
@@ -206,7 +222,7 @@ async def test_change_meeting_considers_absence_requests_as_available_seats():
     event_bus = MagicMock()
     event_bus.publish = AsyncMock()
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     # Meeting B có đủ 35 participants nhưng có 2 người nộp đơn ABSENCE
     participants = [
         MeetingParticipant(id=i, user_id=100 + i, meeting_id=104)
@@ -230,7 +246,7 @@ async def test_change_meeting_considers_absence_requests_as_available_seats():
 
     permission_repo.save.side_effect = _save_req_abs
 
-    use_case = CreateChangeMeetingRequestUseCase(
+    use_case = _create_change_meeting_uc(
         permission_repo=permission_repo,
         meeting_repo=meeting_repo,
         event_bus=event_bus,
@@ -238,6 +254,7 @@ async def test_change_meeting_considers_absence_requests_as_available_seats():
 
     # Đổi thành công vì ghế khả dụng = 35 - (35 - 2) = 2 > 0
     result = await use_case.execute(
+        category=RequestCategory.CHANGE_MEETING,
         note="Đổi vào ghế của người vắng",
         meeting_id=104,
         old_meeting_id=None,
@@ -254,7 +271,7 @@ async def test_change_meeting_rejects_when_meeting_b_in_past():
     meeting_repo = MagicMock()
     event_bus = MagicMock()
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     meeting_b = Meeting(
         id=105,
         title="Meeting B in Past",
@@ -265,7 +282,7 @@ async def test_change_meeting_rejects_when_meeting_b_in_past():
 
     meeting_repo.get_meeting_with_lock.return_value = meeting_b
 
-    use_case = CreateChangeMeetingRequestUseCase(
+    use_case = _create_change_meeting_uc(
         permission_repo=permission_repo,
         meeting_repo=meeting_repo,
         event_bus=event_bus,
@@ -273,6 +290,7 @@ async def test_change_meeting_rejects_when_meeting_b_in_past():
 
     with pytest.raises(HTTPException) as exc_info:
         await use_case.execute(
+            category=RequestCategory.CHANGE_MEETING,
             note="Xin vào ca đã bắt đầu",
             meeting_id=105,
             old_meeting_id=None,
@@ -289,7 +307,7 @@ async def test_change_meeting_rejects_same_meeting_id():
     meeting_repo = MagicMock()
     event_bus = MagicMock()
 
-    use_case = CreateChangeMeetingRequestUseCase(
+    use_case = _create_change_meeting_uc(
         permission_repo=permission_repo,
         meeting_repo=meeting_repo,
         event_bus=event_bus,
@@ -297,6 +315,7 @@ async def test_change_meeting_rejects_same_meeting_id():
 
     with pytest.raises(HTTPException) as exc_info:
         await use_case.execute(
+            category=RequestCategory.CHANGE_MEETING,
             note="Đổi sang chính nó",
             meeting_id=100,
             old_meeting_id=100,
@@ -311,7 +330,7 @@ def test_get_upcoming_meetings_with_seats():
     meeting_repo = MagicMock()
     permission_repo = MagicMock()
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     m1 = Meeting(
         id=1,
         title="Meeting 1",
@@ -380,7 +399,7 @@ async def test_meeting_participant_transferred_notification_handler(monkeypatch)
     user_repo.get_by_id.return_value = user
 
     meeting_repo = MagicMock()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     m_old = Meeting(
         id=101, title="Ca Cũ", start_time=now, end_time=now + timedelta(hours=2)
     )
@@ -435,8 +454,13 @@ async def test_meeting_participant_transferred_notifies_duty_schedule(monkeypatc
     user_repo.get_by_id.return_value = user
 
     meeting_repo = MagicMock()
-    now = datetime.now(timezone.utc)
-    m_old = Meeting(id=101, title="Nhóm 2", start_time=now, end_time=now + timedelta(hours=2))
+    now = datetime.now(UTC)
+    m_old = Meeting(
+        id=101,
+        title="Nhóm 2",
+        start_time=now,
+        end_time=now + timedelta(hours=2),
+    )
     m_new = Meeting(
         id=102,
         title="Nhóm 1",
@@ -447,6 +471,7 @@ async def test_meeting_participant_transferred_notifies_duty_schedule(monkeypatc
 
     duty_repo = MagicMock()
     from app.duty.domain.entity import CleaningDuty, DutyStatus
+
     duty_repo.get_by_meeting_id.return_value = [
         CleaningDuty(
             id=50,
@@ -483,4 +508,3 @@ async def test_meeting_participant_transferred_notifies_duty_schedule(monkeypatc
     assert any("PHÂN CÔNG TRỰC NHẬT" in t for t in titles)
     # Room dispatch: 1
     assert mock_dispatcher.dispatch_room.call_count == 1
-

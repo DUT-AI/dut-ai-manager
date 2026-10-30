@@ -1,6 +1,7 @@
 """Enterprise Datetime Utilities.
 
-Re-exports and timezone constants for consistent UTC and Vietnam (UTC+7) datetime handling.
+Re-exports and timezone constants for consistent UTC and Vietnam (UTC+7)
+datetime handling.
 Legacy naive helper `get_current_utc7_time()` has been permanently removed in favor of:
 `datetime.now(timezone.utc)` for current timestamps.
 """

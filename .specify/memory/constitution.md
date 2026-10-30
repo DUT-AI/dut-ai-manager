@@ -1,11 +1,12 @@
 <!--
 Sync Impact Report:
-- Version: v1.5.0 -> v1.6.0
+- Version: v1.7.0 -> v1.8.0
 - Ratification Date: 2026-09-25
-- Last Amended: 2026-10-30
-- Principles enhanced / modified:
-  - III. Enterprise UTC Storage & Vietnam Display Integrity (MUST) -> Upgraded from naive ICT datetime to Enterprise UTC Architecture: All database tables (TIMESTAMPTZ), ORM models, domain entities, and use cases operate strictly on Timezone-Aware UTC (`timezone.utc`). Banned naive datetimes via Ruff `DTZ`. Inbound request DTOs auto-detect naive strings as Vietnam local time (`Asia/Ho_Chi_Minh`) via `UtcDateTime`.
-- Rationale: Standardizing enterprise backend persistence to UTC, eliminating time calculation bugs and legacy `get_current_utc7_time` dependencies while preserving perfect user experience for Vietnam timezone.
+- Last Amended: 2026-10-31
+- Principles enhanced / added:
+  - XIII. Structured Generic Payload & Absolute Type Safety (MUST) -> Strict ban on `dict[str, Any]`, `getattr()`, and loose `# type: ignore`. When modeling polymorphic entities (e.g., PermissionRequest), specialized data MUST use structured JSON payload mapped to immutable Pydantic Discriminated Unions. Type parsing from DB/JSON to Domain Entities MUST be explicit and safe via centralized utilities (`parse_datetime`, `parse_int`). Mandatory dependencies in Use Cases and Strategies MUST be required parameters and MUST NOT be default-initialized to `None = None`.
+  - X. Zero Redundant Backward Compatibility & No Duplicate API Surface (ENHANCED) -> Explicitly mandate immediate deprecation and deletion of legacy sparse database columns and fallback logic during refactoring. Migration backfill must be performed immediately, legacy columns dropped from database schemas, and all consumer call-sites refactored directly to the canonical API.
+- Rationale: Codifying enterprise-grade type safety, polymorphic strategy payloads, and zero-tolerance legacy column cleanup across all domain models and application use cases.
 -->
 
 # DUT AI Manager Constitution
@@ -41,7 +42,7 @@ Any endpoint that records transactional state over unreliable networks (such as 
 ### VII. Strict Single-Responsibility Use Cases (One Public Execute Per Class) (MUST)
 Each use case in the `application/` layer of every domain MUST strictly follow the Single-Responsibility Principle:
 - **Dedicated File per Use Case**: Each use case MUST reside in its own dedicated Python file named `*_use_case.py` (e.g., `get_user_homeworks_use_case.py`, `get_unsubmitted_homeworks_use_case.py`, `sync_homework_submissions_use_case.py`).
-- **Single Public Action**: Each use case class MUST expose exactly ONE primary public method (conventionally `execute(...)`). Bundling multiple unrelated read or write operations (e.g., bundling `get_all`, `get_paged`, `get_assigned_to_user`, `get_unsubmitted_report` inside a generic `GetHomeworksUseCase`) is strictly prohibited.
+- **Single Public Action**: Each use case class MUST expose exactly ONE primary public method (conventionally `execute(...)`). Bundling multiple unrelated read or write operations inside a generic class is strictly prohibited.
 - **Export Discipline**: The domain's `application/__init__.py` file MUST explicitly re-export all use case classes via `__all__`.
 
 ### VIII. Frontend Component Modularity & Single-Responsibility UI (MUST)
@@ -61,7 +62,27 @@ Reusable business operations across use cases MUST be modeled as dedicated **Dom
 Both backend and frontend codebases MUST NOT retain redundant backward-compatibility layers, duplicate function aliases, or dual-named wrappers that pollute the codebase:
 - **Prohibition of Internal Aliases**: Never create redundant re-exports or aliases (e.g., `export const useSyncHomework = useSyncHomeworkFromQuiz` or duplicate endpoints) merely to avoid updating callers.
 - **Refactor Call Sites Directly**: When renaming, refactoring, or consolidating functions, hooks, DTOs, or services, all consuming callers MUST be updated directly to use the canonical identifier.
+- **Immediate Removal of Legacy Columns**: When migrating database fields to consolidated structures (e.g., shifting metadata columns into JSON payloads), legacy sparse columns and their foreign key constraints MUST be promptly backfilled and dropped via migrations. Never maintain dual-write or sparse legacy columns out of hesitation to refactor.
 - **Single Source of Truth**: Every operation, endpoint, and hook MUST have exactly one canonical representation. Code cleanliness and maintainability strictly take precedence over lazy compatibility wrappers.
+
+### XI. Plain Text Notifications & Clean Channel Presentation (MUST)
+All notification messages dispatched across channels (`Zalo Bot`, `Discord Bot/Embeds`, `In-App Notifications`, `Web Push`) MUST be formatted as clean plain text:
+- **Strict Prohibition of Raw Markdown**: Raw markdown formatting symbols such as `**bold**`, `*italic*`, `` `inline_code` ``, and `[label](url)` are strictly forbidden in `NotificationPayload` titles, content, and field values. Channels like Zalo Bot and Web In-App modals display raw text literally, making markdown tokens appear cluttered and unpolished.
+- **Visual Structure & Emoji Hierarchy**: Visual readability MUST be achieved through structured line breaks (`\n`), bullet points (`•`), capitalized category headings, and standard emojis (`📢`, `⏰`, `👤`, `📅`, `👉`, `•`, `⚠️`).
+- **Direct Navigation Links**: Actionable links MUST be specified via the dedicated `action_url` payload attribute or rendered as plain URLs prefixed with descriptive action labels (e.g. `👉 Xem chi tiết tại: {url}`).
+
+### XII. Server-Driven Filtering & Pagination Cohesion (MUST)
+All data-listing views (tables, cards, virtual lists) backed by server-side pagination (`LIMIT/OFFSET` or cursor-based) MUST strictly delegate filtering to the backend:
+- **Prohibition of Hybrid/Client-Side Filtering on Server Pages**: Client-side filtering (e.g., `items.filter(...)` via `useMemo` over paginated query responses) is strictly forbidden when server pagination is active. Filtering on a pre-paginated subset results in missing rows on earlier pages and fragmented pagination counts.
+- **Full Backend Query Parameterization**: All filter criteria (`role`, `status`, `category`, `date ranges`, `search terms`) MUST be passed as query parameters down to the repository SQL query (`WHERE` clauses).
+- **Synchronous Page Reset**: Frontend filter state updates MUST reset the active page number to `1` to avoid landing on empty out-of-range offsets.
+
+### XIII. Structured Generic Payload & Absolute Type Safety (MUST)
+Entities requiring category-specific or polymorphic business data (e.g., `PermissionRequest`, polymorphic audit logs) MUST use structured JSON payloads managed by strict Strategy and Value Object patterns:
+- **Prohibition of Loose Dictionaries and Dynamic Attributes**: Declaring `payload: dict[str, Any]` in domain entities, repositories, or schemas is strictly forbidden. Using dynamic attribute access (`getattr(obj, "field")`, `hasattr(...)`) to bypass static typing is strictly banned.
+- **Pydantic Discriminated Unions as Value Objects**: All payload variants MUST be modeled as strongly typed, immutable Value Objects inheriting from a base payload (`ConfigDict(frozen=True)`), unified via a Pydantic Discriminated Union (`Field(discriminator="category")`).
+- **Explicit Safe Type Casting**: When extracting raw dictionary/JSON data from the database into Domain Entities, attributes MUST be explicitly cast and validated through dedicated parsing utilities (e.g., `parse_datetime`, `parse_int` in `app.utils.parsers`). Leaving unparsed raw objects or suppressing linter checks with `# type: ignore` is strictly prohibited.
+- **Mandatory Dependencies in Constructors**: All use cases, strategies, and domain services MUST declare mandatory dependencies as non-nullable arguments in `__init__`. Providing default `None` fallback parameters (e.g., `repo: SomeRepository | None = None`) for mandatory collaborators is strictly forbidden.
 
 ## Security & Compliance Standards
 
@@ -85,4 +106,4 @@ Both backend and frontend codebases MUST NOT retain redundant backward-compatibi
    - **MINOR**: Addition of new principles or major workflow standards.
    - **PATCH**: Non-semantic clarifications and wording updates.
 
-**Version**: 1.6.0 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-10-30
+**Version**: 1.8.0 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-10-31

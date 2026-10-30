@@ -7,7 +7,7 @@ Provides Pydantic types that auto-detect client datetime input:
 - Aware strings (with 'Z' or '+HH:MM' offset) are converted directly to UTC aware.
 """
 
-from datetime import date, datetime, time, timezone
+from datetime import UTC, date, datetime, time
 from typing import Annotated, Any
 from zoneinfo import ZoneInfo
 
@@ -59,7 +59,7 @@ def parse_to_utc(val: Any) -> datetime | None:
         dt = dt.replace(tzinfo=VN_TZ)
 
     # Convert to standard UTC
-    return dt.astimezone(timezone.utc)
+    return dt.astimezone(UTC)
 
 
 def serialize_to_iso(val: datetime | None) -> str | None:
@@ -84,8 +84,8 @@ def to_vietnam_time(dt: datetime) -> datetime:
 def ensure_utc(dt: datetime) -> datetime:
     """Ensure datetime is UTC timezone-aware. Naive is treated as Asia/Ho_Chi_Minh."""
     if dt.tzinfo is not None:
-        return dt.astimezone(timezone.utc)
-    return dt.replace(tzinfo=VN_TZ).astimezone(timezone.utc)
+        return dt.astimezone(UTC)
+    return dt.replace(tzinfo=VN_TZ).astimezone(UTC)
 
 
 # Ingestion type for request DTOs

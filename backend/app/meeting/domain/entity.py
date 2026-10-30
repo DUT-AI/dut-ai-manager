@@ -38,7 +38,7 @@ class MeetingParticipant(BaseEntity):
     ) -> tuple[bool, str, bool]:
         """
         Ghi nhận điểm danh cho thành viên theo chuẩn Domain-Driven Design Invariants.
-        
+
         Quy tắc nghiệp vụ:
         1. Nếu đã COMPLETED -> Từ chối ghi nhận điểm danh đè.
         2. Xác định is_late: check_in_time > meeting_start_time.
@@ -52,7 +52,7 @@ class MeetingParticipant(BaseEntity):
            - Nếu chưa có check_in_at -> Gán check_in_time (đảm bảo UTC).
            - Nếu đã có check_in_at -> Giữ mốc ban đầu để bảo vệ dữ liệu gốc.
         5. Cập nhật link_image (nếu được cung cấp) và client_event_id (nếu được cung cấp).
-        
+
         Returns:
             tuple[bool, str, bool]: (success, message, is_late)
         """
@@ -60,20 +60,28 @@ class MeetingParticipant(BaseEntity):
         meeting_start_time_utc = ensure_utc(meeting_start_time)
 
         if self.status == ParticipantStatus.COMPLETED:
-            return False, "Thành viên đã hoàn thành buổi họp, không thể điểm danh lại", False
+            return (
+                False,
+                "Thành viên đã hoàn thành buổi họp, không thể điểm danh lại",
+                False,
+            )
 
         is_late = check_in_time_utc > meeting_start_time_utc
 
-        if self.status == ParticipantStatus.LATE_EXCUSED:
-            # Đã có đơn xin đi trễ được duyệt trước đó -> Bảo lưu quyền có phép
+        if not is_late:
+            # Học viên đến đúng giờ: Kể cả trước đó có đơn xin trễ thì thực tế vẫn đến đúng giờ -> JOINED
+            self.status = ParticipantStatus.JOINED
+        elif self.status == ParticipantStatus.LATE_EXCUSED:
+            # Đến trễ nhưng đã có đơn xin đi trễ được duyệt trước đó -> Bảo lưu LATE_EXCUSED
             pass
-        elif self.status in (ParticipantStatus.JOINED, ParticipantStatus.LATE_UNEXCUSED):
+        elif self.status in (
+            ParticipantStatus.JOINED,
+            ParticipantStatus.LATE_UNEXCUSED,
+        ):
             # Đã điểm danh trước đó, giữ nguyên trạng thái
             pass
-        elif is_late:
-            self.status = ParticipantStatus.LATE_UNEXCUSED
         else:
-            self.status = ParticipantStatus.JOINED
+            self.status = ParticipantStatus.LATE_UNEXCUSED
 
         if self.check_in_at is None:
             self.check_in_at = check_in_time_utc
@@ -229,9 +237,7 @@ class Meeting(BaseEntity):
         if not self.enable_evaluation:
             return False
         deadline = self.evaluation_deadline
-        return deadline is not None and ensure_utc(current_time) > ensure_utc(
-            deadline
-        )
+        return deadline is not None and ensure_utc(current_time) > ensure_utc(deadline)
 
     def is_ongoing(self, current_time: datetime) -> bool:
         """Kiểm tra xem buổi họp có đang diễn ra hay không"""

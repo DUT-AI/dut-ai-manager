@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import status
 
@@ -54,12 +54,10 @@ class UpdateParticipantStatusUseCase:
             parse_datetime_to_utc(check_out_at) if check_out_at else None
         )
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         # Default start time khi điểm danh nhanh là giờ hiện tại nếu đang trong buổi học, hoặc start_time
         default_check_in_time = (
-            now
-            if meeting.start_time <= now <= meeting.end_time
-            else meeting.start_time
+            now if meeting.start_time <= now <= meeting.end_time else meeting.start_time
         )
 
         # Ủy quyền toàn bộ Business Rules cho Domain Entity

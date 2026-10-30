@@ -112,6 +112,8 @@ const UserManagementPage = () => {
         page,
         pageSize,
         keyword: searchText.trim() || undefined,
+        role: filterRole,
+        status: filterStatus,
     });
     const users = usersResult?.data ?? [];
     const paginationMeta = usersResult?.pagination;
@@ -125,15 +127,6 @@ const UserManagementPage = () => {
     const canCreate = hasPermission(UserPermission.CREATE);
     const canUpdate = hasPermission(UserPermission.UPDATE);
     const canDelete = hasPermission(UserPermission.DELETE);
-
-    // Filtered users (by role and status if selected)
-    const filteredUsers = useMemo(() => {
-        return users.filter((user) => {
-            const matchRole = !filterRole || (user.role_names && user.role_names.includes(filterRole));
-            const matchStatus = !filterStatus || user.status === filterStatus;
-            return matchRole && matchStatus;
-        });
-    }, [users, filterRole, filterStatus]);
 
     const handleCreateOrUpdate = async (values: Record<string, unknown>) => {
         try {
@@ -244,7 +237,7 @@ const UserManagementPage = () => {
                 {!screens.md ? (
                     <motion.div variants={itemVariants}>
                         <UserMobileList
-                            filteredUsers={filteredUsers}
+                            filteredUsers={users}
                             isLoading={isLoading}
                             canUpdate={canUpdate}
                             canDelete={canDelete}
@@ -256,7 +249,7 @@ const UserManagementPage = () => {
                 ) : (
                     <motion.div variants={itemVariants}>
                         <UserTable
-                            users={filteredUsers}
+                            users={users}
                             isLoading={isLoading}
                             paginationProps={getPaginationProps(paginationMeta?.total)}
                             canUpdate={canUpdate}

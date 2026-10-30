@@ -2,7 +2,7 @@
 Unit tests for Duty Use Cases.
 """
 
-from datetime import date, datetime, time, timezone
+from datetime import UTC, date, datetime, time
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -1455,10 +1455,18 @@ async def test_meeting_rescheduled_excludes_absent_and_transferred_students(
     mock_meeting.id = 600
     mock_meeting.title = "Sinh hoạt Gen 2 thứ 3"
     mock_meeting.created_by = 999  # Trainer
-    mock_p1 = MagicMock(user_id=101, is_deleted=False, status=ParticipantStatus.NOT_JOINED)
-    mock_p2 = MagicMock(user_id=102, is_deleted=False, status=ParticipantStatus.NOT_JOINED)
-    mock_p3 = MagicMock(user_id=103, is_deleted=False, status=ParticipantStatus.NOT_JOINED)
-    mock_p4 = MagicMock(user_id=104, is_deleted=False, status=ParticipantStatus.NOT_JOINED)
+    mock_p1 = MagicMock(
+        user_id=101, is_deleted=False, status=ParticipantStatus.NOT_JOINED
+    )
+    mock_p2 = MagicMock(
+        user_id=102, is_deleted=False, status=ParticipantStatus.NOT_JOINED
+    )
+    mock_p3 = MagicMock(
+        user_id=103, is_deleted=False, status=ParticipantStatus.NOT_JOINED
+    )
+    mock_p4 = MagicMock(
+        user_id=104, is_deleted=False, status=ParticipantStatus.NOT_JOINED
+    )
     mock_meeting.participants = [mock_p1, mock_p2, mock_p3, mock_p4]
     mock_meeting_repo.get_by_id.return_value = mock_meeting
 
@@ -1477,7 +1485,10 @@ async def test_meeting_rescheduled_excludes_absent_and_transferred_students(
 
     # Mock permission_repo: user 103 xin vắng, user 104 chuyển đi, user 105 chuyển đến
     mock_permission_repo = MagicMock()
-    mock_permission_repo.get_all_excused_or_transferred_out_user_ids.return_value = {103, 104}
+    mock_permission_repo.get_all_excused_or_transferred_out_user_ids.return_value = {
+        103,
+        104,
+    }
     mock_permission_repo.get_transferred_in_user_ids_by_meeting.return_value = {105}
 
     handler = DutyNotificationHandler(
@@ -1507,8 +1518,12 @@ async def test_meeting_rescheduled_excludes_absent_and_transferred_students(
     assert 101 in sent_user_ids
     assert 102 in sent_user_ids
     assert 105 in sent_user_ids
-    assert 103 not in sent_user_ids, "User xin vắng không được nhận thông báo ca trực nhật"
-    assert 104 not in sent_user_ids, "User chuyển buổi không được nhận thông báo ca trực nhật"
+    assert 103 not in sent_user_ids, (
+        "User xin vắng không được nhận thông báo ca trực nhật"
+    )
+    assert 104 not in sent_user_ids, (
+        "User chuyển buổi không được nhận thông báo ca trực nhật"
+    )
     assert mock_notification_service.dispatch.call_count == 3
 
 
@@ -1525,7 +1540,7 @@ async def test_submit_duty_evidence_allows_transferred_in_student(
         "app.duty.application.submit_duty_evidence_use_case.datetime",
         MagicMock(
             now=MagicMock(
-                return_value=datetime(2026, 10, 24, 13, 0, 0, tzinfo=timezone.utc)
+                return_value=datetime(2026, 10, 24, 13, 0, 0, tzinfo=UTC)
             ),
             combine=datetime.combine,
         ),
@@ -1545,7 +1560,9 @@ async def test_submit_duty_evidence_allows_transferred_in_student(
     mock_meeting.id = 700
     p1 = MagicMock(user_id=201, is_deleted=False, status=ParticipantStatus.NOT_JOINED)
     p2 = MagicMock(user_id=202, is_deleted=False, status=ParticipantStatus.NOT_JOINED)
-    p_transferred = MagicMock(user_id=105, is_deleted=False, status=ParticipantStatus.NOT_JOINED)
+    p_transferred = MagicMock(
+        user_id=105, is_deleted=False, status=ParticipantStatus.NOT_JOINED
+    )
     mock_meeting.participants = [p1, p2, p_transferred]
     mock_meeting_repo.get_by_id.return_value = mock_meeting
 
@@ -1591,5 +1608,3 @@ async def test_submit_duty_evidence_allows_transferred_in_student(
     assert result.status == DutyStatus.AWAITING_APPROVAL
     assert mock_duty_repo.save.call_count == 1
     assert mock_event_bus.publish.call_count == 1
-
-

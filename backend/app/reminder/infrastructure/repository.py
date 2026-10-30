@@ -3,7 +3,7 @@ NotificationRepository for storing, querying, updating notifications,
 and managing reminder deduplication / cooldowns.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import desc, func, select, update
 from sqlalchemy.orm import Session
@@ -70,7 +70,7 @@ class NotificationRepository(BaseRepository[NotificationModel, Notification]):
 
     def mark_as_read(self, notification_id: int, user_id: int) -> Notification | None:
         """Đánh dấu 1 thông báo là đã đọc (bảo vệ quyền sở hữu của user)."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         stmt = (
             update(self.model)
             .where(
@@ -88,7 +88,7 @@ class NotificationRepository(BaseRepository[NotificationModel, Notification]):
 
     def mark_all_as_read(self, user_id: int) -> int:
         """Đánh dấu tất cả thông báo của user là đã đọc."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         stmt = (
             update(self.model)
             .where(
@@ -172,7 +172,7 @@ class PushSubscriptionRepositoryImpl(
         stmt = select(self.model).where(self.model.endpoint == endpoint)
         existing = self.session.execute(stmt).scalar_one_or_none()
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if existing:
             existing.user_id = user_id
             existing.p256dh = p256dh
@@ -216,7 +216,7 @@ class PushSubscriptionRepositoryImpl(
         stmt = (
             update(self.model)
             .where(self.model.endpoint == endpoint)
-            .values(is_active=False, updated_at=datetime.now(timezone.utc))
+            .values(is_active=False, updated_at=datetime.now(UTC))
         )
         result = self.session.execute(stmt)
         self.session.commit()
@@ -226,7 +226,7 @@ class PushSubscriptionRepositoryImpl(
         stmt = (
             update(self.model)
             .where(self.model.id == subscription_id)
-            .values(last_used_at=datetime.now(timezone.utc))
+            .values(last_used_at=datetime.now(UTC))
         )
         self.session.execute(stmt)
         self.session.commit()

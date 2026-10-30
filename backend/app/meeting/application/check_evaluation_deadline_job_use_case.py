@@ -67,9 +67,7 @@ class CheckEvaluationDeadlineJobUseCase:
     def _check_trainees(
         self, meeting: Meeting, evals: list, now: datetime, time_str: str
     ) -> int:
-        joined_participants = [
-            p for p in meeting.participants if self._is_joined(p)
-        ]
+        joined_participants = [p for p in meeting.participants if self._is_joined(p)]
         reviewers = {
             e.reviewer_id
             for e in evals
@@ -83,9 +81,7 @@ class CheckEvaluationDeadlineJobUseCase:
                     f"Chưa hoàn thành đánh giá Trainer cho buổi học "
                     f"'{meeting.title}'{time_str} trong vòng 24h"
                 )
-                if not self.violation_repo.exists_by_user_and_reason(
-                    p.user_id, reason
-                ):
+                if not self.violation_repo.exists_by_user_and_reason(p.user_id, reason):
                     v = Violation.create_system_violation(
                         user_id=p.user_id, reason=reason, date=now
                     )

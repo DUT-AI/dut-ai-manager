@@ -2,9 +2,6 @@ import React from 'react';
 import { Table, Space, Tag, Avatar, Typography, Button, Popconfirm, type TablePaginationConfig } from 'antd';
 import {
     UserOutlined,
-    FileTextOutlined,
-    ClockCircleOutlined,
-    SwapOutlined,
     EditOutlined,
     DeleteOutlined,
 } from '@ant-design/icons';
@@ -38,21 +35,24 @@ export const PermissionTable: React.FC<PermissionTableProps> = ({
         {
             title: 'Người tạo',
             key: 'creator',
-            render: (_: unknown, record: PermissionRequestResponse) => (
-                <Space>
-                    <Avatar
-                        src={record.owner?.avatar_url}
-                        icon={<UserOutlined />}
-                        className="bg-linear-to-br from-indigo-500 to-purple-500 shadow-sm"
-                        size="small"
-                    />
-                    <div>
-                        <Text strong className="block">
-                            {record.owner?.name || (record.created_by ? `#${record.created_by}` : 'N/A')}
-                        </Text>
-                    </div>
-                </Space>
-            ),
+            render: (_: unknown, record: PermissionRequestResponse) => {
+                const user = record.creator;
+                return (
+                    <Space>
+                        <Avatar
+                            src={user?.avatar_url}
+                            icon={<UserOutlined />}
+                            className="bg-linear-to-br from-indigo-500 to-purple-500 shadow-sm"
+                            size="small"
+                        />
+                        <div>
+                            <Text strong className="block">
+                                {user?.name || (record.created_by ? `#${record.created_by}` : 'N/A')}
+                            </Text>
+                        </div>
+                    </Space>
+                );
+            },
         },
         {
             title: 'Loại phép',
@@ -63,43 +63,6 @@ export const PermissionTable: React.FC<PermissionTableProps> = ({
                     {CATEGORY_LABELS[category.toLowerCase()] || category}
                 </Tag>
             ),
-        },
-        {
-            title: 'Mục tiêu',
-            key: 'target',
-            render: (_: unknown, record: PermissionRequestResponse) => {
-                if (record.category === 'POSTPONE' && record.homework) {
-                    return (
-                        <Space>
-                            <FileTextOutlined className="text-indigo-400" />
-                            <Text strong className="text-indigo-600">{record.homework.title}</Text>
-                        </Space>
-                    );
-                }
-                if ((record.category === 'ABSENCE' || record.category === 'LATE') && record.meeting) {
-                    return (
-                        <Space>
-                            <ClockCircleOutlined className="text-purple-400" />
-                            <Text strong className="text-purple-600">{record.meeting.title}</Text>
-                        </Space>
-                    );
-                }
-                if (record.category === 'CHANGE_MEETING') {
-                    return (
-                        <Space size="small">
-                            <SwapOutlined className="text-purple-500" />
-                            <Text className="text-xs text-gray-600">
-                                {record.old_meeting?.title || (record.old_meeting_id ? `#${record.old_meeting_id}` : 'Đăng ký mới')}
-                            </Text>
-                            <Text type="secondary" className="text-xs">→</Text>
-                            <Text strong className="text-purple-600 text-xs">
-                                {record.meeting?.title || (record.meeting_id ? `#${record.meeting_id}` : '--')}
-                            </Text>
-                        </Space>
-                    );
-                }
-                return <Text type="secondary">--</Text>;
-            },
         },
         {
             title: 'Thao tác',

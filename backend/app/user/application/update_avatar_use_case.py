@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import HTTPException, UploadFile
 
@@ -32,7 +32,7 @@ class UpdateAvatarUseCase:
             raise HTTPException(status_code=404, detail="User not found")
 
         file_content = await file.read()
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         ext = (
             file.filename.split(".")[-1]
             if file.filename and "." in file.filename

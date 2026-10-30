@@ -7,6 +7,7 @@ const permissionRequestKeys = {
   all: ['permissionRequests'] as const,
   list: (filters: { userId?: number; month?: number; year?: number; category?: string; page?: number; pageSize?: number }) =>
     ['permissionRequests', filters] as const,
+  detail: (id: number) => ['permissionRequests', 'detail', id] as const,
 };
 
 // Queries
@@ -28,6 +29,18 @@ export const usePermissionRequests = (filters: {
     },
     staleTime: 60 * 1000, // 1 minute
     enabled,
+  });
+};
+
+export const usePermissionRequestDetail = (id: number | null | undefined, enabled = true) => {
+  return useQuery({
+    queryKey: id ? permissionRequestKeys.detail(id) : ['permissionRequests', 'detail', 'null'],
+    queryFn: async () => {
+      if (!id) return null;
+      return await permissionService.getPermissionById(id);
+    },
+    staleTime: 60 * 1000,
+    enabled: enabled && !!id,
   });
 };
 

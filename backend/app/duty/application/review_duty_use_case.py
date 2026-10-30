@@ -2,7 +2,7 @@
 Review Duty Use Cases: Approve & Reject.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.duty.application.dtos import DutyResponse
 from app.duty.infrastructure.repository import DutyRepository
@@ -23,9 +23,7 @@ class ApproveDutyUseCase:
             raise BadRequestException("Không tìm thấy ca trực nhật")
 
         try:
-            duty.approve(
-                approved_by=admin_id, approved_at=datetime.now(timezone.utc)
-            )
+            duty.approve(approved_by=admin_id, approved_at=datetime.now(UTC))
         except ValueError as e:
             raise BadRequestException(str(e))
 
@@ -48,7 +46,7 @@ class RejectDutyUseCase:
         try:
             duty.reject(
                 rejected_by=admin_id,
-                rejected_at=datetime.now(timezone.utc),
+                rejected_at=datetime.now(UTC),
                 reason=reason,
             )
         except ValueError as e:

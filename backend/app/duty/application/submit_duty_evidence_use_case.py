@@ -2,7 +2,7 @@
 Submit Duty Evidence Use Case.
 """
 
-from datetime import datetime, time, timezone
+from datetime import UTC, datetime, time
 from typing import cast
 from zoneinfo import ZoneInfo
 
@@ -52,12 +52,12 @@ class SubmitDutyEvidenceUseCase:
                 detail="Ca trực nhật không tồn tại",
             )
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Kiểm tra deadline: 22:00 cùng ngày (Admin/HR có quyền nộp thử hoặc nộp thay)
         deadline_dt = datetime.combine(
             duty.duty_date, time(22, 0, 0), tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")
-        ).astimezone(timezone.utc)
+        ).astimezone(UTC)
         if not is_admin and now > deadline_dt and duty.status != DutyStatus.COMPLETED:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

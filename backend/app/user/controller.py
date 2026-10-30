@@ -27,6 +27,7 @@ from app.user.application.dtos import (
     UserOptionDto,
     UserResponse,
     UserSettingsUpdate,
+    UserStatus,
     UserUpdate,
 )
 
@@ -40,10 +41,16 @@ async def list_users(
     uc: FromDishka[GetUserUseCase],
     pagination: Annotated[PaginationParams, Depends()],
     keyword: str | None = Query(None, description="Search by name or email"),
+    role: str | None = Query(None, description="Filter by role name"),
+    status: UserStatus | None = Query(None, description="Filter by user status"),
 ):
-    """List users with server-side pagination or search by keyword."""
+    """List users with server-side pagination, search, role and status filtering."""
     users, total = uc.get_paged(
-        page=pagination.page, page_size=pagination.page_size, keyword=keyword
+        page=pagination.page,
+        page_size=pagination.page_size,
+        keyword=keyword,
+        role=role,
+        status=status,
     )
     meta = PaginationMeta.create(
         page=pagination.page,

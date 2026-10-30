@@ -83,7 +83,7 @@ export const ProfilePermissionsTab: React.FC<ProfilePermissionsTabProps> = ({
                             {dayjs(selectedPermission.created_at).format('DD/MM/YYYY')}
                         </Descriptions.Item>
                         <Descriptions.Item label="Người tạo">
-                            {selectedPermission.creator?.name || selectedPermission.owner?.name || 'N/A'}
+                            {selectedPermission.creator?.name || 'N/A'}
                         </Descriptions.Item>
                         <Descriptions.Item label="Ngày tạo">
                             {dayjs(selectedPermission.created_at).format('DD/MM/YYYY HH:mm')}

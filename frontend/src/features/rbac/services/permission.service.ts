@@ -61,6 +61,11 @@ export const permissionService = {
     return items;
   },
 
+  async getPermissionById(id: number) {
+    const response = await axiosInstance.get<ApiResponse<PermissionRequestResponse>>(`/${this.subPath}/${id}`);
+    return response.data.data;
+  },
+
   async createPermission(data: PermissionCreate) {
     const response = await axiosInstance.post<ApiResponse<PermissionRequestResponse>>(`/${this.subPath}`, data);
     return response.data;

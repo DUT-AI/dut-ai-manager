@@ -110,13 +110,13 @@ class AccountNotificationHandler:
         if user.discord_id and str(user.discord_id).isdigit():
             embed = {
                 "title": "🔑 KHÔI PHỤC MẬT KHẨU THÀNH CÔNG",
-                "description": f"Yêu cầu khôi phục mật khẩu cho tài khoản **{user.email}** đã được xử lý.",
+                "description": f"Yêu cầu khôi phục mật khẩu cho tài khoản {user.email} đã được xử lý.",
                 "color": 0x3498DB,
                 "fields": [
                     {"name": "👤 Tài khoản", "value": user.email, "inline": True},
                     {
                         "name": "🔑 Mật khẩu mới",
-                        "value": f"`{event.password}`",
+                        "value": str(event.password),
                         "inline": True,
                     },
                 ],

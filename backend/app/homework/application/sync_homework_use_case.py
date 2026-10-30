@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger
@@ -38,7 +38,7 @@ class SyncHomeworkFromQuizUseCase:
                 "Bài tập không có đường dẫn/slug hợp lệ để đồng bộ từ Quiz"
             )
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         synced_coding = 0
         updated_coding = 0
         synced_game = 0

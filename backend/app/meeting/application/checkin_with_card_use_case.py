@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import cast
 
 from loguru import logger
@@ -56,14 +56,15 @@ class CheckInWithCardUseCase:
         if not user:
             msg = f"{code}"
             audio = await self._synthesize_message(
-                "Hãy đăng ký thẻ trên hệ thống với code hiển thị ở màn hình", cache_key=f"tts/system/card_not_registered_v{version_cache}.wav"
+                "Hãy đăng ký thẻ trên hệ thống với code hiển thị ở màn hình",
+                cache_key=f"tts/system/card_not_registered_v{version_cache}.wav",
             )
             return msg, audio
 
         uid = user.id
         assert uid is not None
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         half_hour = timedelta(minutes=30)
         window_start = now - half_hour
         window_end = now + half_hour
@@ -74,13 +75,14 @@ class CheckInWithCardUseCase:
         )
         if not participant or participant.meeting_id is None:
             msg = "không có buổi họp nào trong vòng 30 phút"
-            
+
             text_to_speech = (
                 f"Xin chào {user.name}, hiện tại bạn không có buổi họp nào "
                 f"trong vòng 30 phút"
             )
             audio = await self._synthesize_message(
-                text_to_speech, cache_key=f"tts/users/user_{uid}_no_meeting_v{version_cache}.wav"
+                text_to_speech,
+                cache_key=f"tts/users/user_{uid}_no_meeting_v{version_cache}.wav",
             )
             return msg, audio
 
@@ -89,21 +91,21 @@ class CheckInWithCardUseCase:
             msg = "không tìm thấy thông tin buổi họp"
             text_to_speech = f"Xin chào {user.name}, không tìm thấy thông tin buổi họp"
             audio = await self._synthesize_message(
-                text_to_speech, cache_key=f"tts/users/user_{uid}_no_meeting_v{version_cache}.wav"
+                text_to_speech,
+                cache_key=f"tts/users/user_{uid}_no_meeting_v{version_cache}.wav",
             )
             return msg, audio
 
         if participant.status == ParticipantStatus.COMPLETED or (
-            participant.status in (ParticipantStatus.JOINED, ParticipantStatus.LATE_UNEXCUSED)
+            participant.status
+            in (ParticipantStatus.JOINED, ParticipantStatus.LATE_UNEXCUSED)
             and participant.check_in_at is not None
         ):
             msg = "bạn đã điểm danh cho buổi họp rồi"
-            text_to_speech = (
-                f"Xin chào {user.name}, bạn đã điểm danh cho buổi họp rồi"
-            )
+            text_to_speech = f"Xin chào {user.name}, bạn đã điểm danh cho buổi họp rồi"
             audio = await self._synthesize_message(
                 text_to_speech,
-                cache_key=f"tts/users/user_{uid}_already_checked_in_v{version_cache}.wav"
+                cache_key=f"tts/users/user_{uid}_already_checked_in_v{version_cache}.wav",
             )
             return msg, audio
 

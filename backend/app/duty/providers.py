@@ -28,13 +28,13 @@ from app.duty.application.toggle_duty_schedule_use_case import (
 from app.duty.infrastructure.repository import DutyRepository
 from app.duty.notification_handler import DutyNotificationHandler
 from app.meeting.infrastructure.repository import MeetingRepository
+from app.permission_request.infrastructure.repository import (
+    PermissionRequestRepository,
+)
 from app.shared.domain.event_bus import EventBus
 from app.shared.infrastructure.minio_service import MinioService
 from app.shared.infrastructure.notification.dispatcher import (
     UnifiedNotificationDispatcher,
-)
-from app.permission_request.infrastructure.repository import (
-    PermissionRequestRepository,
 )
 from app.team.infrastructure.repository import TeamRepository
 from app.user.infrastructure.repository import UserRepository

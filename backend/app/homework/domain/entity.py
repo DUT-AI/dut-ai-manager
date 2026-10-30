@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import StrEnum
 
 from app.homework.domain.value_objects import SubmissionEvaluation
@@ -53,7 +53,9 @@ class Homework(BaseEntity):
         is_submitted = (not has_coding or coding_submitted) and (
             not has_game or game_submitted
         )
-        now = ensure_utc(reference_time) if reference_time else datetime.now(timezone.utc)
+        now = (
+            ensure_utc(reference_time) if reference_time else datetime.now(UTC)
+        )
         is_overdue = not is_submitted and (ensure_utc(self.deadline) < now)
 
         return SubmissionEvaluation(

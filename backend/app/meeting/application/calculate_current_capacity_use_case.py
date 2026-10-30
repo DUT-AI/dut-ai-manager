@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.meeting.domain.value_objects import CapacityMonitor
 from app.meeting.infrastructure.repository import MeetingRepository
@@ -18,7 +18,7 @@ class CalculateCurrentCapacityUseCase:
 
     def execute(self) -> CapacityMonitor:
         """Tính toán capacity hiện tại (sync version)"""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         incoming_end = now + timedelta(minutes=self.INCOMING_WINDOW_MINUTES)
         outgoing_end = now + timedelta(minutes=self.OUTGOING_WINDOW_MINUTES)
 

@@ -2,7 +2,7 @@
 RBAC ORM Models — SQLAlchemy 2.0, infrastructure layer.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import Boolean, ForeignKey, String
@@ -50,8 +50,8 @@ class PermissionModel(SQLAlchemyTimestampMixin, Base):
             description=entity.description,
             resource=entity.resource,
             action=entity.action,
-            created_at=entity.created_at or datetime.now(timezone.utc),
-            updated_at=entity.updated_at or datetime.now(timezone.utc),
+            created_at=entity.created_at or datetime.now(UTC),
+            updated_at=entity.updated_at or datetime.now(UTC),
             is_deleted=entity.is_deleted or False,
         )
 
@@ -99,8 +99,8 @@ class RoleApiKeyModel(SQLAlchemyTimestampMixin, Base):
             prefix=entity.prefix,
             is_active=entity.is_active,
             role_id=entity.role_id,
-            created_at=entity.created_at or datetime.now(timezone.utc),
-            updated_at=entity.updated_at or datetime.now(timezone.utc),
+            created_at=entity.created_at or datetime.now(UTC),
+            updated_at=entity.updated_at or datetime.now(UTC),
             is_deleted=entity.is_deleted or False,
         )
 
@@ -142,8 +142,8 @@ class RolePermissionModel(SQLAlchemyTimestampMixin, Base):
             id=entity.id,
             role_id=entity.role_id,
             permission_id=entity.permission_id,
-            created_at=entity.created_at or datetime.now(timezone.utc),
-            updated_at=entity.updated_at or datetime.now(timezone.utc),
+            created_at=entity.created_at or datetime.now(UTC),
+            updated_at=entity.updated_at or datetime.now(UTC),
             is_deleted=entity.is_deleted or False,
         )
 
@@ -194,7 +194,7 @@ class RoleModel(SQLAlchemyTimestampMixin, Base):
             id=entity.id,
             name=entity.name,
             description=entity.description,
-            created_at=entity.created_at or datetime.now(timezone.utc),
-            updated_at=entity.updated_at or datetime.now(timezone.utc),
+            created_at=entity.created_at or datetime.now(UTC),
+            updated_at=entity.updated_at or datetime.now(UTC),
             is_deleted=entity.is_deleted or False,
         )

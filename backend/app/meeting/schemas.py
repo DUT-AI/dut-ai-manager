@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 from zoneinfo import ZoneInfo
 
@@ -216,12 +216,12 @@ class MeetingDetailResponse(MeetingResponse):
     def from_domain(cls, m: "DomainMeeting") -> "MeetingDetailResponse":
         """Map domain Meeting → detail schema (kèm participants)."""
         base_res = MeetingResponse.from_domain(m)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         end_time_utc = (
             m.end_time
             if m.end_time.tzinfo is not None
             else m.end_time.replace(tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")).astimezone(
-                timezone.utc
+                UTC
             )
         )
         is_ended = now > end_time_utc
@@ -358,7 +358,7 @@ class MeetingOverallEvaluationResponse(BaseModel):
             average_score=getattr(e, "average_score", 0.0),
             general_feedback=getattr(e, "general_feedback", None),
             trainer=trainer_dto,
-            created_at=getattr(e, "created_at", None) or datetime.now(timezone.utc),
+            created_at=getattr(e, "created_at", None) or datetime.now(UTC),
         )
 
 
@@ -461,7 +461,7 @@ class EvaluationResponse(BaseModel):
             feedback_text=getattr(e, "feedback_text", None),
             reviewer=reviewer_dto,
             target_user=target_dto,
-            created_at=getattr(e, "created_at", None) or datetime.now(timezone.utc),
+            created_at=getattr(e, "created_at", None) or datetime.now(UTC),
         )
 
 

@@ -2,22 +2,28 @@
 Permission Request ORM Model — SQLAlchemy 2.0, infrastructure layer.
 """
 
-from datetime import datetime
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Index, String
+from sqlalchemy import JSON, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.permission_request.domain.entity import (
     PermissionRequest as PermissionRequestEntity,
 )
+from app.permission_request.domain.payloads import (
+    AbsencePayload,
+    ChangeMeetingPayload,
+    LatePayload,
+    OtherPayload,
+    PermissionPayloadUnion,
+    PostponePayload,
+)
 from app.permission_request.domain.value_objects import RequestCategory
 from app.shared.domain.value_objects import UserRef
 from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
+from app.utils.parsers import parse_datetime, parse_int
 
 if TYPE_CHECKING:
-    from app.homework.infrastructure.model import HomeworkModel
-    from app.meeting.infrastructure.model import Meeting
     from app.user.infrastructure.model import UserModel
 
 
@@ -30,47 +36,53 @@ class PermissionRequest(SQLAlchemyTimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     category: Mapped[RequestCategory] = mapped_column(String(100), index=True)
     note: Mapped[str] = mapped_column(String(500))
-    start_time: Mapped[datetime | None] = mapped_column(DateTime, default=None)
 
-    # Specific metadata fields
-    homework_id: Mapped[int | None] = mapped_column(
-        ForeignKey("homeworks.id"), default=None, index=True
-    )
-    meeting_id: Mapped[int | None] = mapped_column(
-        ForeignKey("meetings.id"), default=None, index=True
-    )
-    old_meeting_id: Mapped[int | None] = mapped_column(
-        ForeignKey("meetings.id"), default=None, index=True
+    # JSON Payload for Generic Strategy Pattern (Single Source of Truth)
+    payload: Mapped[dict[str, object]] = mapped_column(
+        JSON, default=dict, server_default="{}", nullable=False
     )
 
     # Relationships
-    user: Mapped["UserModel"] = relationship(
-        foreign_keys="PermissionRequest.created_by",
-        overlaps="creator",
-    )
-    homework: Mapped["HomeworkModel | None"] = relationship()
-    meeting: Mapped["Meeting | None"] = relationship(foreign_keys=[meeting_id])
-    old_meeting: Mapped["Meeting | None"] = relationship(foreign_keys=[old_meeting_id])
     creator: Mapped["UserModel | None"] = relationship(
         foreign_keys="PermissionRequest.created_by",
-        overlaps="user",
     )
     updater: Mapped["UserModel | None"] = relationship(
         foreign_keys="PermissionRequest.updated_by",
     )
 
+    def _build_typed_payload(self) -> PermissionPayloadUnion:
+        raw_payload = dict(self.payload) if self.payload else {}
+        match self.category:
+            case RequestCategory.ABSENCE:
+                return AbsencePayload(
+                    meeting_id=parse_int(raw_payload.get("meeting_id"))
+                )
+
+            case RequestCategory.LATE:
+                return LatePayload(
+                    meeting_id=parse_int(raw_payload.get("meeting_id")),
+                    start_time=parse_datetime(raw_payload.get("start_time")),
+                )
+
+            case RequestCategory.POSTPONE:
+                return PostponePayload(
+                    homework_id=parse_int(raw_payload.get("homework_id")),
+                    start_time=parse_datetime(raw_payload.get("start_time")),
+                )
+
+            case RequestCategory.CHANGE_MEETING:
+                return ChangeMeetingPayload(
+                    meeting_id=parse_int(raw_payload.get("meeting_id")),
+                    old_meeting_id=parse_int(raw_payload.get("old_meeting_id")),
+                    start_time=parse_datetime(raw_payload.get("start_time")),
+                )
+
+            case _:
+                return OtherPayload()
+
     def to_entity(self) -> PermissionRequestEntity:
         if self.created_by is None:
             raise ValueError("permission request missing created_by")
-
-        owner_ref = None
-
-        if "user" in self.__dict__ and self.user:
-            owner_ref = UserRef(
-                id=self.user.id,
-                name=self.user.name,
-                avatar_url=self.user.avatar_url,
-            )
 
         creator_ref = None
         if "creator" in self.__dict__ and self.creator:
@@ -79,8 +91,6 @@ class PermissionRequest(SQLAlchemyTimestampMixin, Base):
                 name=self.creator.name,
                 avatar_url=self.creator.avatar_url,
             )
-        else:
-            creator_ref = owner_ref
 
         updater_ref = None
         if "updater" in self.__dict__ and self.updater:
@@ -90,46 +100,35 @@ class PermissionRequest(SQLAlchemyTimestampMixin, Base):
                 avatar_url=self.updater.avatar_url,
             )
 
+        typed_payload = self._build_typed_payload()
+
         return PermissionRequestEntity(
             id=self.id,
             user_id=self.created_by,
             created_by=self.created_by,
             updated_by=self.updated_by,
-            category=self.category,
             note=self.note,
-            homework_id=self.homework_id,
-            meeting_id=self.meeting_id,
-            old_meeting_id=self.old_meeting_id,
-            start_time=self.start_time,
+            payload=typed_payload,
             created_at=self.created_at,
             updated_at=self.updated_at,
-            owner=owner_ref,
             creator=creator_ref,
             updater=updater_ref,
-            homework=self.homework.to_entity() if self.homework else None,
-            meeting=self.meeting.to_entity() if self.meeting else None,
-            old_meeting=self.old_meeting.to_entity() if self.old_meeting else None,
         )
 
     @classmethod
     def from_entity(cls, entity: PermissionRequestEntity) -> "PermissionRequest":
         """Convert PermissionRequest domain entity to ORM model"""
-        if not isinstance(entity, PermissionRequestEntity):
-            e = cast(PermissionRequestEntity, entity)
-        else:
-            e = entity
-
+        creator_id = (
+            entity.created_by if entity.created_by is not None else entity.user_id
+        )
         return cls(
-            id=e.id,
-            category=e.category,
-            note=e.note,
-            start_time=e.start_time if e.start_time else None,
-            homework_id=e.homework_id,
-            meeting_id=e.meeting_id,
-            old_meeting_id=e.old_meeting_id,
-            created_by=e.created_by if e.created_by is not None else e.user_id,
-            updated_by=e.updated_by,
-            created_at=e.created_at,
-            updated_at=e.updated_at,
-            is_deleted=e.is_deleted,
+            id=entity.id,
+            category=entity.category,
+            note=entity.note,
+            payload=entity.payload.model_dump(mode="json"),
+            created_by=creator_id,
+            updated_by=entity.updated_by,
+            created_at=entity.created_at,
+            updated_at=entity.updated_at,
+            is_deleted=entity.is_deleted,
         )

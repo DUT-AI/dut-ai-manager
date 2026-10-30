@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import cast
 
 from app.meeting.application.checkin_use_case import parse_client_time_to_utc
@@ -32,7 +32,7 @@ class CheckOutUseCase:
         client_time: str | None = None,
         client_event_id: str | None = None,
     ) -> list[MeetingParticipant]:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         check_out_dt = now
         if client_time:

@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import UTC, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -61,10 +61,10 @@ class MonthlyUserStatsRepository(
 
     def get_current_title(self, user_id: int) -> str | None:
         """Lấy danh hiệu hiện tại (xét tháng trước, áp dụng tháng này)."""
-        from datetime import datetime, timezone
+        from datetime import datetime
         from zoneinfo import ZoneInfo
 
-        now = datetime.now(timezone.utc).astimezone(ZoneInfo("Asia/Ho_Chi_Minh"))
+        now = datetime.now(UTC).astimezone(ZoneInfo("Asia/Ho_Chi_Minh"))
 
         # Lấy danh hiệu của tháng trước
         first_day = now.replace(day=1)

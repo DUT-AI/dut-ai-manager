@@ -47,28 +47,18 @@ export const PermissionMobileList: React.FC<PermissionMobileListProps> = ({
                                 <Tag color={CATEGORY_COLORS[record.category.toLowerCase()] || 'default'} className="m-0 font-medium px-3 rounded-full">
                                     {CATEGORY_LABELS[record.category.toLowerCase()] || record.category}
                                 </Tag>
-                                <Space className="text-gray-400 text-xs">
-                                    <InfoCircleOutlined />
-                                    <span className="max-w-[140px] truncate">
-                                        {record.category === 'POSTPONE'
-                                            ? record.homework?.title
-                                            : record.category === 'CHANGE_MEETING'
-                                            ? `${record.old_meeting?.title || 'Mới'} ➔ ${record.meeting?.title || '--'}`
-                                            : record.meeting?.title || '--'}
-                                    </span>
-                                </Space>
                             </div>
 
                             <div className="flex items-center gap-3 mb-4">
                                 <Avatar
-                                    src={record.owner?.avatar_url}
+                                    src={record.creator?.avatar_url}
                                     icon={<UserOutlined />}
                                     className="bg-linear-to-br from-indigo-500 to-purple-500 shadow-sm shrink-0"
                                     size="large"
                                 />
                                 <div className="flex flex-col min-w-0 flex-1">
                                     <Text strong className="truncate text-base">
-                                        {record.owner?.name || (record.created_by ? `#${record.created_by}` : 'N/A')}
+                                        {record.creator?.name || (record.created_by ? `#${record.created_by}` : 'N/A')}
                                     </Text>
                                 </div>
                             </div>

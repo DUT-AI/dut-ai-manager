@@ -337,5 +337,3 @@ async def restore_duty(
         data=result,
         message="Hồi phục ca trực nhật thành công",
     )
-
-

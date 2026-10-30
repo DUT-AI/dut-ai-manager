@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import (
     JSON,
@@ -112,7 +112,9 @@ class HomeworkSubmissionModel(Base):
         Integer, default=1, server_default="1", nullable=False
     )
     submitted_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
     )
     is_passed: Mapped[bool] = mapped_column(
         Boolean, default=True, server_default="true", nullable=False
@@ -121,7 +123,9 @@ class HomeworkSubmissionModel(Base):
         JSON, default=dict, server_default="{}", nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
     )
 
     homework: Mapped[HomeworkModel] = relationship(back_populates="submissions")

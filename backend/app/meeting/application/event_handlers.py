@@ -64,7 +64,7 @@ class MeetingNotificationHandler(EventHandler):
                 user_id=event.user_id,
                 title="✅ ĐIỂM DANH THÀNH CÔNG",
                 content=(
-                    f"Bạn vừa thực hiện điểm danh thành công tại buổi học/họp: **{event.meeting_title}**."
+                    f"Bạn vừa thực hiện điểm danh thành công tại buổi học/họp: {event.meeting_title}."
                 ),
                 category=NotificationCategory.MEETING,
                 level=NotificationLevel.SUCCESS
@@ -107,7 +107,7 @@ class MeetingNotificationHandler(EventHandler):
                 time_range = f"{event.start_time} - {event.end_time}"
 
             title_prefix = "📅 LỊCH SINH HOẠT MỚI"
-            description = f"Bạn có lịch sinh hoạt mới: **{event.title}**"
+            description = f"Bạn có lịch sinh hoạt mới: {event.title}"
 
             fields = [{"name": "⏰ Thời gian", "value": time_range, "inline": False}]
             image_asset = "anh-nhac-em-meme-9.webp"
@@ -118,7 +118,7 @@ class MeetingNotificationHandler(EventHandler):
                     user_id=user.id,
                     title=title_prefix,
                     content=(
-                        f"Chào **{user.name}**!\n"
+                        f"Chào {user.name}!\n"
                         f"{description}\n"
                         f"Vui lòng kiểm tra và sắp xếp tham gia đúng giờ."
                     ),

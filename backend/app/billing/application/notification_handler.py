@@ -47,8 +47,8 @@ class BillingNotificationHandler(EventHandler):
                 user_id=event.user_id,
                 title="💰 HÓA ĐƠN MỚI CẦN THANH TOÁN",
                 content=(
-                    f"Bạn có 01 hóa đơn mới kỳ **tháng {period_str}** cần thanh toán.\n"
-                    f"Mô tả: *{event.description or 'Các khoản thu định kỳ/vi phạm'}*"
+                    f"Bạn có 01 hóa đơn mới kỳ tháng {period_str} cần thanh toán.\n"
+                    f"Mô tả: {event.description or 'Các khoản thu định kỳ/vi phạm'}"
                 ),
                 category=NotificationCategory.BILLING,
                 level=NotificationLevel.WARNING,
@@ -57,12 +57,12 @@ class BillingNotificationHandler(EventHandler):
                     {"name": "Số tiền", "value": formatted_amount, "inline": True},
                     {
                         "name": "Mã thanh toán",
-                        "value": f"`{event.reference_code}`",
+                        "value": str(event.reference_code),
                         "inline": True,
                     },
                     {
                         "name": "Nội dung chuyển khoản",
-                        "value": f"Chuyển chính xác nội dung: **{event.reference_code}**",
+                        "value": f"Chuyển chính xác nội dung: {event.reference_code}",
                         "inline": False,
                     },
                 ],
@@ -94,7 +94,7 @@ class BillingNotificationHandler(EventHandler):
                 user_id=event.user_id,
                 title="✅ THANH TOÁN THÀNH CÔNG",
                 content=(
-                    f"Hệ thống đã nhận được khoản thanh toán **{formatted_amount}** của bạn.\n"
+                    f"Hệ thống đã nhận được khoản thanh toán {formatted_amount} của bạn.\n"
                     f"Cảm ơn bạn đã hoàn thành nghĩa vụ tài chính đúng hạn!"
                 ),
                 category=NotificationCategory.BILLING,
@@ -108,7 +108,7 @@ class BillingNotificationHandler(EventHandler):
                     },
                     {
                         "name": "Mã hóa đơn",
-                        "value": f"`{event.reference_code}`",
+                        "value": str(event.reference_code),
                         "inline": True,
                     },
                     {

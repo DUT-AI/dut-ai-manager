@@ -1,6 +1,7 @@
 """Unit tests for SQLAlchemyTimestampMixin and timestamp automation."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from sqlalchemy import Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -18,9 +19,9 @@ class DummyModel(SQLAlchemyTimestampMixin, Base):
 def test_base_entity_default_utc():
     entity = BaseEntity()
     assert entity.created_at is not None
-    assert entity.created_at.tzinfo == timezone.utc
+    assert entity.created_at.tzinfo == UTC
     assert entity.updated_at is not None
-    assert entity.updated_at.tzinfo == timezone.utc
+    assert entity.updated_at.tzinfo == UTC
 
 
 def test_sqlalchemy_timestamp_mixin_configuration():
@@ -35,9 +36,9 @@ def test_sqlalchemy_timestamp_mixin_configuration():
     assert created_col.default is not None
     default_val = created_col.default.arg(None)
     assert isinstance(default_val, datetime)
-    assert default_val.tzinfo == timezone.utc
+    assert default_val.tzinfo == UTC
 
     assert updated_col.default is not None
     default_upd = updated_col.default.arg(None)
     assert isinstance(default_upd, datetime)
-    assert default_upd.tzinfo == timezone.utc
+    assert default_upd.tzinfo == UTC

@@ -101,8 +101,8 @@ class BonusPointNotificationHandler(EventHandler):
                     user_id=event.user_id,
                     title=title,
                     content=(
-                        f"Chào **{event.user_name or 'bạn'}**!\n"
-                        f"Bạn vừa có cập nhật điểm rèn luyện ({points_str}): **{event.reason}**.\n"
+                        f"Chào {event.user_name or 'bạn'}!\n"
+                        f"Bạn vừa có cập nhật điểm rèn luyện ({points_str}): {event.reason}.\n"
                         f"Cùng tiếp tục phát huy nhé!"
                     ),
                     category=NotificationCategory.BONUS_POINT,

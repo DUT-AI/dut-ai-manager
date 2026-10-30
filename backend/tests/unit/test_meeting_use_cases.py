@@ -1,6 +1,6 @@
 import asyncio
 import sys
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
@@ -285,7 +285,6 @@ def test_update_meeting_without_user_ids_preserves_participants():
 
 def test_participant_repository_save_persists_all_fields():
     """Kiểm tra ParticipantRepository.save ánh xạ và lưu đầy đủ các trường bao gồm client_event_id."""
-    from datetime import timezone
     from app.meeting.infrastructure.model import MeetingParticipant as ORMParticipant
     from app.meeting.infrastructure.repository import ParticipantRepository
 
@@ -295,7 +294,7 @@ def test_participant_repository_save_persists_all_fields():
 
     repo = ParticipantRepository(session=session)
 
-    check_in_dt = datetime(2026, 10, 30, 12, 10, tzinfo=timezone.utc)
+    check_in_dt = datetime(2026, 10, 30, 12, 10, tzinfo=UTC)
     domain_p = MeetingParticipant(
         id=1,
         meeting_id=10,
@@ -319,8 +318,8 @@ def test_participant_repository_save_persists_all_fields():
 
 def test_checkin_use_case_delegates_to_domain_and_preserves_late_excused():
     """Kiểm tra CheckInUseCase ủy quyền cho Domain Entity, bảo lưu LATE_EXCUSED và ghi nhận check_in_at."""
-    from datetime import timezone
     from unittest.mock import AsyncMock, MagicMock
+
     from app.meeting.application.checkin_use_case import CheckInUseCase
     from app.meeting.domain.events import ParticipantCheckedIn
 
@@ -331,9 +330,9 @@ def test_checkin_use_case_delegates_to_domain_and_preserves_late_excused():
     event_bus = MagicMock()
     event_bus.publish = AsyncMock()
 
-    meeting_start = datetime(2026, 10, 30, 12, 0, tzinfo=timezone.utc)
-    meeting_end = datetime(2026, 10, 30, 14, 0, tzinfo=timezone.utc)
-    check_in_time = datetime(2026, 10, 30, 12, 20, tzinfo=timezone.utc)
+    meeting_start = datetime(2026, 10, 30, 12, 0, tzinfo=UTC)
+    meeting_end = datetime(2026, 10, 30, 14, 0, tzinfo=UTC)
+    check_in_time = datetime(2026, 10, 30, 12, 20, tzinfo=UTC)
 
     dummy_meeting = Meeting(
         id=10,
@@ -392,9 +391,11 @@ def test_checkin_use_case_delegates_to_domain_and_preserves_late_excused():
 
 def test_checkin_with_card_use_case_delegates_to_domain_and_preserves_late_excused():
     """Kiểm tra CheckInWithCardUseCase ủy quyền cho Domain Entity, bảo lưu LATE_EXCUSED và ghi nhận check_in_at."""
-    from datetime import timezone
     from unittest.mock import AsyncMock, MagicMock
-    from app.meeting.application.checkin_with_card_use_case import CheckInWithCardUseCase
+
+    from app.meeting.application.checkin_with_card_use_case import (
+        CheckInWithCardUseCase,
+    )
     from app.meeting.domain.events import ParticipantCheckedIn
 
     user_repo = MagicMock()
@@ -408,8 +409,8 @@ def test_checkin_with_card_use_case_delegates_to_domain_and_preserves_late_excus
     event_bus = MagicMock()
     event_bus.publish = AsyncMock()
 
-    meeting_start = datetime(2026, 10, 30, 12, 0, tzinfo=timezone.utc)
-    meeting_end = datetime(2026, 10, 30, 14, 0, tzinfo=timezone.utc)
+    meeting_start = datetime(2026, 10, 30, 12, 0, tzinfo=UTC)
+    meeting_end = datetime(2026, 10, 30, 14, 0, tzinfo=UTC)
 
     dummy_user = MagicMock()
     dummy_user.id = 101

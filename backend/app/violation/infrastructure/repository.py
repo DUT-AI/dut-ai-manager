@@ -5,7 +5,7 @@ Uses flush() instead of commit(). Session commits at middleware level.
 Mapping delegated to ViolationModel.to_entity() / .from_entity().
 """
 
-from datetime import date, datetime, time, timezone
+from datetime import UTC, date, datetime, time
 from typing import Any
 
 from sqlalchemy import desc, extract, select, update
@@ -286,7 +286,7 @@ class ViolationRepository(BaseRepository[ViolationModel, Violation]):
         statement = (
             update(ViolationModel)
             .where(ViolationModel.id.in_(ids), ViolationModel.is_deleted == False)  # noqa: E712
-            .values(is_deleted=True, updated_at=datetime.now(timezone.utc))
+            .values(is_deleted=True, updated_at=datetime.now(UTC))
         )
         result = self.session.execute(statement)
         self.session.flush()

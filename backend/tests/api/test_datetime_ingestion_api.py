@@ -4,7 +4,7 @@ Verifies that naive datetime strings sent from Frontend (in Vietnam local time)
 are automatically parsed and stored as standard UTC in Meeting and Homework APIs.
 """
 
-from datetime import datetime, timezone
+from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -54,7 +54,9 @@ def test_meeting_create_with_naive_vietnam_time_string(admin_client):
     admin_client.delete(f"/api/v1/meetings/{meeting_id}")
 
 
-def test_homework_create_with_naive_vietnam_time_string(admin_client, mock_current_user):
+def test_homework_create_with_naive_vietnam_time_string(
+    admin_client, mock_current_user
+):
     """Client gửi deadline naive 23:59 giờ VN, backend tự động lưu mốc 16:59 UTC."""
     import uuid
 

@@ -61,7 +61,7 @@ class HomeworkNotificationHandler(EventHandler):
                 fields.append(
                     {
                         "name": "🔗 Đường dẫn bài tập",
-                        "value": f"[Mở bài tập]({homework.link})",
+                        "value": str(homework.link),
                         "inline": False,
                     }
                 )
@@ -72,8 +72,8 @@ class HomeworkNotificationHandler(EventHandler):
                     user_id=user.id,
                     title="📚 BÀI TẬP MỚI ĐƯỢC GIAO",
                     content=(
-                        f"Chào **{user.name}**!\n"
-                        f"Bạn vừa được giao bài tập mới: **{homework.title}**\n"
+                        f"Chào {user.name}!\n"
+                        f"Bạn vừa được giao bài tập mới: {homework.title}\n"
                         f"Vui lòng kiểm tra và nộp bài trước hạn chót."
                     ),
                     category=NotificationCategory.HOMEWORK,
@@ -147,7 +147,7 @@ class HomeworkGradedNotificationHandler(EventHandler):
                 },
                 {
                     "name": "📋 Lời phê chi tiết",
-                    "value": "Vui lòng truy cập website (mục **Bài tập của tôi**) để xem chi tiết lời phê.",
+                    "value": "Vui lòng truy cập website (mục Bài tập của tôi) để xem chi tiết lời phê.",
                     "inline": False,
                 },
             ]
@@ -156,8 +156,8 @@ class HomeworkGradedNotificationHandler(EventHandler):
                 user_id=user.id,
                 title="✅ KẾT QUẢ CHẤM BÀI TẬP",
                 content=(
-                    f"Chào **{user.name}**!\n"
-                    f"Bài tập **{homework.title}** của bạn đã được chấm xong. Kết quả: **{score_text}** ({pass_text})."
+                    f"Chào {user.name}!\n"
+                    f"Bài tập {homework.title} của bạn đã được chấm xong. Kết quả: {score_text} ({pass_text})."
                 ),
                 category=NotificationCategory.HOMEWORK,
                 level=NotificationLevel.SUCCESS

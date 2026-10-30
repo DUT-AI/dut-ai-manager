@@ -582,4 +582,3 @@ def test_member_submit_overall_evaluation_returns_403(member_client, test_meetin
     assert res.status_code == 403
     err_text = res.json().get("message") or res.json().get("detail") or ""
     assert "Bạn không có quyền đánh giá buổi học này" in err_text
-

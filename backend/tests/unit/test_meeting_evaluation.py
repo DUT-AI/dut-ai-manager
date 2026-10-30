@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
 import pytest
@@ -306,13 +306,15 @@ async def test_check_evaluation_deadline_creates_violation_when_trainer_missing(
     mock_meeting = Meeting(
         id=1,
         title="Python 101",
-        start_time=datetime.now(timezone.utc) - timedelta(hours=30),
-        end_time=datetime.now(timezone.utc) - timedelta(hours=28),
+        start_time=datetime.now(UTC) - timedelta(hours=30),
+        end_time=datetime.now(UTC) - timedelta(hours=28),
         enable_evaluation=True,
         created_by=10,
         participants=[],
     )
-    meeting_repo.get_meetings_for_evaluation_deadline_check.return_value = [mock_meeting]
+    meeting_repo.get_meetings_for_evaluation_deadline_check.return_value = [
+        mock_meeting
+    ]
     eval_repo.get_evaluations_by_meeting.return_value = []
     overall_repo.exists_for_meeting.return_value = False  # Trainer chưa đánh giá
     violation_repo.exists_by_user_and_reason.return_value = False
@@ -353,13 +355,15 @@ async def test_check_evaluation_deadline_creates_violation_when_trainee_missing(
     mock_meeting = Meeting(
         id=1,
         title="Python 101",
-        start_time=datetime.now(timezone.utc) - timedelta(hours=30),
-        end_time=datetime.now(timezone.utc) - timedelta(hours=28),
+        start_time=datetime.now(UTC) - timedelta(hours=30),
+        end_time=datetime.now(UTC) - timedelta(hours=28),
         enable_evaluation=True,
         created_by=10,
         participants=[trainee],
     )
-    meeting_repo.get_meetings_for_evaluation_deadline_check.return_value = [mock_meeting]
+    meeting_repo.get_meetings_for_evaluation_deadline_check.return_value = [
+        mock_meeting
+    ]
     eval_repo.get_evaluations_by_meeting.return_value = []  # Trainee chưa đánh giá
     overall_repo.exists_for_meeting.return_value = True  # Trainer đã đánh giá
     violation_repo.exists_by_user_and_reason.return_value = False
@@ -397,8 +401,8 @@ async def test_check_meeting_evaluation_permission_creator_success():
     uc.get_by_id.return_value = Meeting(
         id=105,
         title="AI Workshop",
-        start_time=datetime.now(timezone.utc) - timedelta(hours=2),
-        end_time=datetime.now(timezone.utc) - timedelta(hours=1),
+        start_time=datetime.now(UTC) - timedelta(hours=2),
+        end_time=datetime.now(UTC) - timedelta(hours=1),
         enable_evaluation=True,
         created_by=10,
     )
@@ -435,8 +439,8 @@ async def test_check_meeting_evaluation_permission_unauthorized():
     uc.get_by_id.return_value = Meeting(
         id=105,
         title="AI Workshop",
-        start_time=datetime.now(timezone.utc) - timedelta(hours=2),
-        end_time=datetime.now(timezone.utc) - timedelta(hours=1),
+        start_time=datetime.now(UTC) - timedelta(hours=2),
+        end_time=datetime.now(UTC) - timedelta(hours=1),
         enable_evaluation=True,
         created_by=10,
     )
@@ -453,4 +457,3 @@ async def test_check_meeting_evaluation_permission_unauthorized():
             uc=uc,
         )
     assert exc_info.value.status_code == 403
-

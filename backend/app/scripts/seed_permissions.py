@@ -218,4 +218,3 @@ if __name__ == "__main__":
     seed_permissions()
     seed_admin_user()
     sync_admin_permissions()
-

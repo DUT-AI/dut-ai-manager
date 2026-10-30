@@ -3,7 +3,7 @@ In-App Notification Channel Adapter.
 Persists notifications to the database 'notifications' table via NotificationRepository.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from loguru import logger
 
@@ -43,7 +43,7 @@ class InAppNotificationChannel(NotificationChannel):
     ) -> ChannelDeliveryResult:
         try:
             assert user.id is not None
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
 
             cat_str = (
                 payload.category.value

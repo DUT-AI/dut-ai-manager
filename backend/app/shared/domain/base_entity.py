@@ -9,7 +9,7 @@ Use `from_attributes=True` to enable mapping from ORM models:
     entity = MyEntity.model_validate(orm_model)
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -20,8 +20,8 @@ class BaseEntity(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int | None = None
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     created_by: int | None = None
     updated_by: int | None = None
     is_deleted: bool = False

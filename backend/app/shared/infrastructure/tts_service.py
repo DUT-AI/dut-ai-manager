@@ -1,4 +1,5 @@
 """Text-to-Speech (TTS) Service using external Zerotts API."""
+
 from typing import Any
 
 import aiohttp
@@ -19,6 +20,7 @@ DEFAULT_AUDIO_TOPK = 25
 DEFAULT_AUDIO_TOPP = 0.95
 DEFAULT_AUDIO_REPETITION_PENALTY = 1.2
 DEFAULT_TIMEOUT_SECONDS = 60.0
+
 
 class TTSServiceError(Exception):
     """Custom exception for TTS service errors."""
@@ -215,7 +217,6 @@ class TTSService:
                 status_code=500,
                 details=str(exc),
             ) from exc
-
 
     async def synthesize_with_cache(
         self,

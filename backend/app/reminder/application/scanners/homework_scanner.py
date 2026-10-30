@@ -3,7 +3,7 @@ Homework Task Scanner.
 Scans upcoming homeworks and filters out completed submissions.
 """
 
-from datetime import date, datetime, timezone
+from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
 from app.homework.infrastructure.homework_assignee_repository import (
@@ -40,7 +40,7 @@ class HomeworkTaskScanner(BaseTaskScanner):
         now_utc = (
             now
             if now.tzinfo is not None
-            else now.replace(tzinfo=vn_tz).astimezone(timezone.utc)
+            else now.replace(tzinfo=vn_tz).astimezone(UTC)
         )
 
         for hw in all_homeworks:
@@ -58,19 +58,19 @@ class HomeworkTaskScanner(BaseTaskScanner):
                         minute=59,
                         second=59,
                         tzinfo=hw.deadline.tzinfo or vn_tz,
-                    ).astimezone(timezone.utc)
+                    ).astimezone(UTC)
                 else:
                     hw_deadline_dt = (
                         hw.deadline
                         if hw.deadline.tzinfo is not None
-                        else hw.deadline.replace(tzinfo=vn_tz).astimezone(timezone.utc)
+                        else hw.deadline.replace(tzinfo=vn_tz).astimezone(UTC)
                     )
             else:
-                hw_deadline_dt = datetime.combine(
-                    hw.deadline, datetime.min.time()
-                ).replace(
-                    hour=23, minute=59, second=59, tzinfo=vn_tz
-                ).astimezone(timezone.utc)
+                hw_deadline_dt = (
+                    datetime.combine(hw.deadline, datetime.min.time())
+                    .replace(hour=23, minute=59, second=59, tzinfo=vn_tz)
+                    .astimezone(UTC)
+                )
 
             # Chỉ xét task có deadline trong tương lai và cách tối đa 3 ngày
             if (

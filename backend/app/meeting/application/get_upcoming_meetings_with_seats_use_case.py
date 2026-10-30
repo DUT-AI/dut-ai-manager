@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.core.config import settings
 from app.meeting.infrastructure.repository import MeetingRepository
@@ -22,7 +22,7 @@ class GetUpcomingMeetingsWithSeatsUseCase:
     def execute(
         self, from_date: datetime | None = None
     ) -> list[MeetingSeatAvailabilityDto]:
-        start_threshold = from_date or datetime.now(timezone.utc)
+        start_threshold = from_date or datetime.now(UTC)
 
         # Ưu tiên query tối ưu get_upcoming_meetings, hỗ trợ fallback khi mock get_all_with_participants
         upcoming: list = []

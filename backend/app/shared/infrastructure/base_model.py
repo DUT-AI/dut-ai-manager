@@ -4,7 +4,7 @@ Base ORM model and mixin for both SQLModel and pure SQLAlchemy 2.0 entities.
 Allows incremental migration from SQLModel to SQLAlchemy 2.0.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, func
@@ -25,15 +25,15 @@ class SQLAlchemyTimestampMixin:
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
         index=True,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
         server_default=func.now(),
-        onupdate=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(UTC),
     )
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
     created_by: Mapped[int | None] = mapped_column(

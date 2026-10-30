@@ -6,8 +6,13 @@ import type { PaginationMeta } from '@/types/api.types';
 // Query Keys
 const userKeys = {
   all: ['users'] as const,
-  list: (filters: { page?: number; pageSize?: number; keyword?: string }) =>
-    ['users', filters] as const,
+  list: (filters: {
+    page?: number;
+    pageSize?: number;
+    keyword?: string;
+    role?: string;
+    status?: string;
+  }) => ['users', filters] as const,
   options: ['users', 'options'] as const,
   detail: (id: number) => ['users', id] as const,
 };
@@ -17,17 +22,27 @@ export const useUsers = (filters?: {
   page?: number;
   pageSize?: number;
   keyword?: string;
+  role?: string;
+  status?: string;
   enabled?: boolean;
 }) => {
   const page = filters?.page;
   const pageSize = filters?.pageSize;
   const keyword = filters?.keyword;
+  const role = filters?.role;
+  const status = filters?.status;
   const enabled = filters?.enabled ?? true;
 
   return useQuery({
-    queryKey: userKeys.list({ page, pageSize, keyword }),
+    queryKey: userKeys.list({ page, pageSize, keyword, role, status }),
     queryFn: async () => {
-      const response = await userService.getUsers(page ?? 1, pageSize ?? 20, keyword);
+      const response = await userService.getUsers(
+        page ?? 1,
+        pageSize ?? 20,
+        keyword,
+        role,
+        status
+      );
       const items = response.data ?? [];
       const result = items as Array<UserResponse> & {
         data: UserResponse[];

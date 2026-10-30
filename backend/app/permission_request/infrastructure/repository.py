@@ -3,12 +3,18 @@ from datetime import date
 from sqlalchemy import desc, extract, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
-from app.homework.infrastructure.model import HomeworkModel
-from app.meeting.infrastructure.model import Meeting
+from app.meeting.domain.value_objects import ParticipantStatus
+from app.meeting.infrastructure.model import (
+    MeetingParticipant as ORMParticipant,
+)
 from app.permission_request.domain.entity import PermissionRequest as DomainEntity
 from app.permission_request.domain.value_objects import RequestCategory
 from app.permission_request.infrastructure.model import PermissionRequest as ORMModel
-from app.shared.domain.query_support import QuerySupport, apply_query_support
+from app.shared.domain.query_support import (
+    QuerySupport,
+    apply_filters_only,
+    apply_query_support,
+)
 from app.shared.infrastructure.base_repository import BaseRepository
 
 
@@ -18,34 +24,10 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
     def __init__(self, session: Session):
         super().__init__(session, ORMModel)
 
-    def get_all(
-        self,
-        query_support: QuerySupport | None = None,
-        deleted: bool = False,
-    ) -> list[DomainEntity]:
-        stmt = select(ORMModel).options(
-            joinedload(ORMModel.user),
-            joinedload(ORMModel.homework).noload(HomeworkModel.assignees),
-            joinedload(ORMModel.meeting),
-        )
-
-        if hasattr(ORMModel, "is_deleted"):
-            stmt = stmt.where(ORMModel.is_deleted == deleted)
-
-        if query_support:
-            stmt = apply_query_support(stmt, ORMModel, query_support)
-        else:
-            # Default sorting if no query support provided
-            stmt = stmt.order_by(desc(ORMModel.created_at))
-
-        rows = self.session.scalars(stmt).unique().all()
-        return [r.to_entity() for r in rows]
-
     def get_paged(
         self, query_support: QuerySupport | None = None, deleted: bool = False
     ) -> tuple[list[DomainEntity], int]:
-        """Get paginated permission requests with eager-loaded relations and optimized count."""
-        from app.shared.domain.query_support import apply_filters_only
+        """Get paginated permission requests with eager-loaded relations."""
 
         count_stmt = select(func.count(ORMModel.id)).where(
             ORMModel.is_deleted == deleted
@@ -53,9 +35,7 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         data_stmt = (
             select(ORMModel)
             .options(
-                joinedload(ORMModel.user),
-                joinedload(ORMModel.homework).noload(HomeworkModel.assignees),
-                joinedload(ORMModel.meeting),
+                joinedload(ORMModel.creator),
             )
             .where(ORMModel.is_deleted == deleted)
         )
@@ -79,9 +59,7 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         stmt = (
             select(ORMModel)
             .options(
-                joinedload(ORMModel.user),
-                joinedload(ORMModel.homework).noload(HomeworkModel.assignees),
-                joinedload(ORMModel.meeting),
+                joinedload(ORMModel.creator),
             )
             .where(
                 ORMModel.is_deleted.is_(False),
@@ -102,9 +80,7 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         stmt = (
             select(ORMModel)
             .options(
-                joinedload(ORMModel.user),
-                joinedload(ORMModel.homework).noload(HomeworkModel.assignees),
-                joinedload(ORMModel.meeting),
+                joinedload(ORMModel.creator),
             )
             .where(
                 ORMModel.is_deleted == deleted,
@@ -127,9 +103,7 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         stmt = (
             select(ORMModel)
             .options(
-                joinedload(ORMModel.user),
-                joinedload(ORMModel.homework).noload(HomeworkModel.assignees),
-                joinedload(ORMModel.meeting),
+                joinedload(ORMModel.creator),
             )
             .where(
                 ORMModel.created_by == user_id,
@@ -146,58 +120,17 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         rows = self.session.scalars(stmt).unique().all()
         return [r.to_entity() for r in rows]
 
-    def count_by_user_category_month(
-        self, user_id: int, category: RequestCategory, month: int, year: int
-    ) -> int:
-        stmt = select(func.count(ORMModel.id)).where(
-            ORMModel.created_by == user_id,
-            ORMModel.category == category,
-            ORMModel.is_deleted.is_(False),
-            extract("month", ORMModel.created_at) == month,
-            extract("year", ORMModel.created_at) == year,
-        )
-        return self.session.scalars(stmt).one()
-
-    def has_postpone_request_for_date(self, user_id: int, target_date: date) -> bool:
-        """Kiểm tra user có đơn xin tạm hoãn bài tập trong ngày không."""
-        stmt = select(func.count(ORMModel.id)).where(
-            ORMModel.created_by == user_id,
-            ORMModel.category == RequestCategory.POSTPONE,
-            ORMModel.is_deleted == False,
-            func.date(ORMModel.created_at) == target_date,
-        )
-        return self.session.scalars(stmt).one() > 0
-
-    def has_absence_request_for_date(self, user_id: int, target_date: date) -> bool:
-        """Kiểm tra user có đơn xin vắng sinh hoạt trong ngày không."""
-        stmt = select(func.count(ORMModel.id)).where(
-            ORMModel.created_by == user_id,
-            ORMModel.category == RequestCategory.ABSENCE,
-            ORMModel.is_deleted.is_(False),
-            func.date(ORMModel.created_at) == target_date,
-        )
-        return self.session.scalars(stmt).one() > 0
-
-    def get_user_ids_with_requests_for_date(
-        self, user_ids: list[int], target_date: date, category: RequestCategory
-    ) -> set[int]:
-        """Lấy danh sách các user_id đã có đơn xin phép theo loại và ngày cụ thể (Batch)."""
-        if not user_ids:
-            return set()
-
+    def get_detail_by_id(self, request_id: int) -> ORMModel | None:
+        """Lấy chi tiết đơn xin phép kèm theo liên kết User creator/updater."""
         stmt = (
-            select(ORMModel.created_by)
-            .join(Meeting, ORMModel.meeting_id == Meeting.id)
-            .where(
-                ORMModel.created_by.in_(user_ids),
-                ORMModel.category == category,
-                ORMModel.is_deleted == False,
-                func.date(Meeting.start_time) == target_date,
+            select(ORMModel)
+            .options(
+                joinedload(ORMModel.creator),
+                joinedload(ORMModel.updater),
             )
+            .where(ORMModel.id == request_id, ORMModel.is_deleted.is_(False))
         )
-
-        rows = self.session.scalars(stmt).unique().all()
-        return {r for r in rows if r is not None}
+        return self.session.scalars(stmt).unique().first()
 
     def get_requests_for_meetings(
         self, meeting_ids: list[int], user_ids: list[int]
@@ -213,8 +146,8 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         if meeting_ids:
             stmt = stmt.where(
                 or_(
-                    ORMModel.meeting_id.in_(meeting_ids),
-                    ORMModel.meeting_id.is_(None),
+                    ORMModel.payload["meeting_id"].as_integer().in_(meeting_ids),
+                    ORMModel.payload["meeting_id"].as_integer().is_(None),
                 )
             )
 
@@ -229,7 +162,7 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
             return []
 
         stmt = select(ORMModel).where(
-            ORMModel.homework_id.in_(homework_ids),
+            ORMModel.payload["homework_id"].as_integer().in_(homework_ids),
             ORMModel.created_by.in_(user_ids),
             ORMModel.category == RequestCategory.POSTPONE,
             ORMModel.is_deleted.is_(False),
@@ -239,9 +172,9 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         return [r.to_entity() for r in rows]
 
     def get_absence_user_ids_by_meeting(self, meeting_id: int) -> set[int]:
-        """Lấy danh sách các user_id có đơn xin vắng (ABSENCE) hợp lệ của một meeting."""
+        """Lấy danh sách user_id có đơn xin vắng (ABSENCE) của một meeting."""
         stmt = select(ORMModel.created_by).where(
-            ORMModel.meeting_id == meeting_id,
+            ORMModel.payload["meeting_id"].as_integer() == meeting_id,
             ORMModel.category == RequestCategory.ABSENCE,
             ORMModel.is_deleted.is_(False),
         )
@@ -249,9 +182,9 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         return {r for r in rows if r is not None}
 
     def get_transferred_out_user_ids_by_meeting(self, meeting_id: int) -> set[int]:
-        """Lấy danh sách các user_id có đơn đổi buổi chuyển ĐI khỏi meeting này (old_meeting_id == meeting_id)."""
+        """Lấy user_id có đơn chuyển ĐI khỏi meeting (old_meeting_id == meeting_id)."""
         stmt = select(ORMModel.created_by).where(
-            ORMModel.old_meeting_id == meeting_id,
+            ORMModel.payload["old_meeting_id"].as_integer() == meeting_id,
             ORMModel.category == RequestCategory.CHANGE_MEETING,
             ORMModel.is_deleted.is_(False),
         )
@@ -259,27 +192,25 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         return {r for r in rows if r is not None}
 
     def get_transferred_in_user_ids_by_meeting(self, meeting_id: int) -> set[int]:
-        """Lấy danh sách các user_id có đơn đổi buổi chuyển ĐẾN meeting này (meeting_id == meeting_id)."""
+        """Lấy user_id có đơn chuyển ĐẾN meeting (meeting_id == meeting_id)."""
         stmt = select(ORMModel.created_by).where(
-            ORMModel.meeting_id == meeting_id,
+            ORMModel.payload["meeting_id"].as_integer() == meeting_id,
             ORMModel.category == RequestCategory.CHANGE_MEETING,
             ORMModel.is_deleted.is_(False),
         )
         rows = self.session.scalars(stmt).all()
         return {r for r in rows if r is not None}
 
-    def get_all_excused_or_transferred_out_user_ids(self, meeting_id: int) -> set[int]:
-        """Lấy toàn bộ user_id không tham gia meeting: hoặc xin vắng (ABSENCE), hoặc đã chuyển sang buổi khác (CHANGE_MEETING)."""
+    def get_all_excused_or_transferred_out_user_ids(
+        self, meeting_id: int
+    ) -> set[int]:
+        """Lấy user_id không tham gia: vắng (ABSENCE) hoặc chuyển ca."""
         return self.get_absence_user_ids_by_meeting(
             meeting_id
         ) | self.get_transferred_out_user_ids_by_meeting(meeting_id)
 
     def mark_participant_excused(self, meeting_id: int, user_id: int) -> None:
         """Đánh dấu participant trong meeting_participants thành ABSENT_EXCUSED."""
-        from app.meeting.domain.value_objects import ParticipantStatus
-        from app.meeting.infrastructure.model import (
-            MeetingParticipant as ORMParticipant,
-        )
 
         stmt = select(ORMParticipant).where(
             ORMParticipant.meeting_id == meeting_id,
@@ -291,28 +222,38 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
             p.status = ParticipantStatus.ABSENT_EXCUSED
             self.session.flush()
 
-    def revert_participant_excused(self, meeting_id: int, user_id: int) -> None:
-        """Khôi phục participant trong meeting_participants về NOT_JOINED nếu không còn đơn vắng khác."""
-        from app.meeting.domain.value_objects import ParticipantStatus
-        from app.meeting.infrastructure.model import (
-            MeetingParticipant as ORMParticipant,
-        )
-
+    def mark_participant_late_excused(self, meeting_id: int, user_id: int) -> None:
+        """Đánh dấu participant thành LATE_EXCUSED nếu chưa check-in."""
         stmt = select(ORMParticipant).where(
             ORMParticipant.meeting_id == meeting_id,
             ORMParticipant.user_id == user_id,
             ORMParticipant.is_deleted.is_(False),
         )
         p = self.session.scalars(stmt).first()
-        if p and p.status == ParticipantStatus.ABSENT_EXCUSED:
+        if p and p.status == ParticipantStatus.NOT_JOINED:
+            p.status = ParticipantStatus.LATE_EXCUSED
+            self.session.flush()
+
+    def revert_participant_excused(self, meeting_id: int, user_id: int) -> None:
+        """Khôi phục participant về NOT_JOINED nếu không còn đơn vắng/trễ."""
+        stmt = select(ORMParticipant).where(
+            ORMParticipant.meeting_id == meeting_id,
+            ORMParticipant.user_id == user_id,
+            ORMParticipant.is_deleted.is_(False),
+        )
+        p = self.session.scalars(stmt).first()
+        if p and p.status in (
+            ParticipantStatus.ABSENT_EXCUSED,
+            ParticipantStatus.LATE_EXCUSED,
+        ):
             p.status = ParticipantStatus.NOT_JOINED
             self.session.flush()
 
     def cancel_active_requests_by_meeting(self, user_id: int, meeting_id: int) -> int:
-        """Hủy mềm (is_deleted = True) các đơn xin vắng/trễ cũ của user tại meeting_id."""
+        """Hủy mềm (is_deleted = True) các đơn xin vắng/trễ của user tại meeting_id."""
         stmt = select(ORMModel).where(
             ORMModel.created_by == user_id,
-            ORMModel.meeting_id == meeting_id,
+            ORMModel.payload["meeting_id"].as_integer() == meeting_id,
             ORMModel.category.in_([RequestCategory.ABSENCE, RequestCategory.LATE]),
             ORMModel.is_deleted.is_(False),
         )

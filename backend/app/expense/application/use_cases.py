@@ -4,7 +4,7 @@ Expense Application Use Cases — business logic layer.
 
 import uuid
 from collections.abc import Sequence
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from zoneinfo import ZoneInfo
 
 from app.expense.domain.entity import ExpenseInvoice, ExpenseStatus
@@ -180,7 +180,7 @@ class UpdateExpenseUseCase:
             model.payment_date = payment_date
 
         model.updated_by = updated_by
-        model.updated_at = datetime.now(timezone.utc)
+        model.updated_at = datetime.now(UTC)
 
         self.repo.update(model)
         result = self.repo.get_by_id(expense_id)
@@ -209,7 +209,7 @@ class UpdateExpenseStatusUseCase:
             model.payment_date = (
                 payment_date
                 or model.expense_date
-                or datetime.now(timezone.utc)
+                or datetime.now(UTC)
                 .astimezone(ZoneInfo("Asia/Ho_Chi_Minh"))
                 .date()
             )
@@ -217,7 +217,7 @@ class UpdateExpenseStatusUseCase:
             model.payment_date = None
 
         model.updated_by = updated_by
-        model.updated_at = datetime.now(timezone.utc)
+        model.updated_at = datetime.now(UTC)
 
         self.repo.update(model)
         result = self.repo.get_by_id(expense_id)

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Drawer, Descriptions, Tag, Space, Avatar, Typography, Button, Popconfirm, Card, Divider, Grid } from 'antd';
+import { Drawer, Descriptions, Tag, Space, Avatar, Typography, Button, Popconfirm, Card, Divider, Grid, Spin } from 'antd';
 import {
     UserOutlined,
     EditOutlined,
@@ -11,6 +11,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { PermissionRequestResponse } from '@/features/activity/types/activity.types';
+import { usePermissionRequestDetail } from '@/features/rbac/hooks/usePermissionRequests';
 import { CATEGORY_COLORS, CATEGORY_LABELS } from './constants';
 
 const { Title, Text } = Typography;
@@ -27,7 +28,7 @@ interface PermissionDetailDrawerProps {
 
 export const PermissionDetailDrawer: React.FC<PermissionDetailDrawerProps> = ({
     isOpen,
-    item,
+    item: initialItem,
     canUpdate,
     canDelete,
     onClose,
@@ -35,6 +36,8 @@ export const PermissionDetailDrawer: React.FC<PermissionDetailDrawerProps> = ({
     onDelete,
 }) => {
     const screens = Grid.useBreakpoint();
+    const { data: detailData, isLoading } = usePermissionRequestDetail(initialItem?.id, isOpen);
+    const item = detailData || initialItem;
 
     if (!item) return null;
 
@@ -51,13 +54,14 @@ export const PermissionDetailDrawer: React.FC<PermissionDetailDrawerProps> = ({
             open={isOpen}
             width={screens.md ? 500 : '100%'}
         >
-            <div className="flex flex-col h-full">
+            <Spin spinning={isLoading}>
+                <div className="flex flex-col h-full">
                 <div className="flex-1 overflow-y-auto px-1">
                     <Descriptions column={1} bordered size="small" className="mb-6 bg-white rounded-lg shadow-xs overflow-hidden">
                         <Descriptions.Item label="Người tạo">
                             <Space>
-                                <Avatar size="small" src={item.owner?.avatar_url} icon={<UserOutlined />} />
-                                <Text strong>{item.owner?.name || `#${item.created_by}`}</Text>
+                                <Avatar size="small" src={item.creator?.avatar_url} icon={<UserOutlined />} />
+                                <Text strong>{item.creator?.name || `#${item.created_by}`}</Text>
                             </Space>
                         </Descriptions.Item>
                         <Descriptions.Item label="Loại phép">
@@ -188,6 +192,7 @@ export const PermissionDetailDrawer: React.FC<PermissionDetailDrawerProps> = ({
                     )}
                 </div>
             </div>
+            </Spin>
         </Drawer>
     );
 };

@@ -1,49 +1,82 @@
 from datetime import datetime
 
-from app.homework.domain.entity import Homework
-from app.meeting.domain.entity import Meeting
+from app.permission_request.domain.payloads import (
+    AbsencePayload,
+    BasePermissionPayload,
+    ChangeMeetingPayload,
+    LatePayload,
+    PermissionPayloadUnion,
+    PostponePayload,
+)
 from app.permission_request.domain.value_objects import RequestCategory
 from app.shared.domain.base_entity import BaseEntity
 from app.shared.domain.value_objects import UserRef
 
 
-class PermissionRequest(BaseEntity):
-    """Yêu cầu xin phép (Domain Entity)"""
+class PermissionRequest[TPayload: BasePermissionPayload](BaseEntity):
+    """
+    Yêu cầu xin phép (Generic Domain Entity).
+    TPayload: Kiểu dữ liệu đặc thù của loại đơn (AbsencePayload, LatePayload,...),
+              đảm bảo 100% Type-Safe và không dùng Any hay getattr.
+    """
 
     user_id: int | None
-    category: RequestCategory
     note: str
+    payload: TPayload
 
-    # Specific metadata based on category
-    homework_id: int | None = None
-    meeting_id: int | None = None
-    old_meeting_id: int | None = None
-
-    # Target time (arrival time or deadline time)
-    start_time: datetime | None = None
-
-    # Related entities (Optional)
-    owner: UserRef | None = None
+    # Related entities (Optional snapshots)
     creator: UserRef | None = None
     updater: UserRef | None = None
-    homework: Homework | None = None
-    meeting: Meeting | None = None
-    old_meeting: Meeting | None = None
 
-    def validate_postpone(self, homework: Homework) -> None:
-        """Kiểm tra tính hợp lệ của đơn xin hoãn bài tập (tối đa 4 ngày)."""
-        if self.category != RequestCategory.POSTPONE:
-            return
+    @property
+    def category(self) -> RequestCategory:
+        """Loại yêu cầu xin phép (truy xuất từ payload)."""
+        return self.payload.category
 
-        if self.start_time:
-            delta = self.start_time - homework.deadline
-            if delta.total_seconds() > 4 * 24 * 3600:
-                raise ValueError(
-                    "Thời gian xin hoãn không được vượt quá 4 ngày so với deadline gốc"
-                )
-            if delta.total_seconds() < 0:
-                raise ValueError("Thời gian gia hạn mới phải sau deadline gốc")
+    @property
+    def homework_id(self) -> int | None:
+        """ID bài tập liên kết nếu là đơn hoãn bài tập."""
+        match self.payload:
+            case PostponePayload(homework_id=hid):
+                return hid
+            case _:
+                return None
+
+    @property
+    def meeting_id(self) -> int | None:
+        """ID buổi học liên kết nếu là đơn vắng, trễ, hoặc đổi ca."""
+        match self.payload:
+            case (
+                AbsencePayload(meeting_id=mid)
+                | LatePayload(meeting_id=mid)
+                | ChangeMeetingPayload(meeting_id=mid)
+            ):
+                return mid
+            case _:
+                return None
+
+    @property
+    def old_meeting_id(self) -> int | None:
+        """ID buổi học cũ nếu là đơn đổi ca."""
+        match self.payload:
+            case ChangeMeetingPayload(old_meeting_id=old_mid):
+                return old_mid
+            case _:
+                return None
+
+    @property
+    def start_time(self) -> datetime | None:
+        """Thời gian bắt đầu/hạn nộp liên kết với đơn."""
+        match self.payload:
+            case (
+                LatePayload(start_time=st)
+                | PostponePayload(start_time=st)
+                | ChangeMeetingPayload(start_time=st)
+            ):
+                return st
+            case _:
+                return None
 
 
-# Rebuild model for Pydantic to resolve type hints
-PermissionRequest.model_rebuild()
+# Type alias cho PermissionRequest khi làm việc với Union payload
+PermissionRequestUnion = PermissionRequest[PermissionPayloadUnion]

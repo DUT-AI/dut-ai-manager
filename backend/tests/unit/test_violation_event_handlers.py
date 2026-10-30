@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -10,7 +10,7 @@ from app.meeting.domain.events import (
 )
 from app.meeting.domain.value_objects import ParticipantStatus
 from app.permission_request.domain.entity import PermissionRequest
-from app.permission_request.domain.value_objects import RequestCategory
+from app.permission_request.domain.payloads import AbsencePayload, LatePayload
 from app.violation.application.event_handlers import AutomatedViolationHandler
 
 
@@ -61,9 +61,8 @@ async def test_handle_meeting_absence_with_permission_skips_violation():
     excused_req = PermissionRequest(
         id=1,
         user_id=102,
-        category=RequestCategory.ABSENCE,
         note="Bận việc gia đình",
-        meeting_id=1,
+        payload=AbsencePayload(meeting_id=1),
     )
     permission_repo.get_requests_for_meetings.return_value = [excused_req]
     participant_repo = MagicMock()
@@ -141,10 +140,11 @@ async def test_handle_meeting_late_with_valid_permission_skips_violation():
     late_req = PermissionRequest(
         id=2,
         user_id=104,
-        category=RequestCategory.LATE,
         note="Kẹt xe",
-        meeting_id=1,
-        start_time=datetime(2026, 9, 25, 14, 30),
+        payload=LatePayload(
+            meeting_id=1,
+            start_time=datetime(2026, 9, 25, 14, 30, tzinfo=UTC),
+        ),
     )
     permission_repo.get_requests_for_meetings.return_value = [late_req]
     participant_repo = MagicMock()

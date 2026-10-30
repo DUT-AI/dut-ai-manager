@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from typing import cast
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
@@ -112,8 +112,8 @@ class InvoiceResponse(BaseModel):
             payment_method=invoice.payment_method,
             transaction_id=invoice.transaction_id,
             billing_period=invoice.billing_period,
-            created_at=invoice.created_at or datetime.now(timezone.utc),
-            updated_at=invoice.updated_at or datetime.now(timezone.utc),
+            created_at=invoice.created_at or datetime.now(UTC),
+            updated_at=invoice.updated_at or datetime.now(UTC),
             items=items,
             team=effective_team,
             qr_url=QRGenerator.get_url(invoice),

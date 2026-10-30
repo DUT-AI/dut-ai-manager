@@ -12,6 +12,9 @@ from app.meeting.domain.entity import Meeting
 from app.meeting.domain.events import MeetingUpdated
 from app.meeting.domain.value_objects import ParticipantStatus
 from app.meeting.infrastructure.repository import MeetingRepository
+from app.permission_request.infrastructure.repository import (
+    PermissionRequestRepository,
+)
 from app.shared.application.event_handler import EventHandler
 from app.shared.infrastructure.notification.dispatcher import (
     UnifiedNotificationDispatcher,
@@ -20,9 +23,6 @@ from app.shared.infrastructure.notification_payload import (
     NotificationCategory,
     NotificationLevel,
     NotificationPayload,
-)
-from app.permission_request.infrastructure.repository import (
-    PermissionRequestRepository,
 )
 from app.team.infrastructure.repository import TeamRepository
 from app.user.infrastructure.repository import UserRepository
@@ -142,9 +142,7 @@ class DutyNotificationHandler(EventHandler):
         # Bổ sung các bạn đổi buổi chuyển ĐẾN meeting này
         if self.permission_repo and meeting.id:
             transferred_in_ids = (
-                self.permission_repo.get_transferred_in_user_ids_by_meeting(
-                    meeting.id
-                )
+                self.permission_repo.get_transferred_in_user_ids_by_meeting(meeting.id)
             )
             for uid in transferred_in_ids:
                 if uid not in valid_ids and uid not in excluded_user_ids:
@@ -331,9 +329,9 @@ class DutyNotificationHandler(EventHandler):
 
             def build_content(user_name: str) -> str:
                 return (
-                    f"Chào **{user_name}**!\n"
-                    f"Bạn có lịch phân công trực nhật phòng Lab cho **{event.team_name}** "
-                    f"vào ngày **{duty_date_str}** ({time_str}).\n"
+                    f"Chào {user_name}!\n"
+                    f"Bạn có lịch phân công trực nhật phòng Lab cho {event.team_name} "
+                    f"vào ngày {duty_date_str} ({time_str}).\n"
                     f"👉 Vui lòng dọn dẹp vệ sinh phòng Lab và nộp ảnh minh chứng lên hệ thống."
                 )
 
@@ -447,11 +445,11 @@ class DutyNotificationHandler(EventHandler):
 
             def build_content(user_name: str) -> str:
                 return (
-                    f"Chào **{user_name}**!\n"
-                    f"Buổi sinh hoạt **'{event.title}'** đã thay đổi thời gian, "
-                    f"lịch trực nhật phòng Lab của **{team_name}** được điều chỉnh tương ứng sang:\n"
-                    f"📅 **Ngày trực mới**: {duty_date_str}\n"
-                    f"⏰ **Khung giờ mới**: {time_str}\n"
+                    f"Chào {user_name}!\n"
+                    f"Buổi sinh hoạt '{event.title}' đã thay đổi thời gian, "
+                    f"lịch trực nhật phòng Lab của {team_name} được điều chỉnh tương ứng sang:\n"
+                    f"📅 Ngày trực mới: {duty_date_str}\n"
+                    f"⏰ Khung giờ mới: {time_str}\n"
                     f"👉 Vui lòng lưu ý khung giờ mới để trực nhật và nộp ảnh minh chứng đúng hạn."
                 )
 
@@ -515,10 +513,10 @@ class DutyNotificationHandler(EventHandler):
 
             def build_content(user_name: str) -> str:
                 return (
-                    f"Chào **{user_name}**!\n"
-                    f"Ca trực nhật phòng Lab của **{event.team_name}** vừa được cập nhật thời gian:\n"
-                    f"📅 **Ngày trực**: {duty_date_str}\n"
-                    f"⏰ **Khung giờ**: {time_str}\n"
+                    f"Chào {user_name}!\n"
+                    f"Ca trực nhật phòng Lab của {event.team_name} vừa được cập nhật thời gian:\n"
+                    f"📅 Ngày trực: {duty_date_str}\n"
+                    f"⏰ Khung giờ: {time_str}\n"
                     f"👉 Vui lòng dọn dẹp vệ sinh phòng Lab và nộp ảnh minh chứng theo thời gian mới."
                 )
 
@@ -580,8 +578,8 @@ class DutyNotificationHandler(EventHandler):
                 user_id=event.submitted_by,
                 title="🧹 [TRỰC NHẬT] MINH CHỨNG CẦN DUYỆT",
                 content=(
-                    f"**{user_name}** vừa gửi minh chứng trực nhật cho **{team_name}** "
-                    f"ngày **{event.duty_date}**.\n"
+                    f"{user_name} vừa gửi minh chứng trực nhật cho {team_name} "
+                    f"ngày {event.duty_date}.\n"
                     "👉 Vui lòng Admin/HR kiểm tra hình ảnh và xét duyệt trên hệ thống."
                 ),
                 category=NotificationCategory.DUTY,

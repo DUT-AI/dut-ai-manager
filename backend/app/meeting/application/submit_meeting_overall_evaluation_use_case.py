@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.meeting.domain.entity import EvaluationScoreItem, MeetingOverallEvaluation
 from app.meeting.infrastructure.repository import (
@@ -31,7 +31,7 @@ class SubmitMeetingOverallEvaluationUseCase:
         if not meeting:
             raise BadRequestException("Không tìm thấy buổi học", status_code=404)
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         is_open, message = meeting.is_evaluation_open(now)
         if not is_open:
             raise BadRequestException(message)

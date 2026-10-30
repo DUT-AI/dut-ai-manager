@@ -4,7 +4,7 @@ Homework Rescan Use Case — application layer.
 Quét lại toàn bộ bài tập (cũ & mới) và phát event kiểm tra vi phạm quá hạn.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
 from app.homework.application.check_overdue_homework_use_case import (
@@ -56,7 +56,9 @@ class RescanAllHomeworksUseCase:
         2. Chạy kiểm tra vi phạm cho từng bài tập và phát sinh event tạo vi phạm chuẩn.
         """
         all_homeworks = self.homework_repo.get_all(limit=1000)
-        now_date = datetime.now(timezone.utc).astimezone(ZoneInfo("Asia/Ho_Chi_Minh")).date()
+        now_date = (
+            datetime.now(UTC).astimezone(ZoneInfo("Asia/Ho_Chi_Minh")).date()
+        )
         past_homeworks = [
             hw for hw in all_homeworks if hw.deadline and hw.deadline.date() <= now_date
         ]

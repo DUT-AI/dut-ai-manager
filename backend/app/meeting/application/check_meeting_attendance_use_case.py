@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from typing import cast
 from zoneinfo import ZoneInfo
 
@@ -33,7 +33,7 @@ class CheckMeetingAttendanceUseCase:
 
     async def execute(self, target_date: date | None = None) -> int:
         if target_date is None:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             target_date = now.astimezone(ZoneInfo("Asia/Ho_Chi_Minh")).date()
 
         meetings = self.meeting_repo.get_by_date(target_date)

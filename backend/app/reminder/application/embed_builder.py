@@ -54,21 +54,21 @@ def build_reminder_embed(
         prefix = "🚨 [CẢNH BÁO GẤP]" if is_urgent else "⏰ [NHẮC NHỞ LỊCH HỌP]"
         title = f"{prefix} Buổi họp / Sinh hoạt: {task_title}"
         description = (
-            f"Chào bạn! Bạn có lịch tham gia buổi sinh hoạt **{task_title}** sắp diễn ra.\n\n"
-            f"📅 **Thời gian bắt đầu**: `{deadline_str}` (Giờ VN - UTC+7)\n"
-            f"⏳ **Thời gian còn lại**: **{time_left_str}**\n\n"
-            f"⚠️ *Lưu ý: Vui lòng có mặt đúng giờ và hoàn tất điểm danh trước khi bắt đầu buổi sinh hoạt.*\n\n"
-            f"👉 [**Bấm vào đây để xem chi tiết và điểm danh**]({action_url})"
+            f"Chào bạn! Bạn có lịch tham gia buổi sinh hoạt {task_title} sắp diễn ra.\n\n"
+            f"📅 Thời gian bắt đầu: {deadline_str} (Giờ VN - UTC+7)\n"
+            f"⏳ Thời gian còn lại: {time_left_str}\n\n"
+            f"⚠️ Lưu ý: Vui lòng có mặt đúng giờ và hoàn tất điểm danh trước khi bắt đầu buổi sinh hoạt.\n\n"
+            f"👉 Xem chi tiết và điểm danh tại: {action_url}"
         )
     else:
         prefix = "🚨 [CẢNH BÁO GẤP]" if is_urgent else "⏰ [NHẮC NHỞ HẠN CHÓT]"
         title = f"{prefix} {type_name}: {task_title}"
         description = (
-            f"Chào bạn! Bạn có nhiệm vụ **{task_title}** sắp đến hạn nộp.\n\n"
-            f"📅 **Hạn chót**: `{deadline_str}` (Giờ VN - UTC+7)\n"
-            f"⏳ **Thời gian còn lại**: **{time_left_str}**\n\n"
-            f"⚠️ *Lưu ý: Vui lòng hoàn thành và nộp trước thời hạn trên để tránh bị hệ thống tự động ghi nhận lỗi vi phạm (Violation) vào cuối ngày.*\n\n"
-            f"👉 [**Bấm vào đây để nộp bài ngay**]({action_url})"
+            f"Chào bạn! Bạn có nhiệm vụ {task_title} sắp đến hạn nộp.\n\n"
+            f"📅 Hạn chót: {deadline_str} (Giờ VN - UTC+7)\n"
+            f"⏳ Thời gian còn lại: {time_left_str}\n\n"
+            f"⚠️ Lưu ý: Vui lòng hoàn thành và nộp trước thời hạn trên để tránh bị hệ thống tự động ghi nhận lỗi vi phạm (Violation) vào cuối ngày.\n\n"
+            f"👉 Nộp bài ngay tại: {action_url}"
         )
 
     return {

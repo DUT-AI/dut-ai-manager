@@ -5,9 +5,9 @@ Handles daily background job (23:59) checking for overdue homework submissions
 and publishing domain events (HomeworkOverdueDetected) for decoupled violation processing.
 """
 
-from datetime import date, datetime, timezone
-from zoneinfo import ZoneInfo
+from datetime import UTC, date, datetime
 from typing import cast
+from zoneinfo import ZoneInfo
 
 from loguru import logger
 
@@ -59,7 +59,7 @@ class CheckOverdueHomeworkUseCase:
         3. Nếu CHƯA hoàn thành -> Phát sự kiện HomeworkOverdueDetected lên EventBus.
         """
         if target_date is None:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             target_date = now.astimezone(ZoneInfo("Asia/Ho_Chi_Minh")).date()
 
         due_homeworks = self.homework_repo.get_by_deadline_date(target_date)

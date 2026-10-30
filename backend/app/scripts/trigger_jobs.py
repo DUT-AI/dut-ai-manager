@@ -2,7 +2,7 @@ import argparse
 import asyncio
 import os
 import sys
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 
 # Add the project root to sys.path

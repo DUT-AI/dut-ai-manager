@@ -89,7 +89,7 @@ export const PermissionRequestSection = ({ data, onEdit, onRefresh }: Props) => 
                             </div>
                             <Text className="block text-sm text-gray-700 line-clamp-2">{item.note}</Text>
                             <div className="mt-2 pt-2 border-t border-blue-100 flex justify-between items-center text-[10px] text-gray-400">
-                                <span>Tạo bởi: {item.creator?.name || item.owner?.name || 'System'}</span>
+                                <span>Tạo bởi: {item.creator?.name || 'System'}</span>
                                 <span>{dayjs(item.created_at).format('DD/MM HH:mm')}</span>
                             </div>
                         </Card>
@@ -127,7 +127,7 @@ export const PermissionRequestSection = ({ data, onEdit, onRefresh }: Props) => 
 
                         <Divider style={{ textAlign: 'left' }} className="mb-2!">Thông tin hệ thống</Divider>
                         <Descriptions column={1} size="small" className="text-gray-500">
-                            <Descriptions.Item label="Tạo bởi">{detailItem.creator?.name || detailItem.owner?.name || 'N/A'}</Descriptions.Item>
+                            <Descriptions.Item label="Tạo bởi">{detailItem.creator?.name || 'N/A'}</Descriptions.Item>
                             <Descriptions.Item label="Ngày tạo">{dayjs(detailItem.created_at).format('DD/MM/YYYY HH:mm:ss')}</Descriptions.Item>
                             {detailItem.updated_at !== detailItem.created_at && (
                                 <>

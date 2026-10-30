@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import cast
 
 from fastapi import UploadFile
@@ -45,7 +45,7 @@ class CheckInUseCase:
         client_time: str | None = None,
         client_event_id: str | None = None,
     ) -> tuple[list[MeetingParticipant], str]:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         check_in_dt = now
         if client_time:
@@ -90,10 +90,7 @@ class CheckInUseCase:
                 if not meeting:
                     continue
 
-                if (
-                    client_event_id
-                    and participant.client_event_id == client_event_id
-                ):
+                if client_event_id and participant.client_event_id == client_event_id:
                     messages.append(
                         f"Yêu cầu trùng lặp (client_event_id), đã bỏ qua cho '{meeting.title}'"
                     )

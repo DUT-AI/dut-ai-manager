@@ -3,9 +3,15 @@ import type { ApiResponse } from '@/types/api.types';
 import type { UserResponse, UserCreate, UserUpdate, UserSettingsUpdate, UserImportResult, UserOptionDto } from '@/features/users/types/user.types';
 
 export const userService = {
-  getUsers: async (page = 1, pageSize = 20, keyword?: string) => {
+  getUsers: async (
+    page = 1,
+    pageSize = 20,
+    keyword?: string,
+    role?: string,
+    status?: string
+  ) => {
     const response = await axiosInstance.get<ApiResponse<UserResponse[]>>('/users', {
-      params: { page, page_size: pageSize, keyword },
+      params: { page, page_size: pageSize, keyword, role, status },
     });
     return response.data;
   },

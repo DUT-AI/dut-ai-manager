@@ -60,9 +60,9 @@ class ViolationNotificationHandler(EventHandler):
                 user_id=event.user_id,
                 title="⚠️ THÔNG BÁO VI PHẠM KỶ LUẬT",
                 content=(
-                    f"Chào **{event.user_name or 'bạn'}**!\n"
+                    f"Chào {event.user_name or 'bạn'}!\n"
                     f"Bạn vừa bị ghi nhận 01 biên bản vi phạm mới trong hệ thống.\n"
-                    f"Lý do: **{event.reason}**.\n"
+                    f"Lý do: {event.reason}.\n"
                     f"Vui lòng kiểm tra và rút kinh nghiệm."
                 ),
                 category=NotificationCategory.VIOLATION,

@@ -58,7 +58,6 @@ from app.shared.application.response import (
     BadRequestException,
     PaginationMeta,
 )
-from app.shared.infrastructure.audio_utils import downsample_wav_to_16k_mono
 from app.shared.infrastructure.sse import sse_broadcaster
 from app.utils.text import remove_vietnamese_tones
 
@@ -172,7 +171,9 @@ async def check_meeting_ownership(
 
     meeting = uc.get_by_id(meeting_id)
     if not meeting:
-        raise BadRequestException("Không tìm thấy buổi học", status_code=status.HTTP_404_NOT_FOUND)
+        raise BadRequestException(
+            "Không tìm thấy buổi học", status_code=status.HTTP_404_NOT_FOUND
+        )
 
     if meeting.created_by != current_user.id:
         raise BadRequestException(
@@ -381,7 +382,9 @@ async def check_meeting_evaluation_permission(
 ):
     """Kiểm tra xem người dùng hiện tại có quyền đánh giá cuộc họp không (Admin, Creator, hoặc Trainer)."""
     if current_user.id is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized"
+        )
 
     is_admin = any(
         r.lower() in ["admin", "superadmin", "leader", "manager"]
@@ -396,12 +399,14 @@ async def check_meeting_evaluation_permission(
 
     meeting = uc.get_by_id(meeting_id)
     if not meeting:
-        raise BadRequestException("Không tìm thấy buổi học", status_code=status.HTTP_404_NOT_FOUND)
+        raise BadRequestException(
+            "Không tìm thấy buổi học", status_code=status.HTTP_404_NOT_FOUND
+        )
 
-    is_creator = meeting.created_by is not None and meeting.created_by == current_user.id
-    is_trainer = (
-        meeting.creator is not None and meeting.creator.id == current_user.id
+    is_creator = (
+        meeting.created_by is not None and meeting.created_by == current_user.id
     )
+    is_trainer = meeting.creator is not None and meeting.creator.id == current_user.id
 
     if not (is_creator or is_trainer):
         raise BadRequestException(
@@ -539,6 +544,8 @@ async def get_my_evaluation_result(
 ):
     """Trainee xem kết quả đánh giá mà Trainer dành cho mình (khóa nếu chưa đánh giá Trainer)."""
 
-    result = await uc.execute(meeting_id=meeting_id, current_user_id=current_user.user_id)
+    result = await uc.execute(
+        meeting_id=meeting_id, current_user_id=current_user.user_id
+    )
     data = EvaluationResponse.from_domain(result) if result else None
     return ApiResponse.success(data=data)

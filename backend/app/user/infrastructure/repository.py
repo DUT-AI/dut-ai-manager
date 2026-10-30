@@ -116,8 +116,16 @@ class UserRepository(BaseRepository[UserModel, UserEntity]):
     def get_summary_by_card_code(self, code: str) -> UserEntity | None:
         """Lấy thông tin User tối giản theo mã thẻ (chỉ id, name, code) để tránh N+1 Role/Permission query."""
         stmt = (
-            select(UserModel.id, UserModel.name, UserModel.check_in_card_code, UserModel.email, UserModel.status)
-            .where(UserModel.check_in_card_code == code, UserModel.is_deleted.is_(False))
+            select(
+                UserModel.id,
+                UserModel.name,
+                UserModel.check_in_card_code,
+                UserModel.email,
+                UserModel.status,
+            )
+            .where(
+                UserModel.check_in_card_code == code, UserModel.is_deleted.is_(False)
+            )
             .limit(1)
         )
         row = self.session.execute(stmt).first()
@@ -139,7 +147,12 @@ class UserRepository(BaseRepository[UserModel, UserEntity]):
         return [m.to_entity() for m in models]
 
     def get_paged_users(
-        self, page: int = 1, page_size: int = 20, keyword: str | None = None
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        keyword: str | None = None,
+        role: str | None = None,
+        status: UserStatus | None = None,
     ) -> tuple[list[UserEntity], int]:
         """Get paginated users with eager loaded roles/permissions and total count."""
 
@@ -153,6 +166,11 @@ class UserRepository(BaseRepository[UserModel, UserEntity]):
                     UserModel.email.ilike(f"%{keyword}%"),
                 )
             )
+        if status:
+            count_stmt = count_stmt.where(UserModel.status == status)
+        if role:
+            count_stmt = count_stmt.where(UserModel.roles.any(RoleModel.name == role))
+
         total = self.session.scalar(count_stmt) or 0
 
         statement = self._get_base_query().where(UserModel.is_deleted.is_(False))
@@ -163,6 +181,11 @@ class UserRepository(BaseRepository[UserModel, UserEntity]):
                     UserModel.email.ilike(f"%{keyword}%"),
                 )
             )
+        if status:
+            statement = statement.where(UserModel.status == status)
+        if role:
+            statement = statement.where(UserModel.roles.any(RoleModel.name == role))
+
         offset = (page - 1) * page_size
         statement = (
             statement.order_by(UserModel.created_at.desc())

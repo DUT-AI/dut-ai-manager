@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
 from loguru import logger
@@ -20,7 +20,7 @@ class PermissionViolationHandler:
         if event.category not in [RequestCategory.ABSENCE, RequestCategory.POSTPONE]:
             return
 
-        raw_target = event.start_time or datetime.now(timezone.utc)
+        raw_target = event.start_time or datetime.now(UTC)
         vn_tz = ZoneInfo("Asia/Ho_Chi_Minh")
         target_vn = (
             raw_target.astimezone(vn_tz)
@@ -56,7 +56,7 @@ class PermissionViolationHandler:
             await self.create_violation_uc.execute(
                 user_ids=[event.user_id],
                 reason=reason,
-                date=datetime.now(timezone.utc),
+                date=datetime.now(UTC),
                 is_system=True,
                 system_user_id=None,
             )

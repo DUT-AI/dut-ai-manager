@@ -3,6 +3,8 @@ import asyncio
 from loguru import logger
 
 from app.core.config import settings
+from app.duty.domain.entity import DutyStatus
+from app.duty.infrastructure.repository import DutyRepository
 from app.meeting.infrastructure.repository import MeetingRepository
 from app.permission_request.domain.events import (
     MeetingParticipantTransferred,
@@ -18,7 +20,6 @@ from app.shared.infrastructure.notification_payload import (
     NotificationLevel,
     NotificationPayload,
 )
-from app.duty.infrastructure.repository import DutyRepository
 from app.user.infrastructure.repository import UserRepository
 
 
@@ -94,7 +95,7 @@ class PermissionRequestNotificationHandler(EventHandler[PermissionRequestCreated
             payload = NotificationPayload(
                 user_id=event.user_id,
                 title=f"📋 ĐƠN XIN PHÉP MỚI: {category_text.upper()}",
-                content=f"Thành viên **{user.name}** vừa nộp 01 đơn xin phép loại **{category_text}**.",
+                content=f"Thành viên {user.name} vừa nộp 01 đơn xin phép loại {category_text}.",
                 category=NotificationCategory.PERMISSION_REQUEST,
                 level=NotificationLevel.WARNING,
                 image_asset="anh-nhac-em-meme-9.webp",
@@ -189,7 +190,7 @@ class MeetingParticipantTransferredNotificationHandler(
                 active_duties = [
                     d
                     for d in duties
-                    if getattr(d, "status", None) in ("PENDING", "AWAITING_APPROVAL")
+                    if d.status in (DutyStatus.PENDING, DutyStatus.AWAITING_APPROVAL)
                 ]
                 if active_duties:
                     duty_team_name = ", ".join(
@@ -218,8 +219,8 @@ class MeetingParticipantTransferredNotificationHandler(
                 user_id=event.user_id,
                 title="✅ XÁC NHẬN ĐỔI CA SINH HOẠT THÀNH CÔNG",
                 content=(
-                    f"Chào **{user.name}**, bạn đã đổi ca sinh hoạt thành công sang **{new_meeting.title}** "
-                    f"diễn ra vào lúc **{new_time_str}**."
+                    f"Chào {user.name}, bạn đã đổi ca sinh hoạt thành công sang {new_meeting.title} "
+                    f"diễn ra vào lúc {new_time_str}."
                 ),
                 category=NotificationCategory.MEETING,
                 level=NotificationLevel.SUCCESS,
@@ -234,9 +235,9 @@ class MeetingParticipantTransferredNotificationHandler(
                     user_id=event.user_id,
                     title="🧹 [TRỰC NHẬT] PHÂN CÔNG TRỰC NHẬT PHÒNG LAB",
                     content=(
-                        f"Chào **{user.name}**!\n"
-                        f"Buổi sinh hoạt mới của bạn (**{new_meeting.title}** - {new_time_str}) "
-                        f"có lịch phân công trực nhật phòng Lab do **{duty_team_name or 'Nhóm trực'}** phụ trách.\n"
+                        f"Chào {user.name}!\n"
+                        f"Buổi sinh hoạt mới của bạn ({new_meeting.title} - {new_time_str}) "
+                        f"có lịch phân công trực nhật phòng Lab do {duty_team_name or 'Nhóm trực'} phụ trách.\n"
                         f"👉 Bạn cùng tham gia quét dọn phòng Lab và nộp ảnh minh chứng cùng nhóm nhé!"
                     ),
                     category=NotificationCategory.DUTY,
@@ -248,7 +249,11 @@ class MeetingParticipantTransferredNotificationHandler(
                             "value": duty_team_name or "Theo phân công",
                             "inline": True,
                         },
-                        {"name": "📅 Ngày trực", "value": duty_date_str, "inline": True},
+                        {
+                            "name": "📅 Ngày trực",
+                            "value": duty_date_str,
+                            "inline": True,
+                        },
                         {
                             "name": "📌 Lưu ý",
                             "value": "Nộp ảnh minh chứng hoàn thành trước 22:00 cùng ngày để tránh bị phạt vi phạm.",
@@ -266,9 +271,9 @@ class MeetingParticipantTransferredNotificationHandler(
                     user_id=event.user_id,
                     title="🔄 BIẾN ĐỘNG SĨ SỐ: ĐỔI BUỔI SINH HOẠT",
                     content=(
-                        f"Thành viên **{user.name}** vừa chuyển ca thành công:\n"
-                        f"- **Rút khỏi**: {old_title}\n"
-                        f"- **Tham gia vào**: {new_meeting.title} ({new_time_str})"
+                        f"Thành viên {user.name} vừa chuyển ca thành công:\n"
+                        f"- Rút khỏi: {old_title}\n"
+                        f"- Tham gia vào: {new_meeting.title} ({new_time_str})"
                     ),
                     category=NotificationCategory.MEETING,
                     level=NotificationLevel.INFO,

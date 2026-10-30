@@ -3,7 +3,7 @@ Duty Task Scanner.
 Scans today's cleaning duties that are still pending or rejected before 22:00.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
 from app.duty.domain.entity import DutyStatus
@@ -32,7 +32,7 @@ class DutyTaskScanner(BaseTaskScanner):
         now_utc = (
             now
             if now.tzinfo is not None
-            else now.replace(tzinfo=vn_tz).astimezone(timezone.utc)
+            else now.replace(tzinfo=vn_tz).astimezone(UTC)
         )
         today_date = now_utc.astimezone(vn_tz).date()
         today_duties = self.duty_repo.get_pending_duties_for_date(today_date)
@@ -44,9 +44,11 @@ class DutyTaskScanner(BaseTaskScanner):
             ):
                 continue
 
-            duty_deadline_dt = datetime.combine(
-                duty.duty_date, datetime.min.time()
-            ).replace(hour=22, minute=0, second=0, tzinfo=vn_tz).astimezone(timezone.utc)
+            duty_deadline_dt = (
+                datetime.combine(duty.duty_date, datetime.min.time())
+                .replace(hour=22, minute=0, second=0, tzinfo=vn_tz)
+                .astimezone(UTC)
+            )
 
             stages = calculate_matching_stages(duty_deadline_dt, now_utc)
             if not stages:

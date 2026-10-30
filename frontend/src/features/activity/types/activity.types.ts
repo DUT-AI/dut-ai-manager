@@ -83,7 +83,6 @@ export const permissionRequestResponseSchema = z.object({
   old_meeting_id: z.number().nullable().optional(),
   created_by: z.number().nullable().optional(),
   updated_by: z.number().nullable().optional(),
-  owner: userRefSchema.nullable().optional(),
   created_at: z.string(),
   updated_at: z.string(),
   creator: userRefSchema.nullable().optional(),

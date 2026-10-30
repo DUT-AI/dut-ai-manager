@@ -3,7 +3,7 @@ Integration tests for database timezone migration (TIMESTAMPTZ).
 Verifies that columns are now timestamp with time zone and timezone-aware datetimes work seamlessly.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -44,7 +44,7 @@ def test_insert_and_retrieve_timestamptz(db_session: Session) -> None:
     Kiểm tra ghi và đọc dữ liệu TIMESTAMPTZ:
     Ghi một aware UTC datetime, đọc ra vẫn giữ nguyên mốc thời gian UTC.
     """
-    now_utc = datetime(2026, 10, 31, 12, 30, 0, tzinfo=timezone.utc)
+    now_utc = datetime(2026, 10, 31, 12, 30, 0, tzinfo=UTC)
 
     # Chèn meeting thử nghiệm
     res = db_session.execute(
@@ -63,7 +63,7 @@ def test_insert_and_retrieve_timestamptz(db_session: Session) -> None:
         ),
         {
             "start_time": now_utc,
-            "end_time": datetime(2026, 10, 31, 14, 0, 0, tzinfo=timezone.utc),
+            "end_time": datetime(2026, 10, 31, 14, 0, 0, tzinfo=UTC),
             "now": now_utc,
         },
     ).fetchone()
@@ -73,7 +73,7 @@ def test_insert_and_retrieve_timestamptz(db_session: Session) -> None:
 
     # SQLAlchemy / psycopg trả về timezone-aware datetime
     if saved_start.tzinfo is not None:
-        utc_equiv = saved_start.astimezone(timezone.utc)
+        utc_equiv = saved_start.astimezone(UTC)
         assert utc_equiv.hour == 12
         assert utc_equiv.minute == 30
     else:

@@ -37,7 +37,7 @@ class ZaloNotificationChannel(NotificationChannel):
                 status="NO_ZALO_ID",
             )
 
-        text_lines = [f"📢 *{payload.title}*", "", payload.content]
+        text_lines = [f"{payload.title}", "", payload.content]
 
         if payload.fields:
             text_lines.append("")

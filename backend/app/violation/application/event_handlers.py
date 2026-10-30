@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
 from loguru import logger
@@ -46,7 +46,7 @@ class AutomatedViolationHandler(EventHandler):
         self, event: ParticipantAbsenceRecorded | MeetingAbsenceDetected
     ):
         """Xử lý vắng họp: tra cứu đơn xin vắng, cập nhật trạng thái và tạo vi phạm nếu không phép."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         logger.info(
             f"🔍 [ViolationHandler] Processing absence for user {event.user_id} in meeting {event.meeting_id}"
         )
@@ -99,7 +99,7 @@ class AutomatedViolationHandler(EventHandler):
 
     async def _handle_meeting_late(self, event: ParticipantLateRecorded):
         """Xử lý đi trễ: tra cứu đơn xin trễ, đối soát thời gian và tạo vi phạm nếu trễ không phép."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         logger.info(
             f"🔍 [ViolationHandler] Processing late arrival for user {event.user_id} in meeting {event.meeting_id}"
         )
@@ -140,15 +140,16 @@ class AutomatedViolationHandler(EventHandler):
         # Có đơn xin đi trễ -> Kiểm tra thời gian
         is_within_limit = True
         if late_req.start_time:
+            # Chuẩn hóa về UTC timezone-aware để so sánh chính xác
             limit_time = (
-                late_req.start_time.replace(tzinfo=None)
+                late_req.start_time
                 if late_req.start_time.tzinfo is not None
-                else late_req.start_time
+                else late_req.start_time.replace(tzinfo=UTC)
             )
             check_in_time = (
-                event.check_in_at.replace(tzinfo=None)
+                event.check_in_at
                 if event.check_in_at.tzinfo is not None
-                else event.check_in_at
+                else event.check_in_at.replace(tzinfo=UTC)
             )
             if check_in_time > limit_time:
                 is_within_limit = False
@@ -200,7 +201,7 @@ class AutomatedViolationHandler(EventHandler):
 
     async def _handle_homework_overdue(self, event: HomeworkOverdueDetected):
         """Xử lý bài tập quá hạn: kiểm tra đơn xin hoãn (POSTPONE) và tạo vi phạm nếu không hợp lệ."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         logger.info(
             f"🔍 [ViolationHandler] Processing overdue homework for user {event.user_id} in homework {event.homework_id}"
         )
@@ -217,7 +218,7 @@ class AutomatedViolationHandler(EventHandler):
                 if postpone_req.start_time.tzinfo is not None
                 else postpone_req.start_time.replace(
                     tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")
-                ).astimezone(timezone.utc)
+                ).astimezone(UTC)
             )
             if now <= req_time:
                 has_valid_postpone = True

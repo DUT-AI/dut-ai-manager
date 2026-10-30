@@ -199,5 +199,3 @@ def test_create_and_update_bonus_point_as_trainer_success(
     # Cleanup
     client.delete(f"/api/v1/bonus-points/{created_id}")
     app.dependency_overrides.clear()
-
-

@@ -3,7 +3,7 @@ Reminder & In-App Notification Domain Entities & Value Objects.
 Pure Pydantic models with zero framework / ORM dependencies.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -92,12 +92,12 @@ class ReminderStage(str, Enum):
         now_utc = (
             now
             if now.tzinfo is not None
-            else now.replace(tzinfo=vn_tz).astimezone(timezone.utc)
+            else now.replace(tzinfo=vn_tz).astimezone(UTC)
         )
         deadline_utc = (
             deadline
             if deadline.tzinfo is not None
-            else deadline.replace(tzinfo=vn_tz).astimezone(timezone.utc)
+            else deadline.replace(tzinfo=vn_tz).astimezone(UTC)
         )
 
         # 1. Khung giờ cố định trong ngày quy chiếu theo giờ Việt Nam

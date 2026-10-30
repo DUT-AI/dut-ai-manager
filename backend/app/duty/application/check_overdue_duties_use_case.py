@@ -2,7 +2,7 @@
 Check Overdue Duties Use Case (for Daily Scheduled Job at 23:59).
 """
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from typing import cast
 from zoneinfo import ZoneInfo
 
@@ -42,7 +42,7 @@ class CheckOverdueDutiesUseCase:
     async def execute(self, target_date: date | None = None) -> int:
         if target_date is None:
             target_date = (
-                datetime.now(timezone.utc)
+                datetime.now(UTC)
                 .astimezone(ZoneInfo("Asia/Ho_Chi_Minh"))
                 .date()
             )
@@ -135,7 +135,7 @@ class CheckOverdueDutiesUseCase:
                 logger.warning(
                     f"Tạo vi phạm cho {len(penalized_user_ids)} học viên vì không trực nhật ca {duty.id}"
                 )
-                now_dt = datetime.now(timezone.utc)
+                now_dt = datetime.now(UTC)
                 await self.create_violation_use_case.execute(
                     user_ids=penalized_user_ids,
                     reason=reason,

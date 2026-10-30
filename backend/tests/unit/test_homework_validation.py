@@ -301,4 +301,3 @@ async def test_update_homework_uncheck_game_success(mock_homework_repo, mock_qui
     saved_entity = mock_homework_repo.save.call_args[0][0]
     assert saved_entity.requires_game is False
     assert saved_entity.requires_coding is True
-
