@@ -78,6 +78,7 @@ export const HomeworkFormModal = ({
                     requires_game: editingItem.requires_game ?? false,
                     team_ids: matchedTeams,
                     assignee_ids: initialAssignees,
+                    force_override_deadlines: false,
                 });
             } else {
                 setSelectedTeamIds([]);
@@ -172,9 +173,9 @@ export const HomeworkFormModal = ({
 
         setLoading(true);
         try {
-            const payload = {
+            const payload: any = {
                 title: values.title.trim(),
-                deadline: values.deadline.toISOString(),
+                deadline: values.deadline ? values.deadline.toISOString() : undefined,
                 link: values.link?.trim() || '',
                 slug: values.slug?.trim() || null,
                 requires_coding: !!values.requires_coding,
@@ -183,6 +184,7 @@ export const HomeworkFormModal = ({
             };
 
             if (isEditing) {
+                payload.force_override_deadlines = !!values.force_override_deadlines;
                 await homeworkService.update(editingItem!.id, payload);
                 message.success('Cập nhật bài tập thành công');
             } else {
@@ -250,6 +252,23 @@ export const HomeworkFormModal = ({
                         <Input placeholder="Ví dụ: python-basics" allowClear />
                     </Form.Item>
                 </div>
+
+                {isEditing && (
+                    <div className="bg-amber-50/70 p-3 rounded-xl border border-amber-200/80 mb-4 -mt-1">
+                        <Form.Item
+                            name="force_override_deadlines"
+                            valuePropName="checked"
+                            noStyle
+                        >
+                            <Checkbox className="text-sm font-medium text-amber-950">
+                                ⚠️ Bắt buộc áp dụng hạn nộp mới cho toàn bộ học sinh (ghi đè cả các đơn xin hoãn cá nhân)
+                            </Checkbox>
+                        </Form.Item>
+                        <p className="text-xs text-amber-800/90 mt-1 mb-0 ml-6">
+                            Mặc định (không tích): Hệ thống bảo lưu quyền lợi tối đa cho học sinh. Nếu hạn hoãn cá nhân của học sinh xa hơn hạn mới này, hạn của học sinh sẽ không bị kéo lùi.
+                        </p>
+                    </div>
+                )}
 
                 <Form.Item
                     name="link"

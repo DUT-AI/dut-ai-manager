@@ -7,6 +7,7 @@ import type {
     HomeworkReportResponse,
     HomeworkSubmissionStatus,
     SubmissionHistoryItem,
+    SyncHomeworkResult,
 } from '@/features/homework/types/homework.types';
 
 export const homeworkService = {
@@ -70,7 +71,7 @@ export const homeworkService = {
     },
 
     async syncFromQuiz(homeworkId: number) {
-        const response = await axiosInstance.post<ApiResponse<{ message: string; synced_coding_count: number; synced_game_count: number }>>(
+        const response = await axiosInstance.post<ApiResponse<SyncHomeworkResult>>(
             `/${this.baseUrl}/${homeworkId}/sync`
         );
         return response.data.data;

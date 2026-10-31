@@ -1,113 +1,85 @@
-# Implementation Plan: [FEATURE]
+# Implementation Plan: Đồng Bộ Toàn Diện & Làm Mới Metadata Bài Tập Từ Quiz
 
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
+**Branch**: `041-sync-homework-refresh-metadata` | **Date**: 2026-11-01 | **Spec**: [specs/041-sync-homework-refresh-metadata/spec.md](file:///Users/nguyenhuynh/Documents/dut-ai-manager/specs/041-sync-homework-refresh-metadata/spec.md)
 
-**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
+**Input**: Feature specification từ `specs/041-sync-homework-refresh-metadata/spec.md`
 
-**Note**: This template is filled in by the `/speckit-plan` command; its definition describes the execution workflow.
+---
 
 ## Summary
 
-[Extract from feature spec: primary requirement + technical approach from research]
+Quy trình đồng bộ bài tập từ Quiz (`SyncHomeworkFromQuizUseCase`) hiện tại chỉ kéo các bài đã nộp về bảng `homework_submissions`. Khi giảng viên thêm bài tập con mới hoặc cấu hình lại yêu cầu bài học (thêm game, thêm bài coding) trên Quiz nhưng chưa có ai nộp, hệ thống Manage không nhận diện được.
+
+Kế hoạch này nâng cấp `SyncHomeworkFromQuizUseCase`:
+1. Gọi `quiz_api.get_lesson_metadata(slug)` và `quiz_api.get_lesson_exercises(slug)` ở đầu quy trình.
+2. Tự động đồng bộ và lưu cập nhật các cờ `requires_coding`, `requires_game` vào `HomeworkModel` trong database.
+3. Kéo toàn bộ danh mục bài tập con mới nhất và bài nộp theo phạm vi yêu cầu mới nhất.
+4. Trả về phản hồi chi tiết bao gồm tổng số bài tập con trên Quiz, số bài nộp mới và số bài nộp cập nhật.
+
+---
 
 ## Technical Context
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
+**Language/Version**: Python 3.12  
+**Primary Dependencies**: FastAPI, Dishka DI, SQLAlchemy 2.0, Pydantic V2, httpx  
+**Storage**: PostgreSQL (hoặc SQLite in-memory cho Unit Testing), bảng `homeworks`, `homework_assignees`, `homework_submissions`  
+**Testing**: pytest, pytest-asyncio  
+**Target Platform**: Docker / Linux backend container  
+**Project Type**: Web Service API  
+**Performance Goals**: Quá trình làm mới metadata và đồng bộ hoàn tất trong vòng < 1.5 giây đối với mỗi bài tập  
+**Constraints**: 
+- Graceful Degradation: Nếu Quiz API bị gián đoạn khi lấy metadata, ghi warning và fallback tiếp tục đồng bộ bài nộp mà không gây lỗi 500.
+- Tuân thủ Hiến pháp DUT AI Manager v1.9.0 (No Fake Optionals, Strict Parameter Contracts, Single-Responsibility Use Case).
 
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]
-
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]
-
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
-
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]
-
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-
-**Project Type**: [e.g., library/cli/web-service/mobile-app/compiler/desktop-app or NEEDS CLARIFICATION]
-
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]
-
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]
-
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+---
 
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+| Nguyên tắc | Đánh giá | Ghi chú |
+| :--- | :---: | :--- |
+| **I. Clean Architecture & Practical DDD** | ✅ PASSED | `SyncHomeworkFromQuizUseCase` nằm ở tầng application, điều phối `HomeworkRepository`, `HomeworkSubmissionRepository` và `QuizApiClient`. |
+| **II. Dependency Injection with Dishka** | ✅ PASSED | Use case nhận các dependency qua constructor, được đăng ký tại `backend/app/homework/providers.py`. |
+| **III. Enterprise UTC Storage** | ✅ PASSED | Tất cả timestamp nộp bài (`submitted_at`, `completed_at`) được parse qua `parse_datetime_to_utc`. |
+| **VII. Strict Single-Responsibility Use Case** | ✅ PASSED | `SyncHomeworkFromQuizUseCase` có đúng một phương thức `execute(homework_id)`. |
+| **X. Zero Redundant Backward Compatibility** | ✅ PASSED | Không tạo alias, không duy trì cột thừa. |
+| **XIV. No Fake Optionals & Fail-Fast Parameter Contracts** | ✅ PASSED | Mọi dependency trong constructor đều non-null, không có fake `Type | None = None`. |
+
+---
 
 ## Project Structure
 
 ### Documentation (this feature)
 
 ```text
-specs/[###-feature]/
-├── plan.md              # This file (/speckit-plan command output)
-├── research.md          # Phase 0 output (/speckit-plan command)
-├── data-model.md        # Phase 1 output (/speckit-plan command)
-├── quickstart.md        # Phase 1 output (/speckit-plan command)
-├── contracts/           # Phase 1 output (/speckit-plan command)
-└── tasks.md             # Phase 2 output (/speckit-tasks command - NOT created by /speckit-plan)
+specs/041-sync-homework-refresh-metadata/
+├── spec.md              # Đặc tả yêu cầu nghiệp vụ
+├── plan.md              # Kế hoạch thực thi (tài liệu này)
+├── research.md          # Quyết định kỹ thuật & phân tích phương án
+├── data-model.md        # Cấu trúc thực thể và DTO
+├── quickstart.md        # Kịch bản kiểm thử nhanh
+└── contracts/
+    └── sync-homework-api.md # Hợp đồng API
 ```
 
-### Source Code (repository root)
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
+### Source Code Impact
 
 ```text
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
-src/
-├── models/
-├── services/
-├── cli/
-└── lib/
-
-tests/
-├── contract/
-├── integration/
-└── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
 backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
+├── app/
+│   └── homework/
+│       └── application/
+│           └── sync_homework_use_case.py  # Nâng cấp logic đồng bộ metadata và exercises
 └── tests/
-
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+    └── integration/
+        └── test_homework_quiz_integration.py # Bổ sung test cases kiểm thử làm mới metadata
 ```
 
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
+---
 
-## Complexity Tracking
+## Planned Phases
 
-> **Fill ONLY if Constitution Check has violations that must be justified**
-
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+- **Phase 0: Research & Technical Consensus** -> Đã hoàn thành trong `research.md`.
+- **Phase 1: Design & Contracts** -> Đã hoàn thành trong `data-model.md`, `quickstart.md`, `contracts/`.
+- **Phase 2: Task Breakdown** -> Chạy `/speckit-tasks` để phân rã checklist hành động chi tiết.

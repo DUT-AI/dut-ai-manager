@@ -81,7 +81,9 @@ export type HomeworkCreate = z.infer<typeof homeworkCreateSchema>;
 
 export type CreateHomeworkFormValues = HomeworkCreate;
 
-export const homeworkUpdateSchema = homeworkCreateSchema.partial();
+export const homeworkUpdateSchema = homeworkCreateSchema.partial().extend({
+  force_override_deadlines: z.boolean().optional(),
+});
 export type HomeworkUpdate = z.infer<typeof homeworkUpdateSchema>;
 export type UpdateHomeworkFormValues = HomeworkUpdate;
 
@@ -194,5 +196,20 @@ export interface SubmissionHistoryItem {
   is_passed?: boolean;
   created_at?: string;
 }
+
+export interface SyncHomeworkResult {
+  homework_id: number;
+  title: string;
+  requires_coding: boolean;
+  requires_game: boolean;
+  coding_exercises_count: number;
+  game_questions_count: number;
+  synced_coding_count: number;
+  updated_coding_count: number;
+  synced_game_count: number;
+  updated_game_count: number;
+  message: string;
+}
+
 
 

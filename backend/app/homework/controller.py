@@ -30,6 +30,7 @@ from app.homework.application.dtos import (
     HomeworkSubmissionDetailResponse,
     HomeworkSubmissionStatusResponse,
     HomeworkUpdate,
+    SyncHomeworkResult,
 )
 from app.homework.infrastructure.homework_assignee_repository import (
     HomeworkAssigneeRepository,
@@ -303,7 +304,7 @@ async def get_user_homework_submissions(
 
 @router.post(
     "/{homework_id}/sync",
-    response_model=ApiResponse[dict[str, Any]],
+    response_model=ApiResponse[SyncHomeworkResult],
     dependencies=[hasPermission(HomeworkPermission.READ)],
 )
 @inject

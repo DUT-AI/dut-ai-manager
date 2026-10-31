@@ -197,3 +197,22 @@ class HomeworkSubmissionDetailResponse(BaseModel):
     created_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SyncHomeworkResult(BaseModel):
+    """Kết quả phản hồi chi tiết sau khi đồng bộ bài tập từ Quiz API."""
+
+    homework_id: int
+    title: str
+    requires_coding: bool
+    requires_game: bool
+    coding_exercises_count: int = 0
+    game_questions_count: int = 0
+    synced_coding_count: int = 0
+    updated_coding_count: int = 0
+    synced_game_count: int = 0
+    updated_game_count: int = 0
+    message: str
+
+    model_config = ConfigDict(from_attributes=True)
+
