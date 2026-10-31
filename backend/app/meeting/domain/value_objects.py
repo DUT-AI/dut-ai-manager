@@ -1,10 +1,13 @@
 from datetime import UTC, datetime
 from enum import Enum, StrEnum
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from pydantic import BaseModel, ConfigDict
 
 from app.core.config import settings
+
+if TYPE_CHECKING:
+    from app.meeting.domain.evaluation import MeetingEvaluation
 
 
 class UserRef(BaseModel):
@@ -222,13 +225,13 @@ class EvaluationGroupSummary(BaseModel):
     def from_evaluations(
         cls,
         eval_type: EvaluationType,
-        evaluations: list[Any],
+        evaluations: list["MeetingEvaluation"],
     ) -> "EvaluationGroupSummary":
         """Factory method đóng gói toàn bộ quy tắc tính toán điểm cho nhóm đánh giá."""
         from collections import defaultdict
 
-        def _get_type_str(e: Any) -> str:
-            t = getattr(e, "evaluation_type", "")
+        def _get_type_str(e: "MeetingEvaluation") -> str:
+            t = e.evaluation_type
             return t.value if hasattr(t, "value") else str(t)
 
         relevant_evals = [e for e in evaluations if _get_type_str(e) == eval_type.value]
@@ -246,7 +249,7 @@ class EvaluationGroupSummary(BaseModel):
 
         scores_by_code: dict[str, list[int]] = defaultdict(list)
         for e in relevant_evals:
-            for s in getattr(e, "scores", []) or []:
+            for s in e.scores:
                 scores_by_code[s.criteria_code].append(s.score)
 
         breakdown = []

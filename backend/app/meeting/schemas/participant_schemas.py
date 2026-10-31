@@ -1,9 +1,12 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.meeting.domain.value_objects import ParticipantRole, ParticipantStatus
 from app.shared.domain.datetime_types import UtcDateTime
+
+if TYPE_CHECKING:
+    from app.meeting.domain.participant import MeetingParticipant
 
 
 class CheckInWithCardRequest(BaseModel):
@@ -56,7 +59,7 @@ class ParticipantResponse(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def map_user_info(cls, data: Any) -> Any:
-        """Tự động lấy user_name và user_avatar từ đối tượng user nếu có."""
+        """Tự động lấy user_name và user_avatar từ đối tượng user nếu data là dict."""
         if isinstance(data, dict):
             user = data.get("user")
             if user and isinstance(user, dict):
@@ -64,36 +67,19 @@ class ParticipantResponse(BaseModel):
                     data["user_name"] = user.get("name")
                 if not data.get("user_avatar_url"):
                     data["user_avatar_url"] = user.get("avatar_url")
-        else:
-            # Nếu là object (Domain Entity hoặc ORM)
-            user = getattr(data, "user", None)
-            if user:
-                if not getattr(data, "user_name", None):
-                    d = {
-                        "id": getattr(data, "id", None),
-                        "user_id": getattr(data, "user_id", None),
-                        "role": getattr(data, "role", ParticipantRole.TRAINEE),
-                        "user_name": getattr(user, "name", ""),
-                        "user_avatar_url": getattr(user, "avatar_url", None),
-                        "check_in_at": getattr(data, "check_in_at", None),
-                        "check_out_at": getattr(data, "check_out_at", None),
-                        "status": getattr(data, "status", None),
-                        "link_image": getattr(data, "link_image", None),
-                    }
-                    return d
         return data
 
     @classmethod
-    def from_domain(cls, p: Any) -> "ParticipantResponse":
-        if getattr(p, "id", None) is None:
+    def from_domain(cls, p: "MeetingParticipant") -> "ParticipantResponse":
+        if p.id is None:
             raise ValueError("Participant thiếu id")
-        p_user = getattr(p, "user", None)
-        user_name = getattr(p_user, "name", None) or f"User #{p.user_id}"
-        user_avatar = getattr(p_user, "avatar_url", None)
+        p_user = p.user
+        user_name = p_user.name if p_user and p_user.name else f"User #{p.user_id}"
+        user_avatar = p_user.avatar_url if p_user else None
         return cls(
             id=p.id,
             user_id=p.user_id,
-            role=getattr(p, "role", ParticipantRole.TRAINEE),
+            role=p.role,
             user_name=user_name,
             user_avatar_url=user_avatar,
             check_in_at=p.check_in_at,

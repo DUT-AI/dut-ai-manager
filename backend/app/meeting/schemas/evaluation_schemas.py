@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -9,6 +9,12 @@ from app.meeting.domain.value_objects import (
 )
 
 from .meeting_schemas import UserRefDto
+
+if TYPE_CHECKING:
+    from app.meeting.domain.evaluation import (
+        MeetingEvaluation,
+        MeetingOverallEvaluation,
+    )
 
 
 class EvaluationScoreItemDto(BaseModel):
@@ -61,38 +67,40 @@ class MeetingOverallEvaluationResponse(BaseModel):
     created_at: datetime
 
     @classmethod
-    def from_domain(cls, e: Any) -> "MeetingOverallEvaluationResponse":
+    def from_domain(
+        cls, e: "MeetingOverallEvaluation"
+    ) -> "MeetingOverallEvaluationResponse":
         scores_dtos = []
-        for s in getattr(e, "scores", []) or []:
-            code = getattr(s, "criteria_code", "")
+        for s in e.scores:
+            code = s.criteria_code
             criterion = EvaluationCriterion.from_code(code)
             scores_dtos.append(
                 EvaluationScoreItemDto(
                     criteria_code=code,
                     criteria_name=criterion.name,
                     criteria_description=criterion.description,
-                    score=getattr(s, "score", 0),
+                    score=s.score,
                 )
             )
 
         trainer_dto = None
-        if getattr(e, "trainer", None):
+        if e.trainer is not None:
             t = e.trainer
             trainer_dto = UserRefDto(
-                id=getattr(t, "id", 0),
-                name=getattr(t, "name", ""),
-                avatar_url=getattr(t, "avatar_url", None),
+                id=t.id,
+                name=t.name,
+                avatar_url=t.avatar_url,
             )
 
         return cls(
-            id=getattr(e, "id", 0) or 0,
+            id=e.id or 0,
             meeting_id=e.meeting_id,
             trainer_id=e.trainer_id,
             scores=scores_dtos,
-            average_score=getattr(e, "average_score", 0.0),
-            general_feedback=getattr(e, "general_feedback", None),
+            average_score=e.average_score,
+            general_feedback=e.general_feedback,
             trainer=trainer_dto,
-            created_at=getattr(e, "created_at", None) or datetime.now(UTC),
+            created_at=e.created_at or datetime.now(UTC),
         )
 
 
@@ -140,62 +148,64 @@ class EvaluationResponse(BaseModel):
 
     @classmethod
     def from_domain(
-        cls, e: Any, current_user_id: int | None = None
+        cls, e: "MeetingEvaluation", current_user_id: int | None = None
     ) -> "EvaluationResponse":
         scores_dtos = []
-        for s in getattr(e, "scores", []) or []:
-            code = getattr(s, "criteria_code", "")
+        for s in e.scores:
+            code = s.criteria_code
             criterion = EvaluationCriterion.from_code(code)
             scores_dtos.append(
                 EvaluationScoreItemDto(
                     criteria_code=code,
                     criteria_name=criterion.name,
                     criteria_description=criterion.description,
-                    score=getattr(s, "score", 0),
+                    score=s.score,
                 )
             )
 
-        is_anon = getattr(e, "is_anonymous", False)
-        actual_reviewer_id = getattr(e, "reviewer_id", None)
+        is_anon = e.is_anonymous
+        actual_reviewer_id = e.reviewer_id
         is_owner = current_user_id is not None and actual_reviewer_id == current_user_id
 
         reviewer_dto = None
-        if (not is_anon or is_owner) and getattr(e, "reviewer", None):
+        if (not is_anon or is_owner) and e.reviewer is not None:
             rev = e.reviewer
             reviewer_dto = UserRefDto(
-                id=getattr(rev, "id", 0),
-                name=getattr(rev, "name", ""),
-                avatar_url=getattr(rev, "avatar_url", None),
+                id=rev.id,
+                name=rev.name,
+                avatar_url=rev.avatar_url,
             )
 
         masked_reviewer_id = None if (is_anon and not is_owner) else actual_reviewer_id
 
         target_dto = None
-        if getattr(e, "target_user", None):
+        if e.target_user is not None:
             tgt = e.target_user
             target_dto = UserRefDto(
-                id=getattr(tgt, "id", 0),
-                name=getattr(tgt, "name", ""),
-                avatar_url=getattr(tgt, "avatar_url", None),
+                id=tgt.id,
+                name=tgt.name,
+                avatar_url=tgt.avatar_url,
             )
 
-        eval_type = getattr(e, "evaluation_type", "")
-        if hasattr(eval_type, "value"):
-            eval_type = eval_type.value
+        eval_type = (
+            e.evaluation_type.value
+            if hasattr(e.evaluation_type, "value")
+            else str(e.evaluation_type)
+        )
 
         return cls(
-            id=getattr(e, "id", 0) or 0,
+            id=e.id or 0,
             meeting_id=e.meeting_id,
             reviewer_id=masked_reviewer_id,
             target_user_id=e.target_user_id,
             evaluation_type=str(eval_type),
             is_anonymous=is_anon,
             scores=scores_dtos,
-            average_score=getattr(e, "average_score", 0.0),
-            feedback_text=getattr(e, "feedback_text", None),
+            average_score=e.average_score,
+            feedback_text=e.feedback_text,
             reviewer=reviewer_dto,
             target_user=target_dto,
-            created_at=getattr(e, "created_at", None) or datetime.now(UTC),
+            created_at=e.created_at or datetime.now(UTC),
         )
 
 

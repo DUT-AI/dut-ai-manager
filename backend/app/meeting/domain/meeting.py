@@ -26,7 +26,7 @@ class Meeting(BaseEntity):
         return [
             p
             for p in self.participants
-            if not getattr(p, "is_deleted", False) and p.role == ParticipantRole.TRAINER
+            if not p.is_deleted and p.role == ParticipantRole.TRAINER
         ]
 
     @property
@@ -35,7 +35,7 @@ class Meeting(BaseEntity):
         return [
             p
             for p in self.participants
-            if not getattr(p, "is_deleted", False) and p.role == ParticipantRole.TRAINEE
+            if not p.is_deleted and p.role == ParticipantRole.TRAINEE
         ]
 
     def is_trainer(self, user_id: int) -> bool:

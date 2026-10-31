@@ -28,8 +28,12 @@ class MeetingCreate(BaseModel):
     end_time: UtcDateTime
     require_check_in: bool = True
     enable_evaluation: bool = False
-    trainer_ids: list[int] = Field(default_factory=list, description="Danh sách ID Trainer")
-    trainee_ids: list[int] = Field(default_factory=list, description="Danh sách ID Trainee")
+    trainer_ids: list[int] = Field(
+        default_factory=list, description="Danh sách ID Trainer"
+    )
+    trainee_ids: list[int] = Field(
+        default_factory=list, description="Danh sách ID Trainee"
+    )
 
 
 class MeetingUpdate(BaseModel):
@@ -66,8 +70,8 @@ class MeetingResponse(BaseModel):
             raise ValueError("Meeting thiếu id hoặc timestamps sau khi lưu")
 
         trainers_dto: list[UserRefDto] = []
-        for t in getattr(m, "trainers", []):
-            if getattr(t, "user", None):
+        for t in m.trainers:
+            if t.user is not None:
                 trainers_dto.append(
                     UserRefDto(
                         id=t.user.id,
@@ -132,11 +136,13 @@ class MeetingDetailResponse(BaseModel):
         )
         is_ended = now > end_time_utc
 
-        participants_raw = getattr(m, "participants", []) or []
         trainers: list[ParticipantResponse] = []
         trainees: list[ParticipantResponse] = []
 
-        for p in participants_raw:
+        for p in m.participants:
+            if p.is_deleted or p.id is None:
+                continue
+
             check_out_at = p.check_out_at
             status = p.status
 
@@ -153,13 +159,10 @@ class MeetingDetailResponse(BaseModel):
                 elif not p.check_in_at and status == ParticipantStatus.NOT_JOINED:
                     status = ParticipantStatus.ABSENT_UNEXCUSED
 
-            if p.id is None:
-                continue
-
-            # Read user from ORM relationship or fallback cleanly
-            p_user = getattr(p, "user", None)
-            user_name = getattr(p_user, "name", None) or f"User #{p.user_id}"
-            user_avatar = getattr(p_user, "avatar_url", None)
+            # Read user from snapshot or fallback cleanly
+            p_user = p.user
+            user_name = p_user.name if p_user and p_user.name else f"User #{p.user_id}"
+            user_avatar = p_user.avatar_url if p_user else None
 
             p_dto = ParticipantResponse(
                 id=p.id,
