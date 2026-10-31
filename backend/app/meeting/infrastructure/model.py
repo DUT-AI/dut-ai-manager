@@ -20,7 +20,11 @@ from app.meeting.domain.entity import (
     MeetingOverallEvaluation as MeetingOverallEvaluationEntity,
 )
 from app.meeting.domain.entity import MeetingParticipant as MeetingParticipantEntity
-from app.meeting.domain.value_objects import EvaluationType, ParticipantStatus
+from app.meeting.domain.value_objects import (
+    EvaluationType,
+    ParticipantRole,
+    ParticipantStatus,
+)
 from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
 from app.user.infrastructure.model import UserModel
 
@@ -65,13 +69,13 @@ class Meeting(SQLAlchemyTimestampMixin, Base):
         if "creator" in self.__dict__ and self.creator:
             creator_ref = UserRef(
                 id=self.creator.id,
-                name=self.creator.name or f"Trainer #{self.creator.id}",
+                name=self.creator.name or f"User #{self.creator.id}",
                 avatar_url=self.creator.avatar_url,
             )
         elif self.created_by:
             creator_ref = UserRef(
                 id=self.created_by,
-                name=f"Trainer #{self.created_by}",
+                name=f"User #{self.created_by}",
                 avatar_url=None,
             )
 
@@ -132,6 +136,9 @@ class MeetingParticipant(SQLAlchemyTimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     meeting_id: Mapped[int] = mapped_column(ForeignKey("meetings.id"), index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    role: Mapped[str] = mapped_column(
+        String(50), default=ParticipantRole.TRAINEE.value, nullable=False, index=True
+    )
     check_in_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), default=None
     )
@@ -161,10 +168,18 @@ class MeetingParticipant(SQLAlchemyTimestampMixin, Base):
                 avatar_url=self.user.avatar_url,
             )
 
+        participant_role = ParticipantRole.TRAINEE
+        if self.role:
+            try:
+                participant_role = ParticipantRole(self.role)
+            except ValueError:
+                participant_role = ParticipantRole.TRAINEE
+
         return MeetingParticipantEntity(
             id=self.id,
             meeting_id=self.meeting_id,
             user_id=self.user_id or 0,
+            role=participant_role,
             check_in_at=self.check_in_at,
             check_out_at=self.check_out_at,
             status=self.status or ParticipantStatus.NOT_JOINED,
@@ -179,10 +194,16 @@ class MeetingParticipant(SQLAlchemyTimestampMixin, Base):
 
     @classmethod
     def from_entity(cls, entity: MeetingParticipantEntity) -> "MeetingParticipant":
+        role_str = (
+            entity.role.value
+            if isinstance(entity.role, ParticipantRole)
+            else (entity.role or ParticipantRole.TRAINEE.value)
+        )
         return cls(
             id=entity.id,
             meeting_id=entity.meeting_id,
             user_id=entity.user_id,
+            role=role_str,
             check_in_at=entity.check_in_at,
             check_out_at=entity.check_out_at,
             status=entity.status,

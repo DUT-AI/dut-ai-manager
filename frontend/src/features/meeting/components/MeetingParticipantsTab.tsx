@@ -5,7 +5,7 @@ import type {
   UpdateParticipantStatusPayload,
   EvaluationResponse,
 } from '../types/meeting.types';
-import { ParticipantStatus } from '../types/meeting.types';
+import { ParticipantRole, ParticipantStatus } from '../types/meeting.types';
 import {
   useMeetingDetail,
   useUpdateParticipantStatus,
@@ -20,7 +20,8 @@ import { MyEvaluationResultModal } from './MyEvaluationResultModal';
 import {
   EvaluationProgressFilterBar,
   TraineeEvaluationCard,
-  ParticipantListTable,
+  TrainerListTable,
+  TraineeListTable,
   ParticipantMobileList,
 } from './participants';
 
@@ -47,22 +48,25 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
   );
 
   const currentUserId = user?.id;
+
   const isTrainer = Boolean(
     (meeting?.created_by != null && currentUserId != null && Number(currentUserId) === Number(meeting.created_by)) ||
-    (meeting?.trainer?.id != null && currentUserId != null && Number(currentUserId) === Number(meeting.trainer.id)) ||
+    (meeting?.trainers?.some((t) => Number(t.id || t.user_id) === Number(currentUserId))) ||
     (user?.role_names?.some((r) => ['admin', 'leader', 'superadmin', 'manager'].includes(r.toLowerCase())) ?? false)
   );
 
   const isEnded = meeting ? dayjs().isAfter(dayjs(meeting.end_time)) : false;
-  const totalParticipants = meeting?.participants?.length || 0;
+  const trainerParticipants = meeting?.trainers || [];
+  const traineeParticipants = meeting?.trainees || [];
+  const totalParticipants = trainerParticipants.length + traineeParticipants.length;
 
-  // Build evaluation mappings & count stats
+  // Build evaluation mappings & count stats cho học viên
   const {
     trainerEvalsByTraineeId,
     traineeEvalsByReviewerId,
     myEvalForTrainer,
     isCurrentUserTrainee,
-    trainees,
+    activeTrainees,
     trainerEvaluatedCount,
     traineeEvaluatedCount,
   } = useMemo(() => {
@@ -79,35 +83,31 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
       });
     }
 
-    const allTrainees = (meeting?.participants || []).filter(
-      (p) => p.user_id !== meeting?.created_by && p.user_id !== meeting?.trainer?.id
-    );
-
-    const activeTrainees = allTrainees.filter(
+    const activeList = traineeParticipants.filter(
       (p) =>
         p.status !== ParticipantStatus.ABSENT_EXCUSED &&
         p.status !== ParticipantStatus.ABSENT_UNEXCUSED
     );
 
-    const trainerCount = activeTrainees.filter((p) => trainerMap.has(p.user_id)).length;
-    const traineeCount = activeTrainees.filter((p) => traineeMap.has(p.user_id)).length;
+    const trainerCount = activeList.filter((p) => trainerMap.has(p.user_id)).length;
+    const traineeCount = activeList.filter((p) => traineeMap.has(p.user_id)).length;
 
     const myEval = evalSummary?.my_evaluation || (currentUserId ? traineeMap.get(currentUserId) : null);
     if (myEval && currentUserId && !traineeMap.has(currentUserId)) {
       traineeMap.set(currentUserId, myEval);
     }
-    const isTrainee = allTrainees.some((p) => p.user_id === currentUserId);
+    const isTrainee = traineeParticipants.some((p) => p.user_id === currentUserId);
 
     return {
       trainerEvalsByTraineeId: trainerMap,
       traineeEvalsByReviewerId: traineeMap,
       myEvalForTrainer: myEval,
       isCurrentUserTrainee: isTrainee,
-      trainees: activeTrainees,
+      activeTrainees: activeList,
       trainerEvaluatedCount: trainerCount,
       traineeEvaluatedCount: traineeCount,
     };
-  }, [evalSummary, meeting, currentUserId]);
+  }, [evalSummary, traineeParticipants, currentUserId]);
 
   if (!meeting) return null;
 
@@ -121,8 +121,8 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
     refetch();
   };
 
-  // Filter participants based on evaluation filter
-  const filteredParticipants = (meeting.participants || []).filter((p) => {
+  // Filter trainees based on evaluation filter
+  const filteredTrainees = traineeParticipants.filter((p) => {
     if (!meeting.enable_evaluation || evalFilter === 'all') return true;
     const isEvaluated = trainerEvalsByTraineeId.has(p.user_id);
     if (evalFilter === 'rated') return isEvaluated;
@@ -130,17 +130,16 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
       const isAbsent =
         p.status === ParticipantStatus.ABSENT_EXCUSED ||
         p.status === ParticipantStatus.ABSENT_UNEXCUSED;
-      const isMeetingCreator = p.user_id === meeting.created_by;
-      return !isEvaluated && !isAbsent && !isMeetingCreator;
+      return !isEvaluated && !isAbsent;
     }
     return true;
   });
 
-  const totalActiveTrainees = trainees.length;
+  const totalActiveTrainees = activeTrainees.length;
   const unratedCount = Math.max(0, totalActiveTrainees - trainerEvaluatedCount);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Batch Check-in Banner */}
       <MeetingBatchCheckInBanner meetingId={meetingId} />
 
@@ -153,24 +152,39 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
         />
       )}
 
-      {/* Evaluation Progress & Filter Bar */}
-      {meeting.enable_evaluation && (
-        <EvaluationProgressFilterBar
-          totalParticipants={totalParticipants}
-          totalActiveTrainees={totalActiveTrainees}
-          trainerEvaluatedCount={trainerEvaluatedCount}
-          traineeEvaluatedCount={traineeEvaluatedCount}
-          unratedCount={unratedCount}
-          evalFilter={evalFilter}
-          onFilterChange={setEvalFilter}
-        />
-      )}
-
-      {/* Participants Content: Mobile List vs Desktop Table */}
-      <div className="block md:hidden">
-        <ParticipantMobileList
+      {/* Section 1: Bảng Giảng viên / Người phụ trách (Desktop) */}
+      <div className="hidden md:block">
+        <TrainerListTable
           meeting={meeting}
-          participants={filteredParticipants}
+          trainers={trainerParticipants}
+          currentUserId={currentUserId}
+          isTrainer={isTrainer}
+          isEnded={isEnded}
+          traineeEvalsByReviewerId={traineeEvalsByReviewerId}
+          onEditStatus={(p) => {
+            setEditingParticipant(p);
+            setIsEditStatusModalOpen(true);
+          }}
+        />
+      </div>
+
+      {/* Section 2: Bộ lọc & Bảng Học viên (Desktop) */}
+      <div className="hidden md:block space-y-4">
+        {meeting.enable_evaluation && (
+          <EvaluationProgressFilterBar
+            totalParticipants={totalParticipants}
+            totalActiveTrainees={totalActiveTrainees}
+            trainerEvaluatedCount={trainerEvaluatedCount}
+            traineeEvaluatedCount={traineeEvaluatedCount}
+            unratedCount={unratedCount}
+            evalFilter={evalFilter}
+            onFilterChange={setEvalFilter}
+          />
+        )}
+
+        <TraineeListTable
+          meeting={meeting}
+          trainees={filteredTrainees}
           currentUserId={currentUserId}
           isTrainer={isTrainer}
           isEnded={isEnded}
@@ -184,10 +198,12 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
         />
       </div>
 
-      <div className="hidden md:block">
-        <ParticipantListTable
+      {/* Mobile: Danh sách phân chia 2 nhóm */}
+      <div className="block md:hidden">
+        <ParticipantMobileList
           meeting={meeting}
-          participants={filteredParticipants}
+          trainers={trainerParticipants}
+          trainees={filteredTrainees}
           currentUserId={currentUserId}
           isTrainer={isTrainer}
           isEnded={isEnded}
@@ -219,7 +235,7 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
           meetingId={meeting.id}
           trainee={evaluatingParticipant}
           existingEvaluation={trainerEvalsByTraineeId.get(evaluatingParticipant.user_id)}
-          participants={meeting.participants}
+          participants={traineeParticipants}
           onSelectTrainee={(p) => setEvaluatingParticipant(p)}
           onSuccess={() => {
             setEvaluatingParticipant(null);
@@ -234,9 +250,10 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
       <TraineeEvaluationModal
         open={isTraineeEvalOpen}
         meetingId={meeting.id}
-        trainerId={meeting.trainer?.id || meeting.created_by || undefined}
-        trainerName={meeting.trainer?.name}
-        trainerAvatarUrl={meeting.trainer?.avatar_url}
+        trainers={meeting.trainers || []}
+        trainerId={meeting.trainers?.[0]?.id}
+        trainerName={meeting.trainers?.[0]?.user_name}
+        trainerAvatarUrl={meeting.trainers?.[0]?.user_avatar_url}
         existingEvaluation={myEvalForTrainer}
         onSuccess={() => {
           setIsTraineeEvalOpen(false);

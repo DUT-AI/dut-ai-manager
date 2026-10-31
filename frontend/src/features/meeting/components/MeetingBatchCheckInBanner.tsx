@@ -23,9 +23,11 @@ export const MeetingBatchCheckInBanner: React.FC<Props> = ({ meetingId }) => {
   const currentUserId = user?.id;
   const isTrainer =
     (meeting.created_by ? currentUserId === meeting.created_by : false) ||
-    (user?.role_names?.some((r) => ['admin', 'leader'].includes(r.toLowerCase())) ?? false);
+    (meeting.trainers?.some((t) => Number(t.id || t.user_id) === Number(currentUserId))) ||
+    (user?.role_names?.some((r) => ['admin', 'leader', 'superadmin', 'manager'].includes(r.toLowerCase())) ?? false);
 
-  const unjoinedParticipants = meeting.participants.filter(
+  const allParticipants = [...(meeting.trainers || []), ...(meeting.trainees || [])];
+  const unjoinedParticipants = allParticipants.filter(
     (p) => p.status === ParticipantStatus.NOT_JOINED && !p.check_in_at
   );
   const unjoinedCount = unjoinedParticipants.length;

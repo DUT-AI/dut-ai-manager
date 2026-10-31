@@ -13,8 +13,9 @@ export const MeetingStatsRow: React.FC<Props> = ({ meetingId }) => {
 
   if (!meeting) return null;
 
-  const totalParticipants = meeting.participants.length;
-  const checkedInCount = meeting.participants.filter(
+  const allParticipants = [...(meeting.trainers || []), ...(meeting.trainees || [])];
+  const totalParticipants = allParticipants.length;
+  const checkedInCount = allParticipants.filter(
     (p) =>
       p.status === ParticipantStatus.JOINED ||
       p.status === ParticipantStatus.LATE_EXCUSED ||

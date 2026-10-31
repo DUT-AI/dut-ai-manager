@@ -2,7 +2,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.meeting.domain.value_objects import ParticipantStatus
+from app.meeting.domain.value_objects import ParticipantRole, ParticipantStatus
 from app.shared.domain.datetime_types import UtcDateTime
 
 
@@ -45,6 +45,7 @@ class ParticipantResponse(BaseModel):
 
     id: int
     user_id: int
+    role: ParticipantRole = ParticipantRole.TRAINEE
     user_name: str
     user_avatar_url: str | None = None
     check_in_at: UtcDateTime | None = None
@@ -71,6 +72,7 @@ class ParticipantResponse(BaseModel):
                     d = {
                         "id": getattr(data, "id", None),
                         "user_id": getattr(data, "user_id", None),
+                        "role": getattr(data, "role", ParticipantRole.TRAINEE),
                         "user_name": getattr(user, "name", ""),
                         "user_avatar_url": getattr(user, "avatar_url", None),
                         "check_in_at": getattr(data, "check_in_at", None),
@@ -91,6 +93,7 @@ class ParticipantResponse(BaseModel):
         return cls(
             id=p.id,
             user_id=p.user_id,
+            role=getattr(p, "role", ParticipantRole.TRAINEE),
             user_name=user_name,
             user_avatar_url=user_avatar,
             check_in_at=p.check_in_at,

@@ -129,7 +129,7 @@ async def update_participant_status(
     user_id: int,
     data: UpdateParticipantStatusRequest,
     uc: FromDishka[UpdateParticipantStatusUseCase],
-    _current_user: Annotated[CurrentUser, hasPermission(MeetingPermission.UPDATE)],
+    _current_user: CurrentUser,
     _: Annotated[None, Depends(check_meeting_ownership)],
 ):
     """Cập nhật trạng thái thành viên trong buổi họp (Creator/Admin)."""

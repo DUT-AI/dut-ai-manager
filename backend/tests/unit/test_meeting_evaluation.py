@@ -16,7 +16,11 @@ from app.meeting.domain.entity import (
     Meeting,
     MeetingParticipant,
 )
-from app.meeting.domain.value_objects import EvaluationType, ParticipantStatus
+from app.meeting.domain.value_objects import (
+    EvaluationType,
+    ParticipantRole,
+    ParticipantStatus,
+)
 from app.shared.application.response import BadRequestException
 
 
@@ -35,7 +39,10 @@ async def test_submit_trainer_evaluation_success():
         end_time=past_end,
         enable_evaluation=True,
         created_by=10,
-        participants=[MeetingParticipant(user_id=20, status=ParticipantStatus.JOINED)],
+        participants=[
+            MeetingParticipant(user_id=10, role=ParticipantRole.TRAINER),
+            MeetingParticipant(user_id=20, role=ParticipantRole.TRAINEE, status=ParticipantStatus.JOINED),
+        ],
     )
     meeting_repo.get_by_id.return_value = mock_meeting
     eval_repo.get_by_meeting_and_users.return_value = None
@@ -79,7 +86,10 @@ async def test_submit_trainee_evaluation_anonymous():
         end_time=past_end,
         enable_evaluation=True,
         created_by=10,
-        participants=[MeetingParticipant(user_id=20, status=ParticipantStatus.JOINED)],
+        participants=[
+            MeetingParticipant(user_id=10, role=ParticipantRole.TRAINER),
+            MeetingParticipant(user_id=20, role=ParticipantRole.TRAINEE, status=ParticipantStatus.JOINED),
+        ],
     )
     meeting_repo.get_by_id.return_value = mock_meeting
     eval_repo.get_by_meeting_and_users.return_value = None
@@ -303,6 +313,13 @@ async def test_check_evaluation_deadline_creates_violation_when_trainer_missing(
     overall_repo = MagicMock()
     violation_repo = MagicMock()
 
+    trainer = MeetingParticipant(
+        id=10,
+        user_id=10,
+        meeting_id=1,
+        role=ParticipantRole.TRAINER,
+        status=ParticipantStatus.JOINED,
+    )
     mock_meeting = Meeting(
         id=1,
         title="Python 101",
@@ -310,7 +327,7 @@ async def test_check_evaluation_deadline_creates_violation_when_trainer_missing(
         end_time=datetime.now(UTC) - timedelta(hours=28),
         enable_evaluation=True,
         created_by=10,
-        participants=[],
+        participants=[trainer],
     )
     meeting_repo.get_meetings_for_evaluation_deadline_check.return_value = [
         mock_meeting
@@ -346,10 +363,18 @@ async def test_check_evaluation_deadline_creates_violation_when_trainee_missing(
     overall_repo = MagicMock()
     violation_repo = MagicMock()
 
+    trainer = MeetingParticipant(
+        id=10,
+        user_id=10,
+        meeting_id=1,
+        role=ParticipantRole.TRAINER,
+        status=ParticipantStatus.JOINED,
+    )
     trainee = MeetingParticipant(
         id=1,
         user_id=20,
         meeting_id=1,
+        role=ParticipantRole.TRAINEE,
         status=ParticipantStatus.JOINED,
     )
     mock_meeting = Meeting(
@@ -359,7 +384,7 @@ async def test_check_evaluation_deadline_creates_violation_when_trainee_missing(
         end_time=datetime.now(UTC) - timedelta(hours=28),
         enable_evaluation=True,
         created_by=10,
-        participants=[trainee],
+        participants=[trainer, trainee],
     )
     meeting_repo.get_meetings_for_evaluation_deadline_check.return_value = [
         mock_meeting

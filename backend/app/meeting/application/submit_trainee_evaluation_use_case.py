@@ -42,10 +42,23 @@ class SubmitTraineeEvaluationUseCase:
         if not is_open:
             raise BadRequestException(msg)
 
-        resolved_target_id = target_user_id or meeting.created_by
-        if not resolved_target_id:
+        trainers = meeting.trainers
+        if not trainers:
             raise BadRequestException(
-                "Không xác định được giảng viên (Trainer) của buổi học"
+                "Buổi học này không có Trainer phụ trách để đánh giá"
+            )
+
+        if target_user_id is not None:
+            if not meeting.is_trainer(target_user_id):
+                raise BadRequestException(
+                    "Người được đánh giá không phải là Trainer của buổi học này"
+                )
+            resolved_target_id = target_user_id
+        elif len(trainers) == 1:
+            resolved_target_id = trainers[0].user_id
+        else:
+            raise BadRequestException(
+                "Buổi học có nhiều Trainer phụ trách, vui lòng chỉ định Trainer cần đánh giá"
             )
 
         # 2. Kiểm tra Trainee (người đánh giá) có tham gia không

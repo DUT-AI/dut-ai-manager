@@ -21,6 +21,14 @@ export const participantStatusSchema = z.enum([
   'COMPLETED',
 ]);
 
+export const ParticipantRole = {
+  TRAINER: 'TRAINER',
+  TRAINEE: 'TRAINEE',
+} as const;
+
+export type ParticipantRole = typeof ParticipantRole[keyof typeof ParticipantRole];
+export const participantRoleSchema = z.enum(['TRAINER', 'TRAINEE']);
+
 export interface UpdateParticipantStatusPayload {
   status: ParticipantStatus;
   check_in_at?: string | null;
@@ -31,6 +39,7 @@ export const participantResponseSchema = z.object({
   id: z.number(),
   meeting_id: z.number(),
   user_id: z.number(),
+  role: participantRoleSchema.default('TRAINEE'),
   user_name: z.string().optional(),
   user_avatar_url: z.string().nullable().optional(),
   check_in_at: z.string().nullable().optional(),
@@ -59,14 +68,15 @@ export const meetingResponseSchema = z.object({
   enable_evaluation: z.boolean().default(false),
   evaluation_deadline: z.string().nullable().optional(),
   created_by: z.number().nullable().optional(),
-  trainer: userRefSchema.default({ id: 0, name: 'Trainer' }),
+  trainers: z.array(userRefSchema).default([]),
   created_at: z.string(),
   updated_at: z.string(),
 });
 export type MeetingResponse = z.infer<typeof meetingResponseSchema>;
 
-export const meetingDetailResponseSchema = meetingResponseSchema.extend({
-  participants: z.array(participantResponseSchema).default([]),
+export const meetingDetailResponseSchema = meetingResponseSchema.omit({ trainers: true }).extend({
+  trainers: z.array(participantResponseSchema).default([]),
+  trainees: z.array(participantResponseSchema).default([]),
 });
 export type MeetingDetailResponse = z.infer<typeof meetingDetailResponseSchema>;
 
@@ -77,7 +87,8 @@ export const meetingCreateSchema = z.object({
   end_time: z.string().min(1, 'Vui lòng chọn thời gian kết thúc'),
   require_check_in: z.boolean().optional(),
   enable_evaluation: z.boolean().optional(),
-  user_ids: z.array(z.number()).optional(),
+  trainer_ids: z.array(z.number()).default([]),
+  trainee_ids: z.array(z.number()).default([]),
 });
 export type MeetingCreate = z.infer<typeof meetingCreateSchema>;
 export type CreateMeetingFormValues = MeetingCreate;

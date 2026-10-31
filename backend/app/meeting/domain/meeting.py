@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from pydantic import Field
 
 from app.meeting.domain.participant import MeetingParticipant
-from app.meeting.domain.value_objects import UserRef
+from app.meeting.domain.value_objects import ParticipantRole, UserRef
 from app.shared.domain.base_entity import BaseEntity
 from app.shared.domain.datetime_types import ensure_utc
 
@@ -19,6 +19,32 @@ class Meeting(BaseEntity):
     enable_evaluation: bool = False
     participants: list[MeetingParticipant] = Field(default_factory=list)
     creator: UserRef | None = None
+
+    @property
+    def trainers(self) -> list[MeetingParticipant]:
+        """Danh sách participants đóng vai trò Giảng viên/Trainer phụ trách."""
+        return [
+            p
+            for p in self.participants
+            if not getattr(p, "is_deleted", False) and p.role == ParticipantRole.TRAINER
+        ]
+
+    @property
+    def trainees(self) -> list[MeetingParticipant]:
+        """Danh sách participants đóng vai trò Học viên/Trainee tham gia."""
+        return [
+            p
+            for p in self.participants
+            if not getattr(p, "is_deleted", False) and p.role == ParticipantRole.TRAINEE
+        ]
+
+    def is_trainer(self, user_id: int) -> bool:
+        """Kiểm tra một user có phải là một trong các Trainer của buổi học không."""
+        return any(t.user_id == user_id for t in self.trainers)
+
+    def is_trainee(self, user_id: int) -> bool:
+        """Kiểm tra một user có phải là Học viên của buổi học không."""
+        return any(t.user_id == user_id for t in self.trainees)
 
     @property
     def evaluation_deadline(self) -> datetime | None:

@@ -28,8 +28,6 @@ services:
       - ENVIRONMENT=production
       - POSTGRES_SERVER=postgres
       - POSTGRES_PORT=5432
-      - HOMEWORK_CHECKER_API_URL=http://excercise-checker-backend-1:3636/api/v1/homework
-      - SUBMISSION_CHECKER_API_URL=http://excercise-checker-backend-1:3636/api/v1/submission
     ports:
       - "${BACKEND_PORT}:8000"
     depends_on:

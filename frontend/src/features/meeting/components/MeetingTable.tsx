@@ -59,6 +59,24 @@ export const MeetingTable: React.FC<MeetingTableProps> = ({
       ),
     },
     {
+      title: 'Giảng viên',
+      key: 'trainers',
+      render: (_: unknown, record: MeetingResponse) => {
+        if (!record.trainers || record.trainers.length === 0) {
+          return <Tag color="default">Tự học</Tag>;
+        }
+        return (
+          <Space wrap size={[4, 4]}>
+            {record.trainers.map((t) => (
+              <Tag key={t.id} color="gold">
+                {t.name}
+              </Tag>
+            ))}
+          </Space>
+        );
+      },
+    },
+    {
       title: 'Điểm danh',
       key: 'require_check_in',
       render: (_: unknown, record: MeetingResponse) => (

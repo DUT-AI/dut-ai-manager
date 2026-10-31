@@ -30,10 +30,14 @@ export const MeetingSection = ({ data, onViewParticipants, onEdit, onDelete }: P
                             <div className="flex flex-col gap-2">
                                 <div className="flex justify-between items-start">
                                     <Text strong className="text-blue-600 block">{item.title}</Text>
-                                    <Badge
-                                        status="processing"
-                                        text={`${item.participants.filter(p => p.status === ParticipantStatus.JOINED || p.status === ParticipantStatus.LATE_EXCUSED || p.status === ParticipantStatus.LATE_UNEXCUSED || p.status === ParticipantStatus.COMPLETED).length}/${item.participants.length}`}
-                                    />
+                                    {item.trainers && item.trainers.length > 0 ? (
+                                        <Badge
+                                            status="processing"
+                                            text={`${item.trainers.length} Giảng viên`}
+                                        />
+                                    ) : (
+                                        <Badge status="default" text="Tự học" />
+                                    )}
                                 </div>
 
                                 {item.content && (

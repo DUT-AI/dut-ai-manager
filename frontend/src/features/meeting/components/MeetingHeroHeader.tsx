@@ -71,11 +71,11 @@ export const MeetingHeroHeader: React.FC<Props> = ({ meetingId }) => {
   const currentUserId = user?.id;
   const isTrainer = Boolean(
     (meeting.created_by != null && currentUserId != null && Number(currentUserId) === Number(meeting.created_by)) ||
-    (meeting.trainer?.id != null && currentUserId != null && Number(currentUserId) === Number(meeting.trainer.id)) ||
+    (meeting.trainers?.some((t) => Number(t.id || t.user_id) === Number(currentUserId))) ||
     (user?.role_names?.some((r) => ['admin', 'leader', 'superadmin', 'manager'].includes(r.toLowerCase())) ?? false)
   );
 
-  const myParticipantRecord = meeting.participants.find((p) => p.user_id === currentUserId);
+  const myParticipantRecord = (meeting.trainees || []).find((p) => p.user_id === currentUserId);
   const isTrainee = !!myParticipantRecord;
 
   const isOngoing = dayjs().isAfter(dayjs(meeting.start_time)) && dayjs().isBefore(dayjs(meeting.end_time));
@@ -269,9 +269,10 @@ export const MeetingHeroHeader: React.FC<Props> = ({ meetingId }) => {
       <TraineeEvaluationModal
         open={isTraineeEvalOpen}
         meetingId={meeting.id}
-        trainerId={meeting.trainer?.id || meeting.created_by || undefined}
-        trainerName={meeting.trainer?.name}
-        trainerAvatarUrl={meeting.trainer?.avatar_url}
+        trainers={meeting.trainers || []}
+        trainerId={meeting.trainers?.[0]?.user_id || meeting.trainers?.[0]?.id || meeting.created_by || undefined}
+        trainerName={meeting.trainers?.[0]?.user_name}
+        trainerAvatarUrl={meeting.trainers?.[0]?.user_avatar_url}
         existingEvaluation={myEvalForTrainer}
         onSuccess={() => {
           setIsTraineeEvalOpen(false);

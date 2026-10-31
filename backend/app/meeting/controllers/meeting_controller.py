@@ -62,7 +62,8 @@ async def create_meeting(
         end_time=data.end_time,
         require_check_in=data.require_check_in,
         enable_evaluation=data.enable_evaluation,
-        user_ids=data.user_ids,
+        trainer_ids=data.trainer_ids,
+        trainee_ids=data.trainee_ids,
         creator_id=current_user.id,
     )
     return ApiResponse.success(

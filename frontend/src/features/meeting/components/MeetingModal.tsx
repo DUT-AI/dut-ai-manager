@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Modal, Form, Select, DatePicker, Input, message, Switch, Button, Space, Typography, Tag, Divider, Badge } from 'antd';
-import { TeamOutlined, UserOutlined, CheckOutlined, ClearOutlined } from '@ant-design/icons';
+import { TeamOutlined, UserOutlined, CheckOutlined, ClearOutlined, CrownOutlined } from '@ant-design/icons';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { useUserOptions } from '@/features/users/hooks/useUsers';
 import { teamService } from '@/features/teams/services/team.service';
 import type { TeamResponse } from '@/features/teams/types/team.types';
-import type { MeetingResponse } from '@/features/meeting/types/meeting.types';
+import type { MeetingResponse, MeetingDetailResponse } from '@/features/meeting/types/meeting.types';
 
 const { TextArea } = Input;
 const { RangePicker } = DatePicker;
@@ -14,7 +14,7 @@ const { Text } = Typography;
 
 interface Props {
     open: boolean;
-    editingItem?: MeetingResponse | null;
+    editingItem?: MeetingResponse | MeetingDetailResponse | null;
     initialDate?: Dayjs;
     confirmLoading?: boolean;
     onSubmit: (values: any) => void;
@@ -26,7 +26,8 @@ export const MeetingModal = ({ open, editingItem, initialDate, confirmLoading, o
     const [teams, setTeams] = useState<TeamResponse[]>([]);
     const [loadingTeams, setLoadingTeams] = useState(false);
     const [selectedTeamIds, setSelectedTeamIds] = useState<number[]>([]);
-    const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
+    const [selectedTrainerIds, setSelectedTrainerIds] = useState<number[]>([]);
+    const [selectedTraineeIds, setSelectedTraineeIds] = useState<number[]>([]);
 
     const { data: userOptions = [] } = useUserOptions();
 
@@ -52,28 +53,6 @@ export const MeetingModal = ({ open, editingItem, initialDate, confirmLoading, o
     };
 
     const initialDateKey = initialDate ? initialDate.format('YYYY-MM-DD') : '';
-
-    const initialValues = useMemo(() => {
-        if (editingItem) {
-            return {
-                title: editingItem.title,
-                content: editingItem.content,
-                require_check_in: editingItem.require_check_in,
-                enable_evaluation: editingItem.enable_evaluation ?? false,
-                time_range: [dayjs(editingItem.start_time), dayjs(editingItem.end_time)],
-                user_ids: editingItem.participants.map(p => p.user_id),
-            };
-        }
-        const baseDate = initialDate || dayjs();
-        return {
-            time_range: [
-                baseDate.hour(19).minute(0).second(0),
-                baseDate.hour(21).minute(0).second(0),
-            ],
-            require_check_in: true,
-            enable_evaluation: false,
-        };
-    }, [editingItem?.id, initialDateKey]);
 
     // Helper map: teamId -> array of member user_ids
     const teamMemberMap = useMemo(() => {
@@ -106,10 +85,14 @@ export const MeetingModal = ({ open, editingItem, initialDate, confirmLoading, o
         if (!open) return;
 
         if (editingItem) {
-            const initialUserIds = editingItem.participants.map(p => p.user_id);
-            const matchedTeams = detectMatchingTeams(initialUserIds);
+            const detailItem = editingItem as Partial<MeetingDetailResponse>;
+            const trainers = (detailItem.trainers || []).map((p: any) => p.user_id ?? p.id);
+            const trainees = (detailItem.trainees || []).map((p: any) => p.user_id ?? p.id);
+
+            const matchedTeams = detectMatchingTeams(trainees);
             setSelectedTeamIds(matchedTeams);
-            setSelectedUserIds(initialUserIds);
+            setSelectedTrainerIds(trainers);
+            setSelectedTraineeIds(trainees);
 
             form.setFieldsValue({
                 title: editingItem.title,
@@ -117,13 +100,15 @@ export const MeetingModal = ({ open, editingItem, initialDate, confirmLoading, o
                 require_check_in: editingItem.require_check_in,
                 enable_evaluation: editingItem.enable_evaluation ?? false,
                 time_range: [dayjs(editingItem.start_time), dayjs(editingItem.end_time)],
+                trainer_ids: trainers,
                 team_ids: matchedTeams,
-                user_ids: initialUserIds,
+                trainee_ids: trainees,
             });
         } else {
             const baseDate = initialDate || dayjs();
             setSelectedTeamIds([]);
-            setSelectedUserIds([]);
+            setSelectedTrainerIds([]);
+            setSelectedTraineeIds([]);
             form.setFieldsValue({
                 title: '',
                 content: '',
@@ -133,8 +118,9 @@ export const MeetingModal = ({ open, editingItem, initialDate, confirmLoading, o
                 ],
                 require_check_in: true,
                 enable_evaluation: false,
+                trainer_ids: [],
                 team_ids: [],
-                user_ids: [],
+                trainee_ids: [],
             });
         }
     }, [open, editingItem?.id, initialDateKey, detectMatchingTeams, form]);
@@ -153,16 +139,33 @@ export const MeetingModal = ({ open, editingItem, initialDate, confirmLoading, o
         }
     };
 
-    // Handle Team Selection Change (Resolves team members into user_ids)
+    // Handle Trainer Selection Change
+    const handleTrainerChange = (newTrainerIds: number[]) => {
+        setSelectedTrainerIds(newTrainerIds);
+        // Tự động loại bỏ khỏi trainee_ids nếu đã chọn làm trainer
+        const currentTrainees = form.getFieldValue('trainee_ids') || [];
+        const filteredTrainees = currentTrainees.filter((id: number) => !newTrainerIds.includes(id));
+        if (filteredTrainees.length !== currentTrainees.length) {
+            setSelectedTraineeIds(filteredTrainees);
+            form.setFieldsValue({ trainee_ids: filteredTrainees });
+        }
+        form.setFieldsValue({ trainer_ids: newTrainerIds });
+    };
+
+    // Handle Team Selection Change (Resolves team members into trainee_ids)
     const handleTeamChange = (newTeamIds: number[]) => {
-        const currentUserIds = form.getFieldValue('user_ids') || [];
-        const currentUserSet = new Set<number>(currentUserIds);
+        const currentTraineeIds = form.getFieldValue('trainee_ids') || [];
+        const currentTraineeSet = new Set<number>(currentTraineeIds);
 
         // Teams that were newly selected
         const newlyAdded = newTeamIds.filter(id => !selectedTeamIds.includes(id));
         newlyAdded.forEach(tId => {
             const memberIds = teamMemberMap.get(tId) || [];
-            memberIds.forEach(uid => currentUserSet.add(uid));
+            memberIds.forEach(uid => {
+                if (!selectedTrainerIds.includes(uid)) {
+                    currentTraineeSet.add(uid);
+                }
+            });
         });
 
         // Teams that were deselected
@@ -170,66 +173,68 @@ export const MeetingModal = ({ open, editingItem, initialDate, confirmLoading, o
         newlyRemoved.forEach(tId => {
             const memberIds = teamMemberMap.get(tId) || [];
             memberIds.forEach(uid => {
-                // Only remove if this user is NOT in another currently selected team
                 const belongsToOtherSelectedTeam = newTeamIds.some(otherTId => {
                     const otherMembers = teamMemberMap.get(otherTId) || [];
                     return otherMembers.includes(uid);
                 });
                 if (!belongsToOtherSelectedTeam) {
-                    currentUserSet.delete(uid);
+                    currentTraineeSet.delete(uid);
                 }
             });
         });
 
-        const finalUsers = Array.from(currentUserSet);
+        const finalTrainees = Array.from(currentTraineeSet);
         setSelectedTeamIds(newTeamIds);
-        setSelectedUserIds(finalUsers);
+        setSelectedTraineeIds(finalTrainees);
 
         form.setFieldsValue({
             team_ids: newTeamIds,
-            user_ids: finalUsers,
+            trainee_ids: finalTrainees,
         });
     };
 
-    // Handle Direct User Selection Change
-    const handleUserChange = (newUserIds: number[]) => {
-        setSelectedUserIds(newUserIds);
-        const matchedTeams = detectMatchingTeams(newUserIds);
+    // Handle Direct Trainee Selection Change
+    const handleTraineeChange = (newTraineeIds: number[]) => {
+        // Lọc bỏ trainer nếu người dùng chọn trùng
+        const cleanTrainees = newTraineeIds.filter(id => !selectedTrainerIds.includes(id));
+        setSelectedTraineeIds(cleanTrainees);
+        const matchedTeams = detectMatchingTeams(cleanTrainees);
         setSelectedTeamIds(matchedTeams);
         form.setFieldsValue({
             team_ids: matchedTeams,
-            user_ids: newUserIds,
+            trainee_ids: cleanTrainees,
         });
     };
 
-    // Quick Action: Select All Users
-    const handleSelectAll = () => {
-        const allUserIds = userOptions.map(u => u.id);
+    // Quick Action: Select All Trainees
+    const handleSelectAllTrainees = () => {
+        const allUserIds = userOptions.map(u => u.id).filter(id => !selectedTrainerIds.includes(id));
         const allTeamIds = teams.map(t => t.id);
         setSelectedTeamIds(allTeamIds);
-        setSelectedUserIds(allUserIds);
+        setSelectedTraineeIds(allUserIds);
         form.setFieldsValue({
             team_ids: allTeamIds,
-            user_ids: allUserIds,
+            trainee_ids: allUserIds,
         });
     };
 
-    // Quick Action: Clear All
-    const handleClearAll = () => {
+    // Quick Action: Clear Trainees
+    const handleClearTrainees = () => {
         setSelectedTeamIds([]);
-        setSelectedUserIds([]);
+        setSelectedTraineeIds([]);
         form.setFieldsValue({
             team_ids: [],
-            user_ids: [],
+            trainee_ids: [],
         });
     };
 
     const handleFinish = (values: any) => {
         const [start, end] = values.time_range;
-        const finalUserIds = values.user_ids || [];
+        const trainerIds = values.trainer_ids || [];
+        const traineeIds = values.trainee_ids || [];
 
-        if (finalUserIds.length === 0) {
-            message.warning('Vui lòng chọn ít nhất một thành viên hoặc team tham gia!');
+        if (trainerIds.length === 0 && traineeIds.length === 0) {
+            message.warning('Vui lòng chọn ít nhất một người tham gia (Trainer hoặc Trainee)!');
             return;
         }
 
@@ -240,11 +245,14 @@ export const MeetingModal = ({ open, editingItem, initialDate, confirmLoading, o
             end_time: end.toISOString(),
             require_check_in: values.require_check_in ?? true,
             enable_evaluation: values.enable_evaluation ?? false,
-            user_ids: finalUserIds,
+            trainer_ids: trainerIds,
+            trainee_ids: traineeIds,
         };
 
         onSubmit(formattedValues);
     };
+
+    const totalParticipants = selectedTrainerIds.length + selectedTraineeIds.length;
 
     return (
         <Modal
@@ -254,9 +262,9 @@ export const MeetingModal = ({ open, editingItem, initialDate, confirmLoading, o
             onOk={form.submit}
             confirmLoading={confirmLoading}
             destroyOnClose
-            width={640}
+            width={680}
         >
-            <Form form={form} initialValues={initialValues} layout="vertical" onFinish={handleFinish} className="mt-3">
+            <Form form={form} layout="vertical" onFinish={handleFinish} className="mt-3">
                 <Form.Item name="title" label={<span className="font-medium">Tiêu đề</span>} rules={[{ required: true, message: 'Vui lòng nhập tiêu đề!' }]}>
                     <Input placeholder="Ví dụ: Sinh hoạt định kỳ tuần 1" size="large" />
                 </Form.Item>
@@ -267,29 +275,73 @@ export const MeetingModal = ({ open, editingItem, initialDate, confirmLoading, o
 
                 <Divider className="!my-4">
                     <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm text-indigo-700">Danh sách tham gia</span>
+                        <span className="font-medium text-sm text-indigo-700">Phân công & Thành viên</span>
                         <Badge
-                            count={selectedUserIds.length}
+                            count={totalParticipants}
                             overflowCount={999}
-                            style={{ backgroundColor: selectedUserIds.length > 0 ? '#4f46e5' : '#9ca3af' }}
+                            style={{ backgroundColor: totalParticipants > 0 ? '#4f46e5' : '#9ca3af' }}
                         />
                     </div>
                 </Divider>
 
+                {/* 1. Ô CHỌN TRAINER(S) PHỤ TRÁCH */}
+                <div className="bg-amber-50/60 p-3.5 rounded-xl border border-amber-200/80 mb-4">
+                    <Form.Item
+                        name="trainer_ids"
+                        className="!mb-1"
+                        label={
+                            <div className="flex items-center justify-between w-full">
+                                <span className="flex items-center gap-2 font-medium text-amber-900">
+                                    <CrownOutlined className="text-amber-500" /> Giảng viên / Người phụ trách (Trainers)
+                                </span>
+                                <span className="text-xs text-amber-700 font-medium">
+                                    {selectedTrainerIds.length} Trainer
+                                </span>
+                            </div>
+                        }
+                    >
+                        <Select
+                            mode="multiple"
+                            placeholder="Chọn một hoặc nhiều Giảng viên/Mentor phụ trách (hoặc để trống nếu tự học)..."
+                            showSearch
+                            allowClear
+                            value={selectedTrainerIds}
+                            onChange={handleTrainerChange}
+                            filterOption={filterUserOption}
+                            options={userSelectOptions}
+                            maxTagCount="responsive"
+                            tagRender={({ label, closable, onClose }) => (
+                                <Tag
+                                    color="gold"
+                                    closable={closable}
+                                    onClose={onClose}
+                                    className="flex items-center gap-1 font-semibold my-0.5 text-amber-900 border-amber-300"
+                                >
+                                    <CrownOutlined className="text-amber-600" /> {label}
+                                </Tag>
+                            )}
+                        />
+                    </Form.Item>
+                    <p className="text-xs text-amber-800/80 m-0">
+                        ⭐ Trainer có toàn quyền điểm danh, quản lý và nộp đánh giá tổng thể. Để trống đối với buổi sinh hoạt / tự học nhóm tự quản.
+                    </p>
+                </div>
+
+                {/* 2. KHU VỰC CHỌN TRAINEES THAM GIA */}
                 <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-200/80 mb-4">
                     <div className="flex items-center justify-between mb-2">
                         <Text className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Chọn nhanh theo Team
+                            Chọn nhanh Học viên theo Team
                         </Text>
                         <Space size="small">
                             <Button
                                 type="link"
                                 size="small"
                                 icon={<CheckOutlined />}
-                                onClick={handleSelectAll}
+                                onClick={handleSelectAllTrainees}
                                 className="!p-0 !text-xs !text-indigo-600 font-medium"
                             >
-                                Chọn tất cả ({userOptions.length})
+                                Chọn tất cả ({userOptions.length - selectedTrainerIds.length})
                             </Button>
                             <span className="text-gray-300">|</span>
                             <Button
@@ -297,7 +349,7 @@ export const MeetingModal = ({ open, editingItem, initialDate, confirmLoading, o
                                 size="small"
                                 danger
                                 icon={<ClearOutlined />}
-                                onClick={handleClearAll}
+                                onClick={handleClearTrainees}
                                 className="!p-0 !text-xs font-medium"
                             >
                                 Xóa tất cả
@@ -308,7 +360,7 @@ export const MeetingModal = ({ open, editingItem, initialDate, confirmLoading, o
                     <Form.Item name="team_ids" className="!mb-2">
                         <Select
                             mode="multiple"
-                            placeholder="Chọn một hoặc nhiều Team để tự động thêm tất cả thành viên..."
+                            placeholder="Chọn một hoặc nhiều Team để tự động thêm tất cả thành viên vào học viên..."
                             loading={loadingTeams}
                             allowClear
                             value={selectedTeamIds}
@@ -332,46 +384,44 @@ export const MeetingModal = ({ open, editingItem, initialDate, confirmLoading, o
                             )}
                         />
                     </Form.Item>
-                    <p className="text-xs text-gray-500 m-0">
-                        💡 Khi chọn Team, toàn bộ thành viên trong nhóm sẽ được tự động phân giải và lưu trực tiếp vào danh sách người tham gia.
-                    </p>
-                </div>
 
-                <Form.Item
-                    name="user_ids"
-                    label={
-                        <div className="flex items-center justify-between w-full">
-                            <span className="flex items-center gap-2 font-medium">
-                                <UserOutlined /> Danh sách thành viên tham gia
-                            </span>
-                            <span className="text-xs text-indigo-600 font-normal">
-                                {selectedUserIds.length} người được chọn
-                            </span>
-                        </div>
-                    }
-                    rules={[
-                        {
-                            validator: (_, value) => {
-                                if (!value || value.length === 0) {
-                                    return Promise.reject(new Error('Vui lòng chọn ít nhất 1 thành viên hoặc 1 team'));
-                                }
-                                return Promise.resolve();
-                            }
+                    <Form.Item
+                        name="trainee_ids"
+                        className="!mb-0"
+                        label={
+                            <div className="flex items-center justify-between w-full">
+                                <span className="flex items-center gap-2 font-medium text-blue-900">
+                                    <UserOutlined /> Danh sách Học viên (Trainees)
+                                </span>
+                                <span className="text-xs text-blue-600 font-normal">
+                                    {selectedTraineeIds.length} học viên
+                                </span>
+                            </div>
                         }
-                    ]}
-                >
-                    <Select
-                        mode="multiple"
-                        placeholder="Tìm và chọn các thành viên cụ thể..."
-                        showSearch
-                        allowClear
-                        value={selectedUserIds}
-                        onChange={handleUserChange}
-                        filterOption={filterUserOption}
-                        options={userSelectOptions}
-                        maxTagCount="responsive"
-                    />
-                </Form.Item>
+                    >
+                        <Select
+                            mode="multiple"
+                            placeholder="Tìm và chọn các học viên cụ thể..."
+                            showSearch
+                            allowClear
+                            value={selectedTraineeIds}
+                            onChange={handleTraineeChange}
+                            filterOption={filterUserOption}
+                            options={userSelectOptions.filter(opt => !selectedTrainerIds.includes(opt.value))}
+                            maxTagCount="responsive"
+                            tagRender={({ label, closable, onClose }) => (
+                                <Tag
+                                    color="blue"
+                                    closable={closable}
+                                    onClose={onClose}
+                                    className="flex items-center gap-1 my-0.5"
+                                >
+                                    <UserOutlined /> {label}
+                                </Tag>
+                            )}
+                        />
+                    </Form.Item>
+                </div>
 
                 <Form.Item name="content" label={<span className="font-medium">Nội dung / Ghi chú</span>}>
                     <TextArea rows={3} placeholder="Mô tả chi tiết buổi sinh hoạt..." />
@@ -390,5 +440,3 @@ export const MeetingModal = ({ open, editingItem, initialDate, confirmLoading, o
         </Modal>
     );
 };
-
-

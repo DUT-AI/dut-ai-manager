@@ -17,6 +17,13 @@ class UserRef(BaseModel):
     avatar_url: str | None = None
 
 
+class ParticipantRole(StrEnum):
+    """Vai trò tham dự buổi họp"""
+
+    TRAINER = "TRAINER"  # Người hướng dẫn / Giảng viên
+    TRAINEE = "TRAINEE"  # Học viên tham gia
+
+
 class ParticipantStatus(StrEnum):
     """Trạng thái tham dự buổi họp (7 trạng thái)"""
 

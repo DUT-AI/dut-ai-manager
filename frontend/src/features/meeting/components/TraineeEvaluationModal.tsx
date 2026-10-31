@@ -1,9 +1,27 @@
-import React, { useEffect } from 'react';
-import { Modal, Form, Rate, Input, Switch, message, Typography, Space, Divider, Avatar, Alert } from 'antd';
-import { HeartFilled, EyeInvisibleOutlined, UserOutlined } from '@ant-design/icons';
+import React, { useEffect, useState } from 'react';
+import {
+  Modal,
+  Form,
+  Rate,
+  Input,
+  Switch,
+  message,
+  Typography,
+  Space,
+  Divider,
+  Avatar,
+  Alert,
+  Select,
+} from 'antd';
+import {
+  HeartFilled,
+  EyeInvisibleOutlined,
+  UserOutlined,
+  CrownOutlined,
+} from '@ant-design/icons';
 import { meetingService } from '../services/meeting.service';
 import { useQueryClient } from '@tanstack/react-query';
-import type { EvaluationResponse } from '../types/meeting.types';
+import type { EvaluationResponse, UserRefDto } from '../types/meeting.types';
 
 const { TextArea } = Input;
 const { Text } = Typography;
@@ -11,6 +29,7 @@ const { Text } = Typography;
 interface Props {
   open: boolean;
   meetingId: number;
+  trainers?: UserRefDto[];
   trainerId?: number;
   trainerName?: string;
   trainerAvatarUrl?: string | null;
@@ -46,6 +65,7 @@ const TRAINEE_CRITERIA = [
 export const TraineeEvaluationModal: React.FC<Props> = ({
   open,
   meetingId,
+  trainers = [],
   trainerId,
   trainerName,
   trainerAvatarUrl,
@@ -55,11 +75,18 @@ export const TraineeEvaluationModal: React.FC<Props> = ({
   onCancel,
 }) => {
   const [form] = Form.useForm();
-  const [submitting, setSubmitting] = React.useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [selectedTrainerId, setSelectedTrainerId] = useState<number | undefined>(
+    trainerId || trainers[0]?.id
+  );
   const queryClient = useQueryClient();
 
   useEffect(() => {
     if (open) {
+      const initialId =
+        existingEvaluation?.target_user_id || trainerId || trainers[0]?.id;
+      setSelectedTrainerId(initialId);
+
       if (existingEvaluation && existingEvaluation.scores?.length > 0) {
         const vals: Record<string, any> = {
           is_anonymous: existingEvaluation.is_anonymous ?? false,
@@ -73,7 +100,13 @@ export const TraineeEvaluationModal: React.FC<Props> = ({
         form.resetFields();
       }
     }
-  }, [open, existingEvaluation]);
+  }, [open, existingEvaluation, trainerId, trainers]);
+
+  const currentTrainer =
+    trainers.find((t) => t.id === selectedTrainerId) ||
+    (trainerId
+      ? { id: trainerId, name: trainerName || `Trainer #${trainerId}`, avatar_url: trainerAvatarUrl }
+      : null);
 
   const handleFinish = async (values: any) => {
     setSubmitting(true);
@@ -88,8 +121,9 @@ export const TraineeEvaluationModal: React.FC<Props> = ({
         scores,
         feedback_text: values.feedback_text,
       };
-      if (trainerId) {
-        payload.target_user_id = trainerId;
+
+      if (selectedTrainerId) {
+        payload.target_user_id = selectedTrainerId;
       }
 
       const res = await meetingService.submitTraineeEvaluation(meetingId, payload);
@@ -132,7 +166,9 @@ export const TraineeEvaluationModal: React.FC<Props> = ({
         <Space>
           <HeartFilled style={{ color: '#eb2f96' }} />
           <span>
-            {existingEvaluation ? 'Cập nhật Đánh giá Trainer (Trainee)' : 'Đánh giá Trainer & Buổi học (Trainee)'}
+            {existingEvaluation
+              ? 'Cập nhật Đánh giá Trainer (Trainee)'
+              : 'Đánh giá Trainer & Buổi học (Trainee)'}
           </span>
         </Space>
       }
@@ -143,22 +179,52 @@ export const TraineeEvaluationModal: React.FC<Props> = ({
       destroyOnClose
       width={560}
     >
-      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 mb-4">
-        <Avatar
-          src={trainerAvatarUrl}
-          icon={<UserOutlined />}
-          size={48}
-          className="shadow-sm border border-indigo-100"
-        />
-        <div>
-          <Text type="secondary" className="block text-xs uppercase font-semibold text-gray-500">
-            Trainer phụ trách
-          </Text>
-          <Text strong className="text-base text-gray-900">
-            {trainerName || (trainerId ? `Trainer #${trainerId}` : 'Chưa xác định')}
-          </Text>
+      {/* Chọn Trainer phụ trách */}
+      {trainers.length > 1 ? (
+        <div className="mb-4">
+          <label className="text-xs font-semibold text-gray-500 uppercase block mb-1.5">
+            Chọn Giảng viên cần đánh giá
+          </label>
+          <Select
+            className="w-full"
+            value={selectedTrainerId}
+            onChange={(val) => setSelectedTrainerId(val)}
+            options={trainers.map((t) => ({
+              value: t.id,
+              label: (
+                <div className="flex items-center gap-2">
+                  <Avatar src={t.avatar_url} icon={<UserOutlined />} size="small" />
+                  <span>{t.name}</span>
+                </div>
+              ),
+            }))}
+          />
         </div>
-      </div>
+      ) : (
+        <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 mb-4">
+          <Avatar
+            src={currentTrainer?.avatar_url}
+            icon={<UserOutlined />}
+            size={48}
+            className="shadow-sm border border-amber-200"
+          />
+          <div>
+            <div className="flex items-center gap-1">
+              <CrownOutlined className="text-amber-500 text-xs" />
+              <Text
+                type="secondary"
+                className="text-xs uppercase font-semibold text-gray-500"
+              >
+                Trainer phụ trách
+              </Text>
+            </div>
+            <Text strong className="text-base text-gray-900 block">
+              {currentTrainer?.name || 'Chưa xác định Trainer'}
+            </Text>
+          </div>
+        </div>
+      )}
+
       <Divider style={{ margin: '12px 0' }} />
 
       {existingEvaluation && (
@@ -169,11 +235,13 @@ export const TraineeEvaluationModal: React.FC<Props> = ({
           message={
             existingEvaluation.is_anonymous ? (
               <span>
-                Bạn đã gửi đánh giá <strong>ẩn danh</strong> cho Trainer. Bạn có thể cập nhật lại điểm số hoặc nhận xét bên dưới.
+                Bạn đã gửi đánh giá <strong>ẩn danh</strong> cho Trainer. Bạn có
+                thể cập nhật lại điểm số hoặc nhận xét bên dưới.
               </span>
             ) : (
               <span>
-                Bạn đã gửi đánh giá cho Trainer. Bạn có thể cập nhật lại điểm số hoặc nhận xét bên dưới.
+                Bạn đã gửi đánh giá cho Trainer. Bạn có thể cập nhật lại điểm số
+                hoặc nhận xét bên dưới.
               </span>
             )
           }
@@ -202,7 +270,10 @@ export const TraineeEvaluationModal: React.FC<Props> = ({
           </Form.Item>
         ))}
 
-        <Form.Item name="feedback_text" label={<Text strong>Góp ý / Cảm nhận cho Trainer</Text>}>
+        <Form.Item
+          name="feedback_text"
+          label={<Text strong>Góp ý / Cảm nhận cho Trainer</Text>}
+        >
           <TextArea
             rows={3}
             placeholder="Chia sẻ cảm nghĩ hoặc đề xuất giúp nâng cao chất lượng buổi học..."

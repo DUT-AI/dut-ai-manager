@@ -50,7 +50,7 @@ export const MeetingDetailPage: React.FC = () => {
     );
   }
 
-  const totalParticipants = meeting.participants.length;
+  const totalParticipants = (meeting.trainers?.length || 0) + (meeting.trainees?.length || 0);
 
   return (
     <div className="p-3 sm:p-6 w-full max-w-7xl mx-auto space-y-4 sm:space-y-6">

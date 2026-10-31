@@ -2,6 +2,7 @@ from typing import cast
 
 from app.meeting.domain.entity import Meeting, MeetingParticipant
 from app.meeting.domain.events import MeetingUpdated
+from app.meeting.domain.value_objects import ParticipantRole
 from app.meeting.infrastructure.repository import MeetingRepository
 from app.meeting.schemas import MeetingUpdate
 from app.shared.application.response import BadRequestException
@@ -9,7 +10,7 @@ from app.shared.domain.event_bus import DomainEvent, EventBus
 
 
 class UpdateMeetingUseCase:
-    """Cập nhật thông tin buổi họp"""
+    """Cập nhật thông tin buổi họp và danh sách Trainer/Trainee"""
 
     def __init__(
         self,
@@ -37,17 +38,43 @@ class UpdateMeetingUseCase:
         if data.enable_evaluation is not None:
             meeting.enable_evaluation = data.enable_evaluation
 
-        if data.user_ids is not None:
-            user_ids_list = list(set(data.user_ids))
-
+        if data.trainer_ids is not None or data.trainee_ids is not None:
             existing_participants_map = {p.user_id: p for p in meeting.participants}
-            new_participants = []
 
-            for uid in user_ids_list:
+            new_trainers_set = (
+                set(data.trainer_ids)
+                if data.trainer_ids is not None
+                else {p.user_id for p in meeting.trainers}
+            )
+            new_trainees_set = (
+                set(data.trainee_ids)
+                if data.trainee_ids is not None
+                else {p.user_id for p in meeting.trainees}
+            )
+            # Khử trùng lặp: Trainer ưu tiên hơn Trainee
+            new_trainees_set = new_trainees_set - new_trainers_set
+
+            new_participants: list[MeetingParticipant] = []
+
+            for uid in new_trainers_set:
                 if uid in existing_participants_map:
-                    new_participants.append(existing_participants_map[uid])
+                    p = existing_participants_map[uid]
+                    p.role = ParticipantRole.TRAINER
+                    new_participants.append(p)
                 else:
-                    new_participants.append(MeetingParticipant(user_id=uid))
+                    new_participants.append(
+                        MeetingParticipant(user_id=uid, role=ParticipantRole.TRAINER)
+                    )
+
+            for uid in new_trainees_set:
+                if uid in existing_participants_map:
+                    p = existing_participants_map[uid]
+                    p.role = ParticipantRole.TRAINEE
+                    new_participants.append(p)
+                else:
+                    new_participants.append(
+                        MeetingParticipant(user_id=uid, role=ParticipantRole.TRAINEE)
+                    )
 
             meeting.participants = new_participants
 

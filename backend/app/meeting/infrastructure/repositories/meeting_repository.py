@@ -5,7 +5,7 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session, contains_eager, joinedload, selectinload
 
 from app.meeting.domain.meeting import Meeting as DomainMeeting
-from app.meeting.domain.value_objects import ParticipantStatus
+from app.meeting.domain.value_objects import ParticipantRole, ParticipantStatus
 from app.meeting.infrastructure.model import Meeting as ORMMeeting
 from app.meeting.infrastructure.model import MeetingParticipant as ORMParticipant
 from app.shared.application.query_support_utils import build_query_support
@@ -324,9 +324,15 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
 
         if is_new and domain.participants:
             for dp in domain.participants:
+                role_val = (
+                    dp.role.value
+                    if isinstance(dp.role, ParticipantRole)
+                    else (dp.role or ParticipantRole.TRAINEE.value)
+                )
                 po = ORMParticipant(
                     meeting_id=orm.id,
                     user_id=dp.user_id,
+                    role=role_val,
                     status=dp.status,
                     check_in_at=dp.check_in_at,
                     link_image=dp.link_image,
@@ -354,10 +360,16 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
 
             # 2. Add or update participants
             for new_user_id, new_p in new_user_ids.items():
+                role_val = (
+                    new_p.role.value
+                    if isinstance(new_p.role, ParticipantRole)
+                    else (new_p.role or ParticipantRole.TRAINEE.value)
+                )
                 if new_user_id not in existing_user_ids:
                     po = ORMParticipant(
                         meeting_id=orm.id,
                         user_id=new_user_id,
+                        role=role_val,
                         status=new_p.status,
                         check_in_at=new_p.check_in_at,
                         check_out_at=new_p.check_out_at,
@@ -366,6 +378,7 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
                     self.session.add(po)
                 else:
                     existing = existing_user_ids[new_user_id]
+                    existing.role = role_val
                     existing.is_deleted = False
                     existing.status = new_p.status
                     existing.check_in_at = new_p.check_in_at

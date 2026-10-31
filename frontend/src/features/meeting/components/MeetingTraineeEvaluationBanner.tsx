@@ -26,10 +26,10 @@ export const MeetingTraineeEvaluationBanner: React.FC<Props> = ({ meetingId }) =
   const currentUserId = user?.id;
   const isTrainer =
     (meeting.created_by ? currentUserId === meeting.created_by : false) ||
-    (meeting.trainer?.id ? currentUserId === meeting.trainer.id : false) ||
+    (meeting.trainers?.some((t) => Number(t.id || t.user_id) === Number(currentUserId))) ||
     (user?.role_names?.some((r) => ['admin', 'leader', 'superadmin', 'manager'].includes(r.toLowerCase())) ?? false);
 
-  const myParticipantRecord = meeting.participants.find((p) => p.user_id === currentUserId);
+  const myParticipantRecord = (meeting.trainees || []).find((p) => p.user_id === currentUserId);
   const isTrainee = !!myParticipantRecord;
 
   const handleQuickEnableEvaluation = async () => {
@@ -129,9 +129,10 @@ export const MeetingTraineeEvaluationBanner: React.FC<Props> = ({ meetingId }) =
       <TraineeEvaluationModal
         open={isTraineeEvalOpen}
         meetingId={meeting.id}
-        trainerId={meeting.trainer?.id || meeting.created_by || undefined}
-        trainerName={meeting.trainer?.name}
-        trainerAvatarUrl={meeting.trainer?.avatar_url}
+        trainers={meeting.trainers || []}
+        trainerId={meeting.trainers?.[0]?.user_id || meeting.trainers?.[0]?.id || meeting.created_by || undefined}
+        trainerName={meeting.trainers?.[0]?.user_name}
+        trainerAvatarUrl={meeting.trainers?.[0]?.user_avatar_url}
         onSuccess={() => {
           setIsTraineeEvalOpen(false);
           refetch();

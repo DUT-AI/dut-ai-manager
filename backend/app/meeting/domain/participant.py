@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from app.meeting.domain.value_objects import ParticipantStatus, UserRef
+from app.meeting.domain.value_objects import ParticipantRole, ParticipantStatus, UserRef
 from app.shared.domain.base_entity import BaseEntity
 from app.shared.domain.datetime_types import ensure_utc
 
@@ -10,6 +10,7 @@ class MeetingParticipant(BaseEntity):
 
     user_id: int
     meeting_id: int | None = None
+    role: ParticipantRole = ParticipantRole.TRAINEE
     check_in_at: datetime | None = None
     check_out_at: datetime | None = None
     status: ParticipantStatus = ParticipantStatus.NOT_JOINED

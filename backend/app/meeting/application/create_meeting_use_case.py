@@ -4,13 +4,14 @@ from typing import cast
 from app.core.config import settings
 from app.meeting.domain.entity import Meeting, MeetingParticipant
 from app.meeting.domain.events import MeetingCreated
+from app.meeting.domain.value_objects import ParticipantRole
 from app.meeting.infrastructure.repository import MeetingRepository
 from app.shared.application.response import BadRequestException
 from app.shared.domain.event_bus import DomainEvent, EventBus
 
 
 class CreateMeetingUseCase:
-    """Tạo mới một buổi họp và mời các thành viên tham gia"""
+    """Tạo mới một buổi họp và phân loại Trainer, Trainee tham gia"""
 
     def __init__(
         self,
@@ -28,24 +29,31 @@ class CreateMeetingUseCase:
         content: str | None = None,
         require_check_in: bool = True,
         enable_evaluation: bool = False,
-        user_ids: list[int] | None = None,
+        trainer_ids: list[int] | None = None,
+        trainee_ids: list[int] | None = None,
         creator_id: int | None = None,
     ) -> Meeting:
-        all_user_ids = set(user_ids or [])
-        user_ids_list = list(all_user_ids)
+        trainers_set = set(trainer_ids or [])
+        trainees_set = set(trainee_ids or []) - trainers_set  # Khử trùng lặp, ưu tiên TRAINER
 
         concurrent_participants = self.repo.get_concurrent_participants_count(
             start_time, end_time
         )
 
-        needed_seats = len(user_ids_list)
+        needed_seats = len(trainers_set) + len(trainees_set)
         if concurrent_participants + needed_seats > settings.MAX_SEATS:
             remaining = max(0, settings.MAX_SEATS - concurrent_participants)
             raise BadRequestException(
                 f"Chỗ ngồi không đủ, chỉ còn {remaining} chỗ ngồi"
             )
 
-        participants = [MeetingParticipant(user_id=uid) for uid in user_ids_list]
+        participants = [
+            MeetingParticipant(user_id=uid, role=ParticipantRole.TRAINER)
+            for uid in trainers_set
+        ] + [
+            MeetingParticipant(user_id=uid, role=ParticipantRole.TRAINEE)
+            for uid in trainees_set
+        ]
 
         meeting = Meeting(
             title=title,
@@ -60,13 +68,14 @@ class CreateMeetingUseCase:
 
         saved_meeting = self.repo.save(meeting)
 
+        all_user_ids = [p.user_id for p in participants]
         await self.event_bus.publish(
             cast(
                 DomainEvent,
                 MeetingCreated(
                     meeting_id=cast(int, saved_meeting.id),
                     title=saved_meeting.title,
-                    user_ids=user_ids_list,
+                    user_ids=all_user_ids,
                     start_time=start_time.isoformat(),
                     end_time=end_time.isoformat(),
                 ),

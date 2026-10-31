@@ -13,7 +13,7 @@ async def check_meeting_ownership(
     current_user: CurrentUser,
     uc: FromDishka[GetMeetingsUseCase],
 ):
-    """Kiểm tra quyền sở hữu cuộc họp (Admin, Leader, hoặc Creator)."""
+    """Kiểm tra quyền sở hữu cuộc họp (Admin, Leader, Creator, hoặc Trainer được phân công)."""
     is_admin = any(
         r.lower() in ["admin", "superadmin", "leader", "manager"]
         for r in (current_user.role_names or [])
@@ -27,9 +27,12 @@ async def check_meeting_ownership(
             "Không tìm thấy buổi học", status_code=status.HTTP_404_NOT_FOUND
         )
 
-    if meeting.created_by != current_user.id:
+    is_creator = meeting.created_by is not None and meeting.created_by == current_user.id
+    is_trainer = meeting.is_trainer(current_user.id)
+
+    if not (is_creator or is_trainer):
         raise BadRequestException(
-            message="Bạn không có quyền chỉnh sửa hoặc xóa buổi họp này",
+            message="Bạn không có quyền chỉnh sửa hoặc điều hành buổi họp này",
             status_code=status.HTTP_403_FORBIDDEN,
         )
 
@@ -40,7 +43,7 @@ async def check_meeting_evaluation_permission(
     current_user: CurrentUser,
     uc: FromDishka[GetMeetingsUseCase],
 ):
-    """Kiểm tra quyền đánh giá cuộc họp (Admin, Creator, hoặc Trainer)."""
+    """Kiểm tra quyền đánh giá cuộc họp (Admin, Trainer của buổi học, hoặc Creator)."""
     if current_user.id is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized"
@@ -63,12 +66,10 @@ async def check_meeting_evaluation_permission(
             "Không tìm thấy buổi học", status_code=status.HTTP_404_NOT_FOUND
         )
 
-    is_creator = (
-        meeting.created_by is not None and meeting.created_by == current_user.id
-    )
-    is_trainer = meeting.creator is not None and meeting.creator.id == current_user.id
+    is_trainer = meeting.is_trainer(current_user.id)
+    is_creator = meeting.created_by is not None and meeting.created_by == current_user.id
 
-    if not (is_creator or is_trainer):
+    if not (is_trainer or is_creator):
         raise BadRequestException(
             message="Bạn không có quyền đánh giá buổi học này",
             status_code=status.HTTP_403_FORBIDDEN,

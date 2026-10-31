@@ -28,7 +28,8 @@ def test_meeting(admin_client, mock_current_user):
         "end_time": (now + timedelta(hours=3)).isoformat(),
         "require_check_in": True,
         "enable_evaluation": True,
-        "user_ids": [mock_current_user.id],
+        "trainer_ids": [mock_current_user.id],
+        "trainee_ids": [],
     }
     res = admin_client.post("/api/v1/meetings", json=payload)
     assert res.status_code == 201
@@ -52,7 +53,8 @@ def active_meeting_for_checkin(admin_client, mock_current_user, db_session):
         "end_time": (now + timedelta(minutes=50)).isoformat(),
         "require_check_in": True,
         "enable_evaluation": False,
-        "user_ids": [mock_current_user.id],
+        "trainer_ids": [mock_current_user.id],
+        "trainee_ids": [],
     }
     res = admin_client.post("/api/v1/meetings", json=payload)
     assert res.status_code == 201
@@ -148,7 +150,8 @@ def test_create_meeting_as_admin_success(admin_client, mock_current_user):
         "end_time": (now + timedelta(hours=6)).isoformat(),
         "require_check_in": True,
         "enable_evaluation": False,
-        "user_ids": [mock_current_user.id],
+        "trainer_ids": [mock_current_user.id],
+        "trainee_ids": [],
     }
     res = admin_client.post("/api/v1/meetings", json=payload)
     assert res.status_code == 201
@@ -195,13 +198,14 @@ def test_get_meeting_detail_not_found(admin_client):
 
 
 def test_get_meeting_detail_success(admin_client, test_meeting):
-    """Admin lấy chi tiết meeting kèm danh sách participants."""
+    """Admin lấy chi tiết meeting kèm danh sách trainers và trainees."""
     res = admin_client.get(f"/api/v1/meetings/{test_meeting['id']}")
     assert res.status_code == 200
     data = res.json()
     assert data["is_success"] is True
     assert data["data"]["id"] == test_meeting["id"]
-    assert "participants" in data["data"]
+    assert "trainers" in data["data"]
+    assert "trainees" in data["data"]
 
 
 # ---------------------------------------------------------------------------
@@ -283,18 +287,21 @@ def test_check_in_with_card_unregistered(admin_client):
     )
     assert res.status_code == 200
     assert "X-Message" in res.headers
-    assert "The chua duoc dang ky" in res.headers["X-Message"]
+    assert res.headers["X-Message"] == "NON_EXISTENT_CARD_999999"
 
 
-def test_check_in_with_card_no_meeting(admin_client, db_engine, mock_current_user):
+def test_check_in_with_card_no_meeting(admin_client, db_session):
     """User có thẻ nhưng không có cuộc họp nào trong vòng 30 phút."""
     card_code = f"CARD_NOMEET_{uuid.uuid4().hex[:6]}"
-    with db_engine.connect() as conn:
-        conn.execute(
-            text("UPDATE users SET check_in_card_code = :card WHERE id = :uid"),
-            {"card": card_code, "uid": mock_current_user.id},
-        )
-        conn.commit()
+    res_user = db_session.execute(
+        text(
+            "INSERT INTO users (name, email, check_in_card_code, status, is_deleted, created_at, updated_at) "
+            "VALUES ('User No Meeting', :email, :card, 'ACTIVE', false, NOW(), NOW()) "
+            "RETURNING id"
+        ),
+        {"email": f"no_meeting_{uuid.uuid4().hex[:6]}@example.com", "card": card_code},
+    )
+    db_session.commit()
 
     res = admin_client.post(
         "/api/v1/meetings/check-in-with-card",
@@ -365,12 +372,21 @@ def test_check_in_form_success(
     assert isinstance(res_data["data"], list)
 
 
-def test_check_out_not_checked_in_returns_400(
-    admin_client, mock_current_user, active_meeting_for_checkin
-):
+def test_check_out_not_checked_in_returns_400(admin_client, db_session):
     """Chưa check-in mà thực hiện check-out trả về lỗi 400 Bad Request."""
+    res_user = db_session.execute(
+        text(
+            "INSERT INTO users (name, email, status, is_deleted, created_at, updated_at) "
+            "VALUES ('User No Checkin', :email, 'ACTIVE', false, NOW(), NOW()) "
+            "RETURNING id"
+        ),
+        {"email": f"no_checkin_{uuid.uuid4().hex[:6]}@example.com"},
+    )
+    db_session.commit()
+    target_uid = res_user.fetchone()[0]
+
     payload = {
-        "user_id": mock_current_user.id,
+        "user_id": target_uid,
         "client_time": datetime.now().isoformat(),
     }
     res = admin_client.post("/api/v1/meetings/check-out", json=payload)
@@ -430,7 +446,8 @@ def test_get_my_evaluation_result_disabled_evaluation(admin_client, mock_current
         "start_time": (now + timedelta(hours=3)).isoformat(),
         "end_time": (now + timedelta(hours=4)).isoformat(),
         "enable_evaluation": False,
-        "user_ids": [mock_current_user.id],
+        "trainer_ids": [mock_current_user.id],
+        "trainee_ids": [],
     }
     create_res = admin_client.post("/api/v1/meetings", json=payload)
     meeting_id = create_res.json()["data"]["id"]
@@ -468,7 +485,8 @@ def test_submit_trainer_evaluation_success(admin_client, mock_current_user):
         "start_time": (now - timedelta(hours=1)).isoformat(),
         "end_time": (now + timedelta(hours=1)).isoformat(),
         "enable_evaluation": True,
-        "user_ids": [mock_current_user.id],
+        "trainer_ids": [mock_current_user.id],
+        "trainee_ids": [],
     }
     create_res = admin_client.post("/api/v1/meetings", json=payload_m)
     meeting_id = create_res.json()["data"]["id"]
@@ -502,7 +520,8 @@ def test_submit_trainee_evaluation_success(admin_client, mock_current_user):
         "start_time": (now - timedelta(hours=1)).isoformat(),
         "end_time": (now + timedelta(hours=1)).isoformat(),
         "enable_evaluation": True,
-        "user_ids": [mock_current_user.id],
+        "trainer_ids": [mock_current_user.id],
+        "trainee_ids": [],
     }
     create_res = admin_client.post("/api/v1/meetings", json=payload_m)
     meeting_id = create_res.json()["data"]["id"]
@@ -555,7 +574,8 @@ def test_delete_meeting_success(admin_client, mock_current_user):
         "title": "Meeting to Delete",
         "start_time": (now + timedelta(hours=10)).isoformat(),
         "end_time": (now + timedelta(hours=11)).isoformat(),
-        "user_ids": [mock_current_user.id],
+        "trainer_ids": [mock_current_user.id],
+        "trainee_ids": [],
     }
     res = admin_client.post("/api/v1/meetings", json=payload)
     assert res.status_code == 201
@@ -566,19 +586,120 @@ def test_delete_meeting_success(admin_client, mock_current_user):
     assert del_res.json()["is_success"] is True
 
 
-def test_member_submit_overall_evaluation_returns_403(member_client, test_meeting):
-    """Member không phải người tạo/trainer/admin bị chặn 403 khi đánh giá buổi học."""
-    payload = {
-        "scores": [
-            {"criteria_code": "ORGANIZATION", "score": 5},
-            {"criteria_code": "TRAINEE_ENGAGEMENT", "score": 5},
-        ],
-        "general_feedback": "Đánh giá trái phép",
-    }
-    res = member_client.post(
-        f"/api/v1/meetings/{test_meeting['id']}/evaluations/overall",
-        json=payload,
+def get_or_create_secondary_user(db_session, primary_id: int) -> int:
+    result = db_session.execute(
+        text("SELECT id FROM users WHERE id != :pid AND is_deleted = false LIMIT 1"),
+        {"pid": primary_id},
+    ).fetchone()
+    if result:
+        return result[0]
+    insert_res = db_session.execute(
+        text(
+            "INSERT INTO users (name, email, status, is_deleted, created_at, updated_at) "
+            "VALUES ('Secondary User', :email, 'ACTIVE', false, NOW(), NOW()) "
+            "RETURNING id"
+        ),
+        {"email": f"sec_user_{uuid.uuid4().hex[:6]}@example.com"},
     )
-    assert res.status_code == 403
-    err_text = res.json().get("message") or res.json().get("detail") or ""
-    assert "Bạn không có quyền đánh giá buổi học này" in err_text
+    db_session.commit()
+    return insert_res.fetchone()[0]
+
+
+def test_member_submit_overall_evaluation_returns_403(
+    admin_client, member_client, member_user, db_session
+):
+    """Member không phải người tạo/trainer/admin bị chặn 403 khi đánh giá buổi học."""
+    other_uid = get_or_create_secondary_user(db_session, member_user.id)
+    now = datetime.now()
+    payload = {
+        "title": "Meeting of Another Creator",
+        "start_time": (now - timedelta(hours=1)).isoformat(),
+        "end_time": (now + timedelta(hours=1)).isoformat(),
+        "enable_evaluation": True,
+        "trainer_ids": [other_uid],
+        "trainee_ids": [member_user.id],
+    }
+    create_res = admin_client.post("/api/v1/meetings", json=payload)
+    assert create_res.status_code == 201
+    meeting_id = create_res.json()["data"]["id"]
+
+    # Đổi created_by sang other_uid để member_user không phải creator
+    db_session.execute(
+        text("UPDATE meetings SET created_by = :uid WHERE id = :mid"),
+        {"uid": other_uid, "mid": meeting_id},
+    )
+    db_session.commit()
+
+    try:
+        eval_payload = {
+            "scores": [
+                {"criteria_code": "ORGANIZATION", "score": 5},
+                {"criteria_code": "TRAINEE_ENGAGEMENT", "score": 5},
+            ],
+            "general_feedback": "Đánh giá trái phép",
+        }
+        res = member_client.post(
+            f"/api/v1/meetings/{meeting_id}/evaluations/overall",
+            json=eval_payload,
+        )
+        assert res.status_code == 403
+        err_text = res.json().get("message") or res.json().get("detail") or ""
+        assert "Bạn không có quyền đánh giá buổi học này" in err_text
+    finally:
+        admin_client.delete(f"/api/v1/meetings/{meeting_id}")
+
+
+def test_assigned_trainer_has_full_management_and_evaluation_permission(
+    admin_client, member_client, member_user, db_session
+):
+    """Trainer được phân công (dù không phải creator) có toàn quyền điểm danh và nộp đánh giá tổng thể."""
+    other_uid = get_or_create_secondary_user(db_session, member_user.id)
+    now = datetime.now()
+    # Admin tạo meeting nhưng gán member làm Trainer
+    payload_m = {
+        "title": f"Trainer Owned Meeting {uuid.uuid4().hex[:6]}",
+        "start_time": (now - timedelta(hours=1)).isoformat(),
+        "end_time": (now + timedelta(hours=1)).isoformat(),
+        "enable_evaluation": True,
+        "trainer_ids": [member_user.id],
+        "trainee_ids": [],
+    }
+    create_res = admin_client.post("/api/v1/meetings", json=payload_m)
+    assert create_res.status_code == 201
+    meeting_id = create_res.json()["data"]["id"]
+
+    # Đổi created_by thành other_uid (chứng minh member_user không phải creator)
+    db_session.execute(
+        text("UPDATE meetings SET created_by = :uid WHERE id = :mid"),
+        {"uid": other_uid, "mid": meeting_id},
+    )
+    db_session.commit()
+
+    try:
+        # Member (Trainer của meeting) gửi đánh giá tổng thể buổi học -> Thành công (201)
+        eval_payload = {
+            "scores": [
+                {"criteria_code": "ORGANIZATION", "score": 5},
+                {"criteria_code": "TRAINEE_ENGAGEMENT", "score": 4},
+                {"criteria_code": "CONTENT_QUALITY", "score": 5},
+                {"criteria_code": "FACILITIES_SUPPORT", "score": 4},
+            ],
+            "general_feedback": "Buổi học diễn ra tốt đẹp",
+        }
+        eval_res = member_client.post(
+            f"/api/v1/meetings/{meeting_id}/evaluations/overall",
+            json=eval_payload,
+        )
+        assert eval_res.status_code == 201
+        assert eval_res.json()["is_success"] is True
+
+        # Member (Trainer của meeting) cập nhật trạng thái participant -> Thành công
+        status_res = member_client.put(
+            f"/api/v1/meetings/{meeting_id}/participants/{member_user.id}/status",
+            json={"status": "JOINED"},
+        )
+        assert status_res.status_code == 200
+        assert status_res.json()["is_success"] is True
+    finally:
+        admin_client.delete(f"/api/v1/meetings/{meeting_id}")
+

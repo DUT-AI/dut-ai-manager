@@ -69,7 +69,7 @@ const RobotActivityPage = () => {
             const res = await meetingService.getMeetingsByDateRange(start, end);
             if (res.is_success) {
                 const userMeetings = (res.data || []).filter((m: MeetingResponse) =>
-                    m.participants?.some((p: ParticipantResponse) => p.user_id === userId)
+                    m.trainers?.some((t) => t.id === userId)
                 );
                 setMyShifts(userMeetings);
             }
@@ -116,7 +116,7 @@ const RobotActivityPage = () => {
             return;
         }
 
-        const isRegistered = meeting.participants?.some((p: ParticipantResponse) => p.user_id === currentUser.id);
+        const isRegistered = meeting.trainers?.some((t) => t.id === currentUser.id);
         if (isRegistered) {
             message.warning('You are already registered for this activity');
             return;
@@ -127,11 +127,11 @@ const RobotActivityPage = () => {
             const detailRes = await meetingService.getMeetingById(meeting.id);
             if (!detailRes.is_success || !detailRes.data) throw new Error('Failed to fetch meeting details');
 
-            const currentParticipantIds = detailRes.data.participants?.map((p: ParticipantResponse) => p.user_id) || [];
-            const updatedUserIds = [...new Set([...currentParticipantIds, currentUser.id])];
+            const currentTraineeIds = detailRes.data.trainees?.map((p: ParticipantResponse) => p.user_id) || [];
+            const updatedTraineeIds = [...new Set([...currentTraineeIds, currentUser.id])];
 
             const updateRes = await meetingService.updateMeeting(meeting.id, {
-                user_ids: updatedUserIds
+                trainee_ids: updatedTraineeIds
             });
 
             if (updateRes.is_success) {
@@ -245,7 +245,7 @@ const RobotActivityPage = () => {
                         <AnimatePresence mode="popLayout">
                             {filteredMeetings.length > 0 ? (
                                 filteredMeetings.map((event, idx) => {
-                                    const isRegistered = event.participants?.some((p: ParticipantResponse) => p.user_id === currentUser?.id);
+                                    const isRegistered = event.trainers?.some((t) => t.id === currentUser?.id);
                                     const isOver = dayjs(event.end_time).isBefore(now);
 
                                     return (
@@ -279,7 +279,7 @@ const RobotActivityPage = () => {
                                                 <h3 className={`font-['Space_Grotesk'] text-[24px] leading-[1.2] font-semibold mb-1 ${isOver ? 'text-gray-500' : 'text-[#e1e2ec]'}`}>{event.title}</h3>
                                                 <div className="flex items-center gap-2 text-[#c2c6d6] text-sm">
                                                     <span className="material-symbols-outlined text-[16px]">group</span>
-                                                    <span>{event.participants?.length || 0} Participants</span>
+                                                    <span>{event.trainers?.length || 0} Trainers</span>
                                                 </div>
                                             </div>
 

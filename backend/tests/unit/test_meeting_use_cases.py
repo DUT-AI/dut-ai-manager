@@ -18,7 +18,7 @@ from app.meeting.domain.events import (
     ParticipantAbsenceRecorded,
     ParticipantLateRecorded,
 )
-from app.meeting.domain.value_objects import ParticipantStatus
+from app.meeting.domain.value_objects import ParticipantRole, ParticipantStatus
 
 
 def test_check_meeting_attendance_decoupled_job():
@@ -245,10 +245,11 @@ def test_update_meeting_preserves_participant_attendance_status():
 
     use_case = UpdateMeetingUseCase(repo=repo, event_bus=event_bus)
 
-    # Cập nhật danh sách user_ids gồm user 101 (cũ) và 102 (mới)
+    # Cập nhật danh sách trainers/trainees gồm user 101 (cũ - trainer) và 102 (mới - trainee)
     update_data = MeetingUpdate(
         title="New Title",
-        user_ids=[101, 102],
+        trainer_ids=[101],
+        trainee_ids=[102],
     )
 
     updated_meeting = asyncio.run(use_case.execute(meeting_id=10, data=update_data))
@@ -259,12 +260,14 @@ def test_update_meeting_preserves_participant_attendance_status():
 
     # Tìm participant 101
     p101 = next(p for p in updated_meeting.participants if p.user_id == 101)
+    assert p101.role == ParticipantRole.TRAINER
     assert p101.status == ParticipantStatus.JOINED
     assert p101.check_in_at == check_in_dt
     assert p101.link_image == "https://example.com/face.jpg"
 
     # Tìm participant 102 (mới)
     p102 = next(p for p in updated_meeting.participants if p.user_id == 102)
+    assert p102.role == ParticipantRole.TRAINEE
     assert p102.status == ParticipantStatus.NOT_JOINED
     assert p102.check_in_at is None
 
@@ -555,6 +558,93 @@ def test_update_participant_status_option_a_business_rules():
         check_in_at=explicit_time,
     )
     assert res_2.check_in_at == explicit_time
+
+
+def test_create_meeting_use_case_assigns_trainer_and_trainee_roles():
+    """Kiểm tra CreateMeetingUseCase phân loại đúng vai trò Trainer và Trainee, khử trùng lặp ưu tiên Trainer."""
+    from app.meeting.application.create_meeting_use_case import CreateMeetingUseCase
+
+    repo = MagicMock()
+    repo.get_concurrent_participants_count.return_value = 5
+
+    def mock_save(m):
+        m.id = 105
+        return m
+
+    repo.save.side_effect = mock_save
+    event_bus = MagicMock()
+    event_bus.publish = AsyncMock()
+
+    uc = CreateMeetingUseCase(repo=repo, event_bus=event_bus)
+
+    meeting_start = datetime(2026, 11, 5, 12, 0, tzinfo=UTC)
+    meeting_end = datetime(2026, 11, 5, 14, 0, tzinfo=UTC)
+
+    # User 11 có mặt ở cả trainer_ids và trainee_ids
+    meeting = asyncio.run(
+        uc.execute(
+            title="Buổi học AI & ML",
+            start_time=meeting_start,
+            end_time=meeting_end,
+            trainer_ids=[10, 11],
+            trainee_ids=[11, 21, 22],
+            creator_id=1,
+        )
+    )
+
+    assert meeting.created_by == 1
+    assert len(meeting.participants) == 4
+
+    trainers = meeting.trainers
+    trainees = meeting.trainees
+
+    assert len(trainers) == 2
+    assert {t.user_id for t in trainers} == {10, 11}
+    assert all(t.role == ParticipantRole.TRAINER for t in trainers)
+
+    assert len(trainees) == 2
+    assert {t.user_id for t in trainees} == {21, 22}
+    assert all(t.role == ParticipantRole.TRAINEE for t in trainees)
+
+    assert meeting.is_trainer(10) is True
+    assert meeting.is_trainer(11) is True
+    assert meeting.is_trainer(21) is False
+    assert meeting.is_trainee(21) is True
+
+
+def test_create_meeting_use_case_allows_no_trainer():
+    """Kiểm tra CreateMeetingUseCase cho phép tạo meeting không có Trainer (buổi tự học nhóm)."""
+    from app.meeting.application.create_meeting_use_case import CreateMeetingUseCase
+
+    repo = MagicMock()
+    repo.get_concurrent_participants_count.return_value = 0
+
+    def mock_save(m):
+        m.id = 106
+        return m
+
+    repo.save.side_effect = mock_save
+    event_bus = MagicMock()
+    event_bus.publish = AsyncMock()
+
+    uc = CreateMeetingUseCase(repo=repo, event_bus=event_bus)
+
+    meeting = asyncio.run(
+        uc.execute(
+            title="Tự học nhóm Python",
+            start_time=datetime(2026, 11, 6, 12, 0, tzinfo=UTC),
+            end_time=datetime(2026, 11, 6, 14, 0, tzinfo=UTC),
+            trainer_ids=[],
+            trainee_ids=[31, 32, 33],
+            creator_id=2,
+        )
+    )
+
+    assert meeting.created_by == 2
+    assert len(meeting.trainers) == 0
+    assert len(meeting.trainees) == 3
+    assert meeting.is_trainer(31) is False
+    assert meeting.is_trainee(31) is True
 
 
 if __name__ == "__main__":

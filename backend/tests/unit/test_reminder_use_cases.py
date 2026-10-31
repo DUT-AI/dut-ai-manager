@@ -10,7 +10,7 @@ import pytest
 from app.duty.domain.entity import CleaningDuty, DutyStatus
 from app.homework.domain.entity import Homework, HomeworkSubmission, SubmissionType
 from app.meeting.domain.entity import Meeting, MeetingParticipant
-from app.meeting.domain.value_objects import ParticipantStatus
+from app.meeting.domain.value_objects import ParticipantRole, ParticipantStatus
 from app.reminder.application.get_my_notifications_use_case import (
     GetMyNotificationsUseCase,
 )
@@ -292,9 +292,10 @@ async def test_meeting_evaluation_task_scanner():
         end_time=meeting_end,
         enable_evaluation=True,
         participants=[
-            MeetingParticipant(user_id=1, status=ParticipantStatus.COMPLETED),
-            MeetingParticipant(user_id=2, status=ParticipantStatus.JOINED),
-            MeetingParticipant(user_id=3, status=ParticipantStatus.NOT_JOINED),
+            MeetingParticipant(user_id=10, role=ParticipantRole.TRAINER),
+            MeetingParticipant(user_id=1, role=ParticipantRole.TRAINEE, status=ParticipantStatus.COMPLETED),
+            MeetingParticipant(user_id=2, role=ParticipantRole.TRAINEE, status=ParticipantStatus.JOINED),
+            MeetingParticipant(user_id=3, role=ParticipantRole.TRAINEE, status=ParticipantStatus.NOT_JOINED),
         ],
     )
     meeting_repo.get_all_with_participants.return_value = [mock_meeting]
@@ -302,10 +303,13 @@ async def test_meeting_evaluation_task_scanner():
     eval_repo.count_evaluations_by_reviewer.side_effect = (
         lambda meeting_id, reviewer_id: 1 if reviewer_id == 1 else 0
     )
+    overall_repo = MagicMock()
+    overall_repo.exists_for_meeting.return_value = True
 
     scanner = MeetingEvaluationTaskScanner(
         meeting_repo=meeting_repo,
         evaluation_repo=eval_repo,
+        overall_eval_repo=overall_repo,
     )
     candidates = scanner.scan_pending_tasks(now=now)
 

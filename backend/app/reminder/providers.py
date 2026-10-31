@@ -16,6 +16,7 @@ from app.homework.infrastructure.homework_submission_repository import (
 )
 from app.meeting.infrastructure.repository import (
     MeetingEvaluationRepository,
+    MeetingOverallEvaluationRepository,
     MeetingRepository,
 )
 from app.reminder.application.get_my_notifications_use_case import (
@@ -158,10 +159,12 @@ class ReminderModuleProvider(Provider):
         self,
         meeting_repo: MeetingRepository,
         evaluation_repo: MeetingEvaluationRepository,
+        overall_eval_repo: MeetingOverallEvaluationRepository,
     ) -> MeetingEvaluationTaskScanner:
         return MeetingEvaluationTaskScanner(
             meeting_repo=meeting_repo,
             evaluation_repo=evaluation_repo,
+            overall_eval_repo=overall_eval_repo,
         )
 
     @provide

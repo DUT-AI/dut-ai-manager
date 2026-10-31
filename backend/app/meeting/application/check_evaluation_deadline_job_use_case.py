@@ -51,7 +51,7 @@ class CheckEvaluationDeadlineJobUseCase:
             evals = self.evaluation_repo.get_evaluations_by_meeting(meeting.id)
 
             trainee_violations += self._check_trainees(meeting, evals, now, time_str)
-            trainer_violations += self._check_trainer(meeting, now, time_str)
+            trainer_violations += self._check_trainers(meeting, now, time_str)
 
         return {
             "meetings_scanned": len(meetings),
@@ -71,7 +71,15 @@ class CheckEvaluationDeadlineJobUseCase:
     def _check_trainees(
         self, meeting: Meeting, evals: list, now: datetime, time_str: str
     ) -> int:
-        joined_participants = [p for p in meeting.participants if self._is_joined(p)]
+        # Nếu buổi học không có Trainer nào thì Trainee không cần đánh giá Trainer
+        if not meeting.trainers:
+            return 0
+
+        joined_participants = [
+            p
+            for p in meeting.participants
+            if self._is_joined(p) and not meeting.is_trainer(p.user_id)
+        ]
         reviewers = {
             e.reviewer_id
             for e in evals
@@ -93,23 +101,25 @@ class CheckEvaluationDeadlineJobUseCase:
                     created += 1
         return created
 
-    def _check_trainer(self, meeting: Meeting, now: datetime, time_str: str) -> int:
-        trainer_id = meeting.created_by
-        if not trainer_id or not meeting.id:
+    def _check_trainers(self, meeting: Meeting, now: datetime, time_str: str) -> int:
+        if not meeting.id or not meeting.trainers:
             return 0
 
+        created = 0
         if not self.overall_eval_repo.exists_for_meeting(meeting.id):
-            reason = (
-                f"Trainer chưa hoàn tất đánh giá tổng thể buổi học "
-                f"'{meeting.title}'{time_str} trong vòng 72h"
-            )
-            if not self.violation_repo.exists_by_user_and_reason(trainer_id, reason):
-                v = Violation.create_system_violation(
-                    user_id=trainer_id, reason=reason, date=now
+            for trainer in meeting.trainers:
+                trainer_id = trainer.user_id
+                reason = (
+                    f"Trainer chưa hoàn tất đánh giá tổng thể buổi học "
+                    f"'{meeting.title}'{time_str} trong vòng 72h"
                 )
-                self.violation_repo.save(v)
-                return 1
-        return 0
+                if not self.violation_repo.exists_by_user_and_reason(trainer_id, reason):
+                    v = Violation.create_system_violation(
+                        user_id=trainer_id, reason=reason, date=now
+                    )
+                    self.violation_repo.save(v)
+                    created += 1
+        return created
 
     @staticmethod
     def _is_joined(p: MeetingParticipant) -> bool:

@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.meeting.domain.value_objects import ParticipantStatus
+from app.meeting.domain.value_objects import ParticipantRole, ParticipantStatus
 from app.shared.domain.datetime_types import UtcDateTime
 
 from .participant_schemas import ParticipantResponse
@@ -28,7 +28,8 @@ class MeetingCreate(BaseModel):
     end_time: UtcDateTime
     require_check_in: bool = True
     enable_evaluation: bool = False
-    user_ids: list[int] = []
+    trainer_ids: list[int] = Field(default_factory=list, description="Danh sách ID Trainer")
+    trainee_ids: list[int] = Field(default_factory=list, description="Danh sách ID Trainee")
 
 
 class MeetingUpdate(BaseModel):
@@ -38,7 +39,8 @@ class MeetingUpdate(BaseModel):
     end_time: UtcDateTime | None = None
     require_check_in: bool | None = None
     enable_evaluation: bool | None = None
-    user_ids: list[int] | None = None
+    trainer_ids: list[int] | None = None
+    trainee_ids: list[int] | None = None
 
 
 class MeetingResponse(BaseModel):
@@ -53,7 +55,7 @@ class MeetingResponse(BaseModel):
     enable_evaluation: bool = False
     evaluation_deadline: datetime | None = None
     created_by: int | None = None
-    trainer: UserRefDto | None = None
+    trainers: list[UserRefDto] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
 
@@ -63,27 +65,24 @@ class MeetingResponse(BaseModel):
         if m.id is None or m.created_at is None or m.updated_at is None:
             raise ValueError("Meeting thiếu id hoặc timestamps sau khi lưu")
 
-        # Enforce Trainer Contract & Read profile from ORM relation if present
-        trainer_dto: UserRefDto | None = None
-        creator_rel = getattr(m, "creator", None)
-        if creator_rel and getattr(creator_rel, "id", None):
-            trainer_dto = UserRefDto(
-                id=creator_rel.id,
-                name=creator_rel.name or f"Trainer #{creator_rel.id}",
-                avatar_url=creator_rel.avatar_url,
-            )
-        elif m.created_by:
-            trainer_dto = UserRefDto(
-                id=m.created_by,
-                name=f"Trainer #{m.created_by}",
-                avatar_url=None,
-            )
-        else:
-            trainer_dto = UserRefDto(
-                id=0,
-                name="Unknown Trainer",
-                avatar_url=None,
-            )
+        trainers_dto: list[UserRefDto] = []
+        for t in getattr(m, "trainers", []):
+            if getattr(t, "user", None):
+                trainers_dto.append(
+                    UserRefDto(
+                        id=t.user.id,
+                        name=t.user.name or f"Trainer #{t.user.id}",
+                        avatar_url=t.user.avatar_url,
+                    )
+                )
+            else:
+                trainers_dto.append(
+                    UserRefDto(
+                        id=t.user_id,
+                        name=f"Trainer #{t.user_id}",
+                        avatar_url=None,
+                    )
+                )
 
         return cls(
             id=m.id,
@@ -97,21 +96,34 @@ class MeetingResponse(BaseModel):
             else False,
             evaluation_deadline=m.evaluation_deadline,
             created_by=m.created_by,
-            trainer=trainer_dto,
+            trainers=trainers_dto,
             created_at=m.created_at,
             updated_at=m.updated_at,
         )
 
 
-class MeetingDetailResponse(MeetingResponse):
-    """Schema chi tiết của Meeting bao gồm danh sách người tham gia."""
+class MeetingDetailResponse(BaseModel):
+    """Schema chi tiết của Meeting phân tách thành 2 danh sách trainers và trainees."""
 
-    participants: list[ParticipantResponse] = []
+    id: int
+    title: str
+    content: str | None = None
+    start_time: datetime
+    end_time: datetime
+    require_check_in: bool
+    enable_evaluation: bool = False
+    evaluation_deadline: datetime | None = None
+    created_by: int | None = None
+    trainers: list[ParticipantResponse] = Field(default_factory=list)
+    trainees: list[ParticipantResponse] = Field(default_factory=list)
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
     @classmethod
     def from_domain(cls, m: "DomainMeeting") -> "MeetingDetailResponse":
-        """Map domain Meeting → detail schema (kèm participants)."""
-        base_res = MeetingResponse.from_domain(m)
+        """Map domain Meeting → detail schema (phân chia trainers và trainees rõ ràng)."""
         now = datetime.now(UTC)
         end_time_utc = (
             m.end_time
@@ -121,7 +133,9 @@ class MeetingDetailResponse(MeetingResponse):
         is_ended = now > end_time_utc
 
         participants_raw = getattr(m, "participants", []) or []
-        participants: list[ParticipantResponse] = []
+        trainers: list[ParticipantResponse] = []
+        trainees: list[ParticipantResponse] = []
+
         for p in participants_raw:
             check_out_at = p.check_out_at
             status = p.status
@@ -147,22 +161,39 @@ class MeetingDetailResponse(MeetingResponse):
             user_name = getattr(p_user, "name", None) or f"User #{p.user_id}"
             user_avatar = getattr(p_user, "avatar_url", None)
 
-            participants.append(
-                ParticipantResponse(
-                    id=p.id,
-                    user_id=p.user_id,
-                    user_name=user_name,
-                    user_avatar_url=user_avatar,
-                    check_in_at=p.check_in_at,
-                    check_out_at=check_out_at,
-                    status=status,
-                    link_image=p.link_image,
-                )
+            p_dto = ParticipantResponse(
+                id=p.id,
+                user_id=p.user_id,
+                role=p.role,
+                user_name=user_name,
+                user_avatar_url=user_avatar,
+                check_in_at=p.check_in_at,
+                check_out_at=check_out_at,
+                status=status,
+                link_image=p.link_image,
             )
 
+            if p.role == ParticipantRole.TRAINER:
+                trainers.append(p_dto)
+            else:
+                trainees.append(p_dto)
+
         return cls(
-            **base_res.model_dump(),
-            participants=participants,
+            id=m.id,
+            title=m.title,
+            content=m.content,
+            start_time=m.start_time,
+            end_time=m.end_time,
+            require_check_in=m.require_check_in,
+            enable_evaluation=m.enable_evaluation
+            if m.enable_evaluation is not None
+            else False,
+            evaluation_deadline=m.evaluation_deadline,
+            created_by=m.created_by,
+            trainers=trainers,
+            trainees=trainees,
+            created_at=m.created_at,
+            updated_at=m.updated_at,
         )
 
 
