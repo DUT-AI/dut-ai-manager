@@ -70,12 +70,19 @@ class ParticipantResponse(BaseModel):
         return data
 
     @classmethod
-    def from_domain(cls, p: "MeetingParticipant") -> "ParticipantResponse":
+    def from_domain(
+        cls,
+        p: "MeetingParticipant",
+        *,
+        override_status: ParticipantStatus | None = None,
+        override_check_out_at: UtcDateTime | None = None,
+    ) -> "ParticipantResponse":
         if p.id is None:
             raise ValueError("Participant thiếu id")
-        p_user = p.user
-        user_name = p_user.name if p_user and p_user.name else f"User #{p.user_id}"
-        user_avatar = p_user.avatar_url if p_user else None
+
+        user_name = p.user.name if p.user else ""
+        user_avatar = p.user.avatar_url if p.user else None
+
         return cls(
             id=p.id,
             user_id=p.user_id,
@@ -83,8 +90,8 @@ class ParticipantResponse(BaseModel):
             user_name=user_name,
             user_avatar_url=user_avatar,
             check_in_at=p.check_in_at,
-            check_out_at=p.check_out_at,
-            status=p.status,
+            check_out_at=override_check_out_at or p.check_out_at,
+            status=override_status or p.status,
             link_image=p.link_image,
         )
 

@@ -69,24 +69,14 @@ class MeetingResponse(BaseModel):
         if m.id is None or m.created_at is None or m.updated_at is None:
             raise ValueError("Meeting thiếu id hoặc timestamps sau khi lưu")
 
-        trainers_dto: list[UserRefDto] = []
-        for t in m.trainers:
-            if t.user is not None:
-                trainers_dto.append(
-                    UserRefDto(
-                        id=t.user.id,
-                        name=t.user.name or f"Trainer #{t.user.id}",
-                        avatar_url=t.user.avatar_url,
-                    )
-                )
-            else:
-                trainers_dto.append(
-                    UserRefDto(
-                        id=t.user_id,
-                        name=f"Trainer #{t.user_id}",
-                        avatar_url=None,
-                    )
-                )
+        trainers_dto: list[UserRefDto] = [
+            UserRefDto(
+                id=t.user.id if t.user else t.user_id,
+                name=t.user.name if t.user else "",
+                avatar_url=t.user.avatar_url if t.user else None,
+            )
+            for t in m.trainers
+        ]
 
         return cls(
             id=m.id,
@@ -95,9 +85,7 @@ class MeetingResponse(BaseModel):
             start_time=m.start_time,
             end_time=m.end_time,
             require_check_in=m.require_check_in,
-            enable_evaluation=m.enable_evaluation
-            if m.enable_evaluation is not None
-            else False,
+            enable_evaluation=m.enable_evaluation,
             evaluation_deadline=m.evaluation_deadline,
             created_by=m.created_by,
             trainers=trainers_dto,
@@ -159,21 +147,10 @@ class MeetingDetailResponse(BaseModel):
                 elif not p.check_in_at and status == ParticipantStatus.NOT_JOINED:
                     status = ParticipantStatus.ABSENT_UNEXCUSED
 
-            # Read user from snapshot or fallback cleanly
-            p_user = p.user
-            user_name = p_user.name if p_user and p_user.name else f"User #{p.user_id}"
-            user_avatar = p_user.avatar_url if p_user else None
-
-            p_dto = ParticipantResponse(
-                id=p.id,
-                user_id=p.user_id,
-                role=p.role,
-                user_name=user_name,
-                user_avatar_url=user_avatar,
-                check_in_at=p.check_in_at,
-                check_out_at=check_out_at,
-                status=status,
-                link_image=p.link_image,
+            p_dto = ParticipantResponse.from_domain(
+                p,
+                override_status=status,
+                override_check_out_at=check_out_at,
             )
 
             if p.role == ParticipantRole.TRAINER:
@@ -188,9 +165,7 @@ class MeetingDetailResponse(BaseModel):
             start_time=m.start_time,
             end_time=m.end_time,
             require_check_in=m.require_check_in,
-            enable_evaluation=m.enable_evaluation
-            if m.enable_evaluation is not None
-            else False,
+            enable_evaluation=m.enable_evaluation,
             evaluation_deadline=m.evaluation_deadline,
             created_by=m.created_by,
             trainers=trainers,

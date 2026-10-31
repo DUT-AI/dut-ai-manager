@@ -69,26 +69,24 @@ class Meeting(SQLAlchemyTimestampMixin, Base):
         if "creator" in self.__dict__ and self.creator:
             creator_ref = UserRef(
                 id=self.creator.id,
-                name=self.creator.name or f"User #{self.creator.id}",
+                name=self.creator.name,
                 avatar_url=self.creator.avatar_url,
             )
         elif self.created_by:
             creator_ref = UserRef(
                 id=self.created_by,
-                name=f"User #{self.created_by}",
+                name="",
                 avatar_url=None,
             )
 
         participants_list = []
         if "participants" in self.__dict__ and self.participants:
-            active_participants = [
-                p for p in self.participants if not getattr(p, "is_deleted", False)
-            ]
+            active_participants = [p for p in self.participants if not p.is_deleted]
             sorted_participants = sorted(
                 active_participants,
                 key=lambda p: (
-                    getattr(p, "created_at", None) or datetime.min.replace(tzinfo=UTC),
-                    getattr(p, "id", None) or 0,
+                    p.created_at or datetime.min.replace(tzinfo=UTC),
+                    p.id or 0,
                 ),
                 reverse=True,
             )
@@ -164,7 +162,7 @@ class MeetingParticipant(SQLAlchemyTimestampMixin, Base):
         if self.user:
             user_ref = UserRef(
                 id=self.user.id,
-                name=self.user.name or f"User #{self.user.id}",
+                name=self.user.name,
                 avatar_url=self.user.avatar_url,
             )
 
