@@ -1,3 +1,4 @@
+from datetime import datetime
 from enum import Enum
 
 from pydantic import BaseModel
@@ -54,3 +55,12 @@ class SubmissionEvaluation(BaseModel):
     coding_submitted: bool
     game_submitted: bool
     uncompleted_items: list[str]
+
+
+class DueHomeworkAssignment(BaseModel):
+    homework_id: int
+    user_id: int
+    homework_title: str
+    deadline: datetime
+    requires_coding: bool
+    requires_game: bool

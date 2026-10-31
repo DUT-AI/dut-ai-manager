@@ -15,7 +15,6 @@ class Homework(BaseEntity):
     """Domain model containing assignment details."""
 
     title: str
-    deadline: datetime
     link: str | None = None
     slug: str | None = None
     requires_coding: bool = True
@@ -24,6 +23,7 @@ class Homework(BaseEntity):
     def evaluate_submissions(
         self,
         submissions: list["HomeworkSubmission"],
+        deadline: datetime | None = None,
         reference_time: datetime | None = None,
     ) -> SubmissionEvaluation:
         """Aggregate Root đối chiếu danh sách bài nộp với yêu cầu của đề bài."""
@@ -54,7 +54,11 @@ class Homework(BaseEntity):
             not has_game or game_submitted
         )
         now = ensure_utc(reference_time) if reference_time else datetime.now(UTC)
-        is_overdue = not is_submitted and (ensure_utc(self.deadline) < now)
+        is_overdue = (
+            not is_submitted and (ensure_utc(deadline) < now)
+            if deadline is not None
+            else False
+        )
 
         return SubmissionEvaluation(
             is_submitted=is_submitted,
@@ -63,15 +67,6 @@ class Homework(BaseEntity):
             game_submitted=game_submitted,
             uncompleted_items=uncompleted,
         )
-
-    def get_effective_deadline(self, postpone_time: datetime | None) -> datetime:
-        """Domain Rule: Xác định deadline hiệu lực của học viên khi có đơn xin gia hạn."""
-        base_dl = ensure_utc(self.deadline)
-        if postpone_time:
-            post_time = ensure_utc(postpone_time)
-            if post_time > base_dl:
-                return post_time
-        return base_dl
 
     @staticmethod
     def determine_coding_status(completed_count: int, total_required: int) -> str:
@@ -118,6 +113,14 @@ class Homework(BaseEntity):
                     game_map[sub.user_id] = sub
 
         return exercise_map, coding_general_map, game_map
+
+
+class HomeworkAssignee(BaseEntity):
+    """Domain model for a user assigned to a homework with their individual deadline."""
+
+    homework_id: int
+    user_id: int
+    deadline: datetime
 
 
 class HomeworkSubmission(BaseEntity):

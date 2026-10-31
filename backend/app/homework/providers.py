@@ -31,7 +31,6 @@ from app.homework.infrastructure.homework_submission_repository import (
     HomeworkSubmissionRepository,
 )
 from app.homework.infrastructure.quiz_api import QuizApiClient
-from app.permission_request.infrastructure.repository import PermissionRequestRepository
 from app.shared.infrastructure.notification.dispatcher import (
     UnifiedNotificationDispatcher,
 )
@@ -65,8 +64,12 @@ class HomeworkModuleProvider(Provider):
     def get_get_homeworks_paged_use_case(
         self,
         homework_repo: HomeworkRepository,
+        homework_assignee_repo: HomeworkAssigneeRepository,
     ) -> GetHomeworksPagedUseCase:
-        return GetHomeworksPagedUseCase(homework_repo=homework_repo)
+        return GetHomeworksPagedUseCase(
+            homework_repo=homework_repo,
+            homework_assignee_repo=homework_assignee_repo,
+        )
 
     @provide
     def get_get_homework_detail_use_case(
@@ -84,10 +87,12 @@ class HomeworkModuleProvider(Provider):
         self,
         homework_repo: HomeworkRepository,
         homework_submission_repo: HomeworkSubmissionRepository,
+        homework_assignee_repo: HomeworkAssigneeRepository,
     ) -> GetUserHomeworksUseCase:
         return GetUserHomeworksUseCase(
             homework_repo=homework_repo,
             homework_submission_repo=homework_submission_repo,
+            homework_assignee_repo=homework_assignee_repo,
         )
 
     @provide
@@ -95,10 +100,12 @@ class HomeworkModuleProvider(Provider):
         self,
         homework_repo: HomeworkRepository,
         homework_submission_repo: HomeworkSubmissionRepository,
+        homework_assignee_repo: HomeworkAssigneeRepository,
     ) -> GetUnsubmittedHomeworksForUserUseCase:
         return GetUnsubmittedHomeworksForUserUseCase(
             homework_repo=homework_repo,
             homework_submission_repo=homework_submission_repo,
+            homework_assignee_repo=homework_assignee_repo,
         )
 
     @provide
@@ -190,7 +197,6 @@ class HomeworkModuleProvider(Provider):
         homework_assignee_repo: HomeworkAssigneeRepository,
         user_repo: UserRepository,
         quiz_api: QuizApiClient,
-        permission_repo: PermissionRequestRepository,
     ) -> GetHomeworkSubmissionStatusUseCase:
         return GetHomeworkSubmissionStatusUseCase(
             homework_repo=homework_repo,
@@ -198,7 +204,6 @@ class HomeworkModuleProvider(Provider):
             homework_assignee_repo=homework_assignee_repo,
             user_repo=user_repo,
             quiz_api=quiz_api,
-            permission_repo=permission_repo,
         )
 
     @provide
@@ -237,8 +242,11 @@ class HomeworkModuleProvider(Provider):
         dispatcher: UnifiedNotificationDispatcher,
         homework_repo: HomeworkRepository,
         user_repo: UserRepository,
+        homework_assignee_repo: HomeworkAssigneeRepository,
     ) -> HomeworkNotificationHandler:
-        return HomeworkNotificationHandler(dispatcher, homework_repo, user_repo)
+        return HomeworkNotificationHandler(
+            dispatcher, homework_repo, user_repo, homework_assignee_repo
+        )
 
     @provide
     def get_graded_notification_handler(

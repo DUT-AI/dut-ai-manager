@@ -52,10 +52,10 @@ class CheckOverdueHomeworkUseCase:
     async def execute(self, target_date: date | None = None) -> int:
         """
         Quét tất cả các bài tập có deadline là target_date:
-        - Mặc định khi chạy tự động (target_date is None): quét bài tập có deadline cách đây 2 ngày.
-        - Khi truyền target_date cụ thể: quét chính xác bài tập có deadline ngày đó.
-        1. Lấy danh sách thành viên được phân công (assignee_ids).
-        2. Đối soát bài nộp trong DB: chỉ chấp nhận bài nộp trước hoặc đúng deadline (submitted_at <= deadline).
+        - Mặc định khi chạy tự động (target_date is None): quét các bài phân công có deadline cách đây 2 ngày.
+        - Khi truyền target_date cụ thể: quét chính xác các bài phân công có deadline ngày đó.
+        1. Lấy danh sách phân công đến hạn (due_assignments) từ bảng homework_assignees.
+        2. Đối soát bài nộp trong DB: chỉ chấp nhận bài nộp trước hoặc đúng deadline cá nhân (submitted_at <= assignee.deadline).
         3. Nếu CHƯA hoàn thành trước deadline -> Phát sự kiện HomeworkOverdueDetected lên EventBus.
         """
         if target_date is None:
@@ -63,100 +63,116 @@ class CheckOverdueHomeworkUseCase:
             today_vn = now.astimezone(ZoneInfo("Asia/Ho_Chi_Minh")).date()
             target_date = today_vn - timedelta(days=HOMEWORK_VIOLATION_CHECK_DELAY_DAYS)
 
-        due_homeworks = self.homework_repo.get_by_deadline_date(target_date)
-        if not due_homeworks:
-            logger.info(f"Không có bài tập nào có deadline vào ngày {target_date}")
+        due_assignments = self.homework_assignee_repo.get_by_deadline_date(
+            target_date
+        )
+        if not due_assignments:
+            logger.info(
+                f"Không có bài tập nào có assignee deadline vào ngày {target_date}"
+            )
             return 0
+
+        # Nhóm assignments theo homework_id để cache required_exercise_ids
+        hw_required_exercises: dict[int, set[str]] = {}
+        for item in due_assignments:
+            if item.homework_id not in hw_required_exercises:
+                all_submissions = (
+                    self.homework_submission_repo.get_submissions_by_homework(
+                        item.homework_id
+                    )
+                )
+                hw_required_exercises[item.homework_id] = {
+                    str(s.exercise_id)
+                    for s in all_submissions
+                    if s.exercise_id
+                    and str(s.submission_type).upper() == "CODING"
+                    and not str(s.exercise_id).startswith("sync-legacy")
+                }
 
         events_published_count = 0
 
-        for homework in due_homeworks:
-            if not homework.id:
-                continue
-
-            assigned_uids = self._get_effective_assigned_user_ids(homework)
-            if not assigned_uids:
-                continue
+        for assignment in due_assignments:
+            user_id = assignment.user_id
+            hw_id = assignment.homework_id
+            assignee_deadline = assignment.deadline
 
             # Xác định yêu cầu coding/game cho bài tập
-            req_coding = bool(homework.requires_coding)
-            req_game = bool(homework.requires_game)
+            req_coding = bool(assignment.requires_coding)
+            req_game = bool(assignment.requires_game)
 
             # Nếu cả 2 đều chưa cấu hình bật rõ ràng, mặc định kiểm tra Coding
             if not req_coding and not req_game:
                 req_coding = True
 
-            # Lấy danh mục bài tập con (sub-exercises) từ các submissions của bài tập trong DB
-            all_submissions = self.homework_submission_repo.get_submissions_by_homework(homework.id)
-            required_exercise_ids = {
-                str(s.exercise_id)
-                for s in all_submissions
-                if s.exercise_id
-                and str(s.submission_type).upper() == "CODING"
-                and not str(s.exercise_id).startswith("sync-legacy")
-            }
+            required_exercise_ids = hw_required_exercises.get(hw_id, set())
 
-            for user_id in assigned_uids:
-                # 1. Kiểm tra Coding trong DB (chỉ chấp nhận submitted_at <= deadline)
-                coding_ok = True
-                if req_coding:
-                    if (
-                        hasattr(self.homework_submission_repo, "get_submitted_exercise_ids")
-                        and required_exercise_ids
-                    ):
-                        submitted_ids = (
-                            self.homework_submission_repo.get_submitted_exercise_ids(
-                                homework.id, user_id, homework.deadline
-                            )
+            # 1. Kiểm tra Coding trong DB (chỉ chấp nhận submitted_at <= assignee_deadline)
+            coding_ok = True
+            if req_coding:
+                if (
+                    hasattr(
+                        self.homework_submission_repo,
+                        "get_submitted_exercise_ids",
+                    )
+                    and required_exercise_ids
+                ):
+                    submitted_ids = (
+                        self.homework_submission_repo.get_submitted_exercise_ids(
+                            hw_id, user_id, assignee_deadline
                         )
-                        coding_ok = required_exercise_ids.issubset(submitted_ids)
-                    else:
-                        coding_ok = self.homework_submission_repo.has_valid_submission(
-                            homework.id,
+                    )
+                    coding_ok = required_exercise_ids.issubset(submitted_ids)
+                else:
+                    coding_ok = (
+                        self.homework_submission_repo.has_valid_submission(
+                            hw_id,
                             user_id,
                             SubmissionType.CODING,
-                            homework.deadline,
+                            assignee_deadline,
                         )
-
-                # 2. Kiểm tra Game trong DB (chỉ chấp nhận submitted_at <= deadline)
-                game_ok = True
-                if req_game:
-                    game_ok = self.homework_submission_repo.has_valid_submission(
-                        homework.id,
-                        user_id,
-                        SubmissionType.GAME,
-                        homework.deadline,
                     )
 
-                if coding_ok and game_ok:
-                    continue
-
-                uncompleted_labels = []
-                if req_coding and not coding_ok:
-                    uncompleted_labels.append("bài tập coding")
-
-                if req_game and not game_ok:
-                    uncompleted_labels.append("trắc nghiệm game")
-
-                if not uncompleted_labels:
-                    continue
-
-                items_str = " và ".join(uncompleted_labels)
-                reason_msg = f"Chưa hoàn thành {items_str} ({homework.title})"
-
-                await self.event_bus.publish(
-                    cast(
-                        DomainEvent,
-                        HomeworkOverdueDetected(
-                            user_id=user_id,
-                            homework_id=homework.id,
-                            homework_title=homework.title,
-                            deadline_date=str(homework.deadline.date()),
-                            reason=reason_msg,
-                            uncompleted_items=uncompleted_labels,
-                        ),
-                    )
+            # 2. Kiểm tra Game trong DB (chỉ chấp nhận submitted_at <= assignee_deadline)
+            game_ok = True
+            if req_game:
+                game_ok = self.homework_submission_repo.has_valid_submission(
+                    hw_id,
+                    user_id,
+                    SubmissionType.GAME,
+                    assignee_deadline,
                 )
-                events_published_count += 1
+
+            if coding_ok and game_ok:
+                continue
+
+            uncompleted_labels = []
+            if req_coding and not coding_ok:
+                uncompleted_labels.append("bài tập coding")
+
+            if req_game and not game_ok:
+                uncompleted_labels.append("trắc nghiệm game")
+
+            if not uncompleted_labels:
+                continue
+
+            items_str = " và ".join(uncompleted_labels)
+            reason_msg = (
+                f"Chưa hoàn thành {items_str} ({assignment.homework_title})"
+            )
+
+            await self.event_bus.publish(
+                cast(
+                    DomainEvent,
+                    HomeworkOverdueDetected(
+                        user_id=user_id,
+                        homework_id=hw_id,
+                        homework_title=assignment.homework_title,
+                        deadline_date=str(assignee_deadline.date()),
+                        reason=reason_msg,
+                        uncompleted_items=uncompleted_labels,
+                    ),
+                )
+            )
+            events_published_count += 1
 
         return events_published_count

@@ -140,18 +140,23 @@ async def test_scan_and_send_reminders_homework_dry_run():
     discord_service = MagicMock()
     send_web_push_use_case = MagicMock()
 
+    from zoneinfo import ZoneInfo
+    from app.homework.infrastructure.homework_assignee_repository import AssigneeUserInfo
+
     now = datetime(
         2026, 10, 20, 23, 59, 59
     )  # Đúng 24 giờ trước deadline 2026-10-21 23:59:59 -> Khớp duy nhất OFFSET_1D
-    deadline_date = datetime(2026, 10, 21).date()
+    deadline_dt = datetime(2026, 10, 21, 23, 59, 59, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh"))
 
     mock_hw = Homework(
         id=100,
         title="Bài tập Python OOP",
-        deadline=deadline_date,
     )
     hw_repo.get_all.return_value = [mock_hw]
-    hw_assignee_repo.get_assigned_user_ids.return_value = [1, 2]
+    hw_assignee_repo.get_assignees_with_user_info.return_value = [
+        AssigneeUserInfo(user_id=1, name="User 1", avatar_url=None, deadline=deadline_dt),
+        AssigneeUserInfo(user_id=2, name="User 2", avatar_url=None, deadline=deadline_dt),
+    ]
     hw_sub_repo.get_submissions_by_user.return_value = []  # Chưa nộp
     notif_repo.has_reminder_been_sent.return_value = False
     notif_repo.get_last_reminder_time.return_value = None

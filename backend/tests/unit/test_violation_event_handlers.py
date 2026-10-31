@@ -178,12 +178,10 @@ async def test_handle_meeting_late_with_valid_permission_skips_violation():
 
 
 @pytest.mark.asyncio
-async def test_handle_homework_overdue_without_postpone_creates_violation():
+async def test_handle_homework_overdue_creates_violation():
     create_violation_uc = MagicMock()
     create_violation_uc.execute = AsyncMock()
     permission_repo = MagicMock()
-    permission_repo.get_postpone_requests_for_homeworks.return_value = []
-
     participant_repo = MagicMock()
 
     handler = AutomatedViolationHandler(

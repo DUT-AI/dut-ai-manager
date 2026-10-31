@@ -42,50 +42,55 @@ class HomeworkTaskScanner(BaseTaskScanner):
         )
 
         for hw in all_homeworks:
-            if not hw.id or not hw.deadline:
+            if not hw.id:
                 continue
 
-            if isinstance(hw.deadline, datetime):
-                if (
-                    hw.deadline.hour == 0
-                    and hw.deadline.minute == 0
-                    and hw.deadline.second == 0
-                ):
-                    hw_deadline_dt = hw.deadline.replace(
-                        hour=23,
-                        minute=59,
-                        second=59,
-                        tzinfo=hw.deadline.tzinfo or vn_tz,
-                    ).astimezone(UTC)
+            assignees = self.homework_assignee_repo.get_assignees_with_user_info(hw.id)
+            if not assignees:
+                continue
+
+            for assignee in assignees:
+                uid = assignee.user_id
+                dl = assignee.deadline
+                if not dl:
+                    continue
+
+                if isinstance(dl, datetime):
+                    if (
+                        dl.hour == 0
+                        and dl.minute == 0
+                        and dl.second == 0
+                    ):
+                        hw_deadline_dt = dl.replace(
+                            hour=23,
+                            minute=59,
+                            second=59,
+                            tzinfo=dl.tzinfo or vn_tz,
+                        ).astimezone(UTC)
+                    else:
+                        hw_deadline_dt = (
+                            dl
+                            if dl.tzinfo is not None
+                            else dl.replace(tzinfo=vn_tz).astimezone(UTC)
+                        )
                 else:
                     hw_deadline_dt = (
-                        hw.deadline
-                        if hw.deadline.tzinfo is not None
-                        else hw.deadline.replace(tzinfo=vn_tz).astimezone(UTC)
+                        datetime.combine(dl, datetime.min.time())
+                        .replace(hour=23, minute=59, second=59, tzinfo=vn_tz)
+                        .astimezone(UTC)
                     )
-            else:
-                hw_deadline_dt = (
-                    datetime.combine(hw.deadline, datetime.min.time())
-                    .replace(hour=23, minute=59, second=59, tzinfo=vn_tz)
-                    .astimezone(UTC)
-                )
 
-            # Chỉ xét task có deadline trong tương lai và cách tối đa 3 ngày
-            if (
-                hw_deadline_dt < now_utc
-                or (hw_deadline_dt - now_utc).total_seconds() > 3 * 86400
-            ):
-                continue
+                # Chỉ xét task có deadline trong tương lai và cách tối đa 3 ngày
+                if (
+                    hw_deadline_dt < now_utc
+                    or (hw_deadline_dt - now_utc).total_seconds() > 3 * 86400
+                ):
+                    continue
 
-            stages = calculate_matching_stages(hw_deadline_dt, now_utc)
-            if not stages:
-                continue
+                stages = calculate_matching_stages(hw_deadline_dt, now_utc)
+                if not stages:
+                    continue
 
-            assignee_ids = self.homework_assignee_repo.get_assigned_user_ids(hw.id)
-            if not assignee_ids:
-                continue
-
-            for uid in assignee_ids:
                 # Kiểm tra xem user đã nộp bài chưa
                 submissions = self.homework_submission_repo.get_submissions_by_user(
                     homework_id=hw.id, user_id=uid

@@ -1,4 +1,7 @@
-from app.homework.domain.entity import Homework as HomeworkEntity
+from app.homework.application.dtos import HomeworkResponse
+from app.homework.infrastructure.homework_assignee_repository import (
+    HomeworkAssigneeRepository,
+)
 from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.homework.infrastructure.homework_submission_repository import (
     HomeworkSubmissionRepository,
@@ -12,11 +15,13 @@ class GetUnsubmittedHomeworksForUserUseCase:
         self,
         homework_repo: HomeworkRepository,
         homework_submission_repo: HomeworkSubmissionRepository,
+        homework_assignee_repo: HomeworkAssigneeRepository,
     ):
         self.homework_repo = homework_repo
         self.homework_submission_repo = homework_submission_repo
+        self.homework_assignee_repo = homework_assignee_repo
 
-    async def execute(self, user_id: int) -> list[HomeworkEntity]:
+    async def execute(self, user_id: int) -> list[HomeworkResponse]:
         # 1. Truy vấn bài tập được giao cho user trực tiếp từ Database thông qua SQL JOIN
         assigned_homeworks = self.homework_repo.get_all_assigned_to_user(
             user_id=user_id, deleted=False
@@ -33,16 +38,21 @@ class GetUnsubmittedHomeworksForUserUseCase:
             )
         )
 
+        user_deadlines = self.homework_assignee_repo.get_user_deadlines_for_homeworks(
+            homework_ids=hw_ids, user_id=user_id
+        )
+
         submissions_by_hw: dict[int, list] = {}
         for sub in user_submissions:
             submissions_by_hw.setdefault(sub.homework_id, []).append(sub)
 
         # 3. Determine unsubmitted homeworks
-        unsubmitted: list[HomeworkEntity] = []
+        unsubmitted: list[HomeworkResponse] = []
         for hw in assigned_homeworks:
             assert hw.id is not None
             hw_subs = submissions_by_hw.get(hw.id, [])
-            if not hw.evaluate_submissions(hw_subs).is_submitted:
-                unsubmitted.append(hw)
+            user_dl = user_deadlines.get(hw.id)
+            if not hw.evaluate_submissions(hw_subs, deadline=user_dl).is_submitted:
+                unsubmitted.append(HomeworkResponse.from_entity(hw, deadline=user_dl))
 
         return unsubmitted

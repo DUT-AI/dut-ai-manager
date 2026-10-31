@@ -12,6 +12,7 @@ from app.homework.application import (
     CheckOverdueHomeworkUseCase,
 )
 from app.homework.domain.entity import Homework, SubmissionType
+from app.homework.domain.value_objects import DueHomeworkAssignment
 from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.shared.domain.event_bus import EventBus
 
@@ -26,20 +27,19 @@ async def test_lesson_aggregated_violation_single_ticket():
     mock_submission_repo = MagicMock()
 
     today = datetime.now(UTC).date()
+    dl = datetime.now(UTC) - timedelta(hours=2)
 
-    lesson_hw = Homework(
-        id=101,
-        title="Lesson 1: Python Basics & Game Quiz",
-        deadline=datetime.now(UTC) - timedelta(hours=2),
-        link="https://quiz.dutai.site/lesson/python-lesson-1",
-        slug="python-lesson-1",
-        requires_coding=True,
-        requires_game=True,
-    )
-
-    mock_homework_repo.get_by_deadline_date.return_value = [lesson_hw]
     mock_assignee_repo = MagicMock()
-    mock_assignee_repo.get_assigned_user_ids.return_value = {10}
+    mock_assignee_repo.get_by_deadline_date.return_value = [
+        DueHomeworkAssignment(
+            homework_id=101,
+            user_id=10,
+            homework_title="Lesson 1: Python Basics & Game Quiz",
+            deadline=dl,
+            requires_coding=True,
+            requires_game=True,
+        )
+    ]
 
     # User 10 completed NOTHING on Coding, NOTHING on Game in DB
     mock_submission_repo.get_submissions_by_homework.return_value = []
@@ -76,20 +76,19 @@ async def test_lesson_coding_only_violation():
     mock_submission_repo = MagicMock()
 
     today = datetime.now(UTC).date()
+    dl = datetime.now(UTC) - timedelta(hours=1)
 
-    lesson_hw = Homework(
-        id=102,
-        title="Lesson 2: Data Structures",
-        deadline=datetime.now(UTC) - timedelta(hours=1),
-        link="https://quiz.dutai.site/homeworks/ds-lesson-2",
-        slug="ds-lesson-2",
-        requires_coding=True,
-        requires_game=True,
-    )
-
-    mock_homework_repo.get_by_deadline_date.return_value = [lesson_hw]
     mock_assignee_repo = MagicMock()
-    mock_assignee_repo.get_assigned_user_ids.return_value = {20}
+    mock_assignee_repo.get_by_deadline_date.return_value = [
+        DueHomeworkAssignment(
+            homework_id=102,
+            user_id=20,
+            homework_title="Lesson 2: Data Structures",
+            deadline=dl,
+            requires_coding=True,
+            requires_game=True,
+        )
+    ]
 
     # User 20 completed Game in DB, but did NOT complete Coding
     mock_submission_repo.get_submissions_by_homework.return_value = []
@@ -128,20 +127,19 @@ async def test_lesson_game_only_violation():
     mock_submission_repo = MagicMock()
 
     today = datetime.now(UTC).date()
+    dl = datetime.now(UTC) - timedelta(hours=1)
 
-    lesson_hw = Homework(
-        id=103,
-        title="Lesson 3: Algorithms & Game",
-        deadline=datetime.now(UTC) - timedelta(hours=1),
-        link="https://quiz.dutai.site/game/algo-game",
-        slug="algo-game",
-        requires_coding=True,
-        requires_game=True,
-    )
-
-    mock_homework_repo.get_by_deadline_date.return_value = [lesson_hw]
     mock_assignee_repo = MagicMock()
-    mock_assignee_repo.get_assigned_user_ids.return_value = {30}
+    mock_assignee_repo.get_by_deadline_date.return_value = [
+        DueHomeworkAssignment(
+            homework_id=103,
+            user_id=30,
+            homework_title="Lesson 3: Algorithms & Game",
+            deadline=dl,
+            requires_coding=True,
+            requires_game=True,
+        )
+    ]
 
     # User 30 completed Coding, but did NOT complete Game
     mock_submission_repo.get_submissions_by_homework.return_value = []
@@ -182,17 +180,8 @@ async def test_unassigned_legacy_homework_does_not_penalize_users():
 
     today = datetime.now(UTC).date()
 
-    unassigned_hw = Homework(
-        id=106,
-        title="Unassigned Legacy Homework",
-        deadline=datetime.now(UTC) - timedelta(hours=1),
-        link="https://quiz.dutai.site/homeworks/unassigned",
-        slug="unassigned",
-    )
-
-    mock_homework_repo.get_by_deadline_date.return_value = [unassigned_hw]
     mock_assignee_repo = MagicMock()
-    mock_assignee_repo.get_assigned_user_ids.return_value = set()
+    mock_assignee_repo.get_by_deadline_date.return_value = []
 
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=mock_homework_repo,
@@ -228,7 +217,6 @@ async def test_sync_homework_from_quiz_with_string_timestamps():
     hw = Homework(
         id=201,
         title="Representation Learning",
-        deadline=datetime.now(UTC),
         link="https://quiz.dutai.site/lesson/representation-learning",
         slug="representation-learning",
         requires_coding=True,

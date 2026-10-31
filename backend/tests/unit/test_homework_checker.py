@@ -7,11 +7,13 @@ import pytest
 from app.homework.application import CheckOverdueHomeworkUseCase
 from app.homework.domain.constants import HOMEWORK_VIOLATION_CHECK_DELAY_DAYS
 from app.homework.domain.entity import (
-    Homework as HomeworkEntity,
     HomeworkSubmission as HomeworkSubmissionEntity,
     SubmissionType,
 )
-from app.homework.domain.value_objects import HomeworkOverdueDetected
+from app.homework.domain.value_objects import (
+    DueHomeworkAssignment,
+    HomeworkOverdueDetected,
+)
 
 
 @pytest.mark.asyncio
@@ -21,18 +23,26 @@ async def test_check_overdue_homework_publishes_event():
     event_bus = MagicMock()
     event_bus.publish = AsyncMock()
 
-    # Create dummy homework due today with assignee user 101 and 102
-    hw = HomeworkEntity(
-        id=1,
-        title="Bài tập Python OOP",
-        slug="python-oop",
-        deadline=datetime(2026, 9, 25, 23, 59, tzinfo=UTC),
-        link="https://quiz.example.com/homeworks/python-oop",
-        requires_coding=True,
-    )
-    homework_repo.get_by_deadline_date.return_value = [hw]
+    deadline_dt = datetime(2026, 9, 25, 23, 59, tzinfo=UTC)
     assignee_repo = MagicMock()
-    assignee_repo.get_assigned_user_ids.return_value = {101, 102}
+    assignee_repo.get_by_deadline_date.return_value = [
+        DueHomeworkAssignment(
+            homework_id=1,
+            user_id=101,
+            homework_title="Bài tập Python OOP",
+            deadline=deadline_dt,
+            requires_coding=True,
+            requires_game=False,
+        ),
+        DueHomeworkAssignment(
+            homework_id=1,
+            user_id=102,
+            homework_title="Bài tập Python OOP",
+            deadline=deadline_dt,
+            requires_coding=True,
+            requires_game=False,
+        ),
+    ]
 
     # Không có sub-exercises con
     submission_repo.get_submissions_by_homework.return_value = []
@@ -71,17 +81,18 @@ async def test_check_overdue_multi_exercise_partial_submission_flags_overdue():
     event_bus = MagicMock()
     event_bus.publish = AsyncMock()
 
-    hw = HomeworkEntity(
-        id=2,
-        title="Lesson 2: Multitask",
-        slug="lesson-2-multi",
-        deadline=datetime(2026, 10, 1, 23, 59, tzinfo=UTC),
-        link="https://quiz.example.com/homeworks/lesson-2-multi",
-        requires_coding=True,
-    )
-    homework_repo.get_by_deadline_date.return_value = [hw]
+    deadline_dt = datetime(2026, 10, 1, 23, 59, tzinfo=UTC)
     assignee_repo = MagicMock()
-    assignee_repo.get_assigned_user_ids.return_value = {201}
+    assignee_repo.get_by_deadline_date.return_value = [
+        DueHomeworkAssignment(
+            homework_id=2,
+            user_id=201,
+            homework_title="Lesson 2: Multitask",
+            deadline=deadline_dt,
+            requires_coding=True,
+            requires_game=False,
+        )
+    ]
 
     # Có 2 bài tập con: ex-1 và ex-2
     sub1 = MagicMock(spec=HomeworkSubmissionEntity)
@@ -122,17 +133,18 @@ async def test_check_overdue_multi_exercise_full_submission_passes():
     event_bus = MagicMock()
     event_bus.publish = AsyncMock()
 
-    hw = HomeworkEntity(
-        id=3,
-        title="Lesson 3: Multitask Complete",
-        slug="lesson-3-multi",
-        deadline=datetime(2026, 10, 1, 23, 59, tzinfo=UTC),
-        link="https://quiz.example.com/homeworks/lesson-3-multi",
-        requires_coding=True,
-    )
-    homework_repo.get_by_deadline_date.return_value = [hw]
+    deadline_dt = datetime(2026, 10, 1, 23, 59, tzinfo=UTC)
     assignee_repo = MagicMock()
-    assignee_repo.get_assigned_user_ids.return_value = {301}
+    assignee_repo.get_by_deadline_date.return_value = [
+        DueHomeworkAssignment(
+            homework_id=3,
+            user_id=301,
+            homework_title="Lesson 3: Multitask Complete",
+            deadline=deadline_dt,
+            requires_coding=True,
+            requires_game=False,
+        )
+    ]
 
     # Có 2 bài tập con: ex-1 và ex-2
     sub1 = MagicMock(spec=HomeworkSubmissionEntity)
@@ -163,9 +175,9 @@ async def test_check_overdue_multi_exercise_full_submission_passes():
 async def test_check_overdue_homework_default_target_date_delays_2_days():
     """Khi target_date is None, hệ thống tự động quét ngày (today - 2 ngày)."""
     homework_repo = MagicMock()
-    homework_repo.get_by_deadline_date.return_value = []
     submission_repo = MagicMock()
     assignee_repo = MagicMock()
+    assignee_repo.get_by_deadline_date.return_value = []
     event_bus = MagicMock()
 
     use_case = CheckOverdueHomeworkUseCase(
@@ -176,11 +188,13 @@ async def test_check_overdue_homework_default_target_date_delays_2_days():
     )
 
     now_vn = datetime.now(UTC).astimezone(ZoneInfo("Asia/Ho_Chi_Minh"))
-    expected_target_date = now_vn.date() - timedelta(days=HOMEWORK_VIOLATION_CHECK_DELAY_DAYS)
+    expected_target_date = now_vn.date() - timedelta(
+        days=HOMEWORK_VIOLATION_CHECK_DELAY_DAYS
+    )
 
     await use_case.execute()
 
-    homework_repo.get_by_deadline_date.assert_called_once_with(expected_target_date)
+    assignee_repo.get_by_deadline_date.assert_called_once_with(expected_target_date)
 
 
 @pytest.mark.asyncio
@@ -192,17 +206,17 @@ async def test_check_overdue_homework_flags_late_submission():
     event_bus.publish = AsyncMock()
 
     deadline_dt = datetime(2026, 10, 25, 23, 59, tzinfo=UTC)
-    hw = HomeworkEntity(
-        id=10,
-        title="Bài tập SQL",
-        slug="sql-basics",
-        deadline=deadline_dt,
-        link="https://quiz.example.com/homeworks/sql-basics",
-        requires_coding=True,
-    )
-    homework_repo.get_by_deadline_date.return_value = [hw]
     assignee_repo = MagicMock()
-    assignee_repo.get_assigned_user_ids.return_value = {501}
+    assignee_repo.get_by_deadline_date.return_value = [
+        DueHomeworkAssignment(
+            homework_id=10,
+            user_id=501,
+            homework_title="Bài tập SQL",
+            deadline=deadline_dt,
+            requires_coding=True,
+            requires_game=False,
+        )
+    ]
 
     # Không có sub-exercises
     submission_repo.get_submissions_by_homework.return_value = []
@@ -223,3 +237,63 @@ async def test_check_overdue_homework_flags_late_submission():
     published = event_bus.publish.call_args[0][0]
     assert isinstance(published, HomeworkOverdueDetected)
     assert published.user_id == 501
+
+
+@pytest.mark.asyncio
+async def test_check_overdue_homework_per_assignee_independent_deadlines():
+    """Kiểm tra hai học viên trong cùng một bài tập có deadline khác nhau được quét hoàn toàn độc lập."""
+    homework_repo = MagicMock()
+    submission_repo = MagicMock()
+    submission_repo.get_submissions_by_homework.return_value = []
+    submission_repo.has_valid_submission.return_value = False
+    event_bus = MagicMock()
+    event_bus.publish = AsyncMock()
+    assignee_repo = MagicMock()
+
+    dl_a = datetime(2026, 11, 10, 23, 59, tzinfo=UTC)
+    dl_b = datetime(2026, 11, 14, 23, 59, tzinfo=UTC)
+
+    # Khi quét ngày 10: Chỉ có học viên A
+    assignee_repo.get_by_deadline_date.side_effect = lambda t_date: (
+        [
+            DueHomeworkAssignment(
+                homework_id=1,
+                user_id=10,
+                homework_title="Python Lesson",
+                deadline=dl_a,
+                requires_coding=True,
+                requires_game=False,
+            )
+        ]
+        if t_date == date(2026, 11, 10)
+        else [
+            DueHomeworkAssignment(
+                homework_id=1,
+                user_id=20,
+                homework_title="Python Lesson",
+                deadline=dl_b,
+                requires_coding=True,
+                requires_game=False,
+            )
+        ]
+        if t_date == date(2026, 11, 14)
+        else []
+    )
+
+    use_case = CheckOverdueHomeworkUseCase(
+        homework_repo=homework_repo,
+        homework_submission_repo=submission_repo,
+        homework_assignee_repo=assignee_repo,
+        event_bus=event_bus,
+    )
+
+    # 1. Quét ngày 10: Chỉ học viên 10 bị phạt
+    count_10 = await use_case.execute(target_date=date(2026, 11, 10))
+    assert count_10 == 1
+    assert event_bus.publish.call_args[0][0].user_id == 10
+
+    # 2. Quét ngày 14: Chỉ học viên 20 bị phạt
+    event_bus.publish.reset_mock()
+    count_14 = await use_case.execute(target_date=date(2026, 11, 14))
+    assert count_14 == 1
+    assert event_bus.publish.call_args[0][0].user_id == 20

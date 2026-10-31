@@ -154,23 +154,6 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         rows = self.session.scalars(stmt).unique().all()
         return [r.to_entity() for r in rows]
 
-    def get_postpone_requests_for_homeworks(
-        self, homework_ids: list[int], user_ids: list[int]
-    ) -> list[DomainEntity]:
-        """Lấy danh sách đơn xin hoãn cho các bài tập và user cụ thể."""
-        if not homework_ids or not user_ids:
-            return []
-
-        stmt = select(ORMModel).where(
-            ORMModel.payload["homework_id"].as_integer().in_(homework_ids),
-            ORMModel.created_by.in_(user_ids),
-            ORMModel.category == RequestCategory.POSTPONE,
-            ORMModel.is_deleted.is_(False),
-        )
-
-        rows = self.session.scalars(stmt).unique().all()
-        return [r.to_entity() for r in rows]
-
     def get_absence_user_ids_by_meeting(self, meeting_id: int) -> set[int]:
         """Lấy danh sách user_id có đơn xin vắng (ABSENCE) của một meeting."""
         stmt = select(ORMModel.created_by).where(

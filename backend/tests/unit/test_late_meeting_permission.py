@@ -23,8 +23,8 @@ def test_permission_request_validate_late_success():
     meeting_repo = MagicMock()
     meeting = Meeting(
         title="Buổi sinh hoạt AI",
-        start_time=datetime(2026, 10, 31, 8, 30, tzinfo=UTC),
-        end_time=datetime(2026, 10, 31, 11, 0, tzinfo=UTC),
+        start_time=datetime(2026, 11, 15, 8, 30, tzinfo=UTC),
+        end_time=datetime(2026, 11, 15, 11, 0, tzinfo=UTC),
     )
     meeting_repo.get_by_id.return_value = meeting
     permission_repo = MagicMock()
@@ -35,7 +35,7 @@ def test_permission_request_validate_late_success():
         note="Kẹt xe đến trễ 30 phút",
         payload=LatePayload(
             meeting_id=10,
-            start_time=datetime(2026, 10, 31, 9, 0, tzinfo=UTC),
+            start_time=datetime(2026, 11, 15, 9, 0, tzinfo=UTC),
         ),
     )
 
@@ -78,8 +78,8 @@ def test_permission_request_validate_late_before_meeting_start():
     meeting_repo = MagicMock()
     meeting = Meeting(
         title="Buổi sinh hoạt AI",
-        start_time=datetime(2026, 10, 31, 8, 30, tzinfo=UTC),
-        end_time=datetime(2026, 10, 31, 11, 0, tzinfo=UTC),
+        start_time=datetime(2026, 11, 15, 8, 30, tzinfo=UTC),
+        end_time=datetime(2026, 11, 15, 11, 0, tzinfo=UTC),
     )
     meeting_repo.get_by_id.return_value = meeting
     permission_repo = MagicMock()
@@ -90,7 +90,7 @@ def test_permission_request_validate_late_before_meeting_start():
         note="Đi trễ",
         payload=LatePayload(
             meeting_id=10,
-            start_time=datetime(2026, 10, 31, 8, 15, tzinfo=UTC),
+            start_time=datetime(2026, 11, 15, 8, 15, tzinfo=UTC),
         ),
     )
 
@@ -105,8 +105,8 @@ def test_permission_request_validate_late_after_meeting_end():
     meeting_repo = MagicMock()
     meeting = Meeting(
         title="Buổi sinh hoạt AI",
-        start_time=datetime(2026, 10, 31, 8, 30, tzinfo=UTC),
-        end_time=datetime(2026, 10, 31, 11, 0, tzinfo=UTC),
+        start_time=datetime(2026, 11, 15, 8, 30, tzinfo=UTC),
+        end_time=datetime(2026, 11, 15, 11, 0, tzinfo=UTC),
     )
     meeting_repo.get_by_id.return_value = meeting
     permission_repo = MagicMock()
@@ -117,7 +117,7 @@ def test_permission_request_validate_late_after_meeting_end():
         note="Đi trễ",
         payload=LatePayload(
             meeting_id=10,
-            start_time=datetime(2026, 10, 31, 11, 15, tzinfo=UTC),
+            start_time=datetime(2026, 11, 15, 11, 15, tzinfo=UTC),
         ),
     )
 
@@ -182,8 +182,8 @@ async def test_create_permission_request_use_case_late_updates_participant():
 
     meeting = Meeting(
         title="Họp Team",
-        start_time=datetime(2026, 10, 31, 8, 30, tzinfo=UTC),
-        end_time=datetime(2026, 10, 31, 11, 0, tzinfo=UTC),
+        start_time=datetime(2026, 11, 15, 8, 30, tzinfo=UTC),
+        end_time=datetime(2026, 11, 15, 11, 0, tzinfo=UTC),
     )
 
     def mock_save(req):
@@ -206,7 +206,7 @@ async def test_create_permission_request_use_case_late_updates_participant():
         category=RequestCategory.LATE,
         note="Đến muộn 20p",
         meeting_id=5,
-        start_time=datetime(2026, 10, 31, 8, 50, tzinfo=UTC),
+        start_time=datetime(2026, 11, 15, 8, 50, tzinfo=UTC),
         user_id=12,
     )
 

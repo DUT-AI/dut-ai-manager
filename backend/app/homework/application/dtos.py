@@ -10,7 +10,6 @@ from app.shared.domain.value_objects import UserRef
 
 class HomeworkBase(BaseModel):
     title: str
-    deadline: UtcDateTime
     link: str | None = None
     slug: str | None = None
     requires_coding: bool = False
@@ -18,6 +17,7 @@ class HomeworkBase(BaseModel):
 
 
 class HomeworkCreate(HomeworkBase):
+    deadline: UtcDateTime
     assignee_ids: list[int] = Field(default_factory=list)
 
 
@@ -33,6 +33,7 @@ class HomeworkUpdate(BaseModel):
 
 class HomeworkResponse(HomeworkBase):
     id: int
+    deadline: datetime | None = None
     created_at: datetime
     updated_at: datetime
     created_by: int | None = None
@@ -51,11 +52,13 @@ class HomeworkResponse(HomeworkBase):
         from_attributes = True
 
     @classmethod
-    def from_domain(cls, hw: Any) -> "HomeworkResponse":
+    def from_domain(
+        cls, hw: Any, deadline: datetime | None = None
+    ) -> "HomeworkResponse":
         return cls(
             id=hw.id,
             title=hw.title,
-            deadline=hw.deadline,
+            deadline=deadline,
             link=hw.link,
             slug=hw.slug,
             requires_coding=hw.requires_coding,
@@ -64,6 +67,8 @@ class HomeworkResponse(HomeworkBase):
             updated_at=hw.updated_at,
             created_by=hw.created_by,
         )
+
+    from_entity = from_domain
 
 
 class HomeworkResponseDetail(HomeworkResponse):
@@ -73,12 +78,15 @@ class HomeworkResponseDetail(HomeworkResponse):
 
     @classmethod
     def from_domain(
-        cls, hw: Any, assignee_ids: list[int] | None = None
+        cls,
+        hw: Any,
+        assignee_ids: list[int] | None = None,
+        deadline: datetime | None = None,
     ) -> "HomeworkResponseDetail":
         return cls(
             id=hw.id,
             title=hw.title,
-            deadline=hw.deadline,
+            deadline=deadline,
             link=hw.link,
             slug=hw.slug,
             requires_coding=hw.requires_coding,
@@ -88,6 +96,8 @@ class HomeworkResponseDetail(HomeworkResponse):
             created_by=hw.created_by,
             assignee_ids=assignee_ids or [],
         )
+
+    from_entity = from_domain
 
 
 class ExerciseSummaryDTO(BaseModel):

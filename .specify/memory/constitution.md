@@ -1,12 +1,13 @@
 <!--
 Sync Impact Report:
-- Version: v1.7.0 -> v1.8.0
+- Version: v1.8.0 -> v1.9.0
 - Ratification Date: 2026-09-25
 - Last Amended: 2026-10-31
-- Principles enhanced / added:
-  - XIII. Structured Generic Payload & Absolute Type Safety (MUST) -> Strict ban on `dict[str, Any]`, `getattr()`, and loose `# type: ignore`. When modeling polymorphic entities (e.g., PermissionRequest), specialized data MUST use structured JSON payload mapped to immutable Pydantic Discriminated Unions. Type parsing from DB/JSON to Domain Entities MUST be explicit and safe via centralized utilities (`parse_datetime`, `parse_int`). Mandatory dependencies in Use Cases and Strategies MUST be required parameters and MUST NOT be default-initialized to `None = None`.
-  - X. Zero Redundant Backward Compatibility & No Duplicate API Surface (ENHANCED) -> Explicitly mandate immediate deprecation and deletion of legacy sparse database columns and fallback logic during refactoring. Migration backfill must be performed immediately, legacy columns dropped from database schemas, and all consumer call-sites refactored directly to the canonical API.
-- Rationale: Codifying enterprise-grade type safety, polymorphic strategy payloads, and zero-tolerance legacy column cleanup across all domain models and application use cases.
+- Principles added / enhanced:
+  - XIV. No Fake Optionals & Fail-Fast Parameter Contracts (MUST) (NEW) -> Strict ban on `Type | None = None` defaults and false defensive checks (`if not self.repo:`, dummy fallback defaults) for mandatory dependencies, function parameters, and domain attributes across constructors, event handlers, helpers, repositories, and DTOs.
+  - X. Zero Redundant Backward Compatibility & Contextual Field Ownership (ENHANCED) -> Explicitly mandate Single Source of Truth and relational field ownership. Prohibit duplicate or misplaced columns on parent entities (e.g., `homeworks.deadline`) when the attribute intrinsically belongs to relational assignees (`homework_assignees.deadline`).
+  - Development Workflow & Quality Gates: Migration Integrity (ENHANCED) -> Mandate that Alembic revision IDs MUST NOT exceed 32 characters in length to comply with PostgreSQL's `alembic_version.version_num VARCHAR(32)` column limit.
+- Rationale: Codifying strict type contracts, eliminating fake defensive programming, enforcing relational field ownership, and preventing Alembic revision ID truncation crashes.
 -->
 
 # DUT AI Manager Constitution
@@ -58,11 +59,12 @@ Reusable business operations across use cases MUST be modeled as dedicated **Dom
 - **Favor Composition Over Inheritance**: Use cases requiring shared domain logic MUST either call stateless static methods on domain services (e.g. `TokenService.create_tokens(user)`) or inject the domain service directly via Dishka DI.
 - **Independence & Modularity**: Each use case must remain self-contained, easily testable in isolation, and free from hidden coupling introduced by inheritance hierarchies.
 
-### X. Zero Redundant Backward Compatibility & No Duplicate API Surface (MUST)
-Both backend and frontend codebases MUST NOT retain redundant backward-compatibility layers, duplicate function aliases, or dual-named wrappers that pollute the codebase:
+### X. Zero Redundant Backward Compatibility & Contextual Field Ownership (MUST)
+Both backend and frontend codebases MUST NOT retain redundant backward-compatibility layers, duplicate function aliases, or misplaced data fields:
 - **Prohibition of Internal Aliases**: Never create redundant re-exports or aliases (e.g., `export const useSyncHomework = useSyncHomeworkFromQuiz` or duplicate endpoints) merely to avoid updating callers.
 - **Refactor Call Sites Directly**: When renaming, refactoring, or consolidating functions, hooks, DTOs, or services, all consuming callers MUST be updated directly to use the canonical identifier.
-- **Immediate Removal of Legacy Columns**: When migrating database fields to consolidated structures (e.g., shifting metadata columns into JSON payloads), legacy sparse columns and their foreign key constraints MUST be promptly backfilled and dropped via migrations. Never maintain dual-write or sparse legacy columns out of hesitation to refactor.
+- **Contextual Field Ownership & Single Source of Truth**: Every domain attribute MUST reside strictly on the entity that owns its lifecycle and business rules. Duplicating or storing attributes on parent entities (e.g., storing a `deadline` on `homeworks` when deadlines vary per assignee and postponed request) is strictly forbidden. The parent entity represents only universal metadata; relational and participant-specific attributes belong exclusively in child/association entities (`homework_assignees`).
+- **Immediate Removal of Legacy Columns**: When migrating database fields to consolidated or per-assignee structures, legacy sparse or misplaced columns and their foreign key constraints MUST be promptly backfilled and dropped via migrations. Never maintain dual-write or sparse legacy columns out of hesitation to refactor.
 - **Single Source of Truth**: Every operation, endpoint, and hook MUST have exactly one canonical representation. Code cleanliness and maintainability strictly take precedence over lazy compatibility wrappers.
 
 ### XI. Plain Text Notifications & Clean Channel Presentation (MUST)
@@ -82,7 +84,15 @@ Entities requiring category-specific or polymorphic business data (e.g., `Permis
 - **Prohibition of Loose Dictionaries and Dynamic Attributes**: Declaring `payload: dict[str, Any]` in domain entities, repositories, or schemas is strictly forbidden. Using dynamic attribute access (`getattr(obj, "field")`, `hasattr(...)`) to bypass static typing is strictly banned.
 - **Pydantic Discriminated Unions as Value Objects**: All payload variants MUST be modeled as strongly typed, immutable Value Objects inheriting from a base payload (`ConfigDict(frozen=True)`), unified via a Pydantic Discriminated Union (`Field(discriminator="category")`).
 - **Explicit Safe Type Casting**: When extracting raw dictionary/JSON data from the database into Domain Entities, attributes MUST be explicitly cast and validated through dedicated parsing utilities (e.g., `parse_datetime`, `parse_int` in `app.utils.parsers`). Leaving unparsed raw objects or suppressing linter checks with `# type: ignore` is strictly prohibited.
-- **Mandatory Dependencies in Constructors**: All use cases, strategies, and domain services MUST declare mandatory dependencies as non-nullable arguments in `__init__`. Providing default `None` fallback parameters (e.g., `repo: SomeRepository | None = None`) for mandatory collaborators is strictly forbidden.
+- **Integration with Strict Parameter Contracts**: Constructors and strategy methods MUST declare required dependencies as non-nullable types in compliance with Principle XIV.
+
+### XIV. No Fake Optionals & Fail-Fast Parameter Contracts (MUST)
+All dependencies, parameters, and attributes that are required for business logic or operational correctness MUST be declared as strict, non-nullable types without default `None`:
+- **Strict Constructor & Function Contracts**: Constructors (`__init__`), event handlers, domain helpers, and repository methods MUST NOT accept `Type | None = None` for dependencies or parameters that the code expects to be present. If an object requires a repository, API client, or context data to operate, that collaborator MUST be a mandatory, non-null parameter.
+- **Strict Prohibition of False Defensive Code**: Writing defensive null-checks such as `if not self.repo: return None` or `if self.repo is not None:` for mandatory collaborators is strictly prohibited. False defensive coding silently hides DI misconfigurations, broken call-sites, and test bugs at startup, turning compile-time or initialization failures into hard-to-trace runtime defects.
+- **Fail-Fast Behavior**: If a mandatory argument is missing, the system MUST fail immediately with a `TypeError` at instantiation/call-site rather than degrading silently or returning incomplete state.
+- **No Dummy Fallback Defaults**: Domain entities and methods MUST NOT fabricate fallback values (e.g., defaulting a missing deadline to `datetime.now(timezone.utc)`) to mask missing required inputs. If required data is missing, the operation MUST raise a domain exception.
+- **Model & DTO Purity**: Base DTOs and Domain Entities MUST NOT declare optional attributes (`field: Type | None = None`) purely because one specific lifecycle stage (such as creation or update) requires it. Separate Write DTOs (`*Create`, `*Update`) from canonical Read DTOs and Entities to maintain exact field semantics.
 
 ## Security & Compliance Standards
 
@@ -94,7 +104,7 @@ Entities requiring category-specific or polymorphic business data (e.g., `Permis
 
 1. **Test Verification**: Any change to domain entities, use cases, or critical calculations (e.g. Attendance 23:59 check, Capacity Monitor, Violation trigger) MUST be covered by automated unit/integration tests (`pytest`).
 2. **Zero Regression Guarantee**: Changes to existing use cases MUST NOT break previously established test suites.
-3. **Migration Integrity**: Database schema modifications MUST include corresponding Alembic migrations with reliable upgrade and downgrade paths.
+3. **Migration Integrity**: Database schema modifications MUST include corresponding Alembic migrations with reliable upgrade and downgrade paths. **Alembic Revision ID Limit**: Migration revision IDs MUST NOT exceed 32 characters in length (e.g., `039_move_hw_dl_to_assignees`) to comply with PostgreSQL's `alembic_version.version_num VARCHAR(32)` column width constraint. Exceeding this limit causes immediate migration failures in production and staging environments.
 4. **Production Build Validation**: Frontend refactorings MUST be validated via `npm run build` to verify zero TypeScript errors and bundle compilation health.
 
 ## Governance
@@ -106,4 +116,4 @@ Entities requiring category-specific or polymorphic business data (e.g., `Permis
    - **MINOR**: Addition of new principles or major workflow standards.
    - **PATCH**: Non-semantic clarifications and wording updates.
 
-**Version**: 1.8.0 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-10-31
+**Version**: 1.9.0 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-10-31

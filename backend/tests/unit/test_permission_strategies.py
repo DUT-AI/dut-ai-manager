@@ -37,11 +37,12 @@ def test_strategy_registry_routing():
     repo = MagicMock()
     meeting_repo = MagicMock()
     hw_repo = MagicMock()
+    hw_assignee_repo = MagicMock()
 
     strategies = [
         AbsenceStrategy(repo, meeting_repo),
         LateStrategy(repo, meeting_repo),
-        PostponeStrategy(hw_repo),
+        PostponeStrategy(hw_repo, hw_assignee_repo),
         ChangeMeetingStrategy(repo, meeting_repo),
         OtherStrategy(),
     ]
@@ -59,14 +60,15 @@ def test_strategy_registry_routing():
 def test_postpone_strategy_validation():
     """Kiểm tra validation của PostponeStrategy."""
     hw_repo = MagicMock()
+    hw_assignee_repo = MagicMock()
     deadline = datetime(2026, 11, 1, 12, 0, tzinfo=UTC)
     hw = Homework(
         id=1,
         title="Bài tập Python",
-        deadline=deadline,
     )
     hw_repo.get_by_id.return_value = hw
-    strategy = PostponeStrategy(hw_repo)
+    hw_assignee_repo.get_user_deadline.return_value = deadline
+    strategy = PostponeStrategy(hw_repo, hw_assignee_repo)
 
     # 1. Hợp lệ: gia hạn sau 2 ngày
     req_valid = PermissionRequest(
@@ -92,6 +94,41 @@ def test_postpone_strategy_validation():
         strategy.validate(req_invalid_exceed)
     assert exc_info.value.status_code == 400
     assert "không được vượt quá 4 ngày" in exc_info.value.detail
+
+
+@pytest.mark.asyncio
+async def test_postpone_strategy_lifecycle():
+    """Kiểm tra lifecycle của PostponeStrategy: on_created cập nhật deadline, on_deleted hoàn nguyên."""
+    hw_repo = MagicMock()
+    hw_assignee_repo = MagicMock()
+    initial_deadline = datetime(2026, 11, 1, 12, 0, tzinfo=UTC)
+    hw_assignee_repo.get_user_deadline.return_value = initial_deadline
+
+    strategy = PostponeStrategy(hw_repo, hw_assignee_repo)
+
+    new_deadline = datetime(2026, 11, 3, 12, 0, tzinfo=UTC)
+    req = PermissionRequest(
+        user_id=10,
+        note="Xin hoãn bài tập 2 ngày",
+        payload=PostponePayload(
+            homework_id=5,
+            start_time=new_deadline,
+        ),
+    )
+
+    # 1. on_created: Cập nhật assignee deadline và lưu old_deadline
+    await strategy.on_created(req, user_id=10)
+    assert req.payload.old_deadline == initial_deadline
+    hw_assignee_repo.update_deadline.assert_called_once_with(
+        5, 10, new_deadline
+    )
+
+    # 2. on_deleted: Hoàn nguyên assignee deadline về old_deadline
+    hw_assignee_repo.update_deadline.reset_mock()
+    strategy.on_deleted(req, user_id=10)
+    hw_assignee_repo.update_deadline.assert_called_once_with(
+        5, 10, initial_deadline
+    )
 
 
 @pytest.mark.asyncio

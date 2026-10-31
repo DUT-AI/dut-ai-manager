@@ -2,6 +2,9 @@ from dishka import Provider, Scope, provide
 from sqlalchemy.orm import Session
 
 from app.duty.infrastructure.repository import DutyRepository
+from app.homework.infrastructure.homework_assignee_repository import (
+    HomeworkAssigneeRepository,
+)
 from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.meeting.infrastructure.repository import MeetingRepository
 from app.permission_request.application import (
@@ -44,11 +47,12 @@ class PermissionRequestModuleProvider(Provider):
         repo: PermissionRequestRepository,
         meeting_repo: MeetingRepository,
         homework_repo: HomeworkRepository,
+        homework_assignee_repo: HomeworkAssigneeRepository,
     ) -> PermissionStrategyRegistry:
         strategies = [
             AbsenceStrategy(repo, meeting_repo),
             LateStrategy(repo, meeting_repo),
-            PostponeStrategy(homework_repo),
+            PostponeStrategy(homework_repo, homework_assignee_repo),
             ChangeMeetingStrategy(repo, meeting_repo),
             OtherStrategy(),
         ]

@@ -21,8 +21,6 @@ from app.homework.infrastructure.homework_submission_repository import (
     HomeworkSubmissionRepository,
 )
 from app.homework.infrastructure.quiz_api import QuizApiClient
-from app.permission_request.domain.entity import PermissionRequest
-from app.permission_request.infrastructure.repository import PermissionRequestRepository
 from app.user.infrastructure.repository import UserRepository
 
 
@@ -36,14 +34,12 @@ class GetHomeworkSubmissionStatusUseCase:
         homework_assignee_repo: HomeworkAssigneeRepository,
         user_repo: UserRepository,
         quiz_api: QuizApiClient,
-        permission_repo: PermissionRequestRepository | None = None,
     ):
         self.homework_repo = homework_repo
         self.homework_submission_repo = homework_submission_repo
         self.homework_assignee_repo = homework_assignee_repo
         self.user_repo = user_repo
         self.quiz_api = quiz_api
-        self.permission_repo = permission_repo
 
     async def execute(
         self, homework_id: int
@@ -59,9 +55,6 @@ class GetHomeworkSubmissionStatusUseCase:
         )
         assignees = self.homework_assignee_repo.get_assignees_with_user_info(
             homework.id
-        )
-        postpone_map = self._get_postpone_map(
-            homework.id, [a.user_id for a in assignees]
         )
 
         # 2. Lập bản đồ bài nộp thông qua Aggregate Root Homework
@@ -82,7 +75,6 @@ class GetHomeworkSubmissionStatusUseCase:
                 db_exercise_map=db_exercise_map,
                 db_coding_general_map=db_coding_general_map,
                 db_game_map=db_game_map,
-                postpone_req=postpone_map.get((assignee.user_id, homework.id)),
                 now=now,
             )
             for assignee in assignees
@@ -106,17 +98,6 @@ class GetHomeworkSubmissionStatusUseCase:
     # -------------------------------------------------------------------------
     # Private Helper Methods
     # -------------------------------------------------------------------------
-
-    def _get_postpone_map(
-        self, homework_id: int, user_ids: list[int]
-    ) -> dict[tuple[int, int], PermissionRequest]:
-        """Lấy bản đồ đơn xin hoãn nộp bài theo (user_id, homework_id)."""
-        if not self.permission_repo or not user_ids:
-            return {}
-        requests = self.permission_repo.get_postpone_requests_for_homeworks(
-            homework_ids=[homework_id], user_ids=user_ids
-        )
-        return {(r.created_by, r.homework_id): r for r in requests}
 
     def _extract_coding_exercises(
         self, db_exercise_map: dict[tuple[int, str], Any], submissions: list[Any]
@@ -149,15 +130,11 @@ class GetHomeworkSubmissionStatusUseCase:
         db_exercise_map: dict[tuple[int, str], Any],
         db_coding_general_map: dict[int, Any],
         db_game_map: dict[int, Any],
-        postpone_req: PermissionRequest | None,
         now: datetime,
     ) -> StudentHomeworkDetailDTO:
         """Đánh giá chi tiết tiến độ hoàn thành Coding & Game của 1 học sinh cụ thể."""
         user_id = assignee.user_id
-        # Áp dụng Domain Rule: tính deadline hiệu lực khi có đơn gia hạn
-        effective_deadline = homework.get_effective_deadline(
-            postpone_req.start_time if postpone_req else None
-        )
+        effective_deadline = assignee.deadline
         is_past_effective = now > effective_deadline
 
         # 1. Đánh giá chi tiết từng bài coding con

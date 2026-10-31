@@ -200,35 +200,11 @@ class AutomatedViolationHandler(EventHandler):
             )
 
     async def _handle_homework_overdue(self, event: HomeworkOverdueDetected):
-        """Xử lý bài tập quá hạn: kiểm tra đơn xin hoãn (POSTPONE) và tạo vi phạm nếu không hợp lệ."""
+        """Xử lý bài tập quá hạn và tạo vi phạm."""
         now = datetime.now(UTC)
         logger.info(
             f"🔍 [ViolationHandler] Processing overdue homework for user {event.user_id} in homework {event.homework_id}"
         )
-
-        postpone_requests = self.permission_repo.get_postpone_requests_for_homeworks(
-            homework_ids=[event.homework_id], user_ids=[event.user_id]
-        )
-        postpone_req = next(iter(postpone_requests), None)
-
-        has_valid_postpone = False
-        if postpone_req and postpone_req.start_time:
-            req_time = (
-                postpone_req.start_time
-                if postpone_req.start_time.tzinfo is not None
-                else postpone_req.start_time.replace(
-                    tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")
-                ).astimezone(UTC)
-            )
-            if now <= req_time:
-                has_valid_postpone = True
-
-        if has_valid_postpone:
-            logger.info(
-                f"✅ [ViolationHandler] User {event.user_id} có đơn xin hoãn bài tập '{event.homework_title}' hợp lệ."
-            )
-            return
-
         reason_msg = event.reason or f"Quá hạn nộp bài tập: {event.homework_title}"
         await self.create_violation_use_case.execute(
             user_ids=[event.user_id],

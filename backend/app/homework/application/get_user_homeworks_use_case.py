@@ -1,6 +1,9 @@
 from datetime import UTC, datetime
 
 from app.homework.application.dtos import HomeworkResponse
+from app.homework.infrastructure.homework_assignee_repository import (
+    HomeworkAssigneeRepository,
+)
 from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.homework.infrastructure.homework_submission_repository import (
     HomeworkSubmissionRepository,
@@ -14,9 +17,11 @@ class GetUserHomeworksUseCase:
         self,
         homework_repo: HomeworkRepository,
         homework_submission_repo: HomeworkSubmissionRepository,
+        homework_assignee_repo: HomeworkAssigneeRepository,
     ):
         self.homework_repo = homework_repo
         self.homework_submission_repo = homework_submission_repo
+        self.homework_assignee_repo = homework_assignee_repo
 
     async def execute(
         self,
@@ -44,6 +49,13 @@ class GetUserHomeworksUseCase:
             )
         )
 
+        # Lấy deadline cá nhân của học viên cho các bài tập này
+        user_deadlines = (
+            self.homework_assignee_repo.get_user_deadlines_for_homeworks(
+                paged_hw_ids, user_id
+            )
+        )
+
         # Group submissions by homework_id
         submissions_by_hw: dict[int, list] = {}
         for sub in user_submissions:
@@ -53,12 +65,15 @@ class GetUserHomeworksUseCase:
         for hw in paged_hw:
             assert hw.id is not None
             hw_subs = submissions_by_hw.get(hw.id, [])
-            evaluation = hw.evaluate_submissions(hw_subs, reference_time=now)
+            user_dl = user_deadlines.get(hw.id)
+            evaluation = hw.evaluate_submissions(
+                hw_subs, deadline=user_dl, reference_time=now
+            )
 
             resp = HomeworkResponse(
                 id=hw.id,
                 title=hw.title,
-                deadline=hw.deadline,
+                deadline=user_dl,
                 link=hw.link,
                 slug=hw.slug,
                 requires_coding=hw.requires_coding,

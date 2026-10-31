@@ -39,8 +39,6 @@ class RescanAllHomeworksUseCase:
             homework_repo=homework_repo,
             homework_submission_repo=homework_submission_repo,
             homework_assignee_repo=homework_assignee_repo,
-            quiz_api=quiz_api,
-            user_repo=user_repo,
             event_bus=event_bus,
         )
         self.homework_repo = homework_repo
@@ -53,48 +51,49 @@ class RescanAllHomeworksUseCase:
         """
         Quét lại toàn bộ các bài tập trong quá khứ có deadline <= hiện tại:
         1. Đồng bộ các bài tập cũ chưa có dữ liệu trong homework_assignees.
-        2. Chạy kiểm tra vi phạm cho từng bài tập và phát sinh event tạo vi phạm chuẩn.
+        2. Chạy kiểm tra vi phạm cho từng ngày deadline trong quá khứ và phát sinh event tạo vi phạm chuẩn.
         """
         all_homeworks = self.homework_repo.get_all(limit=1000)
         now_date = datetime.now(UTC).astimezone(ZoneInfo("Asia/Ho_Chi_Minh")).date()
-        past_homeworks = [
-            hw for hw in all_homeworks if hw.deadline and hw.deadline.date() <= now_date
-        ]
 
-        total_violations_created = 0
+        if auto_sync_legacy:
+            for hw in all_homeworks:
+                if not hw.id:
+                    continue
 
-        for hw in past_homeworks:
-            if not hw.id:
-                continue
+                assigned_uids = self.homework_assignee_repo.get_assigned_user_ids(hw.id)
+                if not assigned_uids:
+                    slug = QuizSubmissionHelper.extract_slug_from_entity(hw)
+                    legacy_uids: set[int] = set()
 
-            # Tự động đồng bộ bài tập cũ nếu thiếu assignees
-            assigned_uids = self.checker._get_effective_assigned_user_ids(hw)
-            if not assigned_uids and auto_sync_legacy:
-                slug = QuizSubmissionHelper.extract_slug_from_entity(hw)
-                legacy_uids: set[int] = set()
-
-                if slug:
-                    coding_uids = (
-                        await QuizSubmissionHelper.get_coding_completed_user_ids(
+                    if slug:
+                        coding_uids = (
+                            await QuizSubmissionHelper.get_coding_completed_user_ids(
+                                self.quiz_api, slug
+                            )
+                        )
+                        if coding_uids:
+                            legacy_uids.update(coding_uids)
+                        game_uids = await QuizSubmissionHelper.get_game_completed_user_ids(
                             self.quiz_api, slug
                         )
-                    )
-                    if coding_uids:
-                        legacy_uids.update(coding_uids)
-                    game_uids = await QuizSubmissionHelper.get_game_completed_user_ids(
-                        self.quiz_api, slug
-                    )
-                    if game_uids:
-                        legacy_uids.update(game_uids)
+                        if game_uids:
+                            legacy_uids.update(game_uids)
 
-                if legacy_uids:
-                    self.homework_assignee_repo.sync_assignees(
-                        hw.id,
-                        assignee_ids=list(legacy_uids),
-                    )
+                    if legacy_uids:
+                        self.homework_assignee_repo.sync_assignees(
+                            hw.id,
+                            assignee_ids=list(legacy_uids),
+                            default_deadline=datetime.now(UTC),
+                        )
 
-            # Thực thi kiểm tra vi phạm cho bài tập này
-            count = await self.checker.execute(target_date=hw.deadline.date())
+        past_dates = self.homework_assignee_repo.get_distinct_past_deadline_dates(
+            before_date=now_date
+        )
+
+        total_violations_created = 0
+        for target_date in past_dates:
+            count = await self.checker.execute(target_date=target_date)
             total_violations_created += count
 
         return total_violations_created

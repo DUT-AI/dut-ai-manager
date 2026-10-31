@@ -34,6 +34,7 @@ class PostponePayload(BasePermissionPayload):
     category: Literal[RequestCategory.POSTPONE] = RequestCategory.POSTPONE
     homework_id: int | None = None
     start_time: datetime | None = None
+    old_deadline: datetime | None = None
 
 
 class ChangeMeetingPayload(BasePermissionPayload):

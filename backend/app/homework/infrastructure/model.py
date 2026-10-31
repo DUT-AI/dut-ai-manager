@@ -14,21 +14,19 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.homework.domain.entity import (
     Homework as HomeworkEntity,
-)
-from app.homework.domain.entity import (
+    HomeworkAssignee as HomeworkAssigneeEntity,
     HomeworkSubmission as HomeworkSubmissionEntity,
 )
 from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
 
 
 class HomeworkModel(SQLAlchemyTimestampMixin, Base):
-    """Homework model containing assignment details"""
+    """Homework model containing assignment details (Không còn cột deadline)"""
 
     __tablename__ = "homeworks"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(255), index=True)
-    deadline: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     link: Mapped[str | None] = mapped_column(String(500), default=None, nullable=True)
     slug: Mapped[str | None] = mapped_column(String(255), default=None, nullable=True)
     requires_coding: Mapped[bool] = mapped_column(
@@ -49,7 +47,6 @@ class HomeworkModel(SQLAlchemyTimestampMixin, Base):
         return HomeworkEntity(
             id=self.id,
             title=self.title,
-            deadline=self.deadline,
             link=self.link,
             slug=self.slug,
             requires_coding=self.requires_coding,
@@ -66,7 +63,6 @@ class HomeworkModel(SQLAlchemyTimestampMixin, Base):
         return cls(
             id=entity.id,
             title=entity.title,
-            deadline=entity.deadline,
             link=entity.link,
             slug=entity.slug,
             requires_coding=entity.requires_coding,
@@ -75,7 +71,7 @@ class HomeworkModel(SQLAlchemyTimestampMixin, Base):
 
 
 class HomeworkAssigneeModel(SQLAlchemyTimestampMixin, Base):
-    """Mapping between Homework and direct User assignees"""
+    """Mapping between Homework and direct User assignees with individual deadline"""
 
     __tablename__ = "homework_assignees"
 
@@ -86,8 +82,33 @@ class HomeworkAssigneeModel(SQLAlchemyTimestampMixin, Base):
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
+    deadline: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
 
     homework: Mapped[HomeworkModel] = relationship(back_populates="assignees")
+
+    def to_entity(self) -> HomeworkAssigneeEntity:
+        return HomeworkAssigneeEntity(
+            id=self.id,
+            homework_id=self.homework_id,
+            user_id=self.user_id,
+            deadline=self.deadline,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
+            created_by=self.created_by,
+            updated_by=self.updated_by,
+            is_deleted=self.is_deleted,
+        )
+
+    @classmethod
+    def from_entity(cls, entity: HomeworkAssigneeEntity) -> "HomeworkAssigneeModel":
+        return cls(
+            id=entity.id,
+            homework_id=entity.homework_id,
+            user_id=entity.user_id,
+            deadline=entity.deadline,
+        )
 
 
 class HomeworkSubmissionModel(Base):

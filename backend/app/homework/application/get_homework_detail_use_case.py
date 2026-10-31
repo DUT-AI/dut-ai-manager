@@ -20,7 +20,12 @@ class GetHomeworkDetailUseCase:
         hw = self.homework_repo.get_by_id(homework_id)
         if not hw:
             return None
-        assignee_ids = sorted(
-            list(self.homework_assignee_repo.get_assigned_user_ids(homework_id))
+        assignees = self.homework_assignee_repo.get_assignees_with_user_info(
+            homework_id
         )
-        return HomeworkResponseDetail.from_domain(hw, assignee_ids=assignee_ids)
+        assignee_ids = sorted([a.user_id for a in assignees])
+        deadlines = [a.deadline for a in assignees if a.deadline]
+        min_dl = min(deadlines) if deadlines else None
+        return HomeworkResponseDetail.from_domain(
+            hw, assignee_ids=assignee_ids, deadline=min_dl
+        )

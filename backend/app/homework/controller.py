@@ -31,6 +31,9 @@ from app.homework.application.dtos import (
     HomeworkSubmissionStatusResponse,
     HomeworkUpdate,
 )
+from app.homework.infrastructure.homework_assignee_repository import (
+    HomeworkAssigneeRepository,
+)
 from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.shared.application.pagination import PaginationParams
 from app.shared.application.response import ApiResponse, PaginationMeta
@@ -49,7 +52,7 @@ async def get_all_homeworks(
     pagination: Annotated[PaginationParams, Depends()],
     deleted: bool = False,
 ):
-    homeworks, total = get_paged_uc.execute(
+    homeworks, total, deadlines = get_paged_uc.execute(
         page=pagination.page, page_size=pagination.page_size, deleted=deleted
     )
     meta = PaginationMeta.create(
@@ -58,7 +61,10 @@ async def get_all_homeworks(
         total=total,
     )
     return ApiResponse.success(
-        data=[HomeworkResponse.from_domain(h) for h in homeworks],
+        data=[
+            HomeworkResponse.from_domain(h, deadline=deadlines.get(h.id))
+            for h in homeworks
+        ],
         message="Homeworks retrieved successfully",
         pagination=meta,
     )
@@ -119,7 +125,9 @@ async def create_homework(
     create_uc: FromDishka[CreateHomeworkUseCase],
 ):
     result = await create_uc.execute(data)
-    return ApiResponse.success(data=result)
+    return ApiResponse.success(
+        data=HomeworkResponse.from_entity(result, deadline=data.deadline)
+    )
 
 
 @router.get(
@@ -194,11 +202,20 @@ async def update_homework(
     homework_id: int,
     data: HomeworkUpdate,
     update_uc: FromDishka[UpdateHomeworkUseCase],
+    homework_assignee_repo: FromDishka[HomeworkAssigneeRepository],
 ):
     result = await update_uc.execute(homework_id, data)
     if not result:
         raise HTTPException(status_code=404, detail="Homework not found")
-    return ApiResponse.success(data=result)
+    effective_dl = data.deadline
+    if effective_dl is None and result.id:
+        min_deadlines = homework_assignee_repo.get_min_deadlines_by_homework_ids(
+            [result.id]
+        )
+        effective_dl = min_deadlines.get(result.id)
+    return ApiResponse.success(
+        data=HomeworkResponse.from_entity(result, deadline=effective_dl)
+    )
 
 
 @router.delete(

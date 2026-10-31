@@ -185,7 +185,6 @@ class HomeworkRepository:
         model = self.session.scalars(statement).first()
         if model:
             model.title = homework.title
-            model.deadline = homework.deadline
             model.link = homework.link
             model.slug = homework.slug
             model.requires_coding = homework.requires_coding
@@ -194,18 +193,6 @@ class HomeworkRepository:
             self.session.flush()
             return model.to_entity()
         return None
-
-    def get_by_deadline_date(self, target_date: Any) -> list[HomeworkEntity]:
-        """Lấy danh sách bài tập active có deadline trong một ngày cụ thể."""
-        target_day = (
-            target_date.date() if isinstance(target_date, datetime) else target_date
-        )
-        statement = select(HomeworkModel).where(
-            HomeworkModel.is_deleted == False,
-            func.date(HomeworkModel.deadline) == target_day,
-        )
-        models = self.session.scalars(statement).all()
-        return [m.to_entity() for m in models]
 
     def save(self, homework: HomeworkEntity) -> HomeworkEntity:
         if homework.id:

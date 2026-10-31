@@ -3,6 +3,9 @@ import asyncio
 from loguru import logger
 
 from app.homework.domain.value_objects import HomeworkAssigned, HomeworkGraded
+from app.homework.infrastructure.homework_assignee_repository import (
+    HomeworkAssigneeRepository,
+)
 from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.shared.application.event_handler import EventHandler
 from app.shared.infrastructure.notification.dispatcher import (
@@ -24,10 +27,12 @@ class HomeworkNotificationHandler(EventHandler):
         dispatcher: UnifiedNotificationDispatcher,
         homework_repo: HomeworkRepository,
         user_repo: UserRepository,
+        homework_assignee_repo: HomeworkAssigneeRepository,
     ):
         self.dispatcher = dispatcher
         self.homework_repo = homework_repo
         self.user_repo = user_repo
+        self.homework_assignee_repo = homework_assignee_repo
 
     async def handle(self, event: HomeworkAssigned) -> None:
         """Thông báo cho người dùng khi họ được giao bài tập mới."""
@@ -54,20 +59,29 @@ class HomeworkNotificationHandler(EventHandler):
     async def _send_notifications_task(self, homework, users) -> None:
         """Hàm chạy ngầm để gửi thông báo qua UnifiedNotificationDispatcher."""
         try:
-            deadline_str = homework.deadline.strftime("%H:%M ngày %d/%m/%Y")
-
-            fields = [{"name": "⏰ Hạn nộp", "value": deadline_str, "inline": True}]
-            if homework.link:
-                fields.append(
-                    {
-                        "name": "🔗 Đường dẫn bài tập",
-                        "value": str(homework.link),
-                        "inline": False,
-                    }
-                )
-
             for user in users:
                 assert user.id is not None
+                user_deadline = (
+                    self.homework_assignee_repo.get_user_deadline(homework.id, user.id)
+                    if homework.id
+                    else None
+                )
+                deadline_str = (
+                    user_deadline.strftime("%H:%M ngày %d/%m/%Y")
+                    if user_deadline
+                    else "Theo quy định"
+                )
+
+                fields = [{"name": "⏰ Hạn nộp", "value": deadline_str, "inline": True}]
+                if homework.link:
+                    fields.append(
+                        {
+                            "name": "🔗 Đường dẫn bài tập",
+                            "value": str(homework.link),
+                            "inline": False,
+                        }
+                    )
+
                 payload = NotificationPayload(
                     user_id=user.id,
                     title="📚 BÀI TẬP MỚI ĐƯỢC GIAO",

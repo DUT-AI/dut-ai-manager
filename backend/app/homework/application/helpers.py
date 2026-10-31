@@ -54,11 +54,9 @@ class QuizSubmissionHelper:
 
     @staticmethod
     async def get_coding_completed_map(
-        quiz_api: QuizApiClient | None, slug: str
+        quiz_api: QuizApiClient, slug: str
     ) -> dict[int, dict] | None:
         """Lấy bản đồ thành viên đã hoàn thành bài tập Coding theo user_id từ Quiz API."""
-        if not quiz_api:
-            return None
         try:
             members = await quiz_api.get_homework_completed_members(slug)
             if members is None:
@@ -78,11 +76,9 @@ class QuizSubmissionHelper:
 
     @staticmethod
     async def get_game_completed_map(
-        quiz_api: QuizApiClient | None, slug: str
+        quiz_api: QuizApiClient, slug: str
     ) -> dict[int, dict] | None:
         """Lấy bản đồ thành viên đã hoàn thành game theo user_id từ Quiz API."""
-        if not quiz_api:
-            return None
         try:
             leaderboard = await quiz_api.get_game_leaderboard(slug)
             if leaderboard is None:
@@ -107,7 +103,7 @@ class QuizSubmissionHelper:
 
     @classmethod
     async def get_coding_completed_user_ids(
-        cls, quiz_api: QuizApiClient | None, slug: str
+        cls, quiz_api: QuizApiClient, slug: str
     ) -> set[int] | None:
         """Lấy danh sách user_id đã hoàn thành bài tập Coding."""
         completed_map = await cls.get_coding_completed_map(quiz_api, slug)
@@ -117,7 +113,7 @@ class QuizSubmissionHelper:
 
     @classmethod
     async def get_game_completed_user_ids(
-        cls, quiz_api: QuizApiClient | None, slug: str
+        cls, quiz_api: QuizApiClient, slug: str
     ) -> set[int] | None:
         """Lấy danh sách user_id đã hoàn thành game."""
         completed_map = await cls.get_game_completed_map(quiz_api, slug)
@@ -127,11 +123,9 @@ class QuizSubmissionHelper:
 
     @staticmethod
     async def get_lesson_exercises(
-        quiz_api: QuizApiClient | None, slug: str
+        quiz_api: QuizApiClient, slug: str
     ) -> list[dict] | None:
         """Lấy danh sách các bài tập coding con của bài học từ Quiz API."""
-        if not quiz_api:
-            return None
         try:
             return await quiz_api.get_lesson_exercises(slug)
         except Exception as exc:

@@ -56,7 +56,6 @@ class CreateHomeworkUseCase:
 
         homework = HomeworkEntity(
             title=data.title,
-            deadline=data.deadline,
             link=data.link,
             slug=extracted_slug,
             requires_coding=data.requires_coding,
@@ -65,7 +64,9 @@ class CreateHomeworkUseCase:
 
         saved = self.homework_repo.save(homework)
         target_id = saved.id or homework.id
-        if target_id and data.assignee_ids is not None:
-            self.homework_assignee_repo.sync_assignees(target_id, data.assignee_ids)
+        if target_id and data.assignee_ids:
+            self.homework_assignee_repo.assign_users(
+                target_id, data.assignee_ids, deadline=data.deadline
+            )
 
         return saved

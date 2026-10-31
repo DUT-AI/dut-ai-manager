@@ -211,7 +211,9 @@ async def test_create_homework_success(mock_homework_repo, mock_quiz_api):
     assert saved.requires_coding is True
     assert saved.requires_game is True
     mock_homework_repo.save.assert_called_once()
-    mock_assignee_repo.sync_assignees.assert_called_once_with(saved.id, [1, 2, 3])
+    mock_assignee_repo.assign_users.assert_called_once_with(
+        saved.id, [1, 2, 3], deadline=data.deadline
+    )
 
 
 @pytest.mark.asyncio
@@ -220,7 +222,6 @@ async def test_update_homework_validation(mock_homework_repo, mock_quiz_api):
     existing_hw = Homework(
         id=1,
         title="Old title",
-        deadline=datetime.now(UTC) + timedelta(days=2),
         slug="old-slug",
         requires_coding=False,
         requires_game=True,
@@ -263,7 +264,6 @@ async def test_update_homework_uncheck_game_success(mock_homework_repo, mock_qui
     existing_hw = Homework(
         id=1,
         title="Existing HW",
-        deadline=datetime.now(UTC) + timedelta(days=2),
         slug="test-slug",
         requires_coding=True,
         requires_game=True,

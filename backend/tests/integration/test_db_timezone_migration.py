@@ -18,7 +18,7 @@ def test_columns_converted_to_timestamptz(db_session: Session) -> None:
         ("meetings", "created_at"),
         ("meeting_participants", "check_in_at"),
         ("meeting_participants", "check_out_at"),
-        ("homeworks", "deadline"),
+        ("homework_assignees", "deadline"),
         ("homeworks", "created_at"),
         ("cleaning_duties", "created_at"),
         ("users", "created_at"),
