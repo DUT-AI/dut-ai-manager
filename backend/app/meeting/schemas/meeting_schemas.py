@@ -1,10 +1,9 @@
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import TYPE_CHECKING
-from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.meeting.domain.value_objects import ParticipantRole, ParticipantStatus
+from app.meeting.domain.value_objects import ParticipantRole
 from app.shared.domain.datetime_types import UtcDateTime
 
 from .participant_schemas import ParticipantResponse
@@ -115,15 +114,7 @@ class MeetingDetailResponse(BaseModel):
 
     @classmethod
     def from_domain(cls, m: "DomainMeeting") -> "MeetingDetailResponse":
-        """Map domain Meeting → detail schema (phân chia trainers và trainees rõ ràng)."""
-        now = datetime.now(UTC)
-        end_time_utc = (
-            m.end_time
-            if m.end_time.tzinfo is not None
-            else m.end_time.replace(tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")).astimezone(UTC)
-        )
-        is_ended = now > end_time_utc
-
+        """Map domain Meeting → detail schema (trainers và trainees)."""
         trainers: list[ParticipantResponse] = []
         trainees: list[ParticipantResponse] = []
 
@@ -131,28 +122,7 @@ class MeetingDetailResponse(BaseModel):
             if p.is_deleted or p.id is None:
                 continue
 
-            check_out_at = p.check_out_at
-            status = p.status
-
-            # Auto-set checkout if meeting ended and participant not checked out
-            if is_ended:
-                if p.check_in_at and not check_out_at:
-                    check_out_at = m.end_time
-                    if status in (
-                        ParticipantStatus.JOINED,
-                        ParticipantStatus.LATE_EXCUSED,
-                        ParticipantStatus.LATE_UNEXCUSED,
-                    ):
-                        status = ParticipantStatus.COMPLETED
-                elif not p.check_in_at and status == ParticipantStatus.NOT_JOINED:
-                    status = ParticipantStatus.ABSENT_UNEXCUSED
-
-            p_dto = ParticipantResponse.from_domain(
-                p,
-                override_status=status,
-                override_check_out_at=check_out_at,
-            )
-
+            p_dto = ParticipantResponse.from_domain(p)
             if p.role == ParticipantRole.TRAINER:
                 trainers.append(p_dto)
             else:
