@@ -50,11 +50,14 @@ async def test_check_overdue_homework_publishes_event():
     submission_repo.has_valid_submission.side_effect = (
         lambda h_id, u_id, s_type, deadline: u_id == 101
     )
+    quiz_api = MagicMock()
+    quiz_api.get_lesson_exercises = AsyncMock(return_value=None)
 
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=homework_repo,
         homework_submission_repo=submission_repo,
         homework_assignee_repo=assignee_repo,
+        quiz_api=quiz_api,
         event_bus=event_bus,
     )
 
@@ -105,11 +108,14 @@ async def test_check_overdue_multi_exercise_partial_submission_flags_overdue():
 
     # User 201 chỉ nộp ex-1
     submission_repo.get_submitted_exercise_ids.return_value = {"ex-1"}
+    quiz_api = MagicMock()
+    quiz_api.get_lesson_exercises = AsyncMock(return_value=None)
 
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=homework_repo,
         homework_submission_repo=submission_repo,
         homework_assignee_repo=assignee_repo,
+        quiz_api=quiz_api,
         event_bus=event_bus,
     )
 
@@ -157,11 +163,14 @@ async def test_check_overdue_multi_exercise_full_submission_passes():
 
     # User 301 đã nộp cả ex-1 và ex-2
     submission_repo.get_submitted_exercise_ids.return_value = {"ex-1", "ex-2"}
+    quiz_api = MagicMock()
+    quiz_api.get_lesson_exercises = AsyncMock(return_value=None)
 
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=homework_repo,
         homework_submission_repo=submission_repo,
         homework_assignee_repo=assignee_repo,
+        quiz_api=quiz_api,
         event_bus=event_bus,
     )
 
@@ -179,11 +188,14 @@ async def test_check_overdue_homework_default_target_date_delays_2_days():
     assignee_repo = MagicMock()
     assignee_repo.get_by_deadline_date.return_value = []
     event_bus = MagicMock()
+    quiz_api = MagicMock()
+    quiz_api.get_lesson_exercises = AsyncMock(return_value=None)
 
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=homework_repo,
         homework_submission_repo=submission_repo,
         homework_assignee_repo=assignee_repo,
+        quiz_api=quiz_api,
         event_bus=event_bus,
     )
 
@@ -222,11 +234,14 @@ async def test_check_overdue_homework_flags_late_submission():
     submission_repo.get_submissions_by_homework.return_value = []
     # has_valid_submission lọc theo submitted_at <= deadline, trả False vì user nộp trễ hoặc chưa nộp
     submission_repo.has_valid_submission.return_value = False
+    quiz_api = MagicMock()
+    quiz_api.get_lesson_exercises = AsyncMock(return_value=None)
 
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=homework_repo,
         homework_submission_repo=submission_repo,
         homework_assignee_repo=assignee_repo,
+        quiz_api=quiz_api,
         event_bus=event_bus,
     )
 
@@ -249,6 +264,8 @@ async def test_check_overdue_homework_per_assignee_independent_deadlines():
     event_bus = MagicMock()
     event_bus.publish = AsyncMock()
     assignee_repo = MagicMock()
+    quiz_api = MagicMock()
+    quiz_api.get_lesson_exercises = AsyncMock(return_value=None)
 
     dl_a = datetime(2026, 11, 10, 23, 59, tzinfo=UTC)
     dl_b = datetime(2026, 11, 14, 23, 59, tzinfo=UTC)
@@ -284,6 +301,7 @@ async def test_check_overdue_homework_per_assignee_independent_deadlines():
         homework_repo=homework_repo,
         homework_submission_repo=submission_repo,
         homework_assignee_repo=assignee_repo,
+        quiz_api=quiz_api,
         event_bus=event_bus,
     )
 
@@ -297,3 +315,107 @@ async def test_check_overdue_homework_per_assignee_independent_deadlines():
     count_14 = await use_case.execute(target_date=date(2026, 11, 14))
     assert count_14 == 1
     assert event_bus.publish.call_args[0][0].user_id == 20
+
+
+@pytest.mark.asyncio
+async def test_check_overdue_homework_uses_quiz_api_exercises():
+    """Hệ thống lấy danh mục bài con trực tiếp từ Quiz API để đối soát hoàn thành coding."""
+    homework_repo = MagicMock()
+    submission_repo = MagicMock()
+    assignee_repo = MagicMock()
+    event_bus = MagicMock()
+    event_bus.publish = AsyncMock()
+    quiz_api = MagicMock()
+
+    deadline_dt = datetime(2026, 11, 1, 23, 59, tzinfo=UTC)
+    assignee_repo.get_by_deadline_date.return_value = [
+        DueHomeworkAssignment(
+            homework_id=20,
+            user_id=1001,
+            homework_title="Bài tập thuật toán Quiz",
+            deadline=deadline_dt,
+            requires_coding=True,
+            requires_game=False,
+            slug="algo-lesson-01",
+        )
+    ]
+
+    # Quiz API trả về 3 bài tập con
+    quiz_api.get_lesson_exercises = AsyncMock(
+        return_value=[
+            {"id": "ex_1", "title": "Bài 1"},
+            {"id": "ex_2", "title": "Bài 2"},
+            {"id": "ex_3", "title": "Bài 3"},
+        ]
+    )
+
+    # User 1001 mới chỉ nộp ex_1 và ex_2, thiếu ex_3
+    submission_repo.get_submitted_exercise_ids.return_value = {"ex_1", "ex_2"}
+
+    use_case = CheckOverdueHomeworkUseCase(
+        homework_repo=homework_repo,
+        homework_submission_repo=submission_repo,
+        homework_assignee_repo=assignee_repo,
+        quiz_api=quiz_api,
+        event_bus=event_bus,
+    )
+
+    count = await use_case.execute(target_date=date(2026, 11, 1))
+
+    # Thiếu bài 3 nên phải phát event overdue
+    assert count == 1
+    assert event_bus.publish.called
+    published = event_bus.publish.call_args[0][0]
+    assert isinstance(published, HomeworkOverdueDetected)
+    assert published.user_id == 1001
+    assert "bài tập coding" in published.reason
+
+
+@pytest.mark.asyncio
+async def test_check_overdue_homework_fallbacks_when_quiz_api_fails():
+    """Khi Quiz API bị lỗi mạng hoặc timeout, hệ thống tự động fallback dùng danh sách từ submissions trong DB."""
+    homework_repo = MagicMock()
+    submission_repo = MagicMock()
+    assignee_repo = MagicMock()
+    event_bus = MagicMock()
+    event_bus.publish = AsyncMock()
+    quiz_api = MagicMock()
+
+    deadline_dt = datetime(2026, 11, 1, 23, 59, tzinfo=UTC)
+    assignee_repo.get_by_deadline_date.return_value = [
+        DueHomeworkAssignment(
+            homework_id=25,
+            user_id=1002,
+            homework_title="Bài tập Fallback",
+            deadline=deadline_dt,
+            requires_coding=True,
+            requires_game=False,
+            slug="lesson-fallback",
+        )
+    ]
+
+    # Quiz API ném lỗi
+    quiz_api.get_lesson_exercises = AsyncMock(side_effect=Exception("Quiz API timeout"))
+
+    # Fallback submissions trong DB có ex_alpha
+    sub = MagicMock(spec=HomeworkSubmissionEntity)
+    sub.exercise_id = "ex_alpha"
+    sub.submission_type = SubmissionType.CODING
+    submission_repo.get_submissions_by_homework.return_value = [sub]
+
+    # User 1002 đã nộp đủ ex_alpha
+    submission_repo.get_submitted_exercise_ids.return_value = {"ex_alpha"}
+
+    use_case = CheckOverdueHomeworkUseCase(
+        homework_repo=homework_repo,
+        homework_submission_repo=submission_repo,
+        homework_assignee_repo=assignee_repo,
+        quiz_api=quiz_api,
+        event_bus=event_bus,
+    )
+
+    count = await use_case.execute(target_date=date(2026, 11, 1))
+
+    # User đã hoàn thành bài ex_alpha nên không bị phạt
+    assert count == 0
+    assert not event_bus.publish.called

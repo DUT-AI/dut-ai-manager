@@ -62,8 +62,10 @@ class GetHomeworkSubmissionStatusUseCase:
             homework.index_submissions(submissions)
         )
 
-        # 3. Trích xuất danh mục các bài tập con
-        coding_exercises = self._extract_coding_exercises(db_exercise_map, submissions)
+        # 3. Trích xuất danh mục các bài tập con (từ Quiz API hoặc fallback DB)
+        coding_exercises = await self._get_coding_exercises(
+            homework.slug, db_exercise_map, submissions
+        )
 
         # 4. Đánh giá trạng thái từng học viên
         now = datetime.now(UTC)
@@ -98,6 +100,30 @@ class GetHomeworkSubmissionStatusUseCase:
     # -------------------------------------------------------------------------
     # Private Helper Methods
     # -------------------------------------------------------------------------
+
+    async def _get_coding_exercises(
+        self,
+        slug: str,
+        db_exercise_map: dict[tuple[int, str], Any],
+        submissions: list[Any],
+    ) -> list[ExerciseSummaryDTO]:
+        """Lấy danh mục các bài tập con từ Quiz API hoặc fallback từ DB."""
+        if slug:
+            try:
+                quiz_exercises = await self.quiz_api.get_lesson_exercises(slug)
+                if quiz_exercises:
+                    return [
+                        ExerciseSummaryDTO(
+                            exercise_id=str(ex["id"]),
+                            title=str(ex.get("title") or f"Bài tập {idx + 1}"),
+                            order_index=idx + 1,
+                        )
+                        for idx, ex in enumerate(quiz_exercises)
+                        if isinstance(ex, dict) and "id" in ex
+                    ]
+            except Exception:
+                pass
+        return self._extract_coding_exercises(db_exercise_map, submissions)
 
     def _extract_coding_exercises(
         self, db_exercise_map: dict[tuple[int, str], Any], submissions: list[Any]

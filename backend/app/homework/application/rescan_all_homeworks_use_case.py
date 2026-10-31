@@ -39,6 +39,7 @@ class RescanAllHomeworksUseCase:
             homework_repo=homework_repo,
             homework_submission_repo=homework_submission_repo,
             homework_assignee_repo=homework_assignee_repo,
+            quiz_api=quiz_api,
             event_bus=event_bus,
         )
         self.homework_repo = homework_repo
@@ -74,8 +75,10 @@ class RescanAllHomeworksUseCase:
                         )
                         if coding_uids:
                             legacy_uids.update(coding_uids)
-                        game_uids = await QuizSubmissionHelper.get_game_completed_user_ids(
-                            self.quiz_api, slug
+                        game_uids = (
+                            await QuizSubmissionHelper.get_game_completed_user_ids(
+                                self.quiz_api, slug
+                            )
                         )
                         if game_uids:
                             legacy_uids.update(game_uids)

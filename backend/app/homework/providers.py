@@ -212,11 +212,13 @@ class HomeworkModuleProvider(Provider):
         homework_repo: HomeworkRepository,
         homework_submission_repo: HomeworkSubmissionRepository,
         homework_assignee_repo: HomeworkAssigneeRepository,
+        quiz_api: QuizApiClient,
     ) -> CheckOverdueHomeworkUseCase:
         return CheckOverdueHomeworkUseCase(
             homework_repo=homework_repo,
             homework_submission_repo=homework_submission_repo,
             homework_assignee_repo=homework_assignee_repo,
+            quiz_api=quiz_api,
         )
 
     @provide

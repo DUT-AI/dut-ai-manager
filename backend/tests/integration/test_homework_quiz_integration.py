@@ -45,10 +45,14 @@ async def test_lesson_aggregated_violation_single_ticket():
     mock_submission_repo.get_submissions_by_homework.return_value = []
     mock_submission_repo.has_valid_submission.return_value = False
 
+    mock_quiz_api = MagicMock(spec=QuizApiClient)
+    mock_quiz_api.get_lesson_exercises = AsyncMock(return_value=[])
+
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=mock_homework_repo,
         homework_submission_repo=mock_submission_repo,
         homework_assignee_repo=mock_assignee_repo,
+        quiz_api=mock_quiz_api,
     )
 
     published_events = []
@@ -98,10 +102,14 @@ async def test_lesson_coding_only_violation():
 
     mock_submission_repo.has_valid_submission.side_effect = mock_has_valid
 
+    mock_quiz_api = MagicMock(spec=QuizApiClient)
+    mock_quiz_api.get_lesson_exercises = AsyncMock(return_value=[])
+
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=mock_homework_repo,
         homework_submission_repo=mock_submission_repo,
         homework_assignee_repo=mock_assignee_repo,
+        quiz_api=mock_quiz_api,
     )
 
     published_events = []
@@ -149,10 +157,14 @@ async def test_lesson_game_only_violation():
 
     mock_submission_repo.has_valid_submission.side_effect = mock_has_valid
 
+    mock_quiz_api = MagicMock(spec=QuizApiClient)
+    mock_quiz_api.get_lesson_exercises = AsyncMock(return_value=[])
+
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=mock_homework_repo,
         homework_submission_repo=mock_submission_repo,
         homework_assignee_repo=mock_assignee_repo,
+        quiz_api=mock_quiz_api,
     )
 
     published_events = []
@@ -183,10 +195,14 @@ async def test_unassigned_legacy_homework_does_not_penalize_users():
     mock_assignee_repo = MagicMock()
     mock_assignee_repo.get_by_deadline_date.return_value = []
 
+    mock_quiz_api = MagicMock(spec=QuizApiClient)
+    mock_quiz_api.get_lesson_exercises = AsyncMock(return_value=[])
+
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=mock_homework_repo,
         homework_submission_repo=mock_submission_repo,
         homework_assignee_repo=mock_assignee_repo,
+        quiz_api=mock_quiz_api,
     )
 
     published_events = []

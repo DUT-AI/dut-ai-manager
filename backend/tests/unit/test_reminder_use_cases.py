@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from app.duty.domain.entity import CleaningDuty, DutyStatus
-from app.homework.domain.entity import Homework
+from app.homework.domain.entity import Homework, HomeworkSubmission, SubmissionType
 from app.meeting.domain.entity import Meeting, MeetingParticipant
 from app.meeting.domain.value_objects import ParticipantStatus
 from app.reminder.application.get_my_notifications_use_case import (
@@ -141,12 +141,16 @@ async def test_scan_and_send_reminders_homework_dry_run():
     send_web_push_use_case = MagicMock()
 
     from zoneinfo import ZoneInfo
-    from app.homework.infrastructure.homework_assignee_repository import AssigneeUserInfo
+    from app.homework.infrastructure.homework_assignee_repository import (
+        AssigneeUserInfo,
+    )
 
     now = datetime(
         2026, 10, 20, 23, 59, 59
     )  # Đúng 24 giờ trước deadline 2026-10-21 23:59:59 -> Khớp duy nhất OFFSET_1D
-    deadline_dt = datetime(2026, 10, 21, 23, 59, 59, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh"))
+    deadline_dt = datetime(
+        2026, 10, 21, 23, 59, 59, tzinfo=ZoneInfo("Asia/Ho_Chi_Minh")
+    )
 
     mock_hw = Homework(
         id=100,
@@ -154,8 +158,12 @@ async def test_scan_and_send_reminders_homework_dry_run():
     )
     hw_repo.get_all.return_value = [mock_hw]
     hw_assignee_repo.get_assignees_with_user_info.return_value = [
-        AssigneeUserInfo(user_id=1, name="User 1", avatar_url=None, deadline=deadline_dt),
-        AssigneeUserInfo(user_id=2, name="User 2", avatar_url=None, deadline=deadline_dt),
+        AssigneeUserInfo(
+            user_id=1, name="User 1", avatar_url=None, deadline=deadline_dt
+        ),
+        AssigneeUserInfo(
+            user_id=2, name="User 2", avatar_url=None, deadline=deadline_dt
+        ),
     ]
     hw_sub_repo.get_submissions_by_user.return_value = []  # Chưa nộp
     notif_repo.has_reminder_been_sent.return_value = False
@@ -359,3 +367,161 @@ async def test_scan_and_send_reminders_use_case_with_upcoming_meeting():
     assert response.details[0].status == ReminderStatus.SENT
 
     dispatcher.dispatch.assert_called_once()
+
+
+def test_homework_scanner_incomplete_submission_still_reminds():
+    """Học sinh mới nộp Game nhưng chưa hoàn thành Coding thì scanner vẫn phải trả về candidate."""
+    from zoneinfo import ZoneInfo
+    from app.homework.infrastructure.homework_assignee_repository import (
+        AssigneeUserInfo,
+    )
+
+    hw_repo = MagicMock()
+    hw_assignee_repo = MagicMock()
+    hw_sub_repo = MagicMock()
+
+    vn_tz = ZoneInfo("Asia/Ho_Chi_Minh")
+    now = datetime(2026, 10, 20, 23, 59, 59, tzinfo=vn_tz)
+    deadline_dt = datetime(2026, 10, 21, 23, 59, 59, tzinfo=vn_tz)
+
+    # Bài tập yêu cầu cả Coding và Game
+    mock_hw = Homework(
+        id=101,
+        title="Bài tập thuật toán",
+        requires_coding=True,
+        requires_game=True,
+    )
+    hw_repo.get_all.return_value = [mock_hw]
+    hw_assignee_repo.get_assignees_with_user_info.return_value = [
+        AssigneeUserInfo(
+            user_id=10, name="Học viên 10", avatar_url=None, deadline=deadline_dt
+        ),
+    ]
+
+    # Học sinh chỉ mới nộp Game, chưa có bài nộp Coding
+    hw_sub_repo.get_submissions_by_user.return_value = [
+        HomeworkSubmission.create_game(
+            homework_id=101,
+            user_id=10,
+            submitted_at=now,
+            score=100.0,
+            is_passed=True,
+        )
+    ]
+
+    scanner = HomeworkTaskScanner(
+        homework_repo=hw_repo,
+        homework_assignee_repo=hw_assignee_repo,
+        homework_submission_repo=hw_sub_repo,
+    )
+
+    candidates = scanner.scan_pending_tasks(now=now)
+    assert len(candidates) == 1
+    assert candidates[0].user_id == 10
+    assert candidates[0].task_id == 101
+
+
+def test_homework_scanner_failed_submission_still_reminds():
+    """Học sinh nộp bài Coding nhưng bị Failed (chưa pass) thì scanner vẫn phải trả về candidate."""
+    from zoneinfo import ZoneInfo
+    from app.homework.infrastructure.homework_assignee_repository import (
+        AssigneeUserInfo,
+    )
+
+    hw_repo = MagicMock()
+    hw_assignee_repo = MagicMock()
+    hw_sub_repo = MagicMock()
+
+    vn_tz = ZoneInfo("Asia/Ho_Chi_Minh")
+    now = datetime(2026, 10, 20, 23, 59, 59, tzinfo=vn_tz)
+    deadline_dt = datetime(2026, 10, 21, 23, 59, 59, tzinfo=vn_tz)
+
+    mock_hw = Homework(
+        id=102,
+        title="Bài tập Python cơ bản",
+        requires_coding=True,
+        requires_game=False,
+    )
+    hw_repo.get_all.return_value = [mock_hw]
+    hw_assignee_repo.get_assignees_with_user_info.return_value = [
+        AssigneeUserInfo(
+            user_id=20, name="Học viên 20", avatar_url=None, deadline=deadline_dt
+        ),
+    ]
+
+    # Nộp bài nhưng is_passed = False
+    hw_sub_repo.get_submissions_by_user.return_value = [
+        HomeworkSubmission.create_coding(
+            homework_id=102,
+            user_id=20,
+            exercise_id="ex1",
+            submitted_at=now,
+            is_passed=False,
+        )
+    ]
+
+    scanner = HomeworkTaskScanner(
+        homework_repo=hw_repo,
+        homework_assignee_repo=hw_assignee_repo,
+        homework_submission_repo=hw_sub_repo,
+    )
+
+    candidates = scanner.scan_pending_tasks(now=now)
+    assert len(candidates) == 1
+    assert candidates[0].user_id == 20
+
+
+def test_homework_scanner_fully_completed_skips():
+    """Học sinh đã nộp đủ cả Coding (passed) và Game thì scanner phải bỏ qua."""
+    from zoneinfo import ZoneInfo
+    from app.homework.infrastructure.homework_assignee_repository import (
+        AssigneeUserInfo,
+    )
+
+    hw_repo = MagicMock()
+    hw_assignee_repo = MagicMock()
+    hw_sub_repo = MagicMock()
+
+    vn_tz = ZoneInfo("Asia/Ho_Chi_Minh")
+    now = datetime(2026, 10, 20, 23, 59, 59, tzinfo=vn_tz)
+    deadline_dt = datetime(2026, 10, 21, 23, 59, 59, tzinfo=vn_tz)
+
+    mock_hw = Homework(
+        id=103,
+        title="Bài tập hoàn chỉnh",
+        requires_coding=True,
+        requires_game=True,
+    )
+    hw_repo.get_all.return_value = [mock_hw]
+    hw_assignee_repo.get_assignees_with_user_info.return_value = [
+        AssigneeUserInfo(
+            user_id=30, name="Học viên 30", avatar_url=None, deadline=deadline_dt
+        ),
+    ]
+
+    # Đã nộp cả Game và Coding passed
+    hw_sub_repo.get_submissions_by_user.return_value = [
+        HomeworkSubmission.create_game(
+            homework_id=103,
+            user_id=30,
+            submitted_at=now,
+            score=100.0,
+            is_passed=True,
+        ),
+        HomeworkSubmission.create_coding(
+            homework_id=103,
+            user_id=30,
+            exercise_id="ex1",
+            submitted_at=now,
+            is_passed=True,
+        ),
+    ]
+
+    scanner = HomeworkTaskScanner(
+        homework_repo=hw_repo,
+        homework_assignee_repo=hw_assignee_repo,
+        homework_submission_repo=hw_sub_repo,
+    )
+
+    candidates = scanner.scan_pending_tasks(now=now)
+    assert len(candidates) == 0

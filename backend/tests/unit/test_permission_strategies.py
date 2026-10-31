@@ -1,10 +1,10 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import HTTPException
 
-from app.homework.domain.entity import Homework
+from app.homework.domain.entity import Homework, HomeworkSubmission
 from app.meeting.domain.entity import Meeting
 from app.permission_request.application.strategies import (
     AbsenceStrategy,
@@ -38,11 +38,12 @@ def test_strategy_registry_routing():
     meeting_repo = MagicMock()
     hw_repo = MagicMock()
     hw_assignee_repo = MagicMock()
+    hw_sub_repo = MagicMock()
 
     strategies = [
         AbsenceStrategy(repo, meeting_repo),
         LateStrategy(repo, meeting_repo),
-        PostponeStrategy(hw_repo, hw_assignee_repo),
+        PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo),
         ChangeMeetingStrategy(repo, meeting_repo),
         OtherStrategy(),
     ]
@@ -57,37 +58,172 @@ def test_strategy_registry_routing():
     assert isinstance(registry.get(RequestCategory.OTHER), OtherStrategy)
 
 
-def test_postpone_strategy_validation():
-    """Kiểm tra validation của PostponeStrategy."""
+def test_postpone_strategy_validation_happy_path():
+    """Kiểm tra validation hợp lệ của PostponeStrategy cho lần hoãn đầu tiên."""
     hw_repo = MagicMock()
     hw_assignee_repo = MagicMock()
-    deadline = datetime(2026, 11, 1, 12, 0, tzinfo=UTC)
-    hw = Homework(
-        id=1,
-        title="Bài tập Python",
-    )
-    hw_repo.get_by_id.return_value = hw
-    hw_assignee_repo.get_user_deadline.return_value = deadline
-    strategy = PostponeStrategy(hw_repo, hw_assignee_repo)
+    hw_sub_repo = MagicMock()
 
-    # 1. Hợp lệ: gia hạn sau 2 ngày
+    now = datetime.now(UTC)
+    current_deadline = now + timedelta(days=2)
+    hw = Homework(id=1, title="Bài tập Python")
+    hw_repo.get_by_id.return_value = hw
+    hw_assignee_repo.get_user_deadline.return_value = current_deadline
+    hw_sub_repo.get_submissions_by_user.return_value = []
+    strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo)
+
+    # Gia hạn sau 2 ngày (hợp lệ <= 4 ngày)
     req_valid = PermissionRequest(
         user_id=1,
         note="Xin hoãn",
         payload=PostponePayload(
             homework_id=1,
-            start_time=datetime(2026, 11, 3, 12, 0, tzinfo=UTC),
+            start_time=current_deadline + timedelta(days=2),
         ),
     )
     strategy.validate(req_valid)
 
-    # 2. Quá 4 ngày -> lỗi
-    req_invalid_exceed = PermissionRequest(
+
+def test_postpone_strategy_rejects_past_extended_deadline():
+    """Kiểm tra từ chối khi thời gian gia hạn mới ở quá khứ."""
+    hw_repo = MagicMock()
+    hw_assignee_repo = MagicMock()
+    hw_sub_repo = MagicMock()
+
+    now = datetime.now(UTC)
+    strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo)
+
+    req = PermissionRequest(
         user_id=1,
         note="Xin hoãn",
         payload=PostponePayload(
             homework_id=1,
-            start_time=datetime(2026, 11, 6, 12, 0, tzinfo=UTC),
+            start_time=now - timedelta(hours=1),
+        ),
+    )
+    with pytest.raises(HTTPException) as exc_info:
+        strategy.validate(req)
+    assert exc_info.value.status_code == 400
+    assert "Thời gian gia hạn mới phải ở tương lai" in exc_info.value.detail
+
+
+def test_postpone_strategy_rejects_past_current_deadline():
+    """Kiểm tra từ chối khi deadline hiện tại của học sinh đã quá hạn."""
+    hw_repo = MagicMock()
+    hw_assignee_repo = MagicMock()
+    hw_sub_repo = MagicMock()
+
+    now = datetime.now(UTC)
+    past_deadline = now - timedelta(hours=2)
+    hw = Homework(id=1, title="Bài tập Python")
+    hw_repo.get_by_id.return_value = hw
+    hw_assignee_repo.get_user_deadline.return_value = past_deadline
+    strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo)
+
+    req = PermissionRequest(
+        user_id=1,
+        note="Xin hoãn sau khi quá hạn",
+        payload=PostponePayload(
+            homework_id=1,
+            start_time=now + timedelta(days=1),
+        ),
+    )
+    with pytest.raises(HTTPException) as exc_info:
+        strategy.validate(req)
+    assert exc_info.value.status_code == 400
+    assert "Bài tập đã quá hạn, không thể tạo đơn xin hoãn" in exc_info.value.detail
+
+
+def test_postpone_strategy_rejects_already_completed_homework():
+    """Kiểm tra từ chối khi học sinh đã hoàn thành đủ các bài tập yêu cầu."""
+    hw_repo = MagicMock()
+    hw_assignee_repo = MagicMock()
+    hw_sub_repo = MagicMock()
+
+    now = datetime.now(UTC)
+    current_deadline = now + timedelta(days=2)
+    hw = Homework(id=1, title="Bài tập Python")
+    hw_repo.get_by_id.return_value = hw
+    hw_assignee_repo.get_user_deadline.return_value = current_deadline
+    hw_sub_repo.get_submissions_by_user.return_value = [
+        HomeworkSubmission(
+            homework_id=1,
+            user_id=1,
+            submission_type="CODING",
+            is_passed=True,
+            submitted_at=now,
+        ),
+        HomeworkSubmission(
+            homework_id=1,
+            user_id=1,
+            submission_type="GAME",
+            is_passed=True,
+            submitted_at=now,
+        ),
+    ]
+    strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo)
+
+    req = PermissionRequest(
+        user_id=1,
+        note="Đã làm xong vẫn xin hoãn",
+        payload=PostponePayload(
+            homework_id=1,
+            start_time=current_deadline + timedelta(days=2),
+        ),
+    )
+    with pytest.raises(HTTPException) as exc_info:
+        strategy.validate(req)
+    assert exc_info.value.status_code == 400
+    assert "Bạn đã hoàn thành bài tập này, không thể xin hoãn" in exc_info.value.detail
+
+
+def test_postpone_strategy_cumulative_postpone_success():
+    """Kiểm tra chấp thuận hoãn tích luỹ lần 2 nối tiếp khi chưa nộp bài và thời gian hợp lệ."""
+    hw_repo = MagicMock()
+    hw_assignee_repo = MagicMock()
+    hw_sub_repo = MagicMock()
+
+    now = datetime.now(UTC)
+    # Giả sử sau lần 1 hoãn, deadline hiện tại đã dời tới now + 3 ngày
+    postponed_deadline = now + timedelta(days=3)
+    hw = Homework(id=1, title="Bài tập Python")
+    hw_repo.get_by_id.return_value = hw
+    hw_assignee_repo.get_user_deadline.return_value = postponed_deadline
+    hw_sub_repo.get_submissions_by_user.return_value = []
+    strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo)
+
+    # Hoãn tích luỹ lần 2: xin dời thêm 3 ngày nữa (tổng cộng cách postponed_deadline là 3 ngày <= 4 ngày)
+    req_cumulative = PermissionRequest(
+        user_id=1,
+        note="Xin hoãn lần 2",
+        payload=PostponePayload(
+            homework_id=1,
+            start_time=postponed_deadline + timedelta(days=3),
+        ),
+    )
+    strategy.validate(req_cumulative)
+
+
+def test_postpone_strategy_rejects_exceeding_four_days():
+    """Kiểm tra từ chối khi thời gian hoãn vượt quá 4 ngày so với deadline hiện tại."""
+    hw_repo = MagicMock()
+    hw_assignee_repo = MagicMock()
+    hw_sub_repo = MagicMock()
+
+    now = datetime.now(UTC)
+    current_deadline = now + timedelta(days=2)
+    hw = Homework(id=1, title="Bài tập Python")
+    hw_repo.get_by_id.return_value = hw
+    hw_assignee_repo.get_user_deadline.return_value = current_deadline
+    hw_sub_repo.get_submissions_by_user.return_value = []
+    strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo)
+
+    req_invalid_exceed = PermissionRequest(
+        user_id=1,
+        note="Xin hoãn quá hạn",
+        payload=PostponePayload(
+            homework_id=1,
+            start_time=current_deadline + timedelta(days=5),
         ),
     )
     with pytest.raises(HTTPException) as exc_info:
@@ -96,15 +232,44 @@ def test_postpone_strategy_validation():
     assert "không được vượt quá 4 ngày" in exc_info.value.detail
 
 
+def test_postpone_strategy_rejects_before_or_equal_current_deadline():
+    """Kiểm tra từ chối khi thời gian gia hạn trước hoặc bằng deadline hiện tại."""
+    hw_repo = MagicMock()
+    hw_assignee_repo = MagicMock()
+    hw_sub_repo = MagicMock()
+
+    now = datetime.now(UTC)
+    current_deadline = now + timedelta(days=2)
+    hw = Homework(id=1, title="Bài tập Python")
+    hw_repo.get_by_id.return_value = hw
+    hw_assignee_repo.get_user_deadline.return_value = current_deadline
+    hw_sub_repo.get_submissions_by_user.return_value = []
+    strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo)
+
+    req_invalid_equal = PermissionRequest(
+        user_id=1,
+        note="Xin hoãn bằng deadline hiện tại",
+        payload=PostponePayload(
+            homework_id=1,
+            start_time=current_deadline,
+        ),
+    )
+    with pytest.raises(HTTPException) as exc_info:
+        strategy.validate(req_invalid_equal)
+    assert exc_info.value.status_code == 400
+    assert "Thời gian gia hạn mới phải sau deadline hiện tại" in exc_info.value.detail
+
+
 @pytest.mark.asyncio
 async def test_postpone_strategy_lifecycle():
     """Kiểm tra lifecycle của PostponeStrategy: on_created cập nhật deadline, on_deleted hoàn nguyên."""
     hw_repo = MagicMock()
     hw_assignee_repo = MagicMock()
+    hw_sub_repo = MagicMock()
     initial_deadline = datetime(2026, 11, 1, 12, 0, tzinfo=UTC)
     hw_assignee_repo.get_user_deadline.return_value = initial_deadline
 
-    strategy = PostponeStrategy(hw_repo, hw_assignee_repo)
+    strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo)
 
     new_deadline = datetime(2026, 11, 3, 12, 0, tzinfo=UTC)
     req = PermissionRequest(
@@ -119,16 +284,12 @@ async def test_postpone_strategy_lifecycle():
     # 1. on_created: Cập nhật assignee deadline và lưu old_deadline
     await strategy.on_created(req, user_id=10)
     assert req.payload.old_deadline == initial_deadline
-    hw_assignee_repo.update_deadline.assert_called_once_with(
-        5, 10, new_deadline
-    )
+    hw_assignee_repo.update_deadline.assert_called_once_with(5, 10, new_deadline)
 
     # 2. on_deleted: Hoàn nguyên assignee deadline về old_deadline
     hw_assignee_repo.update_deadline.reset_mock()
     strategy.on_deleted(req, user_id=10)
-    hw_assignee_repo.update_deadline.assert_called_once_with(
-        5, 10, initial_deadline
-    )
+    hw_assignee_repo.update_deadline.assert_called_once_with(5, 10, initial_deadline)
 
 
 @pytest.mark.asyncio

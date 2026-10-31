@@ -1,9 +1,14 @@
+from datetime import UTC, datetime
+
 from fastapi import HTTPException
 
 from app.homework.infrastructure.homework_assignee_repository import (
     HomeworkAssigneeRepository,
 )
 from app.homework.infrastructure.homework_repository import HomeworkRepository
+from app.homework.infrastructure.homework_submission_repository import (
+    HomeworkSubmissionRepository,
+)
 from app.permission_request.application.strategies.base import PermissionStrategy
 from app.permission_request.domain.entity import PermissionRequest
 from app.permission_request.domain.payloads import PostponePayload
@@ -18,9 +23,11 @@ class PostponeStrategy(PermissionStrategy[PostponePayload]):
         self,
         homework_repo: HomeworkRepository,
         homework_assignee_repo: HomeworkAssigneeRepository,
+        homework_submission_repo: HomeworkSubmissionRepository,
     ):
         self.homework_repo = homework_repo
         self.homework_assignee_repo = homework_assignee_repo
+        self.homework_submission_repo = homework_submission_repo
 
     @property
     def category(self) -> RequestCategory:
@@ -43,6 +50,13 @@ class PostponeStrategy(PermissionStrategy[PostponePayload]):
                 status_code=400, detail="Vui lòng chọn thời gian gia hạn mới"
             )
 
+        now_utc = datetime.now(UTC)
+        if extended_deadline <= now_utc:
+            raise HTTPException(
+                status_code=400,
+                detail="Thời gian gia hạn mới phải ở tương lai",
+            )
+
         homework = self.homework_repo.get_by_id(homework_id)
         if not homework:
             raise HTTPException(status_code=404, detail="Không tìm thấy bài tập")
@@ -57,7 +71,27 @@ class PostponeStrategy(PermissionStrategy[PostponePayload]):
                     status_code=400,
                     detail="Bạn không được phân công bài tập này",
                 )
-            delta = extended_deadline - ensure_utc(current_deadline)
+
+            current_deadline_utc = ensure_utc(current_deadline)
+            if current_deadline_utc <= now_utc:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Bài tập đã quá hạn, không thể tạo đơn xin hoãn",
+                )
+
+            # Chặn tạo đơn khi bài tập đã được hoàn thành trọn vẹn
+            submissions = self.homework_submission_repo.get_submissions_by_user(
+                homework_id, uid
+            )
+            if homework.evaluate_submissions(
+                submissions, deadline=current_deadline_utc
+            ).is_submitted:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Bạn đã hoàn thành bài tập này, không thể xin hoãn",
+                )
+
+            delta = extended_deadline - current_deadline_utc
             if delta.total_seconds() > 4 * 24 * 3600:
                 raise HTTPException(
                     status_code=400,

@@ -64,3 +64,4 @@ class DueHomeworkAssignment(BaseModel):
     deadline: datetime
     requires_coding: bool
     requires_game: bool
+    slug: str = ""

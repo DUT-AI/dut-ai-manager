@@ -5,7 +5,7 @@ from app.shared.application.response import BadRequestException
 
 
 class DeleteHomeworkUseCase:
-    """Soft-delete a Homework record."""
+    """Xóa vĩnh viễn (Hard delete) bài tập và tự động cascade xóa toàn bộ assignees & submissions."""
 
     def __init__(self, homework_repo: HomeworkRepository):
         self.homework_repo = homework_repo
@@ -16,4 +16,4 @@ class DeleteHomeworkUseCase:
             raise BadRequestException(
                 "Homework not found", status_code=status.HTTP_404_NOT_FOUND
             )
-        return self.homework_repo.soft_delete(homework_id)
+        return self.homework_repo.delete(homework_id)

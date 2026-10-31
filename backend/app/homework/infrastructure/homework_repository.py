@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Any, cast
 
 from sqlalchemy import desc, func, select
@@ -213,18 +212,8 @@ class HomeworkRepository:
         return False
 
     def soft_delete(self, homework_id: int) -> bool:
-        """Soft delete a homework: sets is_deleted to True."""
-        statement = select(HomeworkModel).where(
-            HomeworkModel.id == homework_id,
-            HomeworkModel.is_deleted == False,
-        )
-        model = self.session.scalars(statement).first()
-        if model:
-            model.is_deleted = True
-            self.session.add(model)
-            self.session.flush()
-            return True
-        return False
+        """Đã chuyển đổi hoàn toàn sang Hard Delete: Xóa vĩnh viễn bài tập và cascade."""
+        return self.delete(homework_id)
 
     def restore(self, homework_id: int) -> HomeworkEntity | None:
         statement = select(HomeworkModel).where(

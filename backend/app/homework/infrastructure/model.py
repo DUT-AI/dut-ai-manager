@@ -14,7 +14,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.homework.domain.entity import (
     Homework as HomeworkEntity,
+)
+from app.homework.domain.entity import (
     HomeworkAssignee as HomeworkAssigneeEntity,
+)
+from app.homework.domain.entity import (
     HomeworkSubmission as HomeworkSubmissionEntity,
 )
 from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin

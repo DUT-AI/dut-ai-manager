@@ -294,31 +294,30 @@ def test_delete_homework_not_found(admin_client):
     assert res.status_code == 404
 
 
-def test_delete_and_restore_homework_flow(admin_client, mock_current_user):
-    """Quy trình Xóa mềm và Khôi phục (restore) bài tập."""
+def test_hard_delete_homework_cascades_completely(admin_client, mock_current_user):
+    """Quy trình Xóa cứng (Hard Delete) bài tập và xóa toàn bộ dữ liệu liên quan."""
     payload = {
-        "title": "Homework for Delete and Restore",
+        "title": "Homework for Hard Delete",
         "deadline": (datetime.now() + timedelta(days=2)).isoformat(),
-        "slug": f"del-res-{uuid.uuid4().hex[:6]}",
+        "slug": f"del-hard-{uuid.uuid4().hex[:6]}",
         "requires_coding": True,
         "assignee_ids": [mock_current_user.id],
     }
     create_res = admin_client.post("/api/v1/homeworks", json=payload)
     hw_id = create_res.json()["data"]["id"]
 
-    # 1. Xóa bài tập
+    # 1. Xóa bài tập (Hard delete)
     del_res = admin_client.delete(f"/api/v1/homeworks/{hw_id}")
     assert del_res.status_code == 200
     assert del_res.json()["is_success"] is True
 
-    # 2. Khôi phục bài tập
-    res_restore = admin_client.put(f"/api/v1/homeworks/{hw_id}/restore")
-    assert res_restore.status_code == 200
-    assert res_restore.json()["is_success"] is True
-    assert res_restore.json()["data"]["id"] == hw_id
+    # 2. Không còn tìm thấy bài tập nữa (404)
+    get_res = admin_client.get(f"/api/v1/homeworks/{hw_id}")
+    assert get_res.status_code == 404
 
-    # 3. Dọn dẹp lại sau test
-    admin_client.delete(f"/api/v1/homeworks/{hw_id}")
+    # 3. Không thể restore vì đã bị xóa cứng khỏi Database (404)
+    res_restore = admin_client.put(f"/api/v1/homeworks/{hw_id}/restore")
+    assert res_restore.status_code == 404
 
 
 def test_restore_homework_not_found(admin_client):

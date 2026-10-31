@@ -29,8 +29,13 @@ class HomeworkAssigneeRepository:
         homework_id: int,
         assignee_ids: list[int] | None,
         default_deadline: datetime | None = None,
+        force_override: bool = False,
     ) -> None:
-        """Đồng bộ danh sách học viên được giao bài tập."""
+        """
+        Đồng bộ danh sách học viên được giao bài tập.
+        Áp dụng Max Deadline Rule: chỉ cập nhật hạn của học viên cũ nếu hạn mới xa hơn
+        hoặc khi force_override=True, bảo lưu hạn hoãn cá nhân của học sinh.
+        """
         if assignee_ids is None:
             return
 
@@ -65,7 +70,14 @@ class HomeworkAssigneeRepository:
             if uid in existing_assignees:
                 existing_assignees[uid].is_deleted = False
                 if default_deadline is not None:
-                    existing_assignees[uid].deadline = ensure_utc(default_deadline)
+                    target_dl = ensure_utc(default_deadline)
+                    current_dl = existing_assignees[uid].deadline
+                    if (
+                        force_override
+                        or current_dl is None
+                        or target_dl > ensure_utc(current_dl)
+                    ):
+                        existing_assignees[uid].deadline = target_dl
             else:
                 assert clean_dl is not None
                 self.session.add(
@@ -82,8 +94,12 @@ class HomeworkAssigneeRepository:
         homework_id: int,
         user_ids: set[int] | list[int],
         deadline: datetime,
+        force_override: bool = False,
     ) -> None:
-        """Gán danh sách học viên vào bài tập kèm deadline cụ thể."""
+        """
+        Gán danh sách học viên vào bài tập kèm deadline cụ thể.
+        Áp dụng Max Deadline Rule: bảo lưu hạn hoãn nếu hạn hiện tại xa hơn hạn mới.
+        """
         clean_deadline = ensure_utc(deadline)
         existing_stmt = select(HomeworkAssigneeModel).where(
             HomeworkAssigneeModel.homework_id == homework_id,
@@ -94,7 +110,13 @@ class HomeworkAssigneeRepository:
         for uid in set(user_ids):
             if uid in existing:
                 existing[uid].is_deleted = False
-                existing[uid].deadline = clean_deadline
+                current_dl = existing[uid].deadline
+                if (
+                    force_override
+                    or current_dl is None
+                    or clean_deadline > ensure_utc(current_dl)
+                ):
+                    existing[uid].deadline = clean_deadline
             else:
                 self.session.add(
                     HomeworkAssigneeModel(
@@ -107,12 +129,18 @@ class HomeworkAssigneeRepository:
 
     def get_user_deadline(self, homework_id: int, user_id: int) -> datetime | None:
         """Lấy hạn nộp cá nhân của học viên đối với một bài tập."""
-        statement = select(HomeworkAssigneeModel.deadline).where(
-            HomeworkAssigneeModel.homework_id == homework_id,
-            HomeworkAssigneeModel.user_id == user_id,
-            HomeworkAssigneeModel.is_deleted == False,
+        statement = (
+            select(HomeworkAssigneeModel.deadline)
+            .join(HomeworkModel, HomeworkAssigneeModel.homework_id == HomeworkModel.id)
+            .where(
+                HomeworkAssigneeModel.homework_id == homework_id,
+                HomeworkAssigneeModel.user_id == user_id,
+                HomeworkAssigneeModel.is_deleted == False,
+                HomeworkModel.is_deleted == False,
+            )
         )
-        return self.session.scalar(statement)
+        dl = self.session.scalar(statement)
+        return ensure_utc(dl) if dl is not None else None
 
     def update_deadline(
         self, homework_id: int, user_id: int, new_deadline: datetime
@@ -154,6 +182,7 @@ class HomeworkAssigneeRepository:
                 HomeworkAssigneeModel.deadline,
                 HomeworkModel.requires_coding,
                 HomeworkModel.requires_game,
+                HomeworkModel.slug,
             )
             .join(HomeworkModel, HomeworkAssigneeModel.homework_id == HomeworkModel.id)
             .where(
@@ -172,6 +201,7 @@ class HomeworkAssigneeRepository:
                 deadline=r[3],
                 requires_coding=r[4],
                 requires_game=r[5],
+                slug=r[6] or "",
             )
             for r in rows
         ]
@@ -207,17 +237,20 @@ class HomeworkAssigneeRepository:
         )
         rows = self.session.execute(statement).all()
         return [
-            AssigneeUserInfo(
-                user_id=r[0], name=r[1], avatar_url=r[2], deadline=r[3]
-            )
+            AssigneeUserInfo(user_id=r[0], name=r[1], avatar_url=r[2], deadline=r[3])
             for r in rows
         ]
 
     def get_assigned_homework_ids(self, user_id: int) -> list[int]:
         """Lấy danh sách homework_id được giao cho một user cụ thể."""
-        statement = select(HomeworkAssigneeModel.homework_id).where(
-            HomeworkAssigneeModel.user_id == user_id,
-            HomeworkAssigneeModel.is_deleted == False,
+        statement = (
+            select(HomeworkAssigneeModel.homework_id)
+            .join(HomeworkModel, HomeworkAssigneeModel.homework_id == HomeworkModel.id)
+            .where(
+                HomeworkAssigneeModel.user_id == user_id,
+                HomeworkAssigneeModel.is_deleted == False,
+                HomeworkModel.is_deleted == False,
+            )
         )
         return list(self.session.scalars(statement).all())
 
@@ -227,12 +260,15 @@ class HomeworkAssigneeRepository:
         """Lấy hạn nộp cá nhân của user cho danh sách bài tập."""
         if not homework_ids:
             return {}
-        statement = select(
-            HomeworkAssigneeModel.homework_id, HomeworkAssigneeModel.deadline
-        ).where(
-            HomeworkAssigneeModel.homework_id.in_(homework_ids),
-            HomeworkAssigneeModel.user_id == user_id,
-            HomeworkAssigneeModel.is_deleted == False,
+        statement = (
+            select(HomeworkAssigneeModel.homework_id, HomeworkAssigneeModel.deadline)
+            .join(HomeworkModel, HomeworkAssigneeModel.homework_id == HomeworkModel.id)
+            .where(
+                HomeworkAssigneeModel.homework_id.in_(homework_ids),
+                HomeworkAssigneeModel.user_id == user_id,
+                HomeworkAssigneeModel.is_deleted == False,
+                HomeworkModel.is_deleted == False,
+            )
         )
         rows = self.session.execute(statement).all()
         return {r[0]: r[1] for r in rows if r[1] is not None}
@@ -250,9 +286,11 @@ class HomeworkAssigneeRepository:
                 HomeworkAssigneeModel.homework_id,
                 func.min(HomeworkAssigneeModel.deadline),
             )
+            .join(HomeworkModel, HomeworkAssigneeModel.homework_id == HomeworkModel.id)
             .where(
                 HomeworkAssigneeModel.homework_id.in_(homework_ids),
                 HomeworkAssigneeModel.is_deleted == False,
+                HomeworkModel.is_deleted == False,
             )
             .group_by(HomeworkAssigneeModel.homework_id)
         )
@@ -298,8 +336,10 @@ class HomeworkAssigneeRepository:
 
         statement = (
             select(HomeworkAssigneeModel.deadline)
+            .join(HomeworkModel, HomeworkAssigneeModel.homework_id == HomeworkModel.id)
             .where(
                 HomeworkAssigneeModel.is_deleted == False,
+                HomeworkModel.is_deleted == False,
                 HomeworkAssigneeModel.deadline <= end_utc,
             )
             .distinct()
@@ -310,4 +350,4 @@ class HomeworkAssigneeRepository:
             if dl is not None:
                 dl_vn = dl if dl.tzinfo is not None else dl.replace(tzinfo=UTC)
                 distinct_dates.add(dl_vn.astimezone(vn_tz).date())
-        return sorted(list(distinct_dates))
+        return sorted(distinct_dates)

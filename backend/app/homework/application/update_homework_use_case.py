@@ -99,7 +99,10 @@ class UpdateHomeworkUseCase:
         saved = self.homework_repo.save(updated)
         if data.assignee_ids is not None:
             self.homework_assignee_repo.sync_assignees(
-                homework_id, data.assignee_ids, default_deadline=data.deadline
+                homework_id,
+                data.assignee_ids,
+                default_deadline=data.deadline,
+                force_override=data.force_override_deadlines,
             )
         elif data.deadline is not None:
             current_uids = self.homework_assignee_repo.get_assigned_user_ids(
@@ -107,7 +110,10 @@ class UpdateHomeworkUseCase:
             )
             if current_uids:
                 self.homework_assignee_repo.assign_users(
-                    homework_id, current_uids, deadline=data.deadline
+                    homework_id,
+                    current_uids,
+                    deadline=data.deadline,
+                    force_override=data.force_override_deadlines,
                 )
 
         return saved

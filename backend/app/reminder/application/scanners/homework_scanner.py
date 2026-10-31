@@ -56,11 +56,7 @@ class HomeworkTaskScanner(BaseTaskScanner):
                     continue
 
                 if isinstance(dl, datetime):
-                    if (
-                        dl.hour == 0
-                        and dl.minute == 0
-                        and dl.second == 0
-                    ):
+                    if dl.hour == 0 and dl.minute == 0 and dl.second == 0:
                         hw_deadline_dt = dl.replace(
                             hour=23,
                             minute=59,
@@ -91,12 +87,15 @@ class HomeworkTaskScanner(BaseTaskScanner):
                 if not stages:
                     continue
 
-                # Kiểm tra xem user đã nộp bài chưa
+                # Kiểm tra xem user đã hoàn thành đầy đủ tất cả yêu cầu của bài tập chưa
                 submissions = self.homework_submission_repo.get_submissions_by_user(
                     homework_id=hw.id, user_id=uid
                 )
-                if submissions:
-                    continue  # Đã nộp bài, bỏ qua
+                evaluation = hw.evaluate_submissions(
+                    submissions, deadline=hw_deadline_dt
+                )
+                if evaluation.is_submitted:
+                    continue  # Đã hoàn thành trọn vẹn cả Coding và Game -> Bỏ qua
 
                 candidates.append(
                     ScannedCandidateTask(

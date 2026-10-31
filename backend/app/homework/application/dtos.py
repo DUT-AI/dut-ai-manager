@@ -29,6 +29,7 @@ class HomeworkUpdate(BaseModel):
     requires_coding: bool | None = None
     requires_game: bool | None = None
     assignee_ids: list[int] | None = None
+    force_override_deadlines: bool = False
 
 
 class HomeworkResponse(HomeworkBase):

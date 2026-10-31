@@ -35,6 +35,7 @@ class Homework(BaseEntity):
         coding_submitted = any(
             getattr(s.submission_type, "value", str(s.submission_type)).upper()
             == "CODING"
+            and s.is_passed is True
             for s in submissions
         )
         game_submitted = any(
