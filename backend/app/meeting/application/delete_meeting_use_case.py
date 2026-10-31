@@ -3,7 +3,7 @@ from app.shared.application.response import BadRequestException
 
 
 class DeleteMeetingUseCase:
-    """Xóa một buổi họp (Soft-delete)"""
+    """Xóa một buổi họp và toàn bộ người tham gia (Hard-delete)."""
 
     def __init__(self, repo: MeetingRepository):
         self.repo = repo

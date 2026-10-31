@@ -396,8 +396,8 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         orm = self.session.get(ORMMeeting, meeting_id)
         if not orm:
             return False
-        orm.is_deleted = True
-        self.session.add(orm)
+        self.session.delete(orm)
+        self.session.flush()
         return True
 
     def get_present_participants_count(self, now: datetime) -> int:

@@ -567,23 +567,45 @@ def test_delete_meeting_not_found(admin_client):
     assert res.status_code in (400, 404)
 
 
-def test_delete_meeting_success(admin_client, mock_current_user):
-    """Admin xóa meeting thành công."""
+def test_delete_meeting_success(admin_client, mock_current_user, db_session):
+    """Admin xóa meeting: Hard delete toàn bộ meeting và participants liên quan."""
+    secondary_uid = get_or_create_secondary_user(db_session, mock_current_user.id)
     now = datetime.now()
     payload = {
         "title": "Meeting to Delete",
         "start_time": (now + timedelta(hours=10)).isoformat(),
         "end_time": (now + timedelta(hours=11)).isoformat(),
         "trainer_ids": [mock_current_user.id],
-        "trainee_ids": [],
+        "trainee_ids": [secondary_uid],
     }
     res = admin_client.post("/api/v1/meetings", json=payload)
     assert res.status_code == 201
     meeting_id = res.json()["data"]["id"]
 
+    # Verify records exist before delete
+    p_before = db_session.execute(
+        text("SELECT id FROM meeting_participants WHERE meeting_id = :mid"),
+        {"mid": meeting_id},
+    ).fetchall()
+    assert len(p_before) == 2
+
+    # Perform hard delete
     del_res = admin_client.delete(f"/api/v1/meetings/{meeting_id}")
     assert del_res.status_code == 200
     assert del_res.json()["is_success"] is True
+
+    # Verify hard delete from database: meeting and participants must be completely gone
+    m_after = db_session.execute(
+        text("SELECT id FROM meetings WHERE id = :mid"),
+        {"mid": meeting_id},
+    ).fetchone()
+    assert m_after is None
+
+    p_after = db_session.execute(
+        text("SELECT id FROM meeting_participants WHERE meeting_id = :mid"),
+        {"mid": meeting_id},
+    ).fetchall()
+    assert len(p_after) == 0
 
 
 def get_or_create_secondary_user(db_session, primary_id: int) -> int:
