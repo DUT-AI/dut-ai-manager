@@ -774,6 +774,38 @@ async def test_check_overdue_duties_penalizes_rejected_duty_not_resubmitted(
 
 
 @pytest.mark.asyncio
+async def test_check_overdue_duties_default_target_date_delays_2_days(
+    mock_duty_repo,
+    mock_meeting_repo,
+    mock_team_repo,
+    mock_create_violation_use_case,
+    mock_event_bus,
+):
+    """Khi target_date is None, CheckOverdueDutiesUseCase tự động quét ngày (today - 2 ngày)."""
+    from datetime import UTC, datetime, timedelta
+    from zoneinfo import ZoneInfo
+    from app.duty.domain.constants import DUTY_VIOLATION_CHECK_DELAY_DAYS
+
+    mock_duty_repo.get_pending_duties_for_date.return_value = []
+
+    uc = CheckOverdueDutiesUseCase(
+        duty_repo=mock_duty_repo,
+        meeting_repo=mock_meeting_repo,
+        team_repo=mock_team_repo,
+        create_violation_use_case=mock_create_violation_use_case,
+        event_bus=mock_event_bus,
+    )
+
+    now_vn = datetime.now(UTC).astimezone(ZoneInfo("Asia/Ho_Chi_Minh"))
+    expected_target_date = now_vn.date() - timedelta(days=DUTY_VIOLATION_CHECK_DELAY_DAYS)
+
+    await uc.execute()
+
+    mock_duty_repo.get_pending_duties_for_date.assert_called_once_with(expected_target_date)
+
+
+
+@pytest.mark.asyncio
 async def test_submit_duty_evidence_validation_no_images(
     mock_duty_repo, mock_team_repo, mock_minio_service, mock_event_bus
 ):

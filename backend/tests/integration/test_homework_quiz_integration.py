@@ -11,10 +11,9 @@ import pytest
 from app.homework.application import (
     CheckOverdueHomeworkUseCase,
 )
-from app.homework.domain.entity import Homework
+from app.homework.domain.entity import Homework, SubmissionType
 from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.shared.domain.event_bus import EventBus
-from app.user.domain.entity import UserEntity
 
 
 @pytest.mark.asyncio
@@ -25,8 +24,6 @@ async def test_lesson_aggregated_violation_single_ticket():
     """
     mock_homework_repo = MagicMock()
     mock_submission_repo = MagicMock()
-    mock_user_repo = MagicMock()
-    mock_quiz_api = MagicMock(spec=QuizApiClient)
 
     today = datetime.now(UTC).date()
 
@@ -44,15 +41,13 @@ async def test_lesson_aggregated_violation_single_ticket():
     mock_assignee_repo = MagicMock()
     mock_assignee_repo.get_assigned_user_ids.return_value = {10}
 
-    # User 10 completed NOTHING on Coding, NOTHING on Game
-    mock_quiz_api.get_homework_completed_members = AsyncMock(return_value=[])
-    mock_quiz_api.get_game_leaderboard = AsyncMock(return_value=[])
+    # User 10 completed NOTHING on Coding, NOTHING on Game in DB
+    mock_submission_repo.get_submissions_by_homework.return_value = []
+    mock_submission_repo.has_valid_submission.return_value = False
 
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=mock_homework_repo,
         homework_submission_repo=mock_submission_repo,
-        quiz_api=mock_quiz_api,
-        user_repo=mock_user_repo,
         homework_assignee_repo=mock_assignee_repo,
     )
 
@@ -79,8 +74,6 @@ async def test_lesson_coding_only_violation():
     """
     mock_homework_repo = MagicMock()
     mock_submission_repo = MagicMock()
-    mock_user_repo = MagicMock()
-    mock_quiz_api = MagicMock(spec=QuizApiClient)
 
     today = datetime.now(UTC).date()
 
@@ -90,30 +83,25 @@ async def test_lesson_coding_only_violation():
         deadline=datetime.now(UTC) - timedelta(hours=1),
         link="https://quiz.dutai.site/homeworks/ds-lesson-2",
         slug="ds-lesson-2",
+        requires_coding=True,
+        requires_game=True,
     )
 
     mock_homework_repo.get_by_deadline_date.return_value = [lesson_hw]
     mock_assignee_repo = MagicMock()
     mock_assignee_repo.get_assigned_user_ids.return_value = {20}
 
-    # User 20 completed Game (15/15 questions), but did NOT complete Coding
-    mock_quiz_api.get_game_leaderboard = AsyncMock(
-        return_value=[
-            {
-                "user_id": 20,
-                "is_completed": True,
-                "total_questions": 15,
-                "answered_questions": 15,
-            }
-        ]
-    )
-    mock_quiz_api.get_homework_completed_members = AsyncMock(return_value=[])
+    # User 20 completed Game in DB, but did NOT complete Coding
+    mock_submission_repo.get_submissions_by_homework.return_value = []
+
+    def mock_has_valid(homework_id, user_id, submission_type, deadline):
+        return submission_type == SubmissionType.GAME
+
+    mock_submission_repo.has_valid_submission.side_effect = mock_has_valid
 
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=mock_homework_repo,
         homework_submission_repo=mock_submission_repo,
-        quiz_api=mock_quiz_api,
-        user_repo=mock_user_repo,
         homework_assignee_repo=mock_assignee_repo,
     )
 
@@ -138,8 +126,6 @@ async def test_lesson_game_only_violation():
     """
     mock_homework_repo = MagicMock()
     mock_submission_repo = MagicMock()
-    mock_user_repo = MagicMock()
-    mock_quiz_api = MagicMock(spec=QuizApiClient)
 
     today = datetime.now(UTC).date()
 
@@ -157,26 +143,17 @@ async def test_lesson_game_only_violation():
     mock_assignee_repo = MagicMock()
     mock_assignee_repo.get_assigned_user_ids.return_value = {30}
 
-    # User 30 completed Coding, but only answered 3/10 questions in Game
-    mock_quiz_api.get_homework_completed_members = AsyncMock(
-        return_value=[{"user_id": 30}]
-    )
-    mock_quiz_api.get_game_leaderboard = AsyncMock(
-        return_value=[
-            {
-                "user_id": 30,
-                "is_completed": True,
-                "total_questions": 10,
-                "answered_questions": 3,
-            }
-        ]
-    )
+    # User 30 completed Coding, but did NOT complete Game
+    mock_submission_repo.get_submissions_by_homework.return_value = []
+
+    def mock_has_valid(homework_id, user_id, submission_type, deadline):
+        return submission_type == SubmissionType.CODING
+
+    mock_submission_repo.has_valid_submission.side_effect = mock_has_valid
 
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=mock_homework_repo,
         homework_submission_repo=mock_submission_repo,
-        quiz_api=mock_quiz_api,
-        user_repo=mock_user_repo,
         homework_assignee_repo=mock_assignee_repo,
     )
 
@@ -191,6 +168,7 @@ async def test_lesson_game_only_violation():
     assert len(published_events) == 1
     reason = published_events[0].reason.lower()
     assert "trắc nghiệm game" in reason
+    assert "bài tập coding" not in reason
 
 
 @pytest.mark.asyncio
@@ -201,8 +179,6 @@ async def test_unassigned_legacy_homework_does_not_penalize_users():
     """
     mock_homework_repo = MagicMock()
     mock_submission_repo = MagicMock()
-    mock_user_repo = MagicMock()
-    mock_quiz_api = MagicMock(spec=QuizApiClient)
 
     today = datetime.now(UTC).date()
 
@@ -217,16 +193,10 @@ async def test_unassigned_legacy_homework_does_not_penalize_users():
     mock_homework_repo.get_by_deadline_date.return_value = [unassigned_hw]
     mock_assignee_repo = MagicMock()
     mock_assignee_repo.get_assigned_user_ids.return_value = set()
-    mock_user_repo.get_active_users.return_value = [
-        UserEntity(id=1, name="Active 1", email="a1@gmail.com"),
-        UserEntity(id=2, name="Active 2", email="a2@gmail.com"),
-    ]
 
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=mock_homework_repo,
         homework_submission_repo=mock_submission_repo,
-        quiz_api=mock_quiz_api,
-        user_repo=mock_user_repo,
         homework_assignee_repo=mock_assignee_repo,
     )
 

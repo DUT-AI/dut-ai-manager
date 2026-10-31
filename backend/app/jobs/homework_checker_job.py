@@ -21,11 +21,12 @@ async def check_overdue_homework_submissions(
     container: AsyncContainer, target_date: date | None = None
 ) -> None:
     """
-    Check for homework submissions that are overdue (deadline = target_date) and create violations.
+    Check for homework submissions that are overdue (deadline = target_date, default today - 2 days)
+    and create violations for unsubmitted or late submissions.
     Resolves CheckOverdueHomeworkUseCase from Dishka container.
     """
     logger.info(
-        f"🔍 [Homework Checker] Starting homework check for {target_date or 'today'}..."
+        f"🔍 [Homework Checker] Starting homework check for {target_date or 'today - 2 days'}..."
     )
 
     try:

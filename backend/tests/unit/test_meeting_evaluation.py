@@ -380,6 +380,47 @@ async def test_check_evaluation_deadline_creates_violation_when_trainee_missing(
     saved_violation = violation_repo.save.call_args[0][0]
     assert saved_violation.user_id == 20
     assert "Chưa hoàn thành đánh giá Trainer" in saved_violation.reason
+    assert "trong vòng 72h" in saved_violation.reason
+
+
+@pytest.mark.asyncio
+async def test_check_evaluation_deadline_uses_72h_bound_and_9d_window():
+    """Kiểm tra use case gọi repo với đúng bounds: start_bound = now - 9 ngày, end_bound = now - 72h."""
+    from app.meeting.application.check_evaluation_deadline_job_use_case import (
+        CheckEvaluationDeadlineJobUseCase,
+    )
+    from app.meeting.domain.constants import (
+        MEETING_EVALUATION_DEADLINE_HOURS,
+        MEETING_EVALUATION_SCAN_WINDOW_DAYS,
+    )
+
+    meeting_repo = MagicMock()
+    eval_repo = MagicMock()
+    overall_repo = MagicMock()
+    violation_repo = MagicMock()
+
+    meeting_repo.get_meetings_for_evaluation_deadline_check.return_value = []
+
+    job = CheckEvaluationDeadlineJobUseCase(
+        meeting_repo, eval_repo, overall_repo, violation_repo
+    )
+    res = await job.execute()
+
+    assert res["meetings_scanned"] == 0
+    meeting_repo.get_meetings_for_evaluation_deadline_check.assert_called_once()
+    called_kwargs = meeting_repo.get_meetings_for_evaluation_deadline_check.call_args.kwargs
+    start_bound = called_kwargs["start_bound"]
+    end_bound = called_kwargs["end_bound"]
+
+    now = datetime.now(UTC)
+    # Check start_bound is roughly now - 9 days
+    diff_start = (now - start_bound).total_seconds() / 86400
+    assert abs(diff_start - MEETING_EVALUATION_SCAN_WINDOW_DAYS) < 0.1
+
+    # Check end_bound is roughly now - 72 hours
+    diff_end = (now - end_bound).total_seconds() / 3600
+    assert abs(diff_end - MEETING_EVALUATION_DEADLINE_HOURS) < 0.1
+
 
 
 @pytest.mark.asyncio

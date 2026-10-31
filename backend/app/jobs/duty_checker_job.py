@@ -24,11 +24,11 @@ async def check_overdue_duties(
     container: AsyncContainer, target_date: date | None = None
 ) -> None:
     """
-    Check for pending cleaning duties on target_date (default today)
+    Check for pending cleaning duties on target_date (default today - 2 days)
     and create violations for attendees if duty was not completed before 22:00.
     """
     logger.info(
-        f"🧹 [Duty Checker] Starting duty check for {target_date or 'today'}..."
+        f"🧹 [Duty Checker] Starting duty check for {target_date or 'today - 2 days'}..."
     )
 
     try:

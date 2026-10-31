@@ -1,7 +1,8 @@
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import cast
 from zoneinfo import ZoneInfo
 
+from app.meeting.domain.constants import MEETING_ATTENDANCE_CHECK_DELAY_DAYS
 from app.meeting.domain.events import (
     ParticipantAbsenceRecorded,
     ParticipantLateRecorded,
@@ -34,7 +35,8 @@ class CheckMeetingAttendanceUseCase:
     async def execute(self, target_date: date | None = None) -> int:
         if target_date is None:
             now = datetime.now(UTC)
-            target_date = now.astimezone(ZoneInfo("Asia/Ho_Chi_Minh")).date()
+            today_vn = now.astimezone(ZoneInfo("Asia/Ho_Chi_Minh")).date()
+            target_date = today_vn - timedelta(days=MEETING_ATTENDANCE_CHECK_DELAY_DAYS)
 
         meetings = self.meeting_repo.get_by_date(target_date)
         if not meetings:

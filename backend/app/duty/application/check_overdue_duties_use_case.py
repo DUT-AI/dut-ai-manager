@@ -2,12 +2,13 @@
 Check Overdue Duties Use Case (for Daily Scheduled Job at 23:59).
 """
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import cast
 from zoneinfo import ZoneInfo
 
 from loguru import logger
 
+from app.duty.domain.constants import DUTY_VIOLATION_CHECK_DELAY_DAYS
 from app.duty.domain.entity import DutyStatus
 from app.duty.domain.events import DutyViolated
 from app.duty.infrastructure.repository import DutyRepository
@@ -41,9 +42,8 @@ class CheckOverdueDutiesUseCase:
 
     async def execute(self, target_date: date | None = None) -> int:
         if target_date is None:
-            target_date = (
-                datetime.now(UTC).astimezone(ZoneInfo("Asia/Ho_Chi_Minh")).date()
-            )
+            now_vn = datetime.now(UTC).astimezone(ZoneInfo("Asia/Ho_Chi_Minh"))
+            target_date = now_vn.date() - timedelta(days=DUTY_VIOLATION_CHECK_DELAY_DAYS)
 
         pending_duties = self.duty_repo.get_pending_duties_for_date(target_date)
         if not pending_duties:

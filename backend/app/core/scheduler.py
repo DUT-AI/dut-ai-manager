@@ -68,7 +68,7 @@ def start_scheduler(dishka_container: AsyncContainer) -> None:
         check_meeting_evaluations,
         CronTrigger(minute=0, timezone="Asia/Ho_Chi_Minh"),
         id="meeting_evaluation_check",
-        name="Check 24h meeting evaluations deadline",
+        name="Check 72h meeting evaluations deadline",
         replace_existing=True,
         kwargs={"container": dishka_container},
     )

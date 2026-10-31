@@ -3,6 +3,11 @@
 Re-exports core domain entities, events, and value objects.
 """
 
+from app.meeting.domain.constants import (
+    MEETING_ATTENDANCE_CHECK_DELAY_DAYS,
+    MEETING_EVALUATION_DEADLINE_HOURS,
+    MEETING_EVALUATION_SCAN_WINDOW_DAYS,
+)
 from app.meeting.domain.evaluation import (
     EvaluationCriteria,
     EvaluationCriteriaCode,
@@ -42,6 +47,9 @@ __all__ = [
     "EvaluationGroupSummary",
     "EvaluationScoreItem",
     "EvaluationType",
+    "MEETING_ATTENDANCE_CHECK_DELAY_DAYS",
+    "MEETING_EVALUATION_DEADLINE_HOURS",
+    "MEETING_EVALUATION_SCAN_WINDOW_DAYS",
     "Meeting",
     "MeetingAbsenceDetected",
     "MeetingCreated",

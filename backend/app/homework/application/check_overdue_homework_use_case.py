@@ -1,17 +1,18 @@
 """
 Homework Checker Use Case — application layer.
 
-Handles daily background job (23:59) checking for overdue homework submissions
-and publishing domain events (HomeworkOverdueDetected) for decoupled violation processing.
+Handles scheduled background checks (default: deadline = today - 2 days)
+for overdue homework submissions by comparing assignees against submissions in database.
+Publishes domain events (HomeworkOverdueDetected) for decoupled violation processing.
 """
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import cast
 from zoneinfo import ZoneInfo
 
 from loguru import logger
 
-from app.homework.application.helpers import QuizSubmissionHelper
+from app.homework.domain.constants import HOMEWORK_VIOLATION_CHECK_DELAY_DAYS
 from app.homework.domain.entity import Homework as HomeworkEntity
 from app.homework.domain.entity import SubmissionType
 from app.homework.domain.value_objects import HomeworkOverdueDetected
@@ -22,27 +23,24 @@ from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.homework.infrastructure.homework_submission_repository import (
     HomeworkSubmissionRepository,
 )
-from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.shared.domain.event_bus import DomainEvent, EventBus
-from app.user.infrastructure.repository import UserRepository
 
 
 class CheckOverdueHomeworkUseCase:
-    """Kiểm tra bài tập quá hạn và phát sự kiện HomeworkOverdueDetected qua EventBus."""
+    """
+    Kiểm tra bài tập quá hạn đối chiếu trực tiếp giữa Assignees và Submissions trong Database.
+    Phát sự kiện HomeworkOverdueDetected qua EventBus để Violation Domain xử lý kỷ luật.
+    """
 
     def __init__(
         self,
         homework_repo: HomeworkRepository,
         homework_submission_repo: HomeworkSubmissionRepository,
-        quiz_api: QuizApiClient,
-        user_repo: UserRepository,
         homework_assignee_repo: HomeworkAssigneeRepository,
         event_bus: type[EventBus] = EventBus,
     ):
         self.homework_repo = homework_repo
         self.homework_submission_repo = homework_submission_repo
-        self.quiz_api = quiz_api
-        self.user_repo = user_repo
         self.homework_assignee_repo = homework_assignee_repo
         self.event_bus = event_bus
 
@@ -53,14 +51,17 @@ class CheckOverdueHomeworkUseCase:
 
     async def execute(self, target_date: date | None = None) -> int:
         """
-        Quét tất cả các bài tập có deadline là target_date (mặc định là hôm nay):
+        Quét tất cả các bài tập có deadline là target_date:
+        - Mặc định khi chạy tự động (target_date is None): quét bài tập có deadline cách đây 2 ngày.
+        - Khi truyền target_date cụ thể: quét chính xác bài tập có deadline ngày đó.
         1. Lấy danh sách thành viên được phân công (assignee_ids).
-        2. Kiểm tra xem họ có hoàn thành Coding và Game (nếu có) trên Quiz API không.
-        3. Nếu CHƯA hoàn thành -> Phát sự kiện HomeworkOverdueDetected lên EventBus.
+        2. Đối soát bài nộp trong DB: chỉ chấp nhận bài nộp trước hoặc đúng deadline (submitted_at <= deadline).
+        3. Nếu CHƯA hoàn thành trước deadline -> Phát sự kiện HomeworkOverdueDetected lên EventBus.
         """
         if target_date is None:
             now = datetime.now(UTC)
-            target_date = now.astimezone(ZoneInfo("Asia/Ho_Chi_Minh")).date()
+            today_vn = now.astimezone(ZoneInfo("Asia/Ho_Chi_Minh")).date()
+            target_date = today_vn - timedelta(days=HOMEWORK_VIOLATION_CHECK_DELAY_DAYS)
 
         due_homeworks = self.homework_repo.get_by_deadline_date(target_date)
         if not due_homeworks:
@@ -73,60 +74,34 @@ class CheckOverdueHomeworkUseCase:
             if not homework.id:
                 continue
 
-            slug = QuizSubmissionHelper.extract_slug_from_entity(homework)
-            if not slug:
-                logger.warning(
-                    f"Bài tập id={homework.id} '{homework.title}' không có slug/link hợp lệ để gọi Quiz API. Bỏ qua."
-                )
-                continue
-
-            coding_completed_uids = (
-                await QuizSubmissionHelper.get_coding_completed_user_ids(
-                    self.quiz_api, slug
-                )
-            )
-            exercises = await QuizSubmissionHelper.get_lesson_exercises(
-                self.quiz_api, slug
-            )
-
-            game_completed_uids = (
-                await QuizSubmissionHelper.get_game_completed_user_ids(
-                    self.quiz_api, slug
-                )
-            )
-
-            has_coding = coding_completed_uids is not None
-            has_game = game_completed_uids is not None
-
-            # Nếu cả 2 đều là None (404/không tìm thấy trên Quiz API), bỏ qua
-            if not has_coding and not has_game:
-                continue
-
             assigned_uids = self._get_effective_assigned_user_ids(homework)
             if not assigned_uids:
                 continue
 
-            required_exercise_ids = set()
-            if exercises:
-                required_exercise_ids = {
-                    str(ex.get("id"))
-                    for ex in exercises
-                    if isinstance(ex, dict) and ex.get("id")
-                }
+            # Xác định yêu cầu coding/game cho bài tập
+            req_coding = bool(homework.requires_coding)
+            req_game = bool(homework.requires_game)
 
-            # Xác định yêu cầu coding/game cho bài tập này dựa trên cấu hình của bài tập
-            req_coding = bool(homework.requires_coding and has_coding)
-            req_game = bool(homework.requires_game and has_game)
+            # Nếu cả 2 đều chưa cấu hình bật rõ ràng, mặc định kiểm tra Coding
+            if not req_coding and not req_game:
+                req_coding = True
+
+            # Lấy danh mục bài tập con (sub-exercises) từ các submissions của bài tập trong DB
+            all_submissions = self.homework_submission_repo.get_submissions_by_homework(homework.id)
+            required_exercise_ids = {
+                str(s.exercise_id)
+                for s in all_submissions
+                if s.exercise_id
+                and str(s.submission_type).upper() == "CODING"
+                and not str(s.exercise_id).startswith("sync-legacy")
+            }
 
             for user_id in assigned_uids:
-                # 1. Kiểm tra mục Coding (nếu bài yêu cầu)
+                # 1. Kiểm tra Coding trong DB (chỉ chấp nhận submitted_at <= deadline)
                 coding_ok = True
                 if req_coding:
-                    db_coding = False
                     if (
-                        hasattr(
-                            self.homework_submission_repo, "get_submitted_exercise_ids"
-                        )
+                        hasattr(self.homework_submission_repo, "get_submitted_exercise_ids")
                         and required_exercise_ids
                     ):
                         submitted_ids = (
@@ -134,27 +109,24 @@ class CheckOverdueHomeworkUseCase:
                                 homework.id, user_id, homework.deadline
                             )
                         )
-                        db_coding = required_exercise_ids.issubset(submitted_ids)
-                    elif hasattr(self.homework_submission_repo, "has_valid_submission"):
-                        res = self.homework_submission_repo.has_valid_submission(
+                        coding_ok = required_exercise_ids.issubset(submitted_ids)
+                    else:
+                        coding_ok = self.homework_submission_repo.has_valid_submission(
                             homework.id,
                             user_id,
                             SubmissionType.CODING,
                             homework.deadline,
                         )
-                        db_coding = res is True
-                    api_coding = user_id in (coding_completed_uids or set())
-                    coding_ok = db_coding or api_coding
 
-                # 2. Kiểm tra mục Game (nếu bài yêu cầu)
+                # 2. Kiểm tra Game trong DB (chỉ chấp nhận submitted_at <= deadline)
                 game_ok = True
                 if req_game:
-                    res = self.homework_submission_repo.has_valid_submission(
-                        homework.id, user_id, SubmissionType.GAME, homework.deadline
+                    game_ok = self.homework_submission_repo.has_valid_submission(
+                        homework.id,
+                        user_id,
+                        SubmissionType.GAME,
+                        homework.deadline,
                     )
-                    db_game = res is True
-                    api_game = user_id in (game_completed_uids or set())
-                    game_ok = db_game or api_game
 
                 if coding_ok and game_ok:
                     continue

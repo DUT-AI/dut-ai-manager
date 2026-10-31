@@ -1,5 +1,9 @@
 from datetime import UTC, datetime, timedelta
 
+from app.meeting.domain.constants import (
+    MEETING_EVALUATION_DEADLINE_HOURS,
+    MEETING_EVALUATION_SCAN_WINDOW_DAYS,
+)
 from app.meeting.domain.entity import Meeting, MeetingParticipant
 from app.meeting.domain.value_objects import EvaluationType, ParticipantStatus
 from app.meeting.infrastructure.repository import (
@@ -28,12 +32,12 @@ class CheckEvaluationDeadlineJobUseCase:
 
     async def execute(self) -> dict:
         now = datetime.now(UTC)
-        seven_days_ago = now - timedelta(days=7)
-        twenty_four_hours_ago = now - timedelta(hours=24)
+        start_bound = now - timedelta(days=MEETING_EVALUATION_SCAN_WINDOW_DAYS)
+        end_bound = now - timedelta(hours=MEETING_EVALUATION_DEADLINE_HOURS)
 
         meetings = self.meeting_repo.get_meetings_for_evaluation_deadline_check(
-            start_bound=seven_days_ago,
-            end_bound=twenty_four_hours_ago,
+            start_bound=start_bound,
+            end_bound=end_bound,
         )
 
         trainee_violations = 0
@@ -79,7 +83,7 @@ class CheckEvaluationDeadlineJobUseCase:
             if p.user_id not in reviewers:
                 reason = (
                     f"Chưa hoàn thành đánh giá Trainer cho buổi học "
-                    f"'{meeting.title}'{time_str} trong vòng 24h"
+                    f"'{meeting.title}'{time_str} trong vòng 72h"
                 )
                 if not self.violation_repo.exists_by_user_and_reason(p.user_id, reason):
                     v = Violation.create_system_violation(
@@ -97,7 +101,7 @@ class CheckEvaluationDeadlineJobUseCase:
         if not self.overall_eval_repo.exists_for_meeting(meeting.id):
             reason = (
                 f"Trainer chưa hoàn tất đánh giá tổng thể buổi học "
-                f"'{meeting.title}'{time_str} trong vòng 24h"
+                f"'{meeting.title}'{time_str} trong vòng 72h"
             )
             if not self.violation_repo.exists_by_user_and_reason(trainer_id, reason):
                 v = Violation.create_system_violation(

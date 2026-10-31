@@ -22,12 +22,12 @@ async def check_meeting_attendance(
     container: AsyncContainer, target_date: date | None = None
 ) -> None:
     """
-    Check for ended meetings (target_date) with require_check_in=True
-    and create violations for participants who didn't attend.
+    Check for ended meetings (target_date, default today - 2 days) with require_check_in=True
+    and create violations for participants who didn't attend or attended late without excuse.
     Resolves CheckMeetingAttendanceUseCase from Dishka container.
     """
     logger.info(
-        f"🔍 [Meeting Checker] Starting meeting check for {target_date or 'today'}..."
+        f"🔍 [Meeting Checker] Starting meeting check for {target_date or 'today - 2 days'}..."
     )
 
     try:
