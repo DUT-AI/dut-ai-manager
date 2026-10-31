@@ -1,6 +1,6 @@
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.meeting.domain.value_objects import ParticipantRole, ParticipantStatus
 from app.shared.domain.datetime_types import UtcDateTime
@@ -55,19 +55,6 @@ class ParticipantResponse(BaseModel):
     check_out_at: UtcDateTime | None = None
     status: ParticipantStatus
     link_image: str | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def map_user_info(cls, data: Any) -> Any:
-        """Tự động lấy user_name và user_avatar từ đối tượng user nếu data là dict."""
-        if isinstance(data, dict):
-            user = data.get("user")
-            if user and isinstance(user, dict):
-                if not data.get("user_name"):
-                    data["user_name"] = user.get("name")
-                if not data.get("user_avatar_url"):
-                    data["user_avatar_url"] = user.get("avatar_url")
-        return data
 
     @classmethod
     def from_domain(
