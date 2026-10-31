@@ -1,13 +1,23 @@
 from datetime import UTC, datetime
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import Any, ClassVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.core.config import settings
 
 
-class ParticipantStatus(str, Enum):
+class UserRef(BaseModel):
+    """Tham chiếu danh tính User trong Domain (Value Object snapshot)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str = ""
+    avatar_url: str | None = None
+
+
+class ParticipantStatus(StrEnum):
     """Trạng thái tham dự buổi họp (7 trạng thái)"""
 
     NOT_JOINED = "NOT_JOINED"  # Chưa checkin
@@ -19,14 +29,14 @@ class ParticipantStatus(str, Enum):
     COMPLETED = "COMPLETED"  # Đã hoàn thành / Đã checkout
 
 
-class EvaluationType(str, Enum):
+class EvaluationType(StrEnum):
     """Loại đánh giá cá nhân 2 chiều"""
 
     TRAINER_TO_TRAINEE = "TRAINER_TO_TRAINEE"
     TRAINEE_TO_TRAINER = "TRAINEE_TO_TRAINER"
 
 
-class EvaluationCriteriaCode(str, Enum):
+class EvaluationCriteriaCode(StrEnum):
     """Mã tiêu chí đánh giá chuẩn hóa hệ thống"""
 
     # Trainer evaluates Trainee
@@ -43,7 +53,7 @@ class EvaluationCriteriaCode(str, Enum):
 
 
 class EvaluationCriterion(BaseModel):
-    """Value Object đại diện cho một Tiêu chí đánh giá chuẩn hóa (Domain Value Object)."""
+    """Tiêu chí đánh giá chuẩn hóa (Domain Value Object)."""
 
     code: str
     name: str
@@ -105,15 +115,16 @@ class EvaluationCriterion(BaseModel):
         }
 
         # Hỗ trợ cả mã có prefix cũ và alias trong mock/test data cũ
+        c = EvaluationCriteriaCode
         legacy_aliases = {
-            "TRAINER_TO_TRAINEE_ATTENDANCE": EvaluationCriteriaCode.ATTENDANCE_CONDUCT.value,
-            "TRAINER_TO_TRAINEE_INTERACTION": EvaluationCriteriaCode.INTERACTION_CONTRIBUTION.value,
-            "TRAINER_TO_TRAINEE_COMPREHENSION": EvaluationCriteriaCode.ABSORPTION_COMPREHENSION.value,
-            "TRAINER_TO_TRAINEE_PREPARATION": EvaluationCriteriaCode.PRE_CLASS_PREPARATION.value,
-            "TRAINEE_TO_TRAINER_CONTENT": EvaluationCriteriaCode.CONTENT_QUALITY.value,
-            "TRAINEE_TO_TRAINER_METHOD": EvaluationCriteriaCode.TEACHING_METHOD.value,
-            "TRAINEE_TO_TRAINER_ATMOSPHERE": EvaluationCriteriaCode.CLASS_ATMOSPHERE.value,
-            "TRAINEE_TO_TRAINER_VALUE": EvaluationCriteriaCode.PRACTICAL_VALUE.value,
+            "TRAINER_TO_TRAINEE_ATTENDANCE": c.ATTENDANCE_CONDUCT.value,
+            "TRAINER_TO_TRAINEE_INTERACTION": c.INTERACTION_CONTRIBUTION.value,
+            "TRAINER_TO_TRAINEE_COMPREHENSION": c.ABSORPTION_COMPREHENSION.value,
+            "TRAINER_TO_TRAINEE_PREPARATION": c.PRE_CLASS_PREPARATION.value,
+            "TRAINEE_TO_TRAINER_CONTENT": c.CONTENT_QUALITY.value,
+            "TRAINEE_TO_TRAINER_METHOD": c.TEACHING_METHOD.value,
+            "TRAINEE_TO_TRAINER_ATMOSPHERE": c.CLASS_ATMOSPHERE.value,
+            "TRAINEE_TO_TRAINER_VALUE": c.PRACTICAL_VALUE.value,
         }
 
         lookup_key = legacy_aliases.get(raw_code, raw_code)
@@ -164,6 +175,10 @@ class EvaluationCriterion(BaseModel):
         return [cls.from_code(c, default_type=eval_type) for c in codes]
 
 
+# Alias for backward-compatibility with plural naming
+EvaluationCriteria = EvaluationCriterion
+
+
 class CriteriaBreakdownSummary(BaseModel):
     """Value Object tổng hợp điểm trung bình của một tiêu chí (Domain Value Object)."""
 
@@ -189,7 +204,7 @@ class CriteriaBreakdownSummary(BaseModel):
 
 
 class EvaluationGroupSummary(BaseModel):
-    """Value Object tổng hợp kết quả của 1 nhóm đánh giá (Trainer->Trainee hoặc Trainee->Trainer)."""
+    """Tổng hợp kết quả của 1 nhóm đánh giá (Trainer->Trainee hoặc ngược lại)."""
 
     evaluation_type: EvaluationType
     total_evaluations: int
@@ -246,7 +261,7 @@ class EvaluationGroupSummary(BaseModel):
         )
 
 
-class CapacityStatus(str, Enum):
+class CapacityStatus(StrEnum):
     SAFE = "SAFE"
     WARNING = "WARNING"
     OVERLOAD = "OVERLOAD"

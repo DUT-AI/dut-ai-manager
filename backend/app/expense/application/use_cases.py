@@ -209,9 +209,7 @@ class UpdateExpenseStatusUseCase:
             model.payment_date = (
                 payment_date
                 or model.expense_date
-                or datetime.now(UTC)
-                .astimezone(ZoneInfo("Asia/Ho_Chi_Minh"))
-                .date()
+                or datetime.now(UTC).astimezone(ZoneInfo("Asia/Ho_Chi_Minh")).date()
             )
         else:
             model.payment_date = None

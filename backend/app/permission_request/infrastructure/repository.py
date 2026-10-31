@@ -201,9 +201,7 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         rows = self.session.scalars(stmt).all()
         return {r for r in rows if r is not None}
 
-    def get_all_excused_or_transferred_out_user_ids(
-        self, meeting_id: int
-    ) -> set[int]:
+    def get_all_excused_or_transferred_out_user_ids(self, meeting_id: int) -> set[int]:
         """Lấy user_id không tham gia: vắng (ABSENCE) hoặc chuyển ca."""
         return self.get_absence_user_ids_by_meeting(
             meeting_id

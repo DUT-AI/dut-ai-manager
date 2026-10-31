@@ -90,9 +90,7 @@ class ReminderStage(str, Enum):
 
         # Chuẩn hóa về UTC aware cho phép so sánh khoảng thời gian
         now_utc = (
-            now
-            if now.tzinfo is not None
-            else now.replace(tzinfo=vn_tz).astimezone(UTC)
+            now if now.tzinfo is not None else now.replace(tzinfo=vn_tz).astimezone(UTC)
         )
         deadline_utc = (
             deadline

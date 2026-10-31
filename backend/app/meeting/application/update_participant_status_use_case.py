@@ -13,7 +13,7 @@ from app.shared.domain.datetime_types import parse_datetime_to_utc
 
 
 class UpdateParticipantStatusUseCase:
-    """Cập nhật thủ công trạng thái của thành viên trong meeting (người tạo meeting / Admin)"""
+    """Cập nhật thủ công trạng thái thành viên trong meeting (Creator/Admin)."""
 
     def __init__(
         self,
@@ -55,10 +55,27 @@ class UpdateParticipantStatusUseCase:
         )
 
         now = datetime.now(UTC)
-        # Default start time khi điểm danh nhanh là giờ hiện tại nếu đang trong buổi học, hoặc start_time
-        default_check_in_time = (
-            now if meeting.start_time <= now <= meeting.end_time else meeting.start_time
-        )
+
+        # Tính toán default_check_in_time theo trạng thái được chọn (Phương án A):
+        # 1. ĐÚNG GIỜ (JOINED): Luôn là giờ bắt đầu buổi họp (meeting.start_time)
+        # 2. ĐẾN TRỄ (LATE_*): Mặc định là now nếu đang trong giờ học, hoặc start_time
+        if target_status == ParticipantStatus.JOINED:
+            default_check_in_time = meeting.start_time
+        elif target_status in (
+            ParticipantStatus.LATE_EXCUSED,
+            ParticipantStatus.LATE_UNEXCUSED,
+        ):
+            default_check_in_time = (
+                now
+                if meeting.start_time <= now <= meeting.end_time
+                else meeting.start_time
+            )
+        else:
+            default_check_in_time = (
+                now
+                if meeting.start_time <= now <= meeting.end_time
+                else meeting.start_time
+            )
 
         # Ủy quyền toàn bộ Business Rules cho Domain Entity
         participant.update_attendance_status(

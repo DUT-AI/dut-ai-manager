@@ -349,4 +349,3 @@ def test_orm_model_typed_payload_parsing_and_casting():
     assert isinstance(entity_postpone.payload, PostponePayload)
     assert entity_postpone.payload.homework_id == 99
     assert entity_postpone.payload.start_time == now_dt
-

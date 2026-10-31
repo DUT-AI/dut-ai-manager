@@ -159,9 +159,7 @@ def test_api_change_meeting_full_flow(api_client, mock_current_user, db_engine):
                 )
 
 
-def test_api_change_meeting_validation_errors(
-    api_client, mock_current_user, db_engine
-):
+def test_api_change_meeting_validation_errors(api_client, mock_current_user, db_engine):
     """Kiểm tra các trường hợp validation lỗi khi gọi API đổi buổi họp."""
     now = datetime.now(UTC)
     start = now + timedelta(days=5)

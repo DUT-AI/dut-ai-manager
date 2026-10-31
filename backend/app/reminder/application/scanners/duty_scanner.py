@@ -30,9 +30,7 @@ class DutyTaskScanner(BaseTaskScanner):
         candidates: list[ScannedCandidateTask] = []
         vn_tz = ZoneInfo("Asia/Ho_Chi_Minh")
         now_utc = (
-            now
-            if now.tzinfo is not None
-            else now.replace(tzinfo=vn_tz).astimezone(UTC)
+            now if now.tzinfo is not None else now.replace(tzinfo=vn_tz).astimezone(UTC)
         )
         today_date = now_utc.astimezone(vn_tz).date()
         today_duties = self.duty_repo.get_pending_duties_for_date(today_date)

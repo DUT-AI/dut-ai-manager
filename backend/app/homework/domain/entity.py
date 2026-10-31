@@ -53,9 +53,7 @@ class Homework(BaseEntity):
         is_submitted = (not has_coding or coding_submitted) and (
             not has_game or game_submitted
         )
-        now = (
-            ensure_utc(reference_time) if reference_time else datetime.now(UTC)
-        )
+        now = ensure_utc(reference_time) if reference_time else datetime.now(UTC)
         is_overdue = not is_submitted and (ensure_utc(self.deadline) < now)
 
         return SubmissionEvaluation(

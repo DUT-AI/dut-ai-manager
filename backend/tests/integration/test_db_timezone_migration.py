@@ -1,6 +1,7 @@
-"""
-Integration tests for database timezone migration (TIMESTAMPTZ).
-Verifies that columns are now timestamp with time zone and timezone-aware datetimes work seamlessly.
+"""Integration tests for database timezone migration (TIMESTAMPTZ).
+
+Verifies that columns are timestamp with time zone and timezone-aware datetimes
+work seamlessly.
 """
 
 from datetime import UTC, datetime
@@ -10,11 +11,13 @@ from sqlalchemy.orm import Session
 
 
 def test_columns_converted_to_timestamptz(db_session: Session) -> None:
-    """Kiểm tra các bảng trọng yếu đã được chuyển đổi sang 'timestamp with time zone'."""
+    """Kiểm tra các bảng trọng yếu đã chuyển đổi sang timestamptz."""
     verified_columns = [
         ("meetings", "start_time"),
         ("meetings", "end_time"),
         ("meetings", "created_at"),
+        ("meeting_participants", "check_in_at"),
+        ("meeting_participants", "check_out_at"),
         ("homeworks", "deadline"),
         ("homeworks", "created_at"),
         ("cleaning_duties", "created_at"),
@@ -25,8 +28,8 @@ def test_columns_converted_to_timestamptz(db_session: Session) -> None:
         result = db_session.execute(
             text(
                 """
-                SELECT data_type 
-                FROM information_schema.columns 
+                SELECT data_type
+                FROM information_schema.columns
                 WHERE table_name = :table_name AND column_name = :column_name
                 """
             ),
@@ -40,8 +43,8 @@ def test_columns_converted_to_timestamptz(db_session: Session) -> None:
 
 
 def test_insert_and_retrieve_timestamptz(db_session: Session) -> None:
-    """
-    Kiểm tra ghi và đọc dữ liệu TIMESTAMPTZ:
+    """Kiểm tra ghi và đọc dữ liệu TIMESTAMPTZ:
+
     Ghi một aware UTC datetime, đọc ra vẫn giữ nguyên mốc thời gian UTC.
     """
     now_utc = datetime(2026, 10, 31, 12, 30, 0, tzinfo=UTC)
@@ -51,11 +54,11 @@ def test_insert_and_retrieve_timestamptz(db_session: Session) -> None:
         text(
             """
             INSERT INTO meetings (
-                title, start_time, end_time, require_check_in, 
+                title, start_time, end_time, require_check_in,
                 enable_evaluation, created_at, updated_at
             )
             VALUES (
-                'Timezone Test Meeting', :start_time, :end_time, 
+                'Timezone Test Meeting', :start_time, :end_time,
                 true, false, :now, :now
             )
             RETURNING id, start_time, end_time, created_at

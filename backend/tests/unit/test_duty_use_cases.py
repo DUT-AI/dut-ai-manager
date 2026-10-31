@@ -1539,9 +1539,7 @@ async def test_submit_duty_evidence_allows_transferred_in_student(
     monkeypatch.setattr(
         "app.duty.application.submit_duty_evidence_use_case.datetime",
         MagicMock(
-            now=MagicMock(
-                return_value=datetime(2026, 10, 24, 13, 0, 0, tzinfo=UTC)
-            ),
+            now=MagicMock(return_value=datetime(2026, 10, 24, 13, 0, 0, tzinfo=UTC)),
             combine=datetime.combine,
         ),
     )

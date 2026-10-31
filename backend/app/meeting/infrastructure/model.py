@@ -83,8 +83,7 @@ class Meeting(SQLAlchemyTimestampMixin, Base):
             sorted_participants = sorted(
                 active_participants,
                 key=lambda p: (
-                    getattr(p, "created_at", None)
-                    or datetime.min.replace(tzinfo=UTC),
+                    getattr(p, "created_at", None) or datetime.min.replace(tzinfo=UTC),
                     getattr(p, "id", None) or 0,
                 ),
                 reverse=True,

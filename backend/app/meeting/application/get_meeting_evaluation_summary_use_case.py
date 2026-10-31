@@ -68,18 +68,14 @@ class GetMeetingEvaluationSummaryUseCase:
         ]
 
         # Tìm đánh giá mà chính user này đã gửi cho Trainer (nếu có)
-        my_eval_entity = (
-            next(
-                (
-                    e
-                    for e in all_evaluations
-                    if e.evaluation_type == EvaluationType.TRAINEE_TO_TRAINER
-                    and e.reviewer_id == current_user_id
-                ),
-                None,
-            )
-            if current_user_id
-            else None
+        my_eval_entity = next(
+            (
+                e
+                for e in all_evaluations
+                if e.evaluation_type == EvaluationType.TRAINEE_TO_TRAINER
+                and e.reviewer_id == current_user_id
+            ),
+            None,
         )
         my_eval_dto = (
             EvaluationResponse.from_domain(

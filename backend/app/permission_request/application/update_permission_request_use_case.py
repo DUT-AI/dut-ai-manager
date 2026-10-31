@@ -42,17 +42,13 @@ class UpdatePermissionRequestUseCase:
             raise HTTPException(
                 status_code=400,
                 detail=(
-                    "Không thể thay đổi buổi sinh hoạt. "
-                    "Vui lòng hủy đơn và tạo mới."
+                    "Không thể thay đổi buổi sinh hoạt. Vui lòng hủy đơn và tạo mới."
                 ),
             )
         if data.homework_id is not None and data.homework_id != request.homework_id:
             raise HTTPException(
                 status_code=400,
-                detail=(
-                    "Không thể thay đổi bài tập. "
-                    "Vui lòng hủy đơn và tạo mới."
-                ),
+                detail=("Không thể thay đổi bài tập. Vui lòng hủy đơn và tạo mới."),
             )
 
         if data.note is not None:

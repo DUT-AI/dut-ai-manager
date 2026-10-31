@@ -95,7 +95,7 @@ async def create_permission_request(
         user_id=_current_user.id,
     )
     message = "Tạo yêu cầu xin phép thành công"
-    
+
     return ApiResponse.success(data=result, message=message)
 
 

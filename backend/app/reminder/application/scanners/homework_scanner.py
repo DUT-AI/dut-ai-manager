@@ -38,9 +38,7 @@ class HomeworkTaskScanner(BaseTaskScanner):
 
         vn_tz = ZoneInfo("Asia/Ho_Chi_Minh")
         now_utc = (
-            now
-            if now.tzinfo is not None
-            else now.replace(tzinfo=vn_tz).astimezone(UTC)
+            now if now.tzinfo is not None else now.replace(tzinfo=vn_tz).astimezone(UTC)
         )
 
         for hw in all_homeworks:

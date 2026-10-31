@@ -80,9 +80,7 @@ def seed_mock_data():
 
         # Helper to create meeting
         def create_meeting(month, year, day, name):
-            date = datetime.datetime(
-                year, month, day, 18, 0, 0, tzinfo=datetime.UTC
-            )
+            date = datetime.datetime(year, month, day, 18, 0, 0, tzinfo=datetime.UTC)
             meeting = Meeting(
                 title=name,
                 content="Mock meeting",

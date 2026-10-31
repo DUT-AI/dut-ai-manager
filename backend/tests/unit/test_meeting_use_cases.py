@@ -458,6 +458,79 @@ def test_checkin_with_card_use_case_delegates_to_domain_and_preserves_late_excus
     assert published_event.meeting_id == 10
 
 
+def test_update_participant_status_option_a_business_rules():
+    """Kiểm tra Phương án A:
+
+    - Chọn JOINED mà để trống giờ -> Gán start_time
+    - Chọn LATE_* mà để trống giờ (trong giờ học) -> Gán now
+    - Nhập giờ tường minh -> Lấy đúng giờ người dùng nhập
+    """
+    from app.meeting.application.update_participant_status_use_case import (
+        UpdateParticipantStatusUseCase,
+    )
+
+    meeting_repo = MagicMock()
+    participant_repo = MagicMock()
+
+    meeting_start = datetime(2026, 11, 1, 12, 0, tzinfo=UTC)  # 19:00 VN
+    meeting_end = datetime(2026, 11, 1, 14, 0, tzinfo=UTC)  # 21:00 VN
+
+    dummy_meeting = Meeting(
+        id=833,
+        title="Test Meeting Option A",
+        start_time=meeting_start,
+        end_time=meeting_end,
+    )
+    meeting_repo.get_by_id.return_value = dummy_meeting
+
+    # 1. Trường hợp JOINED (Đúng giờ) và để trống giờ check-in -> Phải nhận meeting_start (19:00 VN)
+    participant_1 = MeetingParticipant(
+        id=1,
+        meeting_id=833,
+        user_id=10,
+        status=ParticipantStatus.NOT_JOINED,
+        check_in_at=None,
+    )
+    participant_repo.get_by_meeting_and_user.return_value = participant_1
+    participant_repo.update_participant_status.side_effect = (
+        lambda meeting_id, user_id, status, check_in_at, check_out_at: (
+            MeetingParticipant(
+                id=1,
+                meeting_id=meeting_id,
+                user_id=user_id,
+                status=status,
+                check_in_at=check_in_at,
+                check_out_at=check_out_at,
+            )
+        )
+    )
+
+    uc = UpdateParticipantStatusUseCase(
+        meeting_repo=meeting_repo,
+        participant_repo=participant_repo,
+    )
+
+    # Chọn JOINED, để trống check_in_at
+    res_1 = uc.execute(
+        meeting_id=833,
+        user_id=10,
+        target_status=ParticipantStatus.JOINED,
+        check_in_at=None,
+    )
+    assert res_1.status == ParticipantStatus.JOINED
+    assert res_1.check_in_at == meeting_start  # Luôn là 12:00 UTC (19:00 VN)
+
+    # 2. Trường hợp nhập giờ tường minh -> Phải lấy đúng giờ nhập
+    explicit_time = datetime(2026, 11, 1, 12, 15, tzinfo=UTC)
+    res_2 = uc.execute(
+        meeting_id=833,
+        user_id=10,
+        target_status=ParticipantStatus.JOINED,
+        check_in_at=explicit_time,
+    )
+    assert res_2.check_in_at == explicit_time
+
+
 if __name__ == "__main__":
     test_check_meeting_attendance_decoupled_job()
     test_meeting_repository_save_hard_deletes_removed_participants()

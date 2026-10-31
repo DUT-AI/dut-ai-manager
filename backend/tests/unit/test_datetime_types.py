@@ -94,9 +94,7 @@ def test_ensure_utc():
 
     # 2. Input là naive -> Tự động coi là giờ VN (+7) và convert sang UTC
     naive_dt = datetime(2026, 10, 31, 19, 30, 0)
-    assert ensure_utc(naive_dt) == datetime(
-        2026, 10, 31, 12, 30, 0, tzinfo=UTC
-    )
+    assert ensure_utc(naive_dt) == datetime(2026, 10, 31, 12, 30, 0, tzinfo=UTC)
 
     # 3. Input là timezone khác (ví dụ JST +9) -> Chuyển về đúng UTC
     jst_tz = timezone(timedelta(hours=9))
