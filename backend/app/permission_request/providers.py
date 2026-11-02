@@ -76,11 +76,13 @@ class PermissionRequestModuleProvider(Provider):
         repo: PermissionRequestRepository,
         meeting_repo: MeetingRepository,
         homework_repo: HomeworkRepository,
+        homework_assignee_repo: HomeworkAssigneeRepository,
     ) -> GetPermissionRequestDetailUseCase:
         return GetPermissionRequestDetailUseCase(
             repo=repo,
             meeting_repo=meeting_repo,
             homework_repo=homework_repo,
+            homework_assignee_repo=homework_assignee_repo,
         )
 
     @provide

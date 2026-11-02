@@ -43,7 +43,7 @@ class ChangeMeetingStrategy(PermissionStrategy[ChangeMeetingPayload]):
     def validate(self, request: PermissionRequest[ChangeMeetingPayload]) -> None:
         meeting_id = request.payload.meeting_id
         old_meeting_id = request.payload.old_meeting_id
-        user_id = request.user_id
+        user_id = request.created_by
 
         if not meeting_id:
             raise HTTPException(

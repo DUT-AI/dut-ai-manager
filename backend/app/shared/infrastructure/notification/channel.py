@@ -26,6 +26,17 @@ class ChannelDeliveryResult:
     error_message: str | None = None
 
 
+@dataclass(frozen=True)
+class DispatchResult:
+    """Kết quả phát tán thông báo chuẩn hoá (Type-Safe)."""
+
+    success: bool
+    user_id: int
+    in_app: ChannelDeliveryResult
+    queued: bool
+    error_message: str | None = None
+
+
 class NotificationChannel(Protocol):
     """Protocol chuẩn hóa cho mọi kênh gửi thông báo."""
 

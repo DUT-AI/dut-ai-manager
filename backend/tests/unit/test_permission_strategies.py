@@ -74,7 +74,7 @@ def test_postpone_strategy_validation_happy_path():
 
     # Gia hạn sau 2 ngày (hợp lệ <= 4 ngày)
     req_valid = PermissionRequest(
-        user_id=1,
+        created_by=1,
         note="Xin hoãn",
         payload=PostponePayload(
             homework_id=1,
@@ -94,7 +94,7 @@ def test_postpone_strategy_rejects_past_extended_deadline():
     strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo)
 
     req = PermissionRequest(
-        user_id=1,
+        created_by=1,
         note="Xin hoãn",
         payload=PostponePayload(
             homework_id=1,
@@ -121,7 +121,7 @@ def test_postpone_strategy_rejects_past_current_deadline():
     strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo)
 
     req = PermissionRequest(
-        user_id=1,
+        created_by=1,
         note="Xin hoãn sau khi quá hạn",
         payload=PostponePayload(
             homework_id=1,
@@ -164,7 +164,7 @@ def test_postpone_strategy_rejects_already_completed_homework():
     strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo)
 
     req = PermissionRequest(
-        user_id=1,
+        created_by=1,
         note="Đã làm xong vẫn xin hoãn",
         payload=PostponePayload(
             homework_id=1,
@@ -194,7 +194,7 @@ def test_postpone_strategy_cumulative_postpone_success():
 
     # Hoãn tích luỹ lần 2: xin dời thêm 3 ngày nữa (tổng cộng cách postponed_deadline là 3 ngày <= 4 ngày)
     req_cumulative = PermissionRequest(
-        user_id=1,
+        created_by=1,
         note="Xin hoãn lần 2",
         payload=PostponePayload(
             homework_id=1,
@@ -219,7 +219,7 @@ def test_postpone_strategy_rejects_exceeding_four_days():
     strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo)
 
     req_invalid_exceed = PermissionRequest(
-        user_id=1,
+        created_by=1,
         note="Xin hoãn quá hạn",
         payload=PostponePayload(
             homework_id=1,
@@ -247,7 +247,7 @@ def test_postpone_strategy_rejects_before_or_equal_current_deadline():
     strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo)
 
     req_invalid_equal = PermissionRequest(
-        user_id=1,
+        created_by=1,
         note="Xin hoãn bằng deadline hiện tại",
         payload=PostponePayload(
             homework_id=1,
@@ -273,7 +273,7 @@ async def test_postpone_strategy_lifecycle():
 
     new_deadline = datetime(2026, 11, 3, 12, 0, tzinfo=UTC)
     req = PermissionRequest(
-        user_id=10,
+        created_by=10,
         note="Xin hoãn bài tập 2 ngày",
         payload=PostponePayload(
             homework_id=5,
@@ -307,7 +307,7 @@ async def test_absence_strategy_lifecycle():
     strategy = AbsenceStrategy(repo, meeting_repo)
 
     req = PermissionRequest(
-        user_id=10,
+        created_by=10,
         note="Bận việc nhà",
         payload=AbsencePayload(meeting_id=5),
     )
@@ -340,7 +340,7 @@ async def test_change_meeting_strategy_lifecycle():
 
     req = PermissionRequest(
         id=99,
-        user_id=15,
+        created_by=15,
         note="Đổi sang ca chiều",
         payload=ChangeMeetingPayload(meeting_id=20, old_meeting_id=None),
     )
@@ -357,7 +357,6 @@ def test_orm_mapping_two_way_with_json_payload():
     now = datetime(2026, 10, 31, 8, 30, tzinfo=UTC)
     entity = PermissionRequest(
         id=123,
-        user_id=45,
         created_by=45,
         note="Xin đi trễ có việc",
         payload=LatePayload(
@@ -387,7 +386,7 @@ def test_permission_request_properties_pattern_matching():
     # 1. Postpone
     req_postpone = PermissionRequest(
         id=1,
-        user_id=10,
+        created_by=10,
         note="Xin hoãn bài tập",
         payload=PostponePayload(homework_id=99, start_time=now),
     )
@@ -400,7 +399,7 @@ def test_permission_request_properties_pattern_matching():
     # 2. Change meeting
     req_change = PermissionRequest(
         id=2,
-        user_id=10,
+        created_by=10,
         note="Xin đổi ca",
         payload=ChangeMeetingPayload(
             meeting_id=20,
@@ -417,7 +416,7 @@ def test_permission_request_properties_pattern_matching():
     # 3. Absence
     req_absence = PermissionRequest(
         id=3,
-        user_id=10,
+        created_by=10,
         note="Xin vắng",
         payload=AbsencePayload(meeting_id=30),
     )
@@ -429,7 +428,7 @@ def test_permission_request_properties_pattern_matching():
     # 4. Other
     req_other = PermissionRequest(
         id=4,
-        user_id=10,
+        created_by=10,
         note="Xin phép việc riêng",
         payload=OtherPayload(),
     )
@@ -448,7 +447,7 @@ async def test_update_permission_request_use_case_success_and_guardrails():
 
     existing_req = PermissionRequest(
         id=10,
-        user_id=5,
+        created_by=5,
         note="Lý do ban đầu",
         payload=AbsencePayload(meeting_id=1),
     )

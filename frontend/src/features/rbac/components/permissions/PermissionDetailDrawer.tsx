@@ -125,7 +125,10 @@ export const PermissionDetailDrawer: React.FC<PermissionDetailDrawerProps> = ({
                                             <Space><FileTextOutlined /> {item.homework.title}</Space>
                                         </Title>
                                         <Text type="secondary" className="text-xs">
-                                            Deadline: {dayjs(item.homework.deadline).format('DD/MM/YYYY HH:mm')}
+                                            Deadline:{' '}
+                                            {item.homework.deadline && dayjs(item.homework.deadline).isValid()
+                                                ? dayjs(item.homework.deadline).format('DD/MM/YYYY HH:mm')
+                                                : 'Chưa thiết lập'}
                                         </Text>
                                     </Card>
                                 )}

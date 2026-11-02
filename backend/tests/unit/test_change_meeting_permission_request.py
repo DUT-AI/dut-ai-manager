@@ -102,7 +102,7 @@ async def test_change_meeting_success_from_a_to_b():
 
     # 1. Kiểm tra PermissionRequest trả về
     assert result.category == RequestCategory.CHANGE_MEETING
-    assert result.user_id == 10
+    assert result.created_by == 10
     assert result.meeting_id == 102
     assert result.old_meeting_id == 101
 

@@ -10,6 +10,7 @@ import pytest
 from app.shared.infrastructure.notification.channel import (
     ChannelDeliveryResult,
     ChannelType,
+    DispatchResult,
 )
 from app.shared.infrastructure.notification.dispatcher import (
     UnifiedNotificationDispatcher,
@@ -121,8 +122,10 @@ async def test_dispatch_saves_in_app_notification_first(
 
     res = await dispatcher.dispatch(payload)
 
-    assert res["in_app"] is True
-    assert res["queued"] is True
+    assert isinstance(res, DispatchResult)
+    assert res.success is True
+    assert res.in_app.success is True
+    assert res.queued is True
     mock_in_app_channel.send.assert_awaited_once()
 
 
@@ -203,7 +206,10 @@ async def test_dispatch_user_not_found(dispatcher, mock_user_repo, mock_in_app_c
     )
 
     res = await dispatcher.dispatch(payload)
-    assert res == {"in_app": False, "queued": False}
+    assert isinstance(res, DispatchResult)
+    assert res.success is False
+    assert res.queued is False
+    assert res.in_app.status == "USER_NOT_FOUND"
     mock_in_app_channel.send.assert_not_awaited()
 
 

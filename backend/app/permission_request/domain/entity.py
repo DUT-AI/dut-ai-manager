@@ -20,7 +20,6 @@ class PermissionRequest[TPayload: BasePermissionPayload](BaseEntity):
               đảm bảo 100% Type-Safe và không dùng Any hay getattr.
     """
 
-    user_id: int | None
     note: str
     payload: TPayload
 

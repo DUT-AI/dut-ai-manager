@@ -31,7 +31,7 @@ def test_permission_request_validate_late_success():
     strategy = LateStrategy(permission_repo=permission_repo, meeting_repo=meeting_repo)
 
     req = PermissionRequest(
-        user_id=1,
+        created_by=1,
         note="Kẹt xe đến trễ 30 phút",
         payload=LatePayload(
             meeting_id=10,
@@ -57,7 +57,7 @@ def test_permission_request_validate_late_meeting_ended():
     strategy = LateStrategy(permission_repo=permission_repo, meeting_repo=meeting_repo)
 
     req = PermissionRequest(
-        user_id=1,
+        created_by=1,
         note="Đi trễ",
         payload=LatePayload(
             meeting_id=10,
@@ -86,7 +86,7 @@ def test_permission_request_validate_late_before_meeting_start():
     strategy = LateStrategy(permission_repo=permission_repo, meeting_repo=meeting_repo)
 
     req = PermissionRequest(
-        user_id=1,
+        created_by=1,
         note="Đi trễ",
         payload=LatePayload(
             meeting_id=10,
@@ -113,7 +113,7 @@ def test_permission_request_validate_late_after_meeting_end():
     strategy = LateStrategy(permission_repo=permission_repo, meeting_repo=meeting_repo)
 
     req = PermissionRequest(
-        user_id=1,
+        created_by=1,
         note="Đi trễ",
         payload=LatePayload(
             meeting_id=10,

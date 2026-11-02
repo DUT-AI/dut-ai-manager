@@ -136,25 +136,10 @@ class ReminderDispatcher:
         )
 
         try:
-            results = await self.unified_dispatcher.dispatch(payload)
+            result = await self.unified_dispatcher.dispatch(payload)
+            if result.success:
+                return ReminderStatus.SENT
+            return ReminderStatus.FAILED
         except Exception as e:
             logger.error(f"UnifiedNotificationDispatcher error for user {user_id}: {e}")
             return ReminderStatus.FAILED
-
-        # Xác định trạng thái báo cáo dựa trên kết quả Discord (kênh DM chính)
-        discord_res = results.get("discord")
-        if discord_res:
-            if discord_res.success:
-                return ReminderStatus.SENT
-            if discord_res.status == "NO_DISCORD_ID":
-                return ReminderStatus.NO_DISCORD_ID
-            if discord_res.status == "DM_BLOCKED":
-                return ReminderStatus.DM_BLOCKED
-            return ReminderStatus.FAILED
-
-        # Fallback: Nếu không gửi discord (ví dụ không cấu hình discord channel), kiểm tra in_app
-        in_app_res = results.get("in_app")
-        if in_app_res and in_app_res.success:
-            return ReminderStatus.SENT
-
-        return ReminderStatus.FAILED

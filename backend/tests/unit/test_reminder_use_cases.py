@@ -46,6 +46,7 @@ from app.reminder.domain.entity import (
 from app.shared.infrastructure.notification.channel import (
     ChannelDeliveryResult,
     ChannelType,
+    DispatchResult,
 )
 
 
@@ -176,11 +177,14 @@ async def test_scan_and_send_reminders_homework_dry_run():
     )
     mock_unified_dispatcher = MagicMock()
     mock_unified_dispatcher.dispatch = AsyncMock(
-        return_value={
-            "discord": ChannelDeliveryResult(
-                channel=ChannelType.DISCORD, success=True, status="SENT"
-            )
-        }
+        return_value=DispatchResult(
+            success=True,
+            user_id=1,
+            in_app=ChannelDeliveryResult(
+                channel=ChannelType.IN_APP, success=True, status="SAVED"
+            ),
+            queued=True,
+        )
     )
     dispatcher = ReminderDispatcher(
         notification_repo=notif_repo,
@@ -236,11 +240,14 @@ async def test_reminder_dispatcher_dispatch_success():
     user_repo = MagicMock()
     mock_unified_dispatcher = MagicMock()
     mock_unified_dispatcher.dispatch = AsyncMock(
-        return_value={
-            "discord": ChannelDeliveryResult(
-                channel=ChannelType.DISCORD, success=True, status="SENT"
-            )
-        }
+        return_value=DispatchResult(
+            success=True,
+            user_id=1,
+            in_app=ChannelDeliveryResult(
+                channel=ChannelType.IN_APP, success=True, status="SAVED"
+            ),
+            queued=True,
+        )
     )
 
     mock_user = MagicMock()
@@ -529,3 +536,52 @@ def test_homework_scanner_fully_completed_skips():
 
     candidates = scanner.scan_pending_tasks(now=now)
     assert len(candidates) == 0
+
+
+@pytest.mark.asyncio
+async def test_reminder_dispatcher_dispatch_failure():
+    notif_repo = MagicMock()
+    user_repo = MagicMock()
+    mock_unified_dispatcher = MagicMock()
+    mock_unified_dispatcher.dispatch = AsyncMock(
+        return_value=DispatchResult(
+            success=False,
+            user_id=10,
+            in_app=ChannelDeliveryResult(
+                channel=ChannelType.IN_APP,
+                success=False,
+                status="FAILED",
+                error_message="DB error",
+            ),
+            queued=False,
+            error_message="DB error",
+        )
+    )
+
+    mock_user = MagicMock()
+    mock_user.id = 10
+    mock_user.discord_id = None
+    user_repo.get_by_id.return_value = mock_user
+
+    dispatcher = ReminderDispatcher(
+        notification_repo=notif_repo,
+        user_repo=user_repo,
+        unified_dispatcher=mock_unified_dispatcher,
+    )
+
+    now = datetime(2026, 10, 21, 20, 0, 0)
+    deadline = datetime(2026, 10, 21, 23, 59, 59)
+
+    status = await dispatcher.dispatch(
+        task_type=TaskType.HOMEWORK,
+        task_id=101,
+        task_title="Test Bài Tập",
+        user_id=10,
+        deadline=deadline,
+        stage=ReminderStage.OFFSET_4H,
+        action_url="/dashboard/my-homeworks",
+        now=now,
+    )
+
+    assert status == ReminderStatus.FAILED
+

@@ -6,6 +6,7 @@ Provides Unified Notification Dispatcher and Multi-Channel Adapters.
 from app.shared.infrastructure.notification.channel import (
     ChannelDeliveryResult,
     ChannelType,
+    DispatchResult,
     NotificationChannel,
 )
 from app.shared.infrastructure.notification.discord_channel import (
@@ -25,6 +26,7 @@ from app.shared.infrastructure.notification.zalo_channel import ZaloNotification
 __all__ = [
     "ChannelDeliveryResult",
     "ChannelType",
+    "DispatchResult",
     "NotificationChannel",
     "InAppNotificationChannel",
     "DiscordNotificationChannel",

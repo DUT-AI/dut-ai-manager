@@ -11,6 +11,8 @@ from loguru import logger
 
 from app.shared.infrastructure.notification.channel import (
     ChannelDeliveryResult,
+    ChannelType,
+    DispatchResult,
     NotificationChannel,
 )
 from app.shared.infrastructure.notification.discord_channel import (
@@ -55,7 +57,7 @@ class UnifiedNotificationDispatcher:
             self.web_push_channel,
         ]
 
-    async def dispatch(self, payload: NotificationPayload) -> dict[str, Any]:
+    async def dispatch(self, payload: NotificationPayload) -> DispatchResult:
         """
         Phát thông báo chuẩn: Lưu In-App DB ngay lập tức, sau đó chạy ngầm
         phát tán song song đến các kênh ngoại vi (Discord, Zalo, Web Push).
@@ -65,18 +67,33 @@ class UnifiedNotificationDispatcher:
             logger.warning(
                 f"UnifiedNotificationDispatcher: User {payload.user_id} not found, skip dispatch"
             )
-            return {"in_app": False, "queued": False}
+            return DispatchResult(
+                success=False,
+                user_id=payload.user_id,
+                in_app=ChannelDeliveryResult(
+                    channel=ChannelType.IN_APP,
+                    success=False,
+                    status="USER_NOT_FOUND",
+                    error_message=f"User {payload.user_id} not found",
+                ),
+                queued=False,
+                error_message=f"User {payload.user_id} not found",
+            )
 
         # 1. Luôn lưu In-App (DB) trước tiên để đảm bảo tính toàn vẹn dữ liệu
         in_app_res = await self.in_app_channel.send(user, payload)
 
         # 2. Phân phối bất đồng bộ ra bên ngoài để không chặn tiến trình gọi
-        asyncio.create_task(self._dispatch_external_channels(user, payload))
+        if in_app_res.success:
+            asyncio.create_task(self._dispatch_external_channels(user, payload))
 
-        return {
-            "in_app": in_app_res.success,
-            "queued": True,
-        }
+        return DispatchResult(
+            success=in_app_res.success,
+            user_id=payload.user_id,
+            in_app=in_app_res,
+            queued=in_app_res.success,
+            error_message=in_app_res.error_message,
+        )
 
     async def dispatch_now(
         self, payload: NotificationPayload
@@ -103,6 +120,7 @@ class UnifiedNotificationDispatcher:
 
         return results
 
+    
     async def _dispatch_external_channels(
         self, user: UserEntity, payload: NotificationPayload
     ) -> dict[str, ChannelDeliveryResult]:

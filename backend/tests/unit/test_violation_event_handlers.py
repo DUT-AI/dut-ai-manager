@@ -60,7 +60,7 @@ async def test_handle_meeting_absence_with_permission_skips_violation():
 
     excused_req = PermissionRequest(
         id=1,
-        user_id=102,
+        created_by=102,
         note="Bận việc gia đình",
         payload=AbsencePayload(meeting_id=1),
     )
@@ -139,7 +139,7 @@ async def test_handle_meeting_late_with_valid_permission_skips_violation():
 
     late_req = PermissionRequest(
         id=2,
-        user_id=104,
+        created_by=104,
         note="Kẹt xe",
         payload=LatePayload(
             meeting_id=1,

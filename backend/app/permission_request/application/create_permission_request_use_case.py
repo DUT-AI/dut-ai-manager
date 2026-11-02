@@ -138,7 +138,7 @@ class CreatePermissionRequestUseCase:
         )
 
         request = PermissionRequest(
-            user_id=current_user_id,
+            created_by=current_user_id,
             note=note,
             payload=payload,
         )
@@ -159,7 +159,7 @@ class CreatePermissionRequestUseCase:
                 DomainEvent,
                 PermissionRequestCreated(
                     request_id=cast(int, saved.id),
-                    user_id=cast(int, saved.user_id),
+                    user_id=cast(int, saved.created_by),
                     category=saved.category,
                     note=saved.note,
                     start_time=saved.start_time,

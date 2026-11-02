@@ -104,7 +104,6 @@ class PermissionRequest(SQLAlchemyTimestampMixin, Base):
 
         return PermissionRequestEntity(
             id=self.id,
-            user_id=self.created_by,
             created_by=self.created_by,
             updated_by=self.updated_by,
             note=self.note,
@@ -118,15 +117,12 @@ class PermissionRequest(SQLAlchemyTimestampMixin, Base):
     @classmethod
     def from_entity(cls, entity: PermissionRequestEntity) -> "PermissionRequest":
         """Convert PermissionRequest domain entity to ORM model"""
-        creator_id = (
-            entity.created_by if entity.created_by is not None else entity.user_id
-        )
         return cls(
             id=entity.id,
             category=entity.category,
             note=entity.note,
             payload=entity.payload.model_dump(mode="json"),
-            created_by=creator_id,
+            created_by=entity.created_by,
             updated_by=entity.updated_by,
             created_at=entity.created_at,
             updated_at=entity.updated_at,

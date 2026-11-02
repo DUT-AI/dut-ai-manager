@@ -1,6 +1,9 @@
 from fastapi import HTTPException
 
 from app.homework.application.dtos import HomeworkResponse
+from app.homework.infrastructure.homework_assignee_repository import (
+    HomeworkAssigneeRepository,
+)
 from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.meeting.infrastructure.repository import MeetingRepository
 from app.meeting.schemas import MeetingResponse
@@ -18,10 +21,12 @@ class GetPermissionRequestDetailUseCase:
         repo: PermissionRequestRepository,
         meeting_repo: MeetingRepository,
         homework_repo: HomeworkRepository,
+        homework_assignee_repo: HomeworkAssigneeRepository,
     ):
         self.repo = repo
         self.meeting_repo = meeting_repo
         self.homework_repo = homework_repo
+        self.homework_assignee_repo = homework_assignee_repo
 
     def execute(self, request_id: int) -> PermissionRequestDetailResponse:
         row = self.repo.get_detail_by_id(request_id)
@@ -48,7 +53,17 @@ class GetPermissionRequestDetailUseCase:
         if entity.homework_id:
             homework_entity = self.homework_repo.get_by_id(entity.homework_id)
             if homework_entity:
-                homework_dto = HomeworkResponse.model_validate(homework_entity)
+                user_id = entity.created_by
+                user_deadline = (
+                    self.homework_assignee_repo.get_user_deadline(
+                        entity.homework_id, user_id
+                    )
+                    if user_id
+                    else None
+                )
+                homework_dto = HomeworkResponse.from_domain(
+                    homework_entity, deadline=user_deadline
+                )
 
         return PermissionRequestDetailResponse(
             id=entity.id,

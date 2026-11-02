@@ -17,10 +17,10 @@ class DeletePermissionRequestUseCase:
 
     def execute(self, request_id: int) -> bool:
         entity = self.repo.get_by_id(request_id)
-        if entity and entity.user_id:
+        if entity and entity.created_by:
             try:
                 strategy = self.strategy_registry.get(entity.category)
-                strategy.on_deleted(entity, entity.user_id)
+                strategy.on_deleted(entity, entity.created_by)
             except Exception:
                 pass
         return self.repo.delete(request_id)

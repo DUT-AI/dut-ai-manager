@@ -61,7 +61,7 @@ class PostponeStrategy(PermissionStrategy[PostponePayload]):
         if not homework:
             raise HTTPException(status_code=404, detail="Không tìm thấy bài tập")
 
-        uid = request.user_id
+        uid = request.created_by
         if uid:
             current_deadline = self.homework_assignee_repo.get_user_deadline(
                 homework_id, uid
