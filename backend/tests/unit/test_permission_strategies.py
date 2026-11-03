@@ -29,6 +29,7 @@ from app.permission_request.domain.value_objects import RequestCategory
 from app.permission_request.infrastructure.model import (
     PermissionRequest as ORMPermissionRequest,
 )
+from app.permission_request.infrastructure.repository import PermissionRequestRepository
 from app.permission_request.schemas import PermissionRequestUpdate
 
 
@@ -546,3 +547,25 @@ def test_orm_model_typed_payload_parsing_and_casting():
     assert isinstance(entity_postpone.payload, PostponePayload)
     assert entity_postpone.payload.homework_id == 99
     assert entity_postpone.payload.start_time == now_dt
+
+
+def test_count_by_user_category_month():
+    """Kiểm tra đếm số đơn xin phép theo user, category và tháng/năm."""
+    mock_session = MagicMock()
+    mock_session.scalar.return_value = 2
+    repo = PermissionRequestRepository(mock_session)
+
+    count = repo.count_by_user_category_month(
+        user_id=10,
+        category=RequestCategory.ABSENCE,
+        month=11,
+        year=2026,
+    )
+    assert count == 2
+    mock_session.scalar.assert_called_once()
+    # Check that stmt was constructed
+    call_arg = mock_session.scalar.call_args[0][0]
+    compiled_str = str(call_arg)
+    assert "permission_requests.created_by" in compiled_str
+    assert "permission_requests.category" in compiled_str
+    assert "permission_requests.is_deleted" in compiled_str

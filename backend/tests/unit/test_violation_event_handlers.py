@@ -10,8 +10,11 @@ from app.meeting.domain.events import (
 )
 from app.meeting.domain.value_objects import ParticipantStatus
 from app.permission_request.domain.entity import PermissionRequest
+from app.permission_request.domain.events import PermissionRequestCreated
 from app.permission_request.domain.payloads import AbsencePayload, LatePayload
+from app.permission_request.domain.value_objects import RequestCategory
 from app.violation.application.event_handlers import AutomatedViolationHandler
+from app.violation.permission_handler import PermissionViolationHandler
 
 
 @pytest.mark.asyncio
@@ -233,4 +236,109 @@ async def test_handle_meeting_absence_skips_violation_when_participant_not_found
     await handler.handle(event)
 
     # Should NOT create violation because participant was removed / not found
+    assert create_violation_uc.execute.call_count == 0
+
+
+@pytest.mark.asyncio
+async def test_permission_violation_handler_skips_when_count_is_one():
+    create_violation_uc = MagicMock()
+    create_violation_uc.execute = AsyncMock()
+    permission_repo = MagicMock()
+    permission_repo.count_by_user_category_month.return_value = 1
+
+    handler = PermissionViolationHandler(
+        create_violation_uc=create_violation_uc,
+        permission_repo=permission_repo,
+    )
+
+    event = PermissionRequestCreated(
+        request_id=1,
+        user_id=10,
+        category=RequestCategory.ABSENCE,
+        note="Xin vắng lần 1",
+    )
+
+    await handler.handle(event)
+
+    permission_repo.count_by_user_category_month.assert_called_once()
+    assert create_violation_uc.execute.call_count == 0
+
+
+@pytest.mark.asyncio
+async def test_permission_violation_handler_creates_violation_when_exceeding_threshold():
+    create_violation_uc = MagicMock()
+    create_violation_uc.execute = AsyncMock()
+    permission_repo = MagicMock()
+    permission_repo.count_by_user_category_month.return_value = 2
+
+    handler = PermissionViolationHandler(
+        create_violation_uc=create_violation_uc,
+        permission_repo=permission_repo,
+    )
+
+    event = PermissionRequestCreated(
+        request_id=2,
+        user_id=10,
+        category=RequestCategory.ABSENCE,
+        note="Xin vắng lần 2",
+    )
+
+    await handler.handle(event)
+
+    assert create_violation_uc.execute.call_count == 1
+    call_args = create_violation_uc.execute.call_args[1]
+    assert call_args["user_ids"] == [10]
+    assert "Xin vắng sinh hoạt lần 2 trong tháng" in call_args["reason"]
+    assert call_args["is_system"] is True
+
+
+@pytest.mark.asyncio
+async def test_permission_violation_handler_creates_violation_for_postpone():
+    create_violation_uc = MagicMock()
+    create_violation_uc.execute = AsyncMock()
+    permission_repo = MagicMock()
+    permission_repo.count_by_user_category_month.return_value = 3
+
+    handler = PermissionViolationHandler(
+        create_violation_uc=create_violation_uc,
+        permission_repo=permission_repo,
+    )
+
+    event = PermissionRequestCreated(
+        request_id=3,
+        user_id=15,
+        category=RequestCategory.POSTPONE,
+        note="Xin hoãn lần 3",
+        start_time=datetime(2026, 11, 5, 12, 0, tzinfo=UTC),
+    )
+
+    await handler.handle(event)
+
+    assert create_violation_uc.execute.call_count == 1
+    call_args = create_violation_uc.execute.call_args[1]
+    assert call_args["user_ids"] == [15]
+    assert "Xin tạm hoãn bài tập lần 3 trong tháng 11/2026" in call_args["reason"]
+
+
+@pytest.mark.asyncio
+async def test_permission_violation_handler_skips_unsupported_category():
+    create_violation_uc = MagicMock()
+    create_violation_uc.execute = AsyncMock()
+    permission_repo = MagicMock()
+
+    handler = PermissionViolationHandler(
+        create_violation_uc=create_violation_uc,
+        permission_repo=permission_repo,
+    )
+
+    event = PermissionRequestCreated(
+        request_id=4,
+        user_id=10,
+        category=RequestCategory.LATE,
+        note="Đi trễ",
+    )
+
+    await handler.handle(event)
+
+    permission_repo.count_by_user_category_month.assert_not_called()
     assert create_violation_uc.execute.call_count == 0

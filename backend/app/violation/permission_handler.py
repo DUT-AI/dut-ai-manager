@@ -1,17 +1,21 @@
 from datetime import UTC, datetime
-from zoneinfo import ZoneInfo
 
 from loguru import logger
 
 from app.permission_request.domain.events import PermissionRequestCreated
 from app.permission_request.domain.value_objects import RequestCategory
+from app.permission_request.infrastructure.repository import PermissionRequestRepository
 from app.violation.application import CreateViolationUseCase
 
 
 class PermissionViolationHandler:
     """Lắng nghe yêu cầu xin phép để tự động tạo vi phạm nếu vượt quá giới hạn"""
 
-    def __init__(self, create_violation_uc: CreateViolationUseCase, permission_repo):
+    def __init__(
+        self,
+        create_violation_uc: CreateViolationUseCase,
+        permission_repo: PermissionRequestRepository,
+    ):
         self.create_violation_uc = create_violation_uc
         self.permission_repo = permission_repo
 
@@ -20,15 +24,9 @@ class PermissionViolationHandler:
         if event.category not in [RequestCategory.ABSENCE, RequestCategory.POSTPONE]:
             return
 
-        raw_target = event.start_time or datetime.now(UTC)
-        vn_tz = ZoneInfo("Asia/Ho_Chi_Minh")
-        target_vn = (
-            raw_target.astimezone(vn_tz)
-            if raw_target.tzinfo
-            else raw_target.replace(tzinfo=vn_tz)
-        )
-        month = target_vn.month
-        year = target_vn.year
+        target_time = event.start_time or datetime.now(UTC)
+        month = target_time.month
+        year = target_time.year
 
         # Đếm số lượng yêu cầu TRƯỚC ĐÓ trong tháng (không tính yêu cầu vừa tạo - id đã có)
         # Tuy nhiên trong logic cũ, nó đếm tất cả bao gồm cả cái vừa tạo.

@@ -120,6 +120,24 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         rows = self.session.scalars(stmt).unique().all()
         return [r.to_entity() for r in rows]
 
+    def count_by_user_category_month(
+        self,
+        user_id: int,
+        category: RequestCategory | str,
+        month: int,
+        year: int,
+    ) -> int:
+        """Đếm số lượng đơn xin phép theo user, category và tháng/năm."""
+        cat_value = category.value if hasattr(category, "value") else str(category)
+        stmt = select(func.count(ORMModel.id)).where(
+            ORMModel.created_by == user_id,
+            ORMModel.category == cat_value,
+            extract("month", ORMModel.created_at) == month,
+            extract("year", ORMModel.created_at) == year,
+            ORMModel.is_deleted.is_(False),
+        )
+        return self.session.scalar(stmt) or 0
+
     def get_detail_by_id(self, request_id: int) -> ORMModel | None:
         """Lấy chi tiết đơn xin phép kèm theo liên kết User creator/updater."""
         stmt = (
