@@ -32,6 +32,14 @@ class Settings(BaseSettings):
     FRONTEND_HOST: str = "http://localhost:3000"
     BACKEND_PUBLIC_URL: str = "http://localhost:8000"
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
+    COOKIE_SECURE: bool | None = None
+
+    @property
+    def is_cookie_secure(self) -> bool:
+        """Determines if auth cookies should be sent with the Secure flag (HTTPS)."""
+        if self.COOKIE_SECURE is not None:
+            return self.COOKIE_SECURE
+        return self.ENVIRONMENT == "production"
 
     @property
     def FRONTEND_URL(self) -> str:

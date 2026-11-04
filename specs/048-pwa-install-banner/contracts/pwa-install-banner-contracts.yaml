@@ -1,0 +1,44 @@
+# UI & Component Contract Specification
+# Feature: 048-pwa-install-banner
+
+openapi: 3.1.0
+info:
+  title: PWA Mobile Install Banner Interface Contract
+  version: 1.0.0
+  description: Contract for client-side device detection and PWA top banner interaction.
+
+components:
+  schemas:
+    PwaInstallBannerComponent:
+      type: object
+      description: Top banner component rendering on mobile web when app is not installed.
+      properties:
+        placement:
+          type: string
+          enum: [top-stack]
+          default: top-stack
+        visibilityConditions:
+          type: object
+          properties:
+            isMobile:
+              type: boolean
+              description: Must be true (phone or tablet)
+            isInstalled:
+              type: boolean
+              description: Must be false (not in standalone display-mode)
+        actions:
+          installButton:
+            type: object
+            properties:
+              label:
+                type: string
+                example: "Cài đặt ngay"
+              actionAndroid:
+                type: string
+                example: "triggers native beforeinstallprompt"
+              actionIos:
+                type: string
+                example: "opens visual Safari Add to Home Screen guide modal"
+        dismissButton:
+          type: "null"
+          description: "Explicitly forbidden - user has only install action per business decision"

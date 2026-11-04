@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authService } from '../services/auth.service';
+import { resetSessionExpiredState } from '../../../services/axiosInstance';
 import type { UserResponse } from '../../users/types/user.types';
 
 interface AuthContextType {
@@ -40,6 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, []);
 
     const login = async () => {
+        resetSessionExpiredState();
         await fetchUser();
     };
 
@@ -50,6 +52,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.error('Logout error:', error);
         } finally {
             setUser(null);
+            resetSessionExpiredState();
         }
     };
 

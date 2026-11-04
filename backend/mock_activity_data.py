@@ -58,8 +58,8 @@ def seed_mock_data():
         ).all()
 
         # Date range: 2026-01-01 to 2026-06-16
-        start_date = datetime.datetime(2026, 1, 1, tzinfo=datetime.timezone.utc)
-        end_date = datetime.datetime(2026, 6, 16, tzinfo=datetime.timezone.utc)
+        start_date = datetime.datetime(2026, 1, 1, tzinfo=datetime.UTC)
+        end_date = datetime.datetime(2026, 6, 16, tzinfo=datetime.UTC)
 
         meetings = []
         current_date = start_date
@@ -73,7 +73,7 @@ def seed_mock_data():
                     18,
                     0,
                     0,
-                    tzinfo=datetime.timezone.utc,
+                    tzinfo=datetime.UTC,
                 )
                 m = Meeting(
                     title=f"Buổi sinh hoạt {current_date.strftime('%d/%m/%Y')}",

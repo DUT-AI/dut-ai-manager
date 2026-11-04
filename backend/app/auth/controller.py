@@ -22,7 +22,7 @@ from app.auth.application import (
 )
 from app.core.config import settings
 from app.core.deps import CurrentUser
-from app.shared.application.response import ApiResponse
+from app.shared.application.response import ApiResponse, BadRequestException
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -42,7 +42,7 @@ async def login(
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=False,
+        secure=settings.is_cookie_secure,
         samesite="lax",
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
@@ -50,7 +50,7 @@ async def login(
         key="refresh_token",
         value=rf_token,
         httponly=True,
-        secure=False,
+        secure=settings.is_cookie_secure,
         samesite="lax",
         max_age=7 * 24 * 60 * 60,
     )
@@ -77,7 +77,7 @@ async def zalo_phone_login(
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=False,
+        secure=settings.is_cookie_secure,
         samesite="lax",
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
@@ -85,7 +85,7 @@ async def zalo_phone_login(
         key="refresh_token",
         value=rf_token,
         httponly=True,
-        secure=False,
+        secure=settings.is_cookie_secure,
         samesite="lax",
         max_age=7 * 24 * 60 * 60,
     )
@@ -111,7 +111,9 @@ async def refresh_token(
         token = refresh_token_cookie
 
     if not token:
-        return ApiResponse.error(message="Refresh token is missing")
+        raise BadRequestException(
+            status_code=401, message="Refresh token is missing"
+        )
 
     access_token, new_refresh_token = uc.execute(token)
 
@@ -120,7 +122,7 @@ async def refresh_token(
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=False,
+        secure=settings.is_cookie_secure,
         samesite="lax",
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
@@ -128,7 +130,7 @@ async def refresh_token(
         key="refresh_token",
         value=new_refresh_token,
         httponly=True,
-        secure=False,
+        secure=settings.is_cookie_secure,
         samesite="lax",
         max_age=7 * 24 * 60 * 60,
     )

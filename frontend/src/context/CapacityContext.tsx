@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
+import axiosInstance from '@/services/axiosInstance';
 
 export interface CapacityStatus {
   current_count: number;
@@ -48,13 +49,8 @@ export const CapacityProvider = ({ children }: { children: ReactNode }) => {
       // return;
 
 
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
-      const response = await fetch(`${apiUrl}/meetings/capacity/forecast`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`
-        }
-      });
-      const result = await response.json();
+      const response = await axiosInstance.get('/meetings/capacity/forecast');
+      const result = response.data;
       if (result.is_success || result.success) {
         setCapacity(result.data);
       }

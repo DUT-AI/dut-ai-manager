@@ -18,7 +18,7 @@ class RefreshTokenUseCase:
         payload = decode_refresh_token(refresh_token_str)
         if not payload:
             raise BadRequestException(
-                status_code=400, message="Invalid or expired refresh token"
+                status_code=401, message="Invalid or expired refresh token"
             )
 
         # Sử dụng get_one để load role/permissions
@@ -35,7 +35,9 @@ class RefreshTokenUseCase:
             ],
         )
         user = self.user_repo.get_one(user_qs)
-        if not user:
-            raise BadRequestException(status_code=400, message="User not found")
+        if not user or not user.is_active:
+            raise BadRequestException(
+                status_code=401, message="User not found or inactive"
+            )
 
         return TokenService.create_tokens(user)

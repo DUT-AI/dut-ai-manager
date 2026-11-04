@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Tag, Tooltip } from 'antd';
 import { TrophyOutlined, StarOutlined, ExclamationCircleOutlined, StopOutlined } from '@ant-design/icons';
+import axiosInstance from '@/services/axiosInstance';
 
 interface UserTitleBadgeProps {
   userId: number;
@@ -36,9 +37,9 @@ export const UserTitleBadge = ({ userId, showIcon = true }: UserTitleBadgeProps)
   useEffect(() => {
     const fetchTitle = async () => {
       try {
-        const response = await fetch(`/api/v1/reports/users/${userId}/current-title`);
-        const result = await response.json();
-        if (result.success) {
+        const response = await axiosInstance.get(`/reports/users/${userId}/current-title`);
+        const result = response.data;
+        if (result.success || result.is_success) {
           setTitle(result.data);
         }
       } catch (error) {

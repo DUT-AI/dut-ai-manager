@@ -97,3 +97,6 @@ safety:
 
 test:
 	PYTHONPATH=. uv run pytest tests
+
+ty:
+	cd backend && uv run ty check app

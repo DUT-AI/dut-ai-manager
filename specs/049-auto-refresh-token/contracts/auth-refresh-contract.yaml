@@ -1,0 +1,95 @@
+openapi: 3.1.0
+info:
+  title: DUT AI Manager - Auth Refresh API Contract
+  version: 1.0.0
+  description: API contract for silent token refresh and session renewal.
+
+paths:
+  /api/v1/auth/refresh:
+    post:
+      summary: Refresh access and refresh tokens
+      description: |
+        Refreshes the caller's authentication tokens. The refresh token can be supplied
+        either via the HttpOnly cookie `refresh_token` or inside the request JSON body.
+        Upon success, new access and refresh tokens are issued as HttpOnly cookies and returned in the payload.
+      operationId: refreshToken
+      tags:
+        - auth
+      parameters:
+        - name: refresh_token
+          in: cookie
+          required: false
+          schema:
+            type: string
+          description: HttpOnly refresh token cookie
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh_token:
+                  type: string
+                  description: Optional refresh token passed in body if not using cookies
+      responses:
+        '200':
+          description: Tokens refreshed successfully
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: access_token=...; HttpOnly; Path=/; SameSite=Lax
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - is_success
+                  - status_code
+                  - data
+                  - message
+                properties:
+                  is_success:
+                    type: boolean
+                    example: true
+                  status_code:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    required:
+                      - access_token
+                      - refresh_token
+                      - token_type
+                    properties:
+                      access_token:
+                        type: string
+                      refresh_token:
+                        type: string
+                      token_type:
+                        type: string
+                        example: bearer
+                  message:
+                    type: string
+                    example: Success
+        '401':
+          description: Refresh token is missing, expired, or invalid
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - is_success
+                  - status_code
+                  - message
+                properties:
+                  is_success:
+                    type: boolean
+                    example: false
+                  status_code:
+                    type: integer
+                    example: 401
+                  message:
+                    type: string
+                    example: "Refresh token is missing or expired"

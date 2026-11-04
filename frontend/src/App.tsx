@@ -9,7 +9,7 @@ import { AnimatePresence } from 'motion/react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 
 import { useEffect } from 'react';
-import { PwaInstallPrompt, PushBanner } from '@/features/pwa/components';
+import { PwaInstallBanner, PushBanner } from '@/features/pwa/components';
 
 const AppContent = () => {
   const { isAuthenticated, loading } = useAuth();
@@ -59,8 +59,10 @@ const AppContent = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {isAuthenticated && <PushBanner />}
-      <PwaInstallPrompt />
+      <div className="w-full flex flex-col z-30">
+        <PwaInstallBanner />
+        {isAuthenticated && <PushBanner />}
+      </div>
       <div className="flex-1">
         <AnimatePresence mode="wait">
           <Routes location={location} key={routeKey}>
