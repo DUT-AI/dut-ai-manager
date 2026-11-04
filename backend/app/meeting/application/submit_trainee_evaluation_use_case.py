@@ -48,6 +48,10 @@ class SubmitTraineeEvaluationUseCase:
                 "Buổi học này không có Trainer phụ trách để đánh giá"
             )
 
+        # Chặn hành vi tự đánh giá bản thân
+        if target_user_id is not None and reviewer_id == target_user_id:
+            raise BadRequestException("Không thể tự đánh giá chính mình")
+
         if target_user_id is not None:
             if not meeting.is_trainer(target_user_id):
                 raise BadRequestException(
@@ -60,6 +64,9 @@ class SubmitTraineeEvaluationUseCase:
             raise BadRequestException(
                 "Buổi học có nhiều Trainer phụ trách, vui lòng chỉ định Trainer cần đánh giá"
             )
+
+        if reviewer_id == resolved_target_id:
+            raise BadRequestException("Không thể tự đánh giá chính mình")
 
         # 2. Kiểm tra Trainee (người đánh giá) có tham gia không
         participant = next(

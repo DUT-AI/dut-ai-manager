@@ -20,10 +20,13 @@ export const EvaluationOverviewCards: React.FC<Props> = ({
   trainerAvgScore,
   traineeAvgScore,
 }) => {
+  const hasTrainerIndividualEvals = trainerCount > 0;
+  const colSpan = hasTrainerIndividualEvals ? 8 : 12;
+
   return (
     <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
       {/* 1. Tổng điểm */}
-      <Col xs={24} md={8}>
+      <Col xs={24} sm={colSpan} md={colSpan}>
         <Card style={{ height: '100%', backgroundColor: '#fafafa' }} size="small">
           <Text type="secondary" style={{ fontSize: 13 }}>
             Điểm Đánh Giá Chung
@@ -50,37 +53,39 @@ export const EvaluationOverviewCards: React.FC<Props> = ({
         </Card>
       </Col>
 
-      {/* 2. Trainer đánh giá Trainee */}
-      <Col xs={24} sm={12} md={8}>
-        <Card
-          style={{ height: '100%', borderColor: '#ffd591', backgroundColor: '#fffbe6' }}
-          size="small"
-        >
-          <div className="flex justify-between items-center">
-            <Text strong style={{ color: '#d46b08' }}>
-              <ReadOutlined style={{ marginRight: 6 }} /> Trainer đánh giá Trainee
-            </Text>
-            <Tag color="gold">{trainerCount} phiếu</Tag>
-          </div>
-          <div className="flex items-baseline gap-1.5 mt-2">
-            <Title level={3} style={{ margin: 0, color: '#d46b08' }}>
-              {trainerCount > 0 ? trainerAvgScore.toFixed(1) : '--'}
-            </Title>
-            <Text type="secondary" style={{ fontSize: 13 }}>
-              / 5.0
-            </Text>
-          </div>
-          <Rate
-            allowHalf
-            disabled
-            value={trainerAvgScore}
-            style={{ fontSize: 14, color: '#fa8c16', marginTop: 4 }}
-          />
-        </Card>
-      </Col>
+      {/* 2. Trainer đánh giá Trainee (Chỉ hiển thị nếu có dữ liệu lịch sử) */}
+      {hasTrainerIndividualEvals && (
+        <Col xs={24} sm={12} md={8}>
+          <Card
+            style={{ height: '100%', borderColor: '#ffd591', backgroundColor: '#fffbe6' }}
+            size="small"
+          >
+            <div className="flex justify-between items-center">
+              <Text strong style={{ color: '#d46b08' }}>
+                <ReadOutlined style={{ marginRight: 6 }} /> Trainer đánh giá Trainee
+              </Text>
+              <Tag color="gold">{trainerCount} phiếu</Tag>
+            </div>
+            <div className="flex items-baseline gap-1.5 mt-2">
+              <Title level={3} style={{ margin: 0, color: '#d46b08' }}>
+                {trainerAvgScore.toFixed(1)}
+              </Title>
+              <Text type="secondary" style={{ fontSize: 13 }}>
+                / 5.0
+              </Text>
+            </div>
+            <Rate
+              allowHalf
+              disabled
+              value={trainerAvgScore}
+              style={{ fontSize: 14, color: '#fa8c16', marginTop: 4 }}
+            />
+          </Card>
+        </Col>
+      )}
 
       {/* 3. Trainee đánh giá Trainer */}
-      <Col xs={24} sm={12} md={8}>
+      <Col xs={24} sm={colSpan} md={colSpan}>
         <Card
           style={{ height: '100%', borderColor: '#91d5ff', backgroundColor: '#e6f7ff' }}
           size="small"

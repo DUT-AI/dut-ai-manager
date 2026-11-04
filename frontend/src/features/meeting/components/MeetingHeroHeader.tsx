@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Typography, Tag, Button, Popconfirm, message, Space } from 'antd';
 import {
@@ -7,8 +7,6 @@ import {
   SafetyCertificateOutlined,
   EditOutlined,
   DeleteOutlined,
-  StarOutlined,
-  TrophyOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -16,14 +14,9 @@ import {
   useMeetingDetail,
   useDeleteMeeting,
   useUpdateMeeting,
-  useMeetingEvaluationSummary,
-  useMeetingOverallEvaluation,
 } from '../hooks/useMeetings';
-import { useAuth } from '@/features/auth/context/AuthContext';
+import { useMeetingPermissions } from '../hooks/useMeetingPermissions';
 import { MeetingModal } from './MeetingModal';
-import { TraineeEvaluationModal } from './TraineeEvaluationModal';
-import { MyEvaluationResultModal } from './MyEvaluationResultModal';
-import { MeetingOverallEvaluationModal } from './MeetingOverallEvaluationModal';
 
 const { Title, Paragraph } = Typography;
 
@@ -31,55 +24,27 @@ interface Props {
   meetingId: number;
 }
 
-export const MeetingHeroHeader: React.FC<Props> = ({ meetingId }) => {
+export const MeetingHeroHeader: React.FC<Props> = ({
+  meetingId,
+}) => {
   const navigate = useNavigate();
   const { data: meeting, refetch } = useMeetingDetail(meetingId);
-  const { user } = useAuth();
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isTraineeEvalOpen, setIsTraineeEvalOpen] = useState(false);
-  const [isMyResultOpen, setIsMyResultOpen] = useState(false);
-  const [isOverallEvalOpen, setIsOverallEvalOpen] = useState(false);
   const [isEnabling, setIsEnabling] = useState(false);
 
   const deleteMeetingMutation = useDeleteMeeting();
   const updateMeetingMutation = useUpdateMeeting();
-  const { data: evalSummary, refetch: refetchEvalSummary } = useMeetingEvaluationSummary(
-    meetingId,
-    Boolean(meeting?.enable_evaluation)
-  );
-  const { data: overallEval, refetch: refetchOverallEval } = useMeetingOverallEvaluation(
-    meetingId,
-    Boolean(meeting?.enable_evaluation)
-  );
 
-  const myEvalForTrainer = useMemo(() => {
-    if (!evalSummary) return null;
-    if (evalSummary.my_evaluation) return evalSummary.my_evaluation;
-    if (user?.id && evalSummary.evaluations) {
-      return (
-        evalSummary.evaluations.find(
-          (e) => e.evaluation_type === 'TRAINEE_TO_TRAINER' && e.reviewer_id === user.id
-        ) || null
-      );
-    }
-    return null;
-  }, [evalSummary, user?.id]);
+  const { isTrainer } = useMeetingPermissions(meeting);
 
   if (!meeting) return null;
 
-  const currentUserId = user?.id;
-  const isTrainer = Boolean(
-    (meeting.created_by != null && currentUserId != null && Number(currentUserId) === Number(meeting.created_by)) ||
-    (meeting.trainers?.some((t) => Number(t.id || t.user_id) === Number(currentUserId))) ||
-    (user?.role_names?.some((r) => ['admin', 'leader', 'superadmin', 'manager'].includes(r.toLowerCase())) ?? false)
-  );
-
-  const myParticipantRecord = (meeting.trainees || []).find((p) => p.user_id === currentUserId);
-  const isTrainee = !!myParticipantRecord;
-
   const isOngoing = dayjs().isAfter(dayjs(meeting.start_time)) && dayjs().isBefore(dayjs(meeting.end_time));
   const isEnded = dayjs().isAfter(dayjs(meeting.end_time));
+  const isEvalExpired = meeting.evaluation_deadline
+    ? dayjs().isAfter(dayjs(meeting.evaluation_deadline))
+    : false;
 
   const handleDeleteMeeting = async () => {
     try {
@@ -143,9 +108,21 @@ export const MeetingHeroHeader: React.FC<Props> = ({ meetingId }) => {
                 </Tag>
               )}
               {meeting.enable_evaluation ? (
-                <Tag color="warning" className="!bg-amber-500/20 !text-amber-200 border-none">
-                  Đánh giá 2 chiều (Hạn 24h)
-                </Tag>
+                meeting.evaluation_deadline ? (
+                  isEvalExpired ? (
+                    <Tag color="error" className="!bg-rose-500/20 !text-rose-200 border-none">
+                      Đã hết hạn đánh giá ({dayjs(meeting.evaluation_deadline).format('HH:mm DD/MM')})
+                    </Tag>
+                  ) : (
+                    <Tag color="warning" className="!bg-amber-500/20 !text-amber-200 border-none">
+                      Hạn chót đánh giá: {dayjs(meeting.evaluation_deadline).format('HH:mm DD/MM/YYYY')}
+                    </Tag>
+                  )
+                ) : (
+                  <Tag color="warning" className="!bg-amber-500/20 !text-amber-200 border-none">
+                    Đang mở đánh giá
+                  </Tag>
+                )
               ) : (
                 <Tag className="!bg-white/10 !text-white/70 border-none">
                   Đánh giá: Tắt
@@ -192,53 +169,9 @@ export const MeetingHeroHeader: React.FC<Props> = ({ meetingId }) => {
               </Button>
             )}
 
-            {/* Trainee Evaluation Actions */}
-            {meeting.enable_evaluation && (
-              <>
-                {isTrainee && (
-                  <Button
-                    ghost
-                    icon={<TrophyOutlined />}
-                    onClick={() => setIsMyResultOpen(true)}
-                    className="!text-yellow-200 !border-yellow-300/60 hover:!bg-yellow-500/20"
-                  >
-                    Điểm của tôi
-                  </Button>
-                )}
-                <Button
-                  type="primary"
-                  icon={<StarOutlined />}
-                  onClick={() => setIsTraineeEvalOpen(true)}
-                  className={
-                    myEvalForTrainer
-                      ? "!bg-emerald-600 hover:!bg-emerald-500 !text-white border-none font-medium shadow-sm"
-                      : "bg-amber-500 hover:!bg-amber-400 !text-white border-none font-medium shadow-sm"
-                  }
-                >
-                  {myEvalForTrainer
-                    ? (myEvalForTrainer.is_anonymous ? '✓ Đã đánh giá (Ẩn danh)' : '✓ Đã đánh giá Trainer')
-                    : 'Đánh giá Trainer'}
-                </Button>
-              </>
-            )}
-
             {/* Trainer Actions */}
             {isTrainer && (
               <Space size="small">
-                {meeting.enable_evaluation && isEnded && (
-                  <Button
-                    type="primary"
-                    icon={<StarOutlined />}
-                    onClick={() => setIsOverallEvalOpen(true)}
-                    className={
-                      overallEval
-                        ? "!bg-emerald-600 hover:!bg-emerald-500 !text-white border-none font-medium shadow-sm"
-                        : "!bg-amber-500 hover:!bg-amber-400 !text-white border-none font-medium shadow-sm"
-                    }
-                  >
-                    {overallEval ? '✓ Đã đánh giá buổi học' : 'Trainer đánh giá buổi học'}
-                  </Button>
-                )}
                 <Button ghost icon={<EditOutlined />} onClick={() => setIsEditModalOpen(true)}>
                   Chỉnh sửa
                 </Button>
@@ -264,44 +197,6 @@ export const MeetingHeroHeader: React.FC<Props> = ({ meetingId }) => {
         editingItem={meeting}
         onSubmit={handleEditSubmit}
         onCancel={() => setIsEditModalOpen(false)}
-      />
-
-      <TraineeEvaluationModal
-        open={isTraineeEvalOpen}
-        meetingId={meeting.id}
-        trainers={meeting.trainers || []}
-        trainerId={meeting.trainers?.[0]?.user_id || meeting.trainers?.[0]?.id || meeting.created_by || undefined}
-        trainerName={meeting.trainers?.[0]?.user_name}
-        trainerAvatarUrl={meeting.trainers?.[0]?.user_avatar_url}
-        existingEvaluation={myEvalForTrainer}
-        onSuccess={() => {
-          setIsTraineeEvalOpen(false);
-          refetch();
-          refetchEvalSummary();
-        }}
-        onClose={() => setIsTraineeEvalOpen(false)}
-        onCancel={() => setIsTraineeEvalOpen(false)}
-      />
-
-      <MyEvaluationResultModal
-        open={isMyResultOpen}
-        meetingId={meeting.id}
-        onClose={() => setIsMyResultOpen(false)}
-      />
-
-      <MeetingOverallEvaluationModal
-        open={isOverallEvalOpen}
-        meetingId={meeting.id}
-        meetingTitle={meeting.title}
-        existingEvaluation={overallEval}
-        onSuccess={() => {
-          setIsOverallEvalOpen(false);
-          refetch();
-          refetchOverallEval();
-          refetchEvalSummary();
-        }}
-        onClose={() => setIsOverallEvalOpen(false)}
-        onCancel={() => setIsOverallEvalOpen(false)}
       />
     </>
   );

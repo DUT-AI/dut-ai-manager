@@ -460,10 +460,10 @@ def test_get_my_evaluation_result_disabled_evaluation(admin_client, mock_current
         admin_client.delete(f"/api/v1/meetings/{meeting_id}")
 
 
-def test_submit_evaluation_before_start_returns_400(
+def test_submit_trainer_evaluation_deprecated(
     admin_client, test_meeting, mock_current_user
 ):
-    """Buổi học chưa bắt đầu không thể gửi đánh giá (400 Bad Request)."""
+    """Tính năng Trainer đánh giá từng cá nhân đã bị loại bỏ (400 Bad Request)."""
     payload = {
         "target_user_id": mock_current_user.id,
         "scores": [{"criteria_code": "ATTENDANCE_CONDUCT", "score": 5}],
@@ -474,54 +474,39 @@ def test_submit_evaluation_before_start_returns_400(
     )
     assert res.status_code == 400
     err_text = res.json().get("message") or res.json().get("detail") or ""
-    assert "chưa bắt đầu" in err_text
+    assert "loại bỏ" in err_text or "tổng thể" in err_text
 
 
-def test_submit_trainer_evaluation_success(admin_client, mock_current_user):
-    """Trainer gửi đánh giá học viên thành công sau khi buổi học bắt đầu."""
-    now = datetime.now()
-    payload_m = {
-        "title": f"Started Meeting {uuid.uuid4().hex[:6]}",
-        "start_time": (now - timedelta(hours=1)).isoformat(),
-        "end_time": (now + timedelta(hours=1)).isoformat(),
-        "enable_evaluation": True,
-        "trainer_ids": [mock_current_user.id],
-        "trainee_ids": [],
-    }
-    create_res = admin_client.post("/api/v1/meetings", json=payload_m)
-    meeting_id = create_res.json()["data"]["id"]
-
-    try:
-        payload = {
-            "target_user_id": mock_current_user.id,
-            "scores": [
-                {"criteria_code": "ATTENDANCE_CONDUCT", "score": 5},
-                {"criteria_code": "INTERACTION_CONTRIBUTION", "score": 4},
-            ],
-            "feedback_text": "Học viên tham gia tích cực",
-        }
-        res = admin_client.post(
-            f"/api/v1/meetings/{meeting_id}/evaluations/trainer",
-            json=payload,
-        )
-        assert res.status_code == 201
-        data = res.json()
-        assert data["is_success"] is True
-        assert data["data"]["average_score"] == 4.5
-    finally:
-        admin_client.delete(f"/api/v1/meetings/{meeting_id}")
+def get_or_create_secondary_user(db_session, primary_id: int) -> int:
+    result = db_session.execute(
+        text("SELECT id FROM users WHERE id != :pid AND is_deleted = false LIMIT 1"),
+        {"pid": primary_id},
+    ).fetchone()
+    if result:
+        return result[0]
+    insert_res = db_session.execute(
+        text(
+            "INSERT INTO users (name, email, status, is_deleted, created_at, updated_at) "
+            "VALUES ('Secondary User', :email, 'ACTIVE', false, NOW(), NOW()) "
+            "RETURNING id"
+        ),
+        {"email": f"sec_user_{uuid.uuid4().hex[:6]}@example.com"},
+    )
+    db_session.commit()
+    return insert_res.fetchone()[0]
 
 
-def test_submit_trainee_evaluation_success(admin_client, mock_current_user):
+def test_submit_trainee_evaluation_success(admin_client, mock_current_user, db_session):
     """Trainee gửi đánh giá buổi học và Trainer thành công sau khi bắt đầu."""
+    trainer_uid = get_or_create_secondary_user(db_session, mock_current_user.id)
     now = datetime.now()
     payload_m = {
         "title": f"Started Meeting {uuid.uuid4().hex[:6]}",
         "start_time": (now - timedelta(hours=1)).isoformat(),
         "end_time": (now + timedelta(hours=1)).isoformat(),
         "enable_evaluation": True,
-        "trainer_ids": [mock_current_user.id],
-        "trainee_ids": [],
+        "trainer_ids": [trainer_uid],
+        "trainee_ids": [mock_current_user.id],
     }
     create_res = admin_client.post("/api/v1/meetings", json=payload_m)
     meeting_id = create_res.json()["data"]["id"]
@@ -535,7 +520,7 @@ def test_submit_trainee_evaluation_success(admin_client, mock_current_user):
 
         # Bước 2: Gửi đánh giá Trainer
         payload = {
-            "target_user_id": mock_current_user.id,
+            "target_user_id": trainer_uid,
             "is_anonymous": True,
             "scores": [
                 {"criteria_code": "CONTENT_QUALITY", "score": 5},
@@ -551,6 +536,18 @@ def test_submit_trainee_evaluation_success(admin_client, mock_current_user):
         data = res.json()
         assert data["is_success"] is True
         assert data["data"]["is_anonymous"] is True
+
+        # Bước 3: Xác minh tự đánh giá bản thân bị chặn 400
+        self_eval_payload = {
+            "target_user_id": mock_current_user.id,
+            "scores": [{"criteria_code": "CONTENT_QUALITY", "score": 5}],
+        }
+        self_res = admin_client.post(
+            f"/api/v1/meetings/{meeting_id}/evaluations/trainee",
+            json=self_eval_payload,
+        )
+        assert self_res.status_code == 400
+        assert "Không thể tự đánh giá chính mình" in (self_res.json().get("message") or "")
     finally:
         admin_client.delete(f"/api/v1/meetings/{meeting_id}")
 
@@ -606,25 +603,6 @@ def test_delete_meeting_success(admin_client, mock_current_user, db_session):
         {"mid": meeting_id},
     ).fetchall()
     assert len(p_after) == 0
-
-
-def get_or_create_secondary_user(db_session, primary_id: int) -> int:
-    result = db_session.execute(
-        text("SELECT id FROM users WHERE id != :pid AND is_deleted = false LIMIT 1"),
-        {"pid": primary_id},
-    ).fetchone()
-    if result:
-        return result[0]
-    insert_res = db_session.execute(
-        text(
-            "INSERT INTO users (name, email, status, is_deleted, created_at, updated_at) "
-            "VALUES ('Secondary User', :email, 'ACTIVE', false, NOW(), NOW()) "
-            "RETURNING id"
-        ),
-        {"email": f"sec_user_{uuid.uuid4().hex[:6]}@example.com"},
-    )
-    db_session.commit()
-    return insert_res.fetchone()[0]
 
 
 def test_member_submit_overall_evaluation_returns_403(

@@ -84,32 +84,6 @@ class MeetingParticipant(BaseEntity):
         msg = "Điểm danh thành công (đi trễ)" if is_late else "Điểm danh thành công"
         return True, msg, is_late
 
-    def check_in(
-        self,
-        check_in_time: datetime,
-        image_url: str | None = None,
-        status: ParticipantStatus = ParticipantStatus.JOINED,
-    ):
-        """Thực hiện check-in cho thành viên (image_url tùy chọn, ví dụ quẹt thẻ)."""
-        if self.status == ParticipantStatus.COMPLETED:
-            return False, "Da checkout"
-
-        if self.check_in_at is None:
-            self.check_in_at = ensure_utc(check_in_time)
-        self.status = status
-        if image_url:
-            self.link_image = image_url
-        return True, "Checkin thanh cong"
-
-    def check_out(self, check_out_time: datetime):
-        """Thực hiện check-out cho thành viên."""
-        if self.status == ParticipantStatus.COMPLETED:
-            return True, "Da checkout"
-
-        self.check_out_at = check_out_time
-        self.status = ParticipantStatus.COMPLETED
-        return True, "Checkout thanh cong"
-
     def update_attendance_status(
         self,
         new_status: ParticipantStatus,

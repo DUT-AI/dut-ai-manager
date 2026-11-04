@@ -1,10 +1,11 @@
 import React from 'react';
-import { Card, Avatar, Tag, Typography, Image, List, Empty } from 'antd';
+import { Card, Avatar, Tag, Typography, Image, List, Empty, Button } from 'antd';
 import {
   UserOutlined,
   CrownOutlined,
   ClockCircleOutlined,
   CheckCircleOutlined,
+  StarFilled,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type {
@@ -12,6 +13,7 @@ import type {
   EvaluationResponse,
   MeetingResponse,
   MeetingDetailResponse,
+  MeetingOverallEvaluationResponse,
 } from '../../types/meeting.types';
 import { ParticipantRole } from '../../types/meeting.types';
 import { ParticipantStatusTag } from '../ParticipantStatusTag';
@@ -27,10 +29,10 @@ interface Props {
   currentUserId?: number;
   isTrainer: boolean;
   isEnded: boolean;
-  trainerEvalsByTraineeId: Map<number, EvaluationResponse>;
   traineeEvalsByReviewerId: Map<number, EvaluationResponse>;
   onEditStatus: (participant: ParticipantResponse) => void;
-  onEvaluate: (participant: ParticipantResponse) => void;
+  onOpenOverallEvaluation?: () => void;
+  overallEval?: MeetingOverallEvaluationResponse | null;
 }
 
 export const ParticipantMobileList: React.FC<Props> = ({
@@ -40,10 +42,10 @@ export const ParticipantMobileList: React.FC<Props> = ({
   participants,
   isTrainer,
   isEnded,
-  trainerEvalsByTraineeId,
   traineeEvalsByReviewerId,
   onEditStatus,
-  onEvaluate,
+  onOpenOverallEvaluation,
+  overallEval,
 }) => {
   // Chuẩn hóa danh sách trainers và trainees
   const actualTrainers =
@@ -54,7 +56,6 @@ export const ParticipantMobileList: React.FC<Props> = ({
     (participants || []).filter((p) => p.role !== ParticipantRole.TRAINER);
 
   const renderParticipantCard = (record: ParticipantResponse, isTrainerItem: boolean) => {
-    const trainerEval = trainerEvalsByTraineeId.get(record.user_id);
     const traineeEval = traineeEvalsByReviewerId.get(record.user_id);
 
     return (
@@ -108,24 +109,16 @@ export const ParticipantMobileList: React.FC<Props> = ({
           {meeting.enable_evaluation ? (
             <div className="flex items-center gap-2 flex-wrap">
               {!isTrainerItem && (
-                <>
-                  {trainerEval ? (
-                    <Tag color="purple" className="m-0 text-[11px] py-0 px-1.5 rounded">
-                      Trainer: ★ {trainerEval.average_score.toFixed(1)}
-                    </Tag>
-                  ) : (
-                    <Tag color="default" className="m-0 text-[11px] py-0 px-1.5 rounded text-gray-400">
-                      Chưa chấm
-                    </Tag>
-                  )}
-                </>
+                traineeEval ? (
+                  <Tag color="cyan" className="m-0 text-[11px] py-0 px-1.5 rounded flex items-center gap-1">
+                    <CheckCircleOutlined /> Đã đánh giá Trainer
+                  </Tag>
+                ) : (
+                  <Tag color="default" className="m-0 text-[11px] py-0 px-1.5 rounded text-gray-400">
+                    Chưa đánh giá Trainer
+                  </Tag>
+                )
               )}
-
-              {traineeEval ? (
-                <Tag color="cyan" className="m-0 text-[11px] py-0 px-1.5 rounded flex items-center gap-1">
-                  <CheckCircleOutlined /> Đã đánh giá
-                </Tag>
-              ) : null}
             </div>
           ) : (
             <div />
@@ -151,11 +144,7 @@ export const ParticipantMobileList: React.FC<Props> = ({
             meetingId={meeting.id}
             record={record}
             isTrainer={isTrainer}
-            isEnded={isEnded}
-            enableEvaluation={meeting.enable_evaluation}
-            existingEvaluation={trainerEval}
             onEditStatus={onEditStatus}
-            onEvaluate={onEvaluate}
           />
         </div>
       </Card>
@@ -183,11 +172,28 @@ export const ParticipantMobileList: React.FC<Props> = ({
 
       {/* 2. Nhóm Học viên */}
       <div>
-        <div className="flex items-center gap-1.5 mb-2 px-1">
-          <UserOutlined className="text-blue-500" />
-          <span className="font-semibold text-xs text-gray-700 uppercase tracking-wider">
-            Học viên ({actualTrainees.length})
-          </span>
+        <div className="flex items-center justify-between gap-2 mb-2 px-1">
+          <div className="flex items-center gap-1.5">
+            <UserOutlined className="text-blue-500" />
+            <span className="font-semibold text-xs text-gray-700 uppercase tracking-wider">
+              Học viên ({actualTrainees.length})
+            </span>
+          </div>
+          {meeting.enable_evaluation && isTrainer && onOpenOverallEvaluation && (
+            <Button
+              type="primary"
+              size="small"
+              icon={<StarFilled />}
+              onClick={onOpenOverallEvaluation}
+              className={
+                overallEval
+                  ? "!bg-emerald-600 hover:!bg-emerald-500 !text-white border-none text-xs rounded-full"
+                  : "!bg-amber-500 hover:!bg-amber-400 !text-white border-none text-xs rounded-full"
+              }
+            >
+              {overallEval ? '✓ Đã đánh giá' : 'Đánh giá buổi học'}
+            </Button>
+          )}
         </div>
         {actualTrainees.length === 0 ? (
           <Empty

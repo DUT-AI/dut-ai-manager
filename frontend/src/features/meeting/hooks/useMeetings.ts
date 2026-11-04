@@ -116,18 +116,6 @@ export const useMeetingEvaluationSummary = (meetingId: number, enabled: boolean 
   });
 };
 
-export const useMyEvaluationResult = (meetingId: number, enabled: boolean = true) => {
-  return useQuery({
-    queryKey: ['meetings', meetingId, 'evaluations', 'my-result'],
-    queryFn: async () => {
-      const response = await meetingService.getMyEvaluationResult(meetingId);
-      return response.data;
-    },
-    staleTime: 30 * 1000,
-    enabled: meetingId > 0 && enabled,
-  });
-};
-
 export const useMeetingOverallEvaluation = (meetingId: number, enabled: boolean = true) => {
   return useQuery({
     queryKey: ['meeting-overall-evaluation', meetingId],

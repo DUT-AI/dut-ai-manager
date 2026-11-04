@@ -104,16 +104,6 @@ class MeetingOverallEvaluationResponse(BaseModel):
         )
 
 
-class TrainerSubmitEvaluationRequest(BaseModel):
-    target_user_id: int = Field(..., description="ID của Trainee nhận đánh giá")
-    scores: list[EvaluationScoreItemSubmitDto] = Field(
-        ..., min_length=1, description="Danh sách điểm tiêu chí"
-    )
-    feedback_text: str | None = Field(
-        None, max_length=2000, description="Nhận xét chi tiết"
-    )
-
-
 class TraineeSubmitEvaluationRequest(BaseModel):
     target_user_id: int | None = Field(
         None,
@@ -257,5 +247,4 @@ __all__ = [
     "MeetingOverallEvaluationResponse",
     "SubmitMeetingOverallEvaluationRequest",
     "TraineeSubmitEvaluationRequest",
-    "TrainerSubmitEvaluationRequest",
 ]

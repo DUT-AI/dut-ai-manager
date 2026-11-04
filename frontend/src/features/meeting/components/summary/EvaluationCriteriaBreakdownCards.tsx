@@ -75,33 +75,38 @@ export const EvaluationCriteriaBreakdownCards: React.FC<Props> = ({
   trainerCriteria,
   traineeCriteria,
 }) => {
+  const hasTrainerCriteria = trainerCriteria.length > 0;
+  const traineeColSpan = hasTrainerCriteria ? 12 : 24;
+
   return (
     <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-      {/* 1. Trainer đánh giá Trainee */}
-      <Col xs={24} lg={12}>
-        <Card
-          title={
-            <div className="flex items-center justify-between">
-              <span>
-                <ReadOutlined style={{ color: '#fa8c16', marginRight: 8 }} />
-                Tiêu chí Trainer đánh giá Trainee
-              </span>
-              <Tag color="gold">Trainer ➜ Trainee</Tag>
-            </div>
-          }
-          size="small"
-          style={{ height: '100%' }}
-        >
-          {renderCriteriaList(
-            trainerCriteria,
-            '#fa8c16',
-            'Chưa có dữ liệu đánh giá từ Trainer'
-          )}
-        </Card>
-      </Col>
+      {/* 1. Trainer đánh giá Trainee (Chỉ hiển thị nếu có dữ liệu) */}
+      {hasTrainerCriteria && (
+        <Col xs={24} lg={12}>
+          <Card
+            title={
+              <div className="flex items-center justify-between">
+                <span>
+                  <ReadOutlined style={{ color: '#fa8c16', marginRight: 8 }} />
+                  Tiêu chí Trainer đánh giá Trainee
+                </span>
+                <Tag color="gold">Trainer ➜ Trainee</Tag>
+              </div>
+            }
+            size="small"
+            style={{ height: '100%' }}
+          >
+            {renderCriteriaList(
+              trainerCriteria,
+              '#fa8c16',
+              'Chưa có dữ liệu đánh giá từ Trainer'
+            )}
+          </Card>
+        </Col>
+      )}
 
       {/* 2. Trainee đánh giá Trainer */}
-      <Col xs={24} lg={12}>
+      <Col xs={24} lg={traineeColSpan}>
         <Card
           title={
             <div className="flex items-center justify-between">

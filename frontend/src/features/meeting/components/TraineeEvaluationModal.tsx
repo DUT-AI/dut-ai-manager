@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   Modal,
   Form,
@@ -20,23 +20,20 @@ import {
   CrownOutlined,
 } from '@ant-design/icons';
 import { meetingService } from '../services/meeting.service';
+import { useMeetingEvaluationSummary } from '../hooks/useMeetings';
+import { useAuth } from '@/features/auth/context/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
-import type { EvaluationResponse, UserRefDto } from '../types/meeting.types';
+import type { ParticipantResponse } from '../types/meeting.types';
 
 const { TextArea } = Input;
 const { Text } = Typography;
 
-interface Props {
+export interface TraineeEvaluationModalProps {
   open: boolean;
   meetingId: number;
-  trainers?: UserRefDto[];
-  trainerId?: number;
-  trainerName?: string;
-  trainerAvatarUrl?: string | null;
-  existingEvaluation?: EvaluationResponse | null;
+  trainers: ParticipantResponse[];
   onSuccess: () => void;
-  onClose?: () => void;
-  onCancel?: () => void;
+  onClose: () => void;
 }
 
 const TRAINEE_CRITERIA = [
@@ -62,30 +59,40 @@ const TRAINEE_CRITERIA = [
   },
 ];
 
-export const TraineeEvaluationModal: React.FC<Props> = ({
+export const TraineeEvaluationModal: React.FC<TraineeEvaluationModalProps> = ({
   open,
   meetingId,
   trainers = [],
-  trainerId,
-  trainerName,
-  trainerAvatarUrl,
-  existingEvaluation,
   onSuccess,
   onClose,
-  onCancel,
 }) => {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
-  const [selectedTrainerId, setSelectedTrainerId] = useState<number | undefined>(
-    trainerId || trainers[0]?.id
-  );
+  const { user } = useAuth();
   const queryClient = useQueryClient();
+
+  const { data: evalSummary } = useMeetingEvaluationSummary(meetingId, open);
+  const existingEvaluation = useMemo(() => {
+    if (!evalSummary) return null;
+    if (evalSummary.my_evaluation) return evalSummary.my_evaluation;
+    if (user?.id && evalSummary.evaluations) {
+      return (
+        evalSummary.evaluations.find(
+          (e) => e.evaluation_type === 'TRAINEE_TO_TRAINER' && e.reviewer_id === user.id
+        ) || null
+      );
+    }
+    return null;
+  }, [evalSummary, user?.id]);
+
+  const [selectedTrainerUserId, setSelectedTrainerUserId] = useState<number | undefined>(
+    trainers[0]?.user_id
+  );
 
   useEffect(() => {
     if (open) {
-      const initialId =
-        existingEvaluation?.target_user_id || trainerId || trainers[0]?.id;
-      setSelectedTrainerId(initialId);
+      const initialUserId = existingEvaluation?.target_user_id || trainers[0]?.user_id;
+      setSelectedTrainerUserId(initialUserId);
 
       if (existingEvaluation && existingEvaluation.scores?.length > 0) {
         const vals: Record<string, any> = {
@@ -100,15 +107,24 @@ export const TraineeEvaluationModal: React.FC<Props> = ({
         form.resetFields();
       }
     }
-  }, [open, existingEvaluation, trainerId, trainers]);
+  }, [open, existingEvaluation, trainers, form]);
 
-  const currentTrainer =
-    trainers.find((t) => t.id === selectedTrainerId) ||
-    (trainerId
-      ? { id: trainerId, name: trainerName || `Trainer #${trainerId}`, avatar_url: trainerAvatarUrl }
-      : null);
+  const currentTrainer = useMemo(
+    () => trainers.find((t) => t.user_id === selectedTrainerUserId) || trainers[0],
+    [trainers, selectedTrainerUserId]
+  );
 
   const handleFinish = async (values: any) => {
+    const targetUserId =
+      trainers.length > 1
+        ? selectedTrainerUserId
+        : trainers[0]?.user_id;
+
+    if (!targetUserId) {
+      message.error('Vui lòng chọn Trainer cần đánh giá');
+      return;
+    }
+
     setSubmitting(true);
     try {
       const scores = TRAINEE_CRITERIA.map((c) => ({
@@ -116,17 +132,12 @@ export const TraineeEvaluationModal: React.FC<Props> = ({
         score: values[c.code] || 5,
       }));
 
-      const payload: any = {
+      const res = await meetingService.submitTraineeEvaluation(meetingId, {
+        target_user_id: targetUserId,
         is_anonymous: values.is_anonymous ?? false,
         scores,
         feedback_text: values.feedback_text,
-      };
-
-      if (selectedTrainerId) {
-        payload.target_user_id = selectedTrainerId;
-      }
-
-      const res = await meetingService.submitTraineeEvaluation(meetingId, payload);
+      });
 
       if (res.is_success) {
         message.success(
@@ -155,11 +166,6 @@ export const TraineeEvaluationModal: React.FC<Props> = ({
     }, {} as Record<string, number>),
   };
 
-  const handleClose = () => {
-    if (onClose) onClose();
-    if (onCancel) onCancel();
-  };
-
   return (
     <Modal
       title={
@@ -173,7 +179,7 @@ export const TraineeEvaluationModal: React.FC<Props> = ({
         </Space>
       }
       open={open}
-      onCancel={handleClose}
+      onCancel={onClose}
       onOk={form.submit}
       confirmLoading={submitting}
       destroyOnClose
@@ -187,14 +193,14 @@ export const TraineeEvaluationModal: React.FC<Props> = ({
           </label>
           <Select
             className="w-full"
-            value={selectedTrainerId}
-            onChange={(val) => setSelectedTrainerId(val)}
+            value={selectedTrainerUserId}
+            onChange={(val) => setSelectedTrainerUserId(val)}
             options={trainers.map((t) => ({
-              value: t.id,
+              value: t.user_id,
               label: (
                 <div className="flex items-center gap-2">
-                  <Avatar src={t.avatar_url} icon={<UserOutlined />} size="small" />
-                  <span>{t.name}</span>
+                  <Avatar src={t.user_avatar_url} icon={<UserOutlined />} size="small" />
+                  <span>{t.user_name || `User #${t.user_id}`}</span>
                 </div>
               ),
             }))}
@@ -203,7 +209,7 @@ export const TraineeEvaluationModal: React.FC<Props> = ({
       ) : (
         <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 mb-4">
           <Avatar
-            src={currentTrainer?.avatar_url}
+            src={currentTrainer?.user_avatar_url}
             icon={<UserOutlined />}
             size={48}
             className="shadow-sm border border-amber-200"
@@ -219,7 +225,7 @@ export const TraineeEvaluationModal: React.FC<Props> = ({
               </Text>
             </div>
             <Text strong className="text-base text-gray-900 block">
-              {currentTrainer?.name || 'Chưa xác định Trainer'}
+              {currentTrainer?.user_name || 'Chưa xác định Trainer'}
             </Text>
           </div>
         </div>

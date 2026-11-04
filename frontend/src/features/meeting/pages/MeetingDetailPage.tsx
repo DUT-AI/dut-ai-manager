@@ -6,13 +6,15 @@ import {
   BarChartOutlined,
   TeamOutlined,
 } from '@ant-design/icons';
-import { useMeetingDetail } from '@/features/meeting/hooks/useMeetings';
+import { useMeetingDetail, useMeetingOverallEvaluation } from '@/features/meeting/hooks/useMeetings';
 import { useMeetingEvents } from '@/features/meeting/hooks/useMeetingEvents';
 import {
   MeetingHeroHeader,
   MeetingStatsRow,
   MeetingParticipantsTab,
   MeetingEvaluationSummaryView,
+  TraineeEvaluationModal,
+  MeetingOverallEvaluationModal,
 } from '../components';
 
 export const MeetingDetailPage: React.FC = () => {
@@ -20,8 +22,11 @@ export const MeetingDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const meetingId = Number(id);
 
-  const { data: meeting, isLoading, error } = useMeetingDetail(meetingId);
+  const { data: meeting, isLoading, error, refetch } = useMeetingDetail(meetingId);
+  const { data: overallEval, refetch: refetchOverallEval } = useMeetingOverallEvaluation(meetingId);
   const [activeTab, setActiveTab] = useState('participants');
+  const [isTraineeEvalOpen, setIsTraineeEvalOpen] = useState(false);
+  const [isOverallEvalOpen, setIsOverallEvalOpen] = useState(false);
 
   // SSE Events listener
   useMeetingEvents(meetingId, true);
@@ -95,7 +100,14 @@ export const MeetingDetailPage: React.FC = () => {
                   Tham gia ({totalParticipants})
                 </span>
               ),
-              children: <MeetingParticipantsTab meetingId={meetingId} />,
+              children: (
+                <MeetingParticipantsTab
+                  meetingId={meetingId}
+                  onOpenTraineeEvaluation={() => setIsTraineeEvalOpen(true)}
+                  onOpenOverallEvaluation={() => setIsOverallEvalOpen(true)}
+                  overallEval={overallEval}
+                />
+              ),
             },
             ...(meeting.enable_evaluation
               ? [
@@ -118,6 +130,32 @@ export const MeetingDetailPage: React.FC = () => {
           ]}
         />
       </Card>
+
+      {/* Single-Modal Instances (Mounted once at Page level) */}
+      <TraineeEvaluationModal
+        open={isTraineeEvalOpen}
+        meetingId={meetingId}
+        trainers={meeting.trainers || []}
+        onSuccess={() => {
+          setIsTraineeEvalOpen(false);
+          refetch();
+        }}
+        onClose={() => setIsTraineeEvalOpen(false)}
+      />
+
+      <MeetingOverallEvaluationModal
+        open={isOverallEvalOpen}
+        meetingId={meetingId}
+        meetingTitle={meeting.title}
+        existingEvaluation={overallEval}
+        onSuccess={() => {
+          setIsOverallEvalOpen(false);
+          refetch();
+          refetchOverallEval();
+        }}
+        onClose={() => setIsOverallEvalOpen(false)}
+        onCancel={() => setIsOverallEvalOpen(false)}
+      />
     </div>
   );
 };

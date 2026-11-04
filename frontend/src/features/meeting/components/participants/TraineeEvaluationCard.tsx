@@ -1,19 +1,17 @@
 import React from 'react';
 import { Card, Typography, Space, Button, Tag } from 'antd';
-import { HeartFilled, HeartOutlined, TrophyOutlined, StarFilled } from '@ant-design/icons';
+import { HeartFilled, HeartOutlined, StarFilled } from '@ant-design/icons';
 import type { EvaluationResponse } from '../../types/meeting.types';
 
 const { Text } = Typography;
 
 interface Props {
   myEvalForTrainer: EvaluationResponse | null | undefined;
-  onOpenMyResult: () => void;
   onOpenTraineeEval: () => void;
 }
 
 export const TraineeEvaluationCard: React.FC<Props> = ({
   myEvalForTrainer,
-  onOpenMyResult,
   onOpenTraineeEval,
 }) => {
   return (
@@ -50,20 +48,12 @@ export const TraineeEvaluationCard: React.FC<Props> = ({
               {myEvalForTrainer
                 ? `Bạn đã gửi đánh giá ${
                     myEvalForTrainer.is_anonymous ? 'ẩn danh ' : ''
-                  }cho Trainer. Bạn có thể mở khóa xem bảng điểm rèn luyện cá nhân!`
-                : 'Hãy gửi đánh giá & nhận xét cho Trainer để mở khóa xem điểm rèn luyện cá nhân của bạn.'}
+                  }cho Giảng viên của buổi học.`
+                : 'Hãy gửi đánh giá & đóng góp nhận xét cho Giảng viên phụ trách buổi học.'}
             </Text>
           </div>
         </div>
         <Space wrap className="shrink-0">
-          <Button
-            icon={<TrophyOutlined className="text-yellow-600" />}
-            onClick={onOpenMyResult}
-            className="bg-white border-indigo-200 text-indigo-800 hover:!border-indigo-400"
-            size="small"
-          >
-            Xem Điểm của tôi
-          </Button>
           <Button
             type="primary"
             icon={<StarFilled />}

@@ -1,0 +1,206 @@
+openapi: 3.1.0
+info:
+  title: Meeting Evaluation API
+  version: 1.0.0
+  description: API hợp đồng cho hệ thống Đánh giá Buổi học (Meeting Evaluation) đã được tinh giản và chuẩn hóa kiến trúc.
+paths:
+  /api/v1/meetings/{meeting_id}/evaluations/trainee:
+    post:
+      summary: Trainee gửi đánh giá dành cho Trainer của buổi học
+      description: |
+        Học viên tham gia buổi học thực hiện đánh giá Giảng viên (Trainer).
+        Hỗ trợ đánh giá ẩn danh (is_anonymous=true).
+        Invariants:
+        - Chặn tự đánh giá (reviewer_id == target_user_id trả về 400).
+        - target_user_id bắt buộc phải là Trainer của buổi học (trả về 400 nếu sai vai trò).
+      parameters:
+        - name: meeting_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TraineeSubmitEvaluationRequest'
+      responses:
+        '201':
+          description: Đánh giá thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseEvaluationResponse'
+        '400':
+          description: Vi phạm Domain Invariants hoặc buổi học chưa cho phép đánh giá
+
+  /api/v1/meetings/{meeting_id}/evaluations/overall:
+    post:
+      summary: Trainer gửi đánh giá tổng thể cho toàn bộ buổi học
+      description: |
+        Giảng viên phụ trách hoặc Người tạo/Admin gửi đánh giá tổng quan về chất lượng buổi học (4 tiêu chí).
+        Invariants:
+        - Người gửi phải là Trainer, Creator hoặc Admin (trả về 403 nếu không đủ quyền).
+        - Thực hiện đúng 1 query SQL để xác thực và lưu dữ liệu.
+      parameters:
+        - name: meeting_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitMeetingOverallEvaluationRequest'
+      responses:
+        '201':
+          description: Đánh giá tổng thể thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMeetingOverallEvaluationResponse'
+        '403':
+          description: Không có quyền đánh giá buổi học này
+        '404':
+          description: Không tìm thấy buổi học
+
+    get:
+      summary: Lấy đánh giá tổng thể của buổi học
+      description: Công khai cho toàn bộ thành viên trong buổi học.
+      parameters:
+        - name: meeting_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Thông tin đánh giá tổng thể (hoặc null nếu chưa có)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMeetingOverallEvaluationNullable'
+
+  /api/v1/meetings/{meeting_id}/evaluations/summary:
+    get:
+      summary: Báo cáo tổng hợp kết quả đánh giá của buổi học
+      description: |
+        Trả về tổng số phiếu, điểm trung bình các tiêu chí, và đánh giá tổng thể (MeetingOverallEvaluation).
+        Tuân thủ Hiến pháp Điều XIV (Dependency overall_eval_repo là bắt buộc).
+      parameters:
+        - name: meeting_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Báo cáo tổng hợp
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseMeetingEvaluationSummaryResponse'
+
+  /api/v1/meetings/{meeting_id}/evaluations/trainer:
+    post:
+      deprecated: true
+      summary: "[DEPRECATED] Trainer đánh giá cá nhân từng Trainee"
+      description: |
+        Đã ngừng hỗ trợ. Thay thế bằng Đánh giá tổng thể lớp học (/evaluations/overall).
+      parameters:
+        - name: meeting_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '400':
+          description: Tính năng đánh giá cá nhân đã được loại bỏ, vui lòng sử dụng Đánh giá tổng thể
+
+components:
+  schemas:
+    EvaluationScoreItemDto:
+      type: object
+      required:
+        - criteria_code
+        - score
+      properties:
+        criteria_code:
+          type: string
+        score:
+          type: integer
+          minimum: 1
+          maximum: 5
+
+    TraineeSubmitEvaluationRequest:
+      type: object
+      required:
+        - scores
+      properties:
+        target_user_id:
+          type: integer
+          nullable: true
+          description: ID của Giảng viên cần đánh giá (nếu buổi học có nhiều Trainer)
+        scores:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvaluationScoreItemDto'
+        feedback_text:
+          type: string
+          nullable: true
+        is_anonymous:
+          type: boolean
+          default: false
+
+    SubmitMeetingOverallEvaluationRequest:
+      type: object
+      required:
+        - scores
+      properties:
+        scores:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvaluationScoreItemDto'
+        general_feedback:
+          type: string
+          nullable: true
+
+    ApiResponseEvaluationResponse:
+      type: object
+      properties:
+        is_success:
+          type: boolean
+        data:
+          type: object
+        message:
+          type: string
+
+    ApiResponseMeetingOverallEvaluationResponse:
+      type: object
+      properties:
+        is_success:
+          type: boolean
+        data:
+          type: object
+        message:
+          type: string
+
+    ApiResponseMeetingOverallEvaluationNullable:
+      type: object
+      properties:
+        is_success:
+          type: boolean
+        data:
+          type: object
+          nullable: true
+
+    ApiResponseMeetingEvaluationSummaryResponse:
+      type: object
+      properties:
+        is_success:
+          type: boolean
+        data:
+          type: object

@@ -6,11 +6,11 @@ import pytest
 from app.meeting.application.get_my_evaluation_result_use_case import (
     GetMyEvaluationResultUseCase,
 )
+from app.meeting.application.submit_meeting_overall_evaluation_use_case import (
+    SubmitMeetingOverallEvaluationUseCase,
+)
 from app.meeting.application.submit_trainee_evaluation_use_case import (
     SubmitTraineeEvaluationUseCase,
-)
-from app.meeting.application.submit_trainer_evaluation_use_case import (
-    SubmitTrainerEvaluationUseCase,
 )
 from app.meeting.domain.entity import (
     Meeting,
@@ -25,56 +25,11 @@ from app.shared.application.response import BadRequestException
 
 
 @pytest.mark.asyncio
-async def test_submit_trainer_evaluation_success():
-    meeting_repo = MagicMock()
-    eval_repo = MagicMock()
-
-    past_start = datetime.now() - timedelta(hours=3)
-    past_end = datetime.now() - timedelta(hours=1)
-
-    mock_meeting = Meeting(
-        id=1,
-        title="Python 101",
-        start_time=past_start,
-        end_time=past_end,
-        enable_evaluation=True,
-        created_by=10,
-        participants=[
-            MeetingParticipant(user_id=10, role=ParticipantRole.TRAINER),
-            MeetingParticipant(user_id=20, role=ParticipantRole.TRAINEE, status=ParticipantStatus.JOINED),
-        ],
-    )
-    meeting_repo.get_by_id.return_value = mock_meeting
-    eval_repo.get_by_meeting_and_users.return_value = None
-    eval_repo.save.side_effect = lambda x: x
-
-    use_case = SubmitTrainerEvaluationUseCase(meeting_repo, eval_repo)
-    scores_data = [
-        {"criteria_code": "TRAINER_TO_TRAINEE_ATTENDANCE", "score": 5},
-        {"criteria_code": "TRAINER_TO_TRAINEE_INTERACTION", "score": 4},
-        {"criteria_code": "TRAINER_TO_TRAINEE_COMPREHENSION", "score": 4},
-        {"criteria_code": "TRAINER_TO_TRAINEE_PREPARATION", "score": 5},
-    ]
-
-    result = await use_case.execute(
-        meeting_id=1,
-        reviewer_id=10,
-        target_user_id=20,
-        scores_data=scores_data,
-        feedback_text="Làm bài rất tốt",
-    )
-
-    assert result.meeting_id == 1
-    assert result.reviewer_id == 10
-    assert result.target_user_id == 20
-    assert result.average_score == 4.5
-    assert result.evaluation_type == EvaluationType.TRAINER_TO_TRAINEE
-
-
-@pytest.mark.asyncio
 async def test_submit_trainee_evaluation_anonymous():
     meeting_repo = MagicMock()
     eval_repo = MagicMock()
+    overall_eval_repo = MagicMock()
+    overall_eval_repo.get_by_meeting_id.return_value = None
 
     past_start = datetime.now() - timedelta(hours=3)
     past_end = datetime.now() - timedelta(hours=1)
@@ -118,9 +73,125 @@ async def test_submit_trainee_evaluation_anonymous():
 
 
 @pytest.mark.asyncio
+async def test_submit_trainee_evaluation_blocks_self_evaluation():
+    meeting_repo = MagicMock()
+    eval_repo = MagicMock()
+    overall_eval_repo = MagicMock()
+    overall_eval_repo.get_by_meeting_id.return_value = None
+
+    past_start = datetime.now() - timedelta(hours=3)
+    past_end = datetime.now() - timedelta(hours=1)
+
+    mock_meeting = Meeting(
+        id=1,
+        title="Python 101",
+        start_time=past_start,
+        end_time=past_end,
+        enable_evaluation=True,
+        created_by=10,
+        participants=[
+            MeetingParticipant(user_id=10, role=ParticipantRole.TRAINER),
+            MeetingParticipant(user_id=10, role=ParticipantRole.TRAINEE, status=ParticipantStatus.JOINED),
+        ],
+    )
+    meeting_repo.get_by_id.return_value = mock_meeting
+
+    use_case = SubmitTraineeEvaluationUseCase(meeting_repo, eval_repo)
+    scores_data = [{"criteria_code": "TRAINEE_TO_TRAINER_CONTENT", "score": 5}]
+
+    with pytest.raises(BadRequestException) as exc_info:
+        await use_case.execute(
+            meeting_id=1,
+            reviewer_id=10,
+            target_user_id=10,
+            scores_data=scores_data,
+        )
+
+    assert "Không thể tự đánh giá chính mình" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_submit_trainee_evaluation_blocks_non_trainer_target():
+    meeting_repo = MagicMock()
+    eval_repo = MagicMock()
+    overall_eval_repo = MagicMock()
+    overall_eval_repo.get_by_meeting_id.return_value = None
+
+    past_start = datetime.now() - timedelta(hours=3)
+    past_end = datetime.now() - timedelta(hours=1)
+
+    mock_meeting = Meeting(
+        id=1,
+        title="Python 101",
+        start_time=past_start,
+        end_time=past_end,
+        enable_evaluation=True,
+        created_by=10,
+        participants=[
+            MeetingParticipant(user_id=10, role=ParticipantRole.TRAINER),
+            MeetingParticipant(user_id=20, role=ParticipantRole.TRAINEE, status=ParticipantStatus.JOINED),
+            MeetingParticipant(user_id=30, role=ParticipantRole.TRAINEE, status=ParticipantStatus.JOINED),
+        ],
+    )
+    meeting_repo.get_by_id.return_value = mock_meeting
+
+    use_case = SubmitTraineeEvaluationUseCase(meeting_repo, eval_repo)
+    scores_data = [{"criteria_code": "TRAINEE_TO_TRAINER_CONTENT", "score": 5}]
+
+    with pytest.raises(BadRequestException) as exc_info:
+        await use_case.execute(
+            meeting_id=1,
+            reviewer_id=20,
+            target_user_id=30,
+            scores_data=scores_data,
+        )
+
+    assert "Người được đánh giá không phải là Trainer" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_submit_meeting_overall_evaluation_unauthorized():
+    meeting_repo = MagicMock()
+    overall_eval_repo = MagicMock()
+
+    past_start = datetime.now() - timedelta(hours=3)
+    past_end = datetime.now() - timedelta(hours=1)
+
+    mock_meeting = Meeting(
+        id=1,
+        title="Python 101",
+        start_time=past_start,
+        end_time=past_end,
+        enable_evaluation=True,
+        created_by=10,
+        participants=[
+            MeetingParticipant(user_id=10, role=ParticipantRole.TRAINER),
+            MeetingParticipant(user_id=20, role=ParticipantRole.TRAINEE, status=ParticipantStatus.JOINED),
+        ],
+    )
+    meeting_repo.get_by_id.return_value = mock_meeting
+
+    use_case = SubmitMeetingOverallEvaluationUseCase(meeting_repo, overall_eval_repo)
+    scores_data = [{"criteria_code": "OVERALL_COMPREHENSION", "score": 5}]
+
+    with pytest.raises(BadRequestException) as exc_info:
+        await use_case.execute(
+            meeting_id=1,
+            trainer_id=20,
+            scores_data=scores_data,
+            is_admin=False,
+        )
+
+    assert exc_info.value.status_code == 403
+    assert "Bạn không có quyền đánh giá buổi học này" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
 async def test_get_my_evaluation_result_locked_until_evaluated():
     meeting_repo = MagicMock()
     eval_repo = MagicMock()
+    overall_eval_repo = MagicMock()
+    overall_eval_repo.get_by_meeting_id.return_value = None
 
     mock_meeting = Meeting(
         id=1,
@@ -172,6 +243,8 @@ async def test_get_meeting_evaluation_summary_use_case():
 
     meeting_repo = MagicMock()
     eval_repo = MagicMock()
+    overall_eval_repo = MagicMock()
+    overall_eval_repo.get_by_meeting_id.return_value = None
 
     mock_meeting = Meeting(
         id=10,
@@ -212,7 +285,7 @@ async def test_get_meeting_evaluation_summary_use_case():
 
     eval_repo.get_evaluations_by_meeting.return_value = [trainer_eval, trainee_eval]
 
-    use_case = GetMeetingEvaluationSummaryUseCase(meeting_repo, eval_repo)
+    use_case = GetMeetingEvaluationSummaryUseCase(meeting_repo, eval_repo, overall_eval_repo)
     result = await use_case.execute(meeting_id=10)
 
     assert result.total_evaluations == 2
@@ -310,6 +383,8 @@ async def test_check_evaluation_deadline_creates_violation_when_trainer_missing(
 
     meeting_repo = MagicMock()
     eval_repo = MagicMock()
+    overall_eval_repo = MagicMock()
+    overall_eval_repo.get_by_meeting_id.return_value = None
     overall_repo = MagicMock()
     violation_repo = MagicMock()
 
@@ -360,6 +435,8 @@ async def test_check_evaluation_deadline_creates_violation_when_trainee_missing(
 
     meeting_repo = MagicMock()
     eval_repo = MagicMock()
+    overall_eval_repo = MagicMock()
+    overall_eval_repo.get_by_meeting_id.return_value = None
     overall_repo = MagicMock()
     violation_repo = MagicMock()
 
@@ -421,6 +498,8 @@ async def test_check_evaluation_deadline_uses_72h_bound_and_9d_window():
 
     meeting_repo = MagicMock()
     eval_repo = MagicMock()
+    overall_eval_repo = MagicMock()
+    overall_eval_repo.get_by_meeting_id.return_value = None
     overall_repo = MagicMock()
     violation_repo = MagicMock()
 

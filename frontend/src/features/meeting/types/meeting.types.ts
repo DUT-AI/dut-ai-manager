@@ -129,12 +129,6 @@ export interface MeetingOverallEvaluationResponse {
   created_at: string;
 }
 
-export interface TrainerSubmitEvaluationPayload {
-  target_user_id: number;
-  scores: EvaluationScoreItemSubmit[];
-  feedback_text?: string;
-}
-
 export interface TraineeSubmitEvaluationPayload {
   target_user_id: number;
   is_anonymous?: boolean;

@@ -23,7 +23,7 @@ class GetMeetingEvaluationSummaryUseCase:
         self,
         meeting_repo: MeetingRepository,
         evaluation_repo: MeetingEvaluationRepository,
-        overall_eval_repo: MeetingOverallEvaluationRepository | None = None,
+        overall_eval_repo: MeetingOverallEvaluationRepository,
     ):
         self.meeting_repo = meeting_repo
         self.evaluation_repo = evaluation_repo
@@ -86,12 +86,11 @@ class GetMeetingEvaluationSummaryUseCase:
         )
 
         overall_eval_dto = None
-        if self.overall_eval_repo:
-            overall_entity = self.overall_eval_repo.get_by_meeting_id(meeting_id)
-            if overall_entity:
-                overall_eval_dto = MeetingOverallEvaluationResponse.from_domain(
-                    overall_entity
-                )
+        overall_entity = self.overall_eval_repo.get_by_meeting_id(meeting_id)
+        if overall_entity:
+            overall_eval_dto = MeetingOverallEvaluationResponse.from_domain(
+                overall_entity
+            )
 
         return MeetingEvaluationSummaryResponse(
             meeting_id=meeting_id,

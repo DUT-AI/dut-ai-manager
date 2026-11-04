@@ -3,12 +3,10 @@ import { Space, Button, Popconfirm, Tooltip, message } from 'antd';
 import {
   CheckOutlined,
   EditOutlined,
-  StarFilled,
-  StarOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import type { ParticipantResponse, EvaluationResponse } from '../types/meeting.types';
+import type { ParticipantResponse } from '../types/meeting.types';
 import { ParticipantStatus } from '../types/meeting.types';
 import { useUpdateParticipantStatus, useMeetingDetail } from '../hooks/useMeetings';
 
@@ -16,22 +14,14 @@ interface Props {
   meetingId: number;
   record: ParticipantResponse;
   isTrainer: boolean;
-  isEnded: boolean;
-  enableEvaluation?: boolean;
-  existingEvaluation?: EvaluationResponse | null;
   onEditStatus: (participant: ParticipantResponse) => void;
-  onEvaluate: (participant: ParticipantResponse) => void;
 }
 
 export const ParticipantActionButtons: React.FC<Props> = ({
   meetingId,
   record,
   isTrainer,
-  isEnded,
-  enableEvaluation,
-  existingEvaluation,
   onEditStatus,
-  onEvaluate,
 }) => {
   const [loading, setLoading] = useState(false);
   const updateParticipantStatusMutation = useUpdateParticipantStatus();
@@ -110,59 +100,6 @@ export const ParticipantActionButtons: React.FC<Props> = ({
             </Popconfirm>
           )}
         </>
-      )}
-
-      {isTrainer && (
-        enableEvaluation ? (
-          <Tooltip
-            title={
-              record.status === ParticipantStatus.ABSENT_EXCUSED ||
-              record.status === ParticipantStatus.ABSENT_UNEXCUSED
-                ? 'Học viên vắng mặt không thể đánh giá'
-                : existingEvaluation
-                ? `Đã đánh giá: ⭐ ${existingEvaluation.average_score.toFixed(1)}/5. Bấm để xem hoặc chỉnh sửa.`
-                : 'Chấm điểm đánh giá học viên này'
-            }
-          >
-            <Button
-              icon={
-                existingEvaluation ? (
-                  <StarFilled className="text-amber-500" />
-                ) : (
-                  <StarOutlined className="text-amber-500" />
-                )
-              }
-              size="small"
-              type={existingEvaluation ? 'default' : 'dashed'}
-              disabled={
-                record.status === ParticipantStatus.ABSENT_EXCUSED ||
-                record.status === ParticipantStatus.ABSENT_UNEXCUSED
-              }
-              className={
-                existingEvaluation
-                  ? 'border-amber-300 text-amber-800 bg-amber-50 font-medium hover:!bg-amber-100 hover:!border-amber-400'
-                  : 'hover:!border-amber-400 text-amber-700 bg-amber-50/50'
-              }
-              onClick={() => onEvaluate(record)}
-            >
-              {existingEvaluation
-                ? `Đã ĐG (${existingEvaluation.average_score.toFixed(1)})`
-                : 'Đánh giá'}
-            </Button>
-          </Tooltip>
-        ) : (
-          <Tooltip title="Bật 'Đánh giá 2 chiều' để chấm điểm học viên">
-            <Button
-              icon={<StarOutlined className="text-gray-300" />}
-              size="small"
-              type="dashed"
-              disabled
-              className="opacity-60"
-            >
-              Đánh giá
-            </Button>
-          </Tooltip>
-        )
       )}
 
       {isTrainer && (

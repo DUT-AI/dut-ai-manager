@@ -31,24 +31,17 @@ class GetMyEvaluationResultUseCase:
         if not meeting.enable_evaluation:
             return None
 
-        # 1. Kiểm tra Trainee đã đánh giá Trainer chưa
-        trainee_eval = self.evaluation_repo.get_by_meeting_and_users(
+        # 1. Kiểm tra Trainee đã đánh giá Trainer chưa (không giả định target_user_id là created_by)
+        trainee_evals = self.evaluation_repo.get_evaluations_by_meeting(
             meeting_id=meeting_id,
-            reviewer_id=current_user_id,
-            target_user_id=meeting.created_by or 0,
+            evaluation_type=EvaluationType.TRAINEE_TO_TRAINER.value,
         )
-        if not trainee_eval:
-            # Tìm xem có bất kỳ đánh giá nào do Trainee gửi trong meeting không
-            trainee_evals = self.evaluation_repo.get_evaluations_by_meeting(
-                meeting_id=meeting_id,
-                evaluation_type=EvaluationType.TRAINEE_TO_TRAINER.value,
+        has_evaluated = any(e.reviewer_id == current_user_id for e in trainee_evals)
+        if not has_evaluated:
+            raise BadRequestException(
+                "Bạn cần hoàn thành đánh giá Trainer trước khi xem kết quả đánh giá của mình",
+                status_code=403,
             )
-            has_evaluated = any(e.reviewer_id == current_user_id for e in trainee_evals)
-            if not has_evaluated:
-                raise BadRequestException(
-                    "Bạn cần hoàn thành đánh giá Trainer trước khi xem kết quả đánh giá của mình",
-                    status_code=403,
-                )
 
         # 2. Lấy phiếu đánh giá mà Trainer đã chấm cho Trainee
         evaluations_received = self.evaluation_repo.get_evaluations_for_user_in_meeting(

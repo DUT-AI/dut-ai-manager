@@ -1,27 +1,23 @@
-from typing import Annotated
-
 from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, status
 
 from app.core.deps import CurrentUser
+from app.core.permissions import MeetingPermission
 from app.meeting.application import (
     GetMeetingEvaluationSummaryUseCase,
     GetMeetingOverallEvaluationUseCase,
     GetMyEvaluationResultUseCase,
     SubmitMeetingOverallEvaluationUseCase,
     SubmitTraineeEvaluationUseCase,
-    SubmitTrainerEvaluationUseCase,
 )
-from app.meeting.controllers.dependencies import check_meeting_evaluation_permission
 from app.meeting.schemas import (
     EvaluationResponse,
     MeetingEvaluationSummaryResponse,
     MeetingOverallEvaluationResponse,
     SubmitMeetingOverallEvaluationRequest,
     TraineeSubmitEvaluationRequest,
-    TrainerSubmitEvaluationRequest,
 )
-from app.shared.application.response import ApiResponse
+from app.shared.application.response import ApiResponse, BadRequestException
 
 router = APIRouter(prefix="/meetings", tags=["Meetings"])
 
@@ -37,13 +33,20 @@ async def submit_meeting_overall_evaluation(
     data: SubmitMeetingOverallEvaluationRequest,
     uc: FromDishka[SubmitMeetingOverallEvaluationUseCase],
     current_user: CurrentUser,
-    _: Annotated[None, Depends(check_meeting_evaluation_permission)],
 ):
+    is_admin = any(
+        r.lower() in ["admin", "superadmin", "leader", "manager"]
+        for r in (current_user.role_names or [])
+    ) or (
+        MeetingPermission.CREATE in (current_user.permissions or set())
+        or MeetingPermission.UPDATE in (current_user.permissions or set())
+    )
     result = await uc.execute(
         meeting_id=meeting_id,
         trainer_id=current_user.user_id,
         scores_data=[s.model_dump() for s in data.scores],
         general_feedback=data.general_feedback,
+        is_admin=is_admin,
     )
     return ApiResponse.success(
         data=MeetingOverallEvaluationResponse.from_domain(result),
@@ -70,28 +73,19 @@ async def get_meeting_overall_evaluation(
 @router.post(
     "/{meeting_id}/evaluations/trainer",
     response_model=ApiResponse[EvaluationResponse],
-    status_code=status.HTTP_201_CREATED,
+    status_code=status.HTTP_400_BAD_REQUEST,
+    deprecated=True,
 )
 @inject
 async def submit_trainer_evaluation(
     meeting_id: int,
-    data: TrainerSubmitEvaluationRequest,
-    uc: FromDishka[SubmitTrainerEvaluationUseCase],
-    current_user: CurrentUser,
-    _: Annotated[None, Depends(check_meeting_evaluation_permission)],
+    _current_user: CurrentUser,
+    _data: dict | None = None,
 ):
-    """Trainer gửi đánh giá cho 1 Trainee cụ thể trong buổi học."""
-
-    result = await uc.execute(
-        meeting_id=meeting_id,
-        reviewer_id=current_user.user_id,
-        target_user_id=data.target_user_id,
-        scores_data=[s.model_dump() for s in data.scores],
-        feedback_text=data.feedback_text,
-    )
-    return ApiResponse.success(
-        data=EvaluationResponse.from_domain(result),
-        message="Đánh giá học viên thành công",
+    """[DEPRECATED] Trainer gửi đánh giá cho 1 Trainee cụ thể trong buổi học."""
+    raise BadRequestException(
+        "Tính năng Giảng viên đánh giá từng cá nhân đã được loại bỏ. Vui lòng sử dụng Đánh giá tổng thể buổi học.",
+        status_code=status.HTTP_400_BAD_REQUEST,
     )
 
 

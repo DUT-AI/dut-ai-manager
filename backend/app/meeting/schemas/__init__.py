@@ -15,7 +15,6 @@ from .evaluation_schemas import (
     MeetingOverallEvaluationResponse,
     SubmitMeetingOverallEvaluationRequest,
     TraineeSubmitEvaluationRequest,
-    TrainerSubmitEvaluationRequest,
 )
 from .meeting_schemas import (
     MeetingCreate,
@@ -49,7 +48,6 @@ __all__ = [
     "ParticipantResponse",
     "SubmitMeetingOverallEvaluationRequest",
     "TraineeSubmitEvaluationRequest",
-    "TrainerSubmitEvaluationRequest",
     "UpdateParticipantStatusRequest",
     "UserRefDto",
 ]

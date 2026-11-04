@@ -31,9 +31,6 @@ from app.meeting.application.submit_meeting_overall_evaluation_use_case import (
 from app.meeting.application.submit_trainee_evaluation_use_case import (
     SubmitTraineeEvaluationUseCase,
 )
-from app.meeting.application.submit_trainer_evaluation_use_case import (
-    SubmitTrainerEvaluationUseCase,
-)
 from app.meeting.application.update_meeting_use_case import UpdateMeetingUseCase
 from app.meeting.application.update_participant_status_use_case import (
     UpdateParticipantStatusUseCase,
@@ -53,7 +50,6 @@ __all__ = [
     "CalculateCurrentCapacityUseCase",
     "SubmitMeetingOverallEvaluationUseCase",
     "GetMeetingOverallEvaluationUseCase",
-    "SubmitTrainerEvaluationUseCase",
     "SubmitTraineeEvaluationUseCase",
     "GetMyEvaluationResultUseCase",
     "GetMeetingEvaluationSummaryUseCase",

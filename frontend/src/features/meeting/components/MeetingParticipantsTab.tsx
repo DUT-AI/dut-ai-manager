@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import type {
   ParticipantResponse,
   UpdateParticipantStatusPayload,
   EvaluationResponse,
+  MeetingOverallEvaluationResponse,
 } from '../types/meeting.types';
 import { ParticipantRole, ParticipantStatus } from '../types/meeting.types';
 import {
@@ -11,12 +12,10 @@ import {
   useUpdateParticipantStatus,
   useMeetingEvaluationSummary,
 } from '../hooks/useMeetings';
+import { useMeetingPermissions } from '../hooks/useMeetingPermissions';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { MeetingBatchCheckInBanner } from './MeetingBatchCheckInBanner';
 import { EditParticipantStatusModal } from './EditParticipantStatusModal';
-import { TrainerEvaluationModal } from './TrainerEvaluationModal';
-import { TraineeEvaluationModal } from './TraineeEvaluationModal';
-import { MyEvaluationResultModal } from './MyEvaluationResultModal';
 import {
   EvaluationProgressFilterBar,
   TraineeEvaluationCard,
@@ -27,18 +26,23 @@ import {
 
 interface Props {
   meetingId: number;
+  onOpenTraineeEvaluation?: () => void;
+  onOpenOverallEvaluation?: () => void;
+  overallEval?: MeetingOverallEvaluationResponse | null;
 }
 
-export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
+export const MeetingParticipantsTab: React.FC<Props> = ({
+  meetingId,
+  onOpenTraineeEvaluation,
+  onOpenOverallEvaluation,
+  overallEval,
+}) => {
   const { data: meeting, refetch } = useMeetingDetail(meetingId);
   const { user } = useAuth();
 
   // Local Modal States
   const [editingParticipant, setEditingParticipant] = useState<ParticipantResponse | null>(null);
   const [isEditStatusModalOpen, setIsEditStatusModalOpen] = useState(false);
-  const [evaluatingParticipant, setEvaluatingParticipant] = useState<ParticipantResponse | null>(null);
-  const [isTraineeEvalOpen, setIsTraineeEvalOpen] = useState(false);
-  const [isMyResultOpen, setIsMyResultOpen] = useState(false);
   const [evalFilter, setEvalFilter] = useState<'all' | 'unrated' | 'rated'>('all');
 
   const updateParticipantStatusMutation = useUpdateParticipantStatus();
@@ -48,12 +52,7 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
   );
 
   const currentUserId = user?.id;
-
-  const isTrainer = Boolean(
-    (meeting?.created_by != null && currentUserId != null && Number(currentUserId) === Number(meeting.created_by)) ||
-    (meeting?.trainers?.some((t) => Number(t.id || t.user_id) === Number(currentUserId))) ||
-    (user?.role_names?.some((r) => ['admin', 'leader', 'superadmin', 'manager'].includes(r.toLowerCase())) ?? false)
-  );
+  const { isTrainer } = useMeetingPermissions(meeting);
 
   const isEnded = meeting ? dayjs().isAfter(dayjs(meeting.end_time)) : false;
   const trainerParticipants = meeting?.trainers || [];
@@ -62,22 +61,17 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
 
   // Build evaluation mappings & count stats cho học viên
   const {
-    trainerEvalsByTraineeId,
     traineeEvalsByReviewerId,
     myEvalForTrainer,
     isCurrentUserTrainee,
     activeTrainees,
-    trainerEvaluatedCount,
     traineeEvaluatedCount,
   } = useMemo(() => {
-    const trainerMap = new Map<number, EvaluationResponse>();
     const traineeMap = new Map<number, EvaluationResponse>();
 
     if (evalSummary?.evaluations) {
       evalSummary.evaluations.forEach((e) => {
-        if (e.evaluation_type === 'TRAINER_TO_TRAINEE') {
-          trainerMap.set(e.target_user_id, e);
-        } else if (e.evaluation_type === 'TRAINEE_TO_TRAINER' && e.reviewer_id) {
+        if (e.evaluation_type === 'TRAINEE_TO_TRAINER' && e.reviewer_id) {
           traineeMap.set(e.reviewer_id, e);
         }
       });
@@ -89,7 +83,6 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
         p.status !== ParticipantStatus.ABSENT_UNEXCUSED
     );
 
-    const trainerCount = activeList.filter((p) => trainerMap.has(p.user_id)).length;
     const traineeCount = activeList.filter((p) => traineeMap.has(p.user_id)).length;
 
     const myEval = evalSummary?.my_evaluation || (currentUserId ? traineeMap.get(currentUserId) : null);
@@ -99,12 +92,10 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
     const isTrainee = traineeParticipants.some((p) => p.user_id === currentUserId);
 
     return {
-      trainerEvalsByTraineeId: trainerMap,
       traineeEvalsByReviewerId: traineeMap,
       myEvalForTrainer: myEval,
       isCurrentUserTrainee: isTrainee,
       activeTrainees: activeList,
-      trainerEvaluatedCount: trainerCount,
       traineeEvaluatedCount: traineeCount,
     };
   }, [evalSummary, traineeParticipants, currentUserId]);
@@ -124,7 +115,7 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
   // Filter trainees based on evaluation filter
   const filteredTrainees = traineeParticipants.filter((p) => {
     if (!meeting.enable_evaluation || evalFilter === 'all') return true;
-    const isEvaluated = trainerEvalsByTraineeId.has(p.user_id);
+    const isEvaluated = traineeEvalsByReviewerId.has(p.user_id);
     if (evalFilter === 'rated') return isEvaluated;
     if (evalFilter === 'unrated') {
       const isAbsent =
@@ -136,7 +127,7 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
   });
 
   const totalActiveTrainees = activeTrainees.length;
-  const unratedCount = Math.max(0, totalActiveTrainees - trainerEvaluatedCount);
+  const unratedCount = Math.max(0, totalActiveTrainees - traineeEvaluatedCount);
 
   return (
     <div className="space-y-6">
@@ -147,13 +138,12 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
       {meeting.enable_evaluation && isCurrentUserTrainee && (
         <TraineeEvaluationCard
           myEvalForTrainer={myEvalForTrainer}
-          onOpenMyResult={() => setIsMyResultOpen(true)}
-          onOpenTraineeEval={() => setIsTraineeEvalOpen(true)}
+          onOpenTraineeEval={onOpenTraineeEvaluation || (() => { })}
         />
       )}
 
       {/* Section 1: Bảng Giảng viên / Người phụ trách (Desktop) */}
-      <div className="hidden md:block">
+      <div className="hidden md:block mt-3">
         <TrainerListTable
           meeting={meeting}
           trainers={trainerParticipants}
@@ -174,7 +164,6 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
           <EvaluationProgressFilterBar
             totalParticipants={totalParticipants}
             totalActiveTrainees={totalActiveTrainees}
-            trainerEvaluatedCount={trainerEvaluatedCount}
             traineeEvaluatedCount={traineeEvaluatedCount}
             unratedCount={unratedCount}
             evalFilter={evalFilter}
@@ -188,13 +177,13 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
           currentUserId={currentUserId}
           isTrainer={isTrainer}
           isEnded={isEnded}
-          trainerEvalsByTraineeId={trainerEvalsByTraineeId}
           traineeEvalsByReviewerId={traineeEvalsByReviewerId}
+          onOpenOverallEvaluation={onOpenOverallEvaluation}
+          overallEval={overallEval}
           onEditStatus={(p) => {
             setEditingParticipant(p);
             setIsEditStatusModalOpen(true);
           }}
-          onEvaluate={(p) => setEvaluatingParticipant(p)}
         />
       </div>
 
@@ -207,13 +196,13 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
           currentUserId={currentUserId}
           isTrainer={isTrainer}
           isEnded={isEnded}
-          trainerEvalsByTraineeId={trainerEvalsByTraineeId}
           traineeEvalsByReviewerId={traineeEvalsByReviewerId}
+          onOpenOverallEvaluation={onOpenOverallEvaluation}
+          overallEval={overallEval}
           onEditStatus={(p) => {
             setEditingParticipant(p);
             setIsEditStatusModalOpen(true);
           }}
-          onEvaluate={(p) => setEvaluatingParticipant(p)}
         />
       </div>
 
@@ -227,47 +216,6 @@ export const MeetingParticipantsTab: React.FC<Props> = ({ meetingId }) => {
         }}
         onSubmit={handleUpdateStatus}
         loading={updateParticipantStatusMutation.isPending}
-      />
-
-      {evaluatingParticipant && (
-        <TrainerEvaluationModal
-          open={!!evaluatingParticipant}
-          meetingId={meeting.id}
-          trainee={evaluatingParticipant}
-          existingEvaluation={trainerEvalsByTraineeId.get(evaluatingParticipant.user_id)}
-          participants={traineeParticipants}
-          onSelectTrainee={(p) => setEvaluatingParticipant(p)}
-          onSuccess={() => {
-            setEvaluatingParticipant(null);
-            refetch();
-            refetchEvalSummary();
-          }}
-          onClose={() => setEvaluatingParticipant(null)}
-          onCancel={() => setEvaluatingParticipant(null)}
-        />
-      )}
-
-      <TraineeEvaluationModal
-        open={isTraineeEvalOpen}
-        meetingId={meeting.id}
-        trainers={meeting.trainers || []}
-        trainerId={meeting.trainers?.[0]?.id}
-        trainerName={meeting.trainers?.[0]?.user_name}
-        trainerAvatarUrl={meeting.trainers?.[0]?.user_avatar_url}
-        existingEvaluation={myEvalForTrainer}
-        onSuccess={() => {
-          setIsTraineeEvalOpen(false);
-          refetch();
-          refetchEvalSummary();
-        }}
-        onClose={() => setIsTraineeEvalOpen(false)}
-        onCancel={() => setIsTraineeEvalOpen(false)}
-      />
-
-      <MyEvaluationResultModal
-        open={isMyResultOpen}
-        meetingId={meeting.id}
-        onClose={() => setIsMyResultOpen(false)}
       />
     </div>
   );

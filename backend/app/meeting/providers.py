@@ -17,7 +17,6 @@ from app.meeting.application import (
     GetUpcomingMeetingsWithSeatsUseCase,
     SubmitMeetingOverallEvaluationUseCase,
     SubmitTraineeEvaluationUseCase,
-    SubmitTrainerEvaluationUseCase,
     UpdateMeetingUseCase,
     UpdateParticipantStatusUseCase,
 )
@@ -161,14 +160,6 @@ class MeetingModuleProvider(Provider):
         overall_eval_repo: MeetingOverallEvaluationRepository,
     ) -> GetMeetingOverallEvaluationUseCase:
         return GetMeetingOverallEvaluationUseCase(meeting_repo, overall_eval_repo)
-
-    @provide
-    def submit_trainer_evaluation_uc(
-        self,
-        meeting_repo: MeetingRepository,
-        evaluation_repo: MeetingEvaluationRepository,
-    ) -> SubmitTrainerEvaluationUseCase:
-        return SubmitTrainerEvaluationUseCase(meeting_repo, evaluation_repo)
 
     @provide
     def submit_trainee_evaluation_uc(

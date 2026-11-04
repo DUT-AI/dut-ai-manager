@@ -1,6 +1,6 @@
 import React from 'react';
-import { Table, Avatar, Typography, Image, Tag, Empty } from 'antd';
-import { UserOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { Table, Avatar, Typography, Image, Tag, Empty, Button } from 'antd';
+import { UserOutlined, CheckCircleOutlined, StarFilled } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { ColumnsType } from 'antd/es/table';
 import type {
@@ -8,6 +8,7 @@ import type {
   EvaluationResponse,
   MeetingResponse,
   MeetingDetailResponse,
+  MeetingOverallEvaluationResponse,
 } from '../../types/meeting.types';
 import { ParticipantStatusTag } from '../ParticipantStatusTag';
 import { ParticipantActionButtons } from '../ParticipantActionButtons';
@@ -20,10 +21,10 @@ interface Props {
   currentUserId?: number;
   isTrainer: boolean;
   isEnded: boolean;
-  trainerEvalsByTraineeId: Map<number, EvaluationResponse>;
   traineeEvalsByReviewerId: Map<number, EvaluationResponse>;
   onEditStatus: (participant: ParticipantResponse) => void;
-  onEvaluate: (participant: ParticipantResponse) => void;
+  onOpenOverallEvaluation?: () => void;
+  overallEval?: MeetingOverallEvaluationResponse | null;
 }
 
 export const TraineeListTable: React.FC<Props> = ({
@@ -32,10 +33,10 @@ export const TraineeListTable: React.FC<Props> = ({
   currentUserId,
   isTrainer,
   isEnded,
-  trainerEvalsByTraineeId,
   traineeEvalsByReviewerId,
   onEditStatus,
-  onEvaluate,
+  onOpenOverallEvaluation,
+  overallEval,
 }) => {
   const columns: ColumnsType<ParticipantResponse> = [
     {
@@ -104,34 +105,34 @@ export const TraineeListTable: React.FC<Props> = ({
     },
     ...(meeting.enable_evaluation
       ? [
-          {
-            title: 'Đánh giá Giảng viên',
-            key: 'trainee_eval',
-            render: (_: unknown, record: ParticipantResponse) => {
-              const existing = traineeEvalsByReviewerId.get(record.user_id);
-              if (existing) {
-                const isAnonymous = existing.is_anonymous;
-                return (
-                  <Tag
-                    color={isAnonymous ? 'purple' : 'blue'}
-                    icon={<CheckCircleOutlined />}
-                    className="text-xs py-0.5 px-2"
-                  >
-                    {isAnonymous ? 'Đã gửi (Ẩn danh)' : 'Đã gửi'}
-                    {record.user_id === currentUserId
-                      ? ` (⭐ ${existing.average_score.toFixed(1)})`
-                      : ''}
-                  </Tag>
-                );
-              }
+        {
+          title: 'Đánh giá Giảng viên',
+          key: 'trainee_eval',
+          render: (_: unknown, record: ParticipantResponse) => {
+            const existing = traineeEvalsByReviewerId.get(record.user_id);
+            if (existing) {
+              const isAnonymous = existing.is_anonymous;
               return (
-                <Tag color="default" className="text-xs py-0.5 px-2">
-                  Chưa gửi
+                <Tag
+                  color={isAnonymous ? 'purple' : 'blue'}
+                  icon={<CheckCircleOutlined />}
+                  className="text-xs py-0.5 px-2"
+                >
+                  {isAnonymous ? 'Đã gửi (Ẩn danh)' : 'Đã gửi'}
+                  {record.user_id === currentUserId
+                    ? ` (⭐ ${existing.average_score.toFixed(1)})`
+                    : ''}
                 </Tag>
               );
-            },
+            }
+            return (
+              <Tag color="default" className="text-xs py-0.5 px-2">
+                Chưa gửi
+              </Tag>
+            );
           },
-        ]
+        },
+      ]
       : []),
     {
       title: 'Ảnh quẹt thẻ',
@@ -163,25 +164,37 @@ export const TraineeListTable: React.FC<Props> = ({
           meetingId={meeting.id}
           record={record}
           isTrainer={isTrainer}
-          isEnded={isEnded}
-          enableEvaluation={meeting.enable_evaluation}
-          existingEvaluation={trainerEvalsByTraineeId.get(record.user_id)}
           onEditStatus={onEditStatus}
-          onEvaluate={onEvaluate}
         />
       ),
     },
   ];
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-blue-50/40">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mt-3">
+      <div className="p-3.5 sm:p-4 border-b border-gray-100 flex items-center justify-between flex-wrap gap-2 bg-blue-50/40">
         <div className="flex items-center gap-2">
           <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
           <h4 className="m-0 text-sm font-semibold text-gray-800">
             Danh sách Học viên ({trainees.length})
           </h4>
         </div>
+
+        {meeting.enable_evaluation && isTrainer && onOpenOverallEvaluation && (
+          <Button
+            type="primary"
+            icon={<StarFilled />}
+            onClick={onOpenOverallEvaluation}
+            size="middle"
+            className={
+              overallEval
+                ? "!bg-emerald-600 hover:!bg-emerald-500 !text-white border-none font-medium shadow-sm rounded-full"
+                : "!bg-amber-500 hover:!bg-amber-400 !text-white border-none font-medium shadow-sm rounded-full"
+            }
+          >
+            {overallEval ? '✓ Đã đánh giá buổi học' : 'Trainer đánh giá buổi học'}
+          </Button>
+        )}
       </div>
       <Table
         columns={columns}

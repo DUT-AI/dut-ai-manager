@@ -42,7 +42,7 @@ class CheckInWithCardUseCase:
         Returns:
             tuple[str, bytes]: (Thông báo dạng chữ, Dữ liệu audio WAV)
         """
-        version_cache = f"{8}"
+        version_cache = f"{9}"
         code = (card_code or "").strip()
         if not code:
             msg = "Mã thẻ không hợp lệ"
@@ -152,13 +152,13 @@ class CheckInWithCardUseCase:
                 )
                 if audio_bytes:
                     audio_bytes = downsample_wav_to_16k_mono(
-                        audio_bytes, target_rate=11025, target_bits=8, speed=1.25
+                        audio_bytes, target_rate=11025, target_bits=8, speed=1.0
                     )
                 return audio_bytes
             raw_audio = await self.tts_service.synthesize(text=text)
             if raw_audio:
                 return downsample_wav_to_16k_mono(
-                    raw_audio, target_rate=11025, target_bits=8, speed=1.25
+                    raw_audio, target_rate=11025, target_bits=8, speed=1.0
                 )
             return raw_audio
         except Exception as exc:

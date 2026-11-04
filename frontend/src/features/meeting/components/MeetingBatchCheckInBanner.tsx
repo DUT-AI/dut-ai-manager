@@ -4,7 +4,7 @@ import { ThunderboltOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { ParticipantStatus } from '../types/meeting.types';
 import { useMeetingDetail, useUpdateParticipantStatus } from '../hooks/useMeetings';
-import { useAuth } from '@/features/auth/context/AuthContext';
+import { useMeetingPermissions } from '../hooks/useMeetingPermissions';
 
 const { Text } = Typography;
 
@@ -14,17 +14,11 @@ interface Props {
 
 export const MeetingBatchCheckInBanner: React.FC<Props> = ({ meetingId }) => {
   const { data: meeting, refetch } = useMeetingDetail(meetingId);
-  const { user } = useAuth();
   const [isCheckingInAll, setIsCheckingInAll] = useState(false);
   const updateParticipantStatusMutation = useUpdateParticipantStatus();
+  const { isTrainer } = useMeetingPermissions(meeting);
 
   if (!meeting) return null;
-
-  const currentUserId = user?.id;
-  const isTrainer =
-    (meeting.created_by ? currentUserId === meeting.created_by : false) ||
-    (meeting.trainers?.some((t) => Number(t.id || t.user_id) === Number(currentUserId))) ||
-    (user?.role_names?.some((r) => ['admin', 'leader', 'superadmin', 'manager'].includes(r.toLowerCase())) ?? false);
 
   const allParticipants = [...(meeting.trainers || []), ...(meeting.trainees || [])];
   const unjoinedParticipants = allParticipants.filter(
