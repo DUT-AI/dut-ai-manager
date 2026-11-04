@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
+from redis.asyncio import Redis
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.v1.router import api_v1_router
@@ -18,7 +19,7 @@ from app.bonus_point.providers import BonusPointModuleProvider
 from app.core.config import settings
 from app.core.events import bootstrap_events
 from app.core.logging_config import setup_logging
-from app.core.scheduler import shutdown_scheduler, start_scheduler
+from app.core.scheduler_coordinator import RedisSchedulerCoordinator
 from app.duty.providers import DutyModuleProvider
 from app.expense.providers import ExpenseModuleProvider
 from app.homework.providers import HomeworkModuleProvider
@@ -50,12 +51,21 @@ async def lifespan(app: FastAPI):
     # Event registration using Dishka
     await bootstrap_events(app.state.dishka_container)
 
-    start_scheduler(app.state.dishka_container)
+    # Distributed Scheduler Coordination using Redis Leader Election
+    redis_client = await app.state.dishka_container.get(Redis)
+    coordinator = RedisSchedulerCoordinator(
+        redis_client=redis_client,
+        dishka_container=app.state.dishka_container,
+    )
+    app.state.scheduler_coordinator = coordinator
+    await coordinator.start()
+
     logger.info("🚀 Application started")
     yield
     # Shutdown
+    if hasattr(app.state, "scheduler_coordinator"):
+        await app.state.scheduler_coordinator.stop()
     await app.state.dishka_container.close()
-    shutdown_scheduler()
     logger.info("👋 Application shutdown")
 
 

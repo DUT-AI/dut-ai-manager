@@ -447,6 +447,7 @@ async def test_check_evaluation_deadline_creates_violation_when_trainer_missing(
     assert "Python 101" in saved_violation.reason
     assert mock_meeting.start_time.strftime("%H:%M") in saved_violation.reason
     assert mock_meeting.end_time.strftime("%d/%m/%Y") in saved_violation.reason
+    assert "trong vòng 24h" in saved_violation.reason
 
 
 @pytest.mark.asyncio
@@ -504,12 +505,12 @@ async def test_check_evaluation_deadline_creates_violation_when_trainee_missing(
     saved_violation = violation_repo.save.call_args[0][0]
     assert saved_violation.user_id == 20
     assert "Chưa hoàn thành đánh giá Trainer" in saved_violation.reason
-    assert "trong vòng 72h" in saved_violation.reason
+    assert "trong vòng 24h" in saved_violation.reason
 
 
 @pytest.mark.asyncio
-async def test_check_evaluation_deadline_uses_72h_bound_and_9d_window():
-    """Kiểm tra use case gọi repo với đúng bounds: start_bound = now - 9 ngày, end_bound = now - 72h."""
+async def test_check_evaluation_deadline_uses_24h_bound_and_9d_window():
+    """Kiểm tra use case gọi repo với đúng bounds: start_bound = now - 9 ngày, end_bound = now - 24h."""
     from app.meeting.application.check_evaluation_deadline_job_use_case import (
         CheckEvaluationDeadlineJobUseCase,
     )
@@ -545,7 +546,7 @@ async def test_check_evaluation_deadline_uses_72h_bound_and_9d_window():
     diff_start = (now - start_bound).total_seconds() / 86400
     assert abs(diff_start - MEETING_EVALUATION_SCAN_WINDOW_DAYS) < 0.1
 
-    # Check end_bound is roughly now - 72 hours
+    # Check end_bound is roughly now - 24 hours
     diff_end = (now - end_bound).total_seconds() / 3600
     assert abs(diff_end - MEETING_EVALUATION_DEADLINE_HOURS) < 0.1
 

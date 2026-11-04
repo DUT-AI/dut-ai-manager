@@ -1,6 +1,7 @@
-from collections.abc import Iterable
+from collections.abc import AsyncIterable, Iterable
 
 from dishka import Provider, Scope, provide
+from redis.asyncio import Redis
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
@@ -26,6 +27,10 @@ from app.shared.infrastructure.notification.web_push_channel import (
     WebPushNotificationChannel,
 )
 from app.shared.infrastructure.notification.zalo_channel import ZaloNotificationChannel
+from app.shared.infrastructure.redis_client import (
+    close_redis_client,
+    create_redis_client,
+)
 from app.shared.infrastructure.tts_service import TTSService
 from app.user.infrastructure.repository import UserRepository
 from app.zalo.infrastructure.zalo_bot_client import ZaloBotClient
@@ -64,6 +69,14 @@ class InfrastructureProvider(Provider):
     @provide(scope=Scope.APP)
     def get_tts_service(self) -> TTSService:
         return TTSService()
+
+    @provide(scope=Scope.APP)
+    async def get_redis_client(self) -> AsyncIterable[Redis]:
+        client = create_redis_client()
+        try:
+            yield client
+        finally:
+            await close_redis_client(client)
 
     # Notification Channels
     @provide(scope=Scope.REQUEST)

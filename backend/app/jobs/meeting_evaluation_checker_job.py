@@ -1,7 +1,7 @@
 """
 Meeting Evaluation Checker Job
 
-Scheduled job that runs periodically to check for meetings that ended > 72 hours ago
+Scheduled job that runs periodically to check for meetings that ended > 24 hours ago
 and create violations for Trainer or Trainee who failed to complete their evaluations.
 """
 
@@ -17,7 +17,7 @@ from app.shared.infrastructure.request_context import (
 
 async def check_meeting_evaluations(container: AsyncContainer) -> None:
     """
-    Check for ended meetings with enable_evaluation=True that passed 72h deadline
+    Check for ended meetings with enable_evaluation=True that passed 24h deadline
     and automatically create violations for unsubmitted evaluations.
     """
     logger.info("🔍 [Meeting Evaluation Checker] Starting evaluation deadline check...")

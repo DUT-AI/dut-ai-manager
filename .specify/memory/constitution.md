@@ -1,13 +1,11 @@
 <!--
 Sync Impact Report:
-- Version: v1.8.0 -> v1.9.0
+- Version: v1.9.0 -> v1.10.0
 - Ratification Date: 2026-09-25
-- Last Amended: 2026-10-31
+- Last Amended: 2026-11-05
 - Principles added / enhanced:
-  - XIV. No Fake Optionals & Fail-Fast Parameter Contracts (MUST) (NEW) -> Strict ban on `Type | None = None` defaults and false defensive checks (`if not self.repo:`, dummy fallback defaults) for mandatory dependencies, function parameters, and domain attributes across constructors, event handlers, helpers, repositories, and DTOs.
-  - X. Zero Redundant Backward Compatibility & Contextual Field Ownership (ENHANCED) -> Explicitly mandate Single Source of Truth and relational field ownership. Prohibit duplicate or misplaced columns on parent entities (e.g., `homeworks.deadline`) when the attribute intrinsically belongs to relational assignees (`homework_assignees.deadline`).
-  - Development Workflow & Quality Gates: Migration Integrity (ENHANCED) -> Mandate that Alembic revision IDs MUST NOT exceed 32 characters in length to comply with PostgreSQL's `alembic_version.version_num VARCHAR(32)` column limit.
-- Rationale: Codifying strict type contracts, eliminating fake defensive programming, enforcing relational field ownership, and preventing Alembic revision ID truncation crashes.
+  - XV. Unified Client Networking & Fail-Fast Session Renewal (MUST) (NEW) -> Mandate that all client HTTP communications use canonical `axiosInstance` (prohibiting raw `fetch` and disparate token headers), enforce single-flight promise queuing with `_retry = true` loop protection for silent token refresh, return fail-fast HTTP 401 for auth errors without false alarm toasts for guests, dynamic environment-aware cookie `Secure` flags, and mandatory `user.is_active` validation in `RefreshTokenUseCase`.
+- Rationale: Codifying client-server authentication standards, eliminating infinite retry loops, preventing inactive user token renewals, and standardizing frontend API client calls.
 -->
 
 # DUT AI Manager Constitution
@@ -94,11 +92,19 @@ All dependencies, parameters, and attributes that are required for business logi
 - **No Dummy Fallback Defaults**: Domain entities and methods MUST NOT fabricate fallback values (e.g., defaulting a missing deadline to `datetime.now(timezone.utc)`) to mask missing required inputs. If required data is missing, the operation MUST raise a domain exception.
 - **Model & DTO Purity**: Base DTOs and Domain Entities MUST NOT declare optional attributes (`field: Type | None = None`) purely because one specific lifecycle stage (such as creation or update) requires it. Separate Write DTOs (`*Create`, `*Update`) from canonical Read DTOs and Entities to maintain exact field semantics.
 
+### XV. Unified Client Networking & Fail-Fast Session Renewal (MUST)
+All client-to-server communication and session renewal mechanisms MUST follow strict canonical networking and fail-fast authentication contracts:
+- **Canonical Client Instance**: All HTTP network communication on client applications (`frontend/`) MUST flow through the canonical, configured HTTP client (`axiosInstance`). Ad-hoc instantiation of raw `fetch()`, isolated `axios` instances, or disparate manual headers (such as reading `localStorage.getItem('access_token')`) for API requests is strictly forbidden.
+- **Single-Flight & Queued Silent Refresh**: Token renewal MUST be executed silently and asynchronously via single-flight locking (`isRefreshing`) and a FIFO Promise queue (`failedQueue`). Each queued request replayed upon token refresh MUST be marked with `_retry = true` to prevent infinite refresh loops and unhandled race conditions.
+- **Fail-Fast HTTP Status Codes & Guest Protection**: Session expiration and missing credential errors MUST return standard HTTP `401 Unauthorized` (via `BadRequestException(status_code=401)` on the backend), strictly prohibiting HTTP 200 responses with `{ is_success: false }` for authentication failures. The client interceptor MUST differentiate between unauthenticated guests (e.g. missing token) and expired sessions, preventing false alarm "Phiên đăng nhập đã hết hạn" notifications for visitors.
+- **Environment-Aware Cookie Security & Active Account Integrity**: Auth cookies (`access_token`, `refresh_token`) MUST enforce `HttpOnly`, `SameSite=Lax`, and dynamic `Secure` flags (`secure=settings.is_cookie_secure`) bound to `settings.ENVIRONMENT == "production"`. Token issuing and renewal use cases (`RefreshTokenUseCase`) MUST verify account active status (`user.is_active`), immediately revoking token renewal rights for locked or inactive users.
+
 ## Security & Compliance Standards
 
 1. **Zero Secret Leakage**: No hardcoding of passwords, JWT secrets, Discord Bot tokens, MinIO credentials, or Zalo App secrets. All configurations MUST read from environment variables managed via `app.core.config.Settings`.
 2. **Role-Based Access Control (RBAC)**: All administrative, modification, and deletion endpoints MUST enforce permission checks via `hasPermission(...)` and `CurrentUser`.
 3. **Data Protection & Sanitization**: All file uploads MUST be validated for MIME type and stored in object storage (MinIO) with securely generated paths.
+4. **Cookie & Session Hardening**: Auth cookies must be HttpOnly with dynamic secure flag based on environment, and all token renewal must validate active user status (`user.is_active`).
 
 ## Development Workflow & Quality Gates
 
@@ -116,4 +122,4 @@ All dependencies, parameters, and attributes that are required for business logi
    - **MINOR**: Addition of new principles or major workflow standards.
    - **PATCH**: Non-semantic clarifications and wording updates.
 
-**Version**: 1.9.0 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-10-31
+**Version**: 1.10.0 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-11-05

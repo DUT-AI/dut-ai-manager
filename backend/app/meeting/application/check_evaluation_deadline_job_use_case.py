@@ -91,7 +91,7 @@ class CheckEvaluationDeadlineJobUseCase:
             if p.user_id not in reviewers:
                 reason = (
                     f"Chưa hoàn thành đánh giá Trainer cho buổi học "
-                    f"'{meeting.title}'{time_str} trong vòng 72h"
+                    f"'{meeting.title}'{time_str} trong vòng 24h"
                 )
                 if not self.violation_repo.exists_by_user_and_reason(p.user_id, reason):
                     v = Violation.create_system_violation(
@@ -111,7 +111,7 @@ class CheckEvaluationDeadlineJobUseCase:
                 trainer_id = trainer.user_id
                 reason = (
                     f"Trainer chưa hoàn tất đánh giá tổng thể buổi học "
-                    f"'{meeting.title}'{time_str} trong vòng 72h"
+                    f"'{meeting.title}'{time_str} trong vòng 24h"
                 )
                 if not self.violation_repo.exists_by_user_and_reason(
                     trainer_id, reason

@@ -103,6 +103,23 @@ class Settings(BaseSettings):
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_PORT: int = 5432
 
+    # Redis Configuration
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_PASSWORD: str = ""
+    REDIS_DB: int = 0
+
+    @computed_field
+    @property
+    def REDIS_URL(self) -> str:
+        """Construct Redis connection string."""
+        if self.REDIS_PASSWORD:
+            return f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+
+    # Server Workers Configuration
+    UVICORN_WORKERS: int = 4
+
     # Production Database credentials
     POSTGRES_DB: str = ""
     POSTGRES_USER_ADMIN: str = ""

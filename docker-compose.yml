@@ -16,6 +16,22 @@ services:
     networks:
       - dut-ai-network
 
+  redis:
+    image: redis:7-alpine
+    container_name: dut-ai-redis
+    restart: always
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dut-ai-network
+
   backend:
     build:
       context: ./backend
@@ -28,10 +44,14 @@ services:
       - ENVIRONMENT=production
       - POSTGRES_SERVER=postgres
       - POSTGRES_PORT=5432
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     ports:
       - "${BACKEND_PORT}:8000"
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/docs')\" || exit 1"]
@@ -70,4 +90,6 @@ networks:
 
 volumes:
   postgres_data:
+    driver: local
+  redis_data:
     driver: local

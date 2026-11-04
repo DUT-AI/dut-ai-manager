@@ -1,11 +1,10 @@
-"""
-Scheduler module for background jobs using APScheduler.
+"""Scheduler module for background jobs using APScheduler.
+
 Runs scheduled tasks like homework deadline checks.
 
-NOTE: When running with multiple workers (e.g., gunicorn --workers 4),
-the scheduler should only run in ONE worker to avoid duplicate job executions.
-This is achieved using file-based locking - only the first worker to acquire
-the lock will run the scheduler.
+NOTE: When running with multiple workers (e.g., uvicorn --workers 4),
+the scheduler is coordinated by RedisSchedulerCoordinator so that only
+ONE worker acts as the LEADER and runs this scheduler.
 """
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -25,13 +24,26 @@ from app.jobs.reminder_scanner_job import scan_and_send_reminders
 scheduler: AsyncIOScheduler | None = None
 
 
-def start_scheduler(dishka_container: AsyncContainer) -> None:
+async def start_scheduler(dishka_container: AsyncContainer) -> None:
     """Start the background scheduler with all registered jobs."""
     global scheduler
 
+    if scheduler and scheduler.running:
+        logger.warning("📅 Scheduler is already running, skipping start.")
+        return
+
     logger.info("📅 Starting background scheduler...")
 
-    scheduler = AsyncIOScheduler(timezone="Asia/Ho_Chi_Minh")
+    job_defaults = {
+        "coalesce": True,
+        "max_instances": 1,
+        "misfire_grace_time": 300,
+    }
+
+    scheduler = AsyncIOScheduler(
+        timezone="Asia/Ho_Chi_Minh",
+        job_defaults=job_defaults,
+    )
 
     # Schedule homework check job at 23:59 every day
     scheduler.add_job(
@@ -68,7 +80,7 @@ def start_scheduler(dishka_container: AsyncContainer) -> None:
         check_meeting_evaluations,
         CronTrigger(minute=0, timezone="Asia/Ho_Chi_Minh"),
         id="meeting_evaluation_check",
-        name="Check 72h meeting evaluations deadline",
+        name="Check 24h meeting evaluations deadline",
         replace_existing=True,
         kwargs={"container": dishka_container},
     )
@@ -109,10 +121,11 @@ def start_scheduler(dishka_container: AsyncContainer) -> None:
     )
 
 
-def shutdown_scheduler() -> None:
+async def shutdown_scheduler() -> None:
     """Shutdown the scheduler gracefully."""
     global scheduler
 
     if scheduler and scheduler.running:
         scheduler.shutdown(wait=False)
+        scheduler = None
         logger.info("📅 Scheduler shutdown complete")
