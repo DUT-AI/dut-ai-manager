@@ -1,5 +1,5 @@
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel
 
@@ -14,7 +14,7 @@ class ScoreDetail(BaseModel):
     weight: float
 
 
-class HomeworkStatus(str, Enum):
+class HomeworkStatus(StrEnum):
     NOT_SUBMITTED = "NOT_SUBMITTED"
     SUBMITTED = "SUBMITTED"
     LEADER_CHECKED = "LEADER_CHECKED"

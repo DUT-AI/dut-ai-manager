@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar
+from typing import TypeVar
 
 from app.shared.domain.event_bus import DomainEvent
 
 T = TypeVar("T", bound=DomainEvent)
 
 
-class EventHandler(ABC, Generic[T]):
+class EventHandler[T: DomainEvent](ABC):
     """Interface cho tất cả các Domain Event Handlers."""
 
     @abstractmethod

@@ -9,7 +9,7 @@ Key differences from the old BaseRepository (api/v1/repositories/base.py):
 Old modules can keep using the old BaseRepository until they are migrated.
 """
 
-from typing import Any, Generic, TypeVar, cast
+from typing import Any, TypeVar, cast
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -28,7 +28,7 @@ TModel = TypeVar("TModel", bound=SQLAlchemyTimestampMixin)
 TEntity = TypeVar("TEntity", bound=BaseEntity)
 
 
-class BaseRepository(Generic[TModel, TEntity]):
+class BaseRepository[TModel: SQLAlchemyTimestampMixin, TEntity: BaseEntity]:
     """Base repository — uses flush() for atomicity, NOT commit()."""
 
     def __init__(self, session: Session, model: type[TModel]):

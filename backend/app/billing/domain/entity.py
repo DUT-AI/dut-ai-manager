@@ -3,19 +3,19 @@ Billing Domain Entities — pure Pydantic, NO ORM dependency.
 """
 
 from datetime import date
-from enum import Enum
+from enum import StrEnum
 
 from app.shared.domain.base_entity import BaseEntity
 
 
-class InvoiceStatus(str, Enum):
+class InvoiceStatus(StrEnum):
     PENDING = "PENDING"
     PAID = "PAID"
     CANCELLED = "CANCELLED"
     EXPIRED = "EXPIRED"
 
 
-class InvoiceItemType(str, Enum):
+class InvoiceItemType(StrEnum):
     VIOLATION = "VIOLATION"
     FUND = "FUND"
     DINING = "DINING"

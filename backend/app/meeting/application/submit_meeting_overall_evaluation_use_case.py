@@ -35,7 +35,9 @@ class SubmitMeetingOverallEvaluationUseCase:
         # 2. Kiểm tra thẩm quyền (Trainer của buổi học, Creator hoặc Admin)
         if not is_admin:
             is_trainer = meeting.is_trainer(trainer_id)
-            is_creator = meeting.created_by is not None and meeting.created_by == trainer_id
+            is_creator = (
+                meeting.created_by is not None and meeting.created_by == trainer_id
+            )
             if not (is_trainer or is_creator):
                 raise BadRequestException(
                     "Bạn không có quyền đánh giá buổi học này",

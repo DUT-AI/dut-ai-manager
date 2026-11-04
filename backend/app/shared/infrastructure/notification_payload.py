@@ -1,9 +1,9 @@
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class NotificationCategory(str, Enum):
+class NotificationCategory(StrEnum):
     BILLING = "billing"
     HOMEWORK = "homework"
     VIOLATION = "violation"
@@ -23,7 +23,7 @@ class NotificationCategory(str, Enum):
         return None
 
 
-class NotificationLevel(str, Enum):
+class NotificationLevel(StrEnum):
     INFO = "info"
     SUCCESS = "success"
     WARNING = "warning"

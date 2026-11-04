@@ -27,7 +27,9 @@ async def check_meeting_ownership(
             "Không tìm thấy buổi học", status_code=status.HTTP_404_NOT_FOUND
         )
 
-    is_creator = meeting.created_by is not None and meeting.created_by == current_user.id
+    is_creator = (
+        meeting.created_by is not None and meeting.created_by == current_user.id
+    )
     is_trainer = meeting.is_trainer(current_user.id)
 
     if not (is_creator or is_trainer):
@@ -67,7 +69,9 @@ async def check_meeting_evaluation_permission(
         )
 
     is_trainer = meeting.is_trainer(current_user.id)
-    is_creator = meeting.created_by is not None and meeting.created_by == current_user.id
+    is_creator = (
+        meeting.created_by is not None and meeting.created_by == current_user.id
+    )
 
     if not (is_trainer or is_creator):
         raise BadRequestException(

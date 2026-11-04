@@ -4,14 +4,14 @@ Pure Pydantic models with zero framework / ORM dependencies.
 """
 
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from zoneinfo import ZoneInfo
 
 from app.shared.domain.base_entity import BaseEntity
 
 
-class TaskType(str, Enum):
+class TaskType(StrEnum):
     HOMEWORK = "HOMEWORK"
     DUTY = "DUTY"
     MEETING_EVALUATION = "MEETING_EVALUATION"
@@ -27,7 +27,7 @@ class TaskType(str, Enum):
         return None
 
 
-class NotificationCategory(str, Enum):
+class NotificationCategory(StrEnum):
     HOMEWORK = "HOMEWORK"
     DUTY = "DUTY"
     MEETING = "MEETING"
@@ -47,7 +47,7 @@ class NotificationCategory(str, Enum):
         return None
 
 
-class NotificationLevel(str, Enum):
+class NotificationLevel(StrEnum):
     INFO = "INFO"
     SUCCESS = "SUCCESS"
     WARNING = "WARNING"
@@ -63,12 +63,17 @@ class NotificationLevel(str, Enum):
         return None
 
 
-class ReminderStage(str, Enum):
+class ReminderStage(StrEnum):
+    # ================= Active Pure Countdown Stages =================
+    OFFSET_1D = "OFFSET_1D"  # 24 giờ trước hạn chót (22h - 26h)
+    OFFSET_4H = "OFFSET_4H"  # 4 giờ trước hạn chót (3.5h - 4.5h)
+    OFFSET_1H = "OFFSET_1H"  # 1 giờ trước hạn chót (0.5h - 1.5h) - Critical
+
+    # ================= Deprecated Legacy Stages =====================
+    # Giữ lại để đảm bảo tương thích ngược (Backward Compatibility)
+    # khi đọc dữ liệu lịch sử từ bảng `notifications` trong database.
     OFFSET_2D = "OFFSET_2D"
-    OFFSET_1D = "OFFSET_1D"
     OFFSET_12H = "OFFSET_12H"
-    OFFSET_4H = "OFFSET_4H"
-    OFFSET_1H = "OFFSET_1H"
     FIXED_0800 = "FIXED_0800"
     FIXED_1200 = "FIXED_1200"
     FIXED_1930 = "FIXED_1930"
@@ -76,14 +81,22 @@ class ReminderStage(str, Enum):
 
     @property
     def is_critical(self) -> bool:
-        """Kiểm tra mốc nhắc nhở có thuộc nhóm khẩn cấp cao không."""
-        return self in (ReminderStage.OFFSET_1H, ReminderStage.FIXED_2200)
+        """Kiểm tra mốc nhắc nhở có thuộc nhóm khẩn cấp cao không (Chỉ duy nhất mốc 1H)."""
+        return self == ReminderStage.OFFSET_1H
 
     @classmethod
     def calculate_matching_stages(
         cls, deadline: datetime, now: datetime
     ) -> list["ReminderStage"]:
-        """Xác định danh sách các mốc ReminderStage phù hợp với thời điểm hiện tại và deadline."""
+        """
+        Xác định danh sách các mốc ReminderStage phù hợp thuần đếm ngược (Countdown Offsets).
+        Đã loại bỏ toàn bộ 4 khung giờ cố định cũ (08:00, 12:00, 19:30, 22:00)
+        và các mốc dư thừa (OFFSET_2D, OFFSET_12H).
+        Chỉ giữ 3 mốc chuẩn:
+        - OFFSET_1D: 24 giờ trước hạn chót (22.0h - 26.0h)
+        - OFFSET_4H: 4 giờ trước hạn chót (3.5h - 4.5h)
+        - OFFSET_1H: 1 giờ trước hạn chót (0.5h - 1.5h)
+        """
         stages: list[ReminderStage] = []
 
         vn_tz = ZoneInfo("Asia/Ho_Chi_Minh")
@@ -98,33 +111,11 @@ class ReminderStage(str, Enum):
             else deadline.replace(tzinfo=vn_tz).astimezone(UTC)
         )
 
-        # 1. Khung giờ cố định trong ngày quy chiếu theo giờ Việt Nam
-        now_vn = now_utc.astimezone(vn_tz)
-        hour = now_vn.hour
-        minute = now_vn.minute
-
-        # 08:00 (7:45 - 8:20)
-        if (hour == 8 and minute <= 20) or (hour == 7 and minute >= 45):
-            stages.append(cls.FIXED_0800)
-        # 12:00 (11:45 - 12:20)
-        if (hour == 12 and minute <= 20) or (hour == 11 and minute >= 45):
-            stages.append(cls.FIXED_1200)
-        # 19:30 (19:15 - 19:45)
-        if hour == 19 and 15 <= minute <= 45:
-            stages.append(cls.FIXED_1930)
-        # 22:00 (21:45 - 22:20)
-        if (hour == 22 and minute <= 20) or (hour == 21 and minute >= 45):
-            stages.append(cls.FIXED_2200)
-
-        # 2. Mốc đếm ngược động theo deadline
         diff_hours = (deadline_utc - now_utc).total_seconds() / 3600.0
 
-        if 46.0 <= diff_hours <= 50.0:
-            stages.append(cls.OFFSET_2D)
-        elif 22.0 <= diff_hours <= 26.0:
+        # Thuần mốc đếm ngược theo deadline
+        if 22.0 <= diff_hours <= 26.0:
             stages.append(cls.OFFSET_1D)
-        elif 11.0 <= diff_hours <= 13.0:
-            stages.append(cls.OFFSET_12H)
         elif 3.5 <= diff_hours <= 4.5:
             stages.append(cls.OFFSET_4H)
         elif 0.5 <= diff_hours <= 1.5:
@@ -133,7 +124,7 @@ class ReminderStage(str, Enum):
         return stages
 
 
-class ReminderStatus(str, Enum):
+class ReminderStatus(StrEnum):
     SENT = "SENT"
     FAILED = "FAILED"
     DM_BLOCKED = "DM_BLOCKED"

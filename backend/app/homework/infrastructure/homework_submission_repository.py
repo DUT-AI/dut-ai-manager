@@ -86,7 +86,7 @@ class HomeworkSubmissionRepository:
             HomeworkSubmissionModel.homework_id == homework_id,
             HomeworkSubmissionModel.user_id == user_id,
             func.upper(HomeworkSubmissionModel.submission_type) == type_str,
-            HomeworkSubmissionModel.is_passed == True,
+            HomeworkSubmissionModel.is_passed,
             HomeworkSubmissionModel.submitted_at <= deadline,
         )
         return self.session.scalars(statement).first() is not None
@@ -220,7 +220,7 @@ class HomeworkSubmissionRepository:
             HomeworkSubmissionModel.homework_id == homework_id,
             HomeworkSubmissionModel.user_id == user_id,
             func.upper(HomeworkSubmissionModel.submission_type) == "CODING",
-            HomeworkSubmissionModel.is_passed == True,
+            HomeworkSubmissionModel.is_passed,
             HomeworkSubmissionModel.exercise_id.is_not(None),
         )
         if deadline is not None:

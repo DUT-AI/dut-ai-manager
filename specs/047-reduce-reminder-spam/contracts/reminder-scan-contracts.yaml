@@ -1,0 +1,114 @@
+openapi: 3.1.0
+info:
+  title: Reminder Scan & Notification Dispatch API Contract
+  version: 1.0.0
+  description: API specifications for triggered reminder scanning and notification channel delivery.
+paths:
+  /api/v1/reminders/trigger:
+    post:
+      summary: Kích hoạt quét và gửi thông báo nhắc nhở hạn chót
+      description: Quét tất cả các nhiệm vụ chưa hoàn thành theo cơ chế thuần đếm ngược (24h, 4h, 1h), áp dụng deduplication và phân phối đa kênh (ngoại trừ Zalo Bot khi bị tắt).
+      parameters:
+        - name: dry_run
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: Chạy thử nghiệm không thực sự gửi thông báo đến các kênh ngoài.
+      responses:
+        '200':
+          description: Kết quả quét nhắc nhở thành công.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/TriggerReminderScanResponseDto'
+                  message:
+                    type: string
+                    example: "Reminder scan completed successfully."
+components:
+  schemas:
+    ReminderStage:
+      type: string
+      enum:
+        - OFFSET_1D
+        - OFFSET_4H
+        - OFFSET_1H
+        - OFFSET_2D
+        - OFFSET_12H
+        - FIXED_0800
+        - FIXED_1200
+        - FIXED_1930
+        - FIXED_2200
+      description: |
+        Các mốc nhắc việc. Trong đó các mốc active được sinh ra là OFFSET_1D (24h), OFFSET_4H (4h), OFFSET_1H (1h).
+        Các mốc FIXED_* và OFFSET_2D/12H được lưu giữ nhằm bảo toàn tương thích đọc dữ liệu cũ.
+    TaskType:
+      type: string
+      enum:
+        - HOMEWORK
+        - DUTY
+        - MEETING
+        - MEETING_EVALUATION
+    ReminderStatus:
+      type: string
+      enum:
+        - SENT
+        - FAILED
+        - DM_BLOCKED
+        - NO_DISCORD_ID
+        - NO_ZALO_ID
+        - NO_SUBSCRIPTION
+        - DISABLED
+    ReminderScanDetailDto:
+      type: object
+      required:
+        - task_type
+        - task_id
+        - user_id
+        - stage
+        - status
+      properties:
+        task_type:
+          $ref: '#/components/schemas/TaskType'
+        task_id:
+          type: integer
+          example: 10
+        user_id:
+          type: integer
+          example: 42
+        stage:
+          $ref: '#/components/schemas/ReminderStage'
+        status:
+          $ref: '#/components/schemas/ReminderStatus'
+    TriggerReminderScanResponseDto:
+      type: object
+      required:
+        - total_scanned
+        - total_reminders_sent
+        - total_skipped_already_sent
+        - total_failed
+        - details
+      properties:
+        total_scanned:
+          type: integer
+          example: 15
+        total_reminders_sent:
+          type: integer
+          example: 3
+        total_skipped_already_sent:
+          type: integer
+          example: 12
+        total_failed:
+          type: integer
+          example: 0
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReminderScanDetailDto'

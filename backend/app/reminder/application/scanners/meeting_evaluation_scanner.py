@@ -91,9 +91,11 @@ class MeetingEvaluationTaskScanner(BaseTaskScanner):
                 ]
 
                 for p in valid_trainees:
-                    evaluated_count = self.evaluation_repo.count_evaluations_by_reviewer(
-                        meeting_id=meeting.id,
-                        reviewer_id=p.user_id,
+                    evaluated_count = (
+                        self.evaluation_repo.count_evaluations_by_reviewer(
+                            meeting_id=meeting.id,
+                            reviewer_id=p.user_id,
+                        )
                     )
                     if evaluated_count == 0:
                         candidates.append(

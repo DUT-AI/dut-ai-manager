@@ -105,6 +105,7 @@ def test_check_meeting_attendance_default_target_date_delays_2_days():
     """Khi target_date is None, CheckMeetingAttendanceUseCase tự động quét (today - 2 ngày)."""
     from datetime import UTC, timedelta
     from zoneinfo import ZoneInfo
+
     from app.meeting.domain.constants import MEETING_ATTENDANCE_CHECK_DELAY_DAYS
 
     meeting_repo = MagicMock()
@@ -119,12 +120,13 @@ def test_check_meeting_attendance_default_target_date_delays_2_days():
     )
 
     now_vn = datetime.now(UTC).astimezone(ZoneInfo("Asia/Ho_Chi_Minh"))
-    expected_target_date = now_vn.date() - timedelta(days=MEETING_ATTENDANCE_CHECK_DELAY_DAYS)
+    expected_target_date = now_vn.date() - timedelta(
+        days=MEETING_ATTENDANCE_CHECK_DELAY_DAYS
+    )
 
     asyncio.run(use_case.execute())
 
     meeting_repo.get_by_date.assert_called_once_with(expected_target_date)
-
 
 
 def test_meeting_repository_save_hard_deletes_removed_participants():

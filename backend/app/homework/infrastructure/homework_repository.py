@@ -114,7 +114,7 @@ class HomeworkRepository:
             )
             .where(
                 HomeworkAssigneeModel.user_id == user_id,
-                HomeworkAssigneeModel.is_deleted == False,
+                not HomeworkAssigneeModel.is_deleted,
                 HomeworkModel.is_deleted == deleted,
             )
         )
@@ -131,7 +131,7 @@ class HomeworkRepository:
             )
             .where(
                 HomeworkAssigneeModel.user_id == user_id,
-                HomeworkAssigneeModel.is_deleted == False,
+                not HomeworkAssigneeModel.is_deleted,
                 HomeworkModel.is_deleted == deleted,
             )
             .order_by(desc(HomeworkModel.created_at))
@@ -155,7 +155,7 @@ class HomeworkRepository:
             )
             .where(
                 HomeworkAssigneeModel.user_id == user_id,
-                HomeworkAssigneeModel.is_deleted == False,
+                not HomeworkAssigneeModel.is_deleted,
                 HomeworkModel.is_deleted == deleted,
             )
             .order_by(desc(HomeworkModel.created_at))
@@ -218,7 +218,7 @@ class HomeworkRepository:
     def restore(self, homework_id: int) -> HomeworkEntity | None:
         statement = select(HomeworkModel).where(
             HomeworkModel.id == homework_id,
-            HomeworkModel.is_deleted == True,
+            HomeworkModel.is_deleted,
         )
         model = self.session.scalars(statement).first()
         if model:
@@ -232,7 +232,7 @@ class HomeworkRepository:
         """Find active homework by slug."""
         statement = select(HomeworkModel).where(
             HomeworkModel.slug == slug,
-            HomeworkModel.is_deleted == False,
+            not HomeworkModel.is_deleted,
         )
         model = self.session.scalars(statement).first()
         return model.to_entity() if model else None

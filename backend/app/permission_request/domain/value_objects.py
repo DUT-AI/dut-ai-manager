@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class RequestCategory(str, Enum):
+class RequestCategory(StrEnum):
     """Phân loại yêu cầu xin phép (Domain Value Object)"""
 
     ABSENCE = "ABSENCE"  # Xin vắng sinh hoạt

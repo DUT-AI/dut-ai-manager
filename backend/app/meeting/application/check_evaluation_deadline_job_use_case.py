@@ -113,7 +113,9 @@ class CheckEvaluationDeadlineJobUseCase:
                     f"Trainer chưa hoàn tất đánh giá tổng thể buổi học "
                     f"'{meeting.title}'{time_str} trong vòng 72h"
                 )
-                if not self.violation_repo.exists_by_user_and_reason(trainer_id, reason):
+                if not self.violation_repo.exists_by_user_and_reason(
+                    trainer_id, reason
+                ):
                     v = Violation.create_system_violation(
                         user_id=trainer_id, reason=reason, date=now
                     )

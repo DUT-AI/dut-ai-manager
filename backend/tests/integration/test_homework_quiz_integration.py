@@ -560,4 +560,3 @@ async def test_sync_homework_result_payload_contract():
     assert expected_keys.issubset(set(result.keys()))
     assert isinstance(result["message"], str)
     assert len(result["message"]) > 0
-

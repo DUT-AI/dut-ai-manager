@@ -43,7 +43,9 @@ class CheckOverdueDutiesUseCase:
     async def execute(self, target_date: date | None = None) -> int:
         if target_date is None:
             now_vn = datetime.now(UTC).astimezone(ZoneInfo("Asia/Ho_Chi_Minh"))
-            target_date = now_vn.date() - timedelta(days=DUTY_VIOLATION_CHECK_DELAY_DAYS)
+            target_date = now_vn.date() - timedelta(
+                days=DUTY_VIOLATION_CHECK_DELAY_DAYS
+            )
 
         pending_duties = self.duty_repo.get_pending_duties_for_date(target_date)
         if not pending_duties:

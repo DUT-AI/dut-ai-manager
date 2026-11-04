@@ -3,7 +3,7 @@ Pagination dependencies and value objects.
 """
 
 from dataclasses import dataclass
-from typing import Generic, TypeVar
+from typing import TypeVar
 
 from pydantic import BaseModel, Field
 
@@ -34,7 +34,7 @@ class PaginationParams(BaseModel):
 
 
 @dataclass(frozen=True, slots=True)
-class PagedResult(Generic[TEntity]):
+class PagedResult[TEntity]:
     """Value object holding paginated entities and total count."""
 
     items: list[TEntity]

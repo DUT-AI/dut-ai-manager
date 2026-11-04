@@ -137,7 +137,7 @@ async def test_dispatch_now_calls_all_channels(
     mock_zalo_channel,
     mock_web_push_channel,
 ):
-    """Xác nhận dispatch_now gọi đầy đủ tất cả các kênh (In-App, Discord, Zalo, Web Push)."""
+    """Xác nhận dispatch_now gọi các kênh ngoại vi kích hoạt (Discord, Web Push) và In-App, loại trừ Zalo để chống spam."""
     payload = NotificationPayload(
         user_id=1,
         title="Meeting Title",
@@ -150,13 +150,14 @@ async def test_dispatch_now_calls_all_channels(
 
     assert "in_app" in results
     assert "discord" in results
-    assert "zalo" in results
     assert "web_push" in results
+    # Zalo channel bị loại bỏ khỏi danh sách phát tán ngoại vi
+    assert "zalo" not in results
 
     assert results["in_app"].success is True
     assert results["discord"].success is True
-    assert results["zalo"].success is True
     assert results["web_push"].success is True
+    mock_zalo_channel.send.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -188,9 +189,17 @@ async def test_dispatch_fault_isolation(
     assert results["discord"].status == "FAILED"
     assert "Discord API 500" in results["discord"].error_message
 
-    # Zalo và Web Push vẫn gửi thành công
-    assert results["zalo"].success is True
+    # Web Push vẫn gửi thành công, Zalo không bị gọi
     assert results["web_push"].success is True
+    mock_zalo_channel.send.assert_not_called()
+
+
+def test_zalo_channel_excluded_from_external_channels(dispatcher, mock_zalo_channel):
+    """Xác nhận Zalo channel bị loại bỏ khỏi danh sách kênh phát ngoại vi để tránh spam."""
+    assert mock_zalo_channel not in dispatcher._external_channels
+    assert len(dispatcher._external_channels) == 2
+    assert dispatcher.discord_channel in dispatcher._external_channels
+    assert dispatcher.web_push_channel in dispatcher._external_channels
 
 
 @pytest.mark.asyncio

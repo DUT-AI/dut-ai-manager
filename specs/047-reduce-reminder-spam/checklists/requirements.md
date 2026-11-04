@@ -31,8 +31,9 @@
 
 ## Notes
 
-- Toàn bộ các điểm cần làm rõ đã được thống nhất:
+- Đã tích hợp đầy đủ yêu cầu của người dùng:
   1. Loại bỏ toàn bộ các khung giờ cố định (`FIXED_0800`, `FIXED_1200`, `FIXED_1930`, `FIXED_2200`).
   2. Áp dụng chuẩn 3 mốc đếm ngược (`24h`, `4h`, `1h`), với nhiệm vụ còn xa (>24h) chỉ nhắc tối đa 1 lần mỗi ngày.
   3. Giữ nguyên định dạng thông báo và kênh truyền tải quen thuộc theo từng nhiệm vụ hiện tại.
-- Đặc tả đã đạt chuẩn 100% chất lượng và sẵn sàng chuyển sang giai đoạn `/speckit-plan`.
+  4. Ngừng gửi thông báo qua kênh Zalo Bot (Mute Zalo Bot), bảo toàn 100% mã nguồn hiện có để có thể mở lại khi cần.
+- Đặc tả đã đạt chuẩn 100% chất lượng và sẵn sàng cho lệnh `/speckit-plan`.

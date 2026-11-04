@@ -401,12 +401,16 @@ class CreateMonthlyInvoicesUseCase:
         month: int,
         year: int,
         team_id: int,
-        user_ids: list[int] = [],
+        user_ids: list[int] = None,
         violation_price: int = 20000,
         fund_amount: int = 50000,
-        extra_items: list[dict] = [],
+        extra_items: list[dict] = None,
         execute: bool = False,
     ) -> dict:
+        if extra_items is None:
+            extra_items = []
+        if user_ids is None:
+            user_ids = []
         if not team_id:
             raise BadRequestException("Vui lòng chọn nhóm để gán hóa đơn")
 

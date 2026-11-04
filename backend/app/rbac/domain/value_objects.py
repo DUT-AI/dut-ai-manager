@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class RoleType(str, Enum):
+class RoleType(StrEnum):
     """Role type enum"""
 
     ADMIN = "admin"  # Chủ nhiệm
@@ -9,77 +9,77 @@ class RoleType(str, Enum):
     TEAMMATE = "teammate"  # Thành viên
 
 
-class AccountPermission(str, Enum):
+class AccountPermission(StrEnum):
     CREATE = "account:create"
     READ = "account:read"
     UPDATE = "account:update"
     DELETE = "account:delete"
 
 
-class RolePermission(str, Enum):
+class RolePermission(StrEnum):
     CREATE = "role:create"
     READ = "role:read"
     UPDATE = "role:update"
     DELETE = "role:delete"
 
 
-class UserPermission(str, Enum):
+class UserPermission(StrEnum):
     CREATE = "user:create"
     READ = "user:read"
     UPDATE = "user:update"
     DELETE = "user:delete"
 
 
-class BonusPointPermission(str, Enum):
+class BonusPointPermission(StrEnum):
     CREATE = "bonus_point:create"
     READ = "bonus_point:read"
     UPDATE = "bonus_point:update"
     DELETE = "bonus_point:delete"
 
 
-class ViolationPermission(str, Enum):
+class ViolationPermission(StrEnum):
     CREATE = "violation:create"
     READ = "violation:read"
     UPDATE = "violation:update"
     DELETE = "violation:delete"
 
 
-class PermissionRequestPermission(str, Enum):
+class PermissionRequestPermission(StrEnum):
     CREATE = "permission_request:create"
     READ = "permission_request:read"
     UPDATE = "permission_request:update"
     DELETE = "permission_request:delete"
 
 
-class PermissionPermission(str, Enum):
+class PermissionPermission(StrEnum):
     CREATE = "permission:create"
     READ = "permission:read"
     UPDATE = "permission:update"
     DELETE = "permission:delete"
 
 
-class TeamPermission(str, Enum):
+class TeamPermission(StrEnum):
     CREATE = "team:create"
     READ = "team:read"
     UPDATE = "team:update"
     DELETE = "team:delete"
 
 
-class TeamMemberPermission(str, Enum):
+class TeamMemberPermission(StrEnum):
     CREATE = "team_member:create"
     READ = "team_member:read"
     UPDATE = "team_member:update"
     DELETE = "team_member:delete"
 
 
-class HomeworkPermission(str, Enum):
+class HomeworkPermission(StrEnum):
     CREATE = "homework:create"
     READ = "homework:read"
     UPDATE = "homework:update"
     DELETE = "homework:delete"
 
 
-class MeetingPermission(str, Enum):
+class MeetingPermission(StrEnum):
     CREATE = "meeting:create"
     READ = "meeting:read"
     UPDATE = "meeting:update"

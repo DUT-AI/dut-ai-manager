@@ -88,7 +88,7 @@ class InAppNotificationChannel(NotificationChannel):
                 created_at=now,
             )
 
-            saved_entity = self.notification_repo.add(notif_entity)
+            self.notification_repo.add(notif_entity)
             return ChannelDeliveryResult(
                 channel=ChannelType.IN_APP,
                 success=True,

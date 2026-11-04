@@ -93,6 +93,42 @@ def test_unified_notification_deduplication(db_session):
     )
     assert last_time is not None
 
+    # 4. Kiểm tra deduplication cho các mốc thuần đếm ngược mới: OFFSET_1D, OFFSET_4H, OFFSET_1H
+    assert (
+        repo.has_reminder_been_sent(TaskType.HOMEWORK, 1, 10, ReminderStage.OFFSET_1D)
+        is False
+    )
+    assert (
+        repo.has_reminder_been_sent(TaskType.HOMEWORK, 1, 10, ReminderStage.OFFSET_4H)
+        is False
+    )
+    assert (
+        repo.has_reminder_been_sent(TaskType.HOMEWORK, 1, 10, ReminderStage.OFFSET_1H)
+        is False
+    )
+
+    notif_1d = Notification.create_deadline_reminder(
+        user_id=10,
+        task_type=TaskType.HOMEWORK,
+        task_id=1,
+        task_title="Bài tập 1",
+        deadline_str="21/10/2026 23:59",
+        time_left_str="24 giờ",
+        stage=ReminderStage.OFFSET_1D,
+        action_url="/dashboard/my-homeworks",
+        now=datetime.now(),
+        discord_status=ReminderStatus.SENT,
+    )
+    repo.add(notif_1d)
+    assert (
+        repo.has_reminder_been_sent(TaskType.HOMEWORK, 1, 10, ReminderStage.OFFSET_1D)
+        is True
+    )
+    assert (
+        repo.has_reminder_been_sent(TaskType.HOMEWORK, 1, 10, ReminderStage.OFFSET_4H)
+        is False
+    )
+
 
 def test_unified_notification_repository_crud_and_pagination(db_session):
     repo = NotificationRepository(session=db_session)

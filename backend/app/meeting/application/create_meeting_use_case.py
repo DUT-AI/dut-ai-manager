@@ -34,7 +34,9 @@ class CreateMeetingUseCase:
         creator_id: int | None = None,
     ) -> Meeting:
         trainers_set = set(trainer_ids or [])
-        trainees_set = set(trainee_ids or []) - trainers_set  # Khử trùng lặp, ưu tiên TRAINER
+        trainees_set = (
+            set(trainee_ids or []) - trainers_set
+        )  # Khử trùng lặp, ưu tiên TRAINER
 
         concurrent_participants = self.repo.get_concurrent_participants_count(
             start_time, end_time

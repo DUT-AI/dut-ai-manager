@@ -1,9 +1,9 @@
-from enum import Enum
+from enum import StrEnum
 
 from app.shared.domain.base_entity import BaseEntity
 
 
-class UserTitle(str, Enum):
+class UserTitle(StrEnum):
     """Các loại danh hiệu tháng"""
 
     ACTIVE = "Tích cực"

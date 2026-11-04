@@ -65,7 +65,7 @@ class GetActivityTrendUseCase:
 
         items = []
         current_end = end_date
-        for i in range(WEEKS_COUNT):
+        for _i in range(WEEKS_COUNT):
             current_start = current_end - timedelta(days=6)
 
             label = current_start.strftime("%d/%m")

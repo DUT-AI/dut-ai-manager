@@ -5,7 +5,6 @@ asynchronous fault-isolated dispatch across Discord, Zalo, and Web Push.
 """
 
 import asyncio
-from typing import Any
 
 from loguru import logger
 
@@ -35,7 +34,8 @@ class UnifiedNotificationDispatcher:
     Cổng điều phối phát thông báo trung tâm cho toàn bộ hệ thống DUT AI Manager.
     Tự động:
     1. Lưu thông báo nội bộ vào In-App DB (bảng notifications).
-    2. Chạy ngầm phân phối đa kênh (Discord, Zalo, Web Push) với Fault Isolation và Retry.
+    2. Chạy ngầm phân phối đa kênh (Discord, Web Push) với Fault Isolation và Retry.
+       (Zalo Bot tạm ngưng phân phối chủ động để tránh spam tin nhắn cá nhân người dùng).
     """
 
     def __init__(
@@ -51,9 +51,10 @@ class UnifiedNotificationDispatcher:
         self.discord_channel = discord_channel
         self.zalo_channel = zalo_channel
         self.web_push_channel = web_push_channel
+
+        # Loại bỏ Zalo khỏi danh sách phát tán ngoại vi chủ động để tránh spam thông báo
         self._external_channels: list[NotificationChannel] = [
             self.discord_channel,
-            self.zalo_channel,
             self.web_push_channel,
         ]
 
@@ -120,7 +121,6 @@ class UnifiedNotificationDispatcher:
 
         return results
 
-    
     async def _dispatch_external_channels(
         self, user: UserEntity, payload: NotificationPayload
     ) -> dict[str, ChannelDeliveryResult]:
@@ -129,7 +129,7 @@ class UnifiedNotificationDispatcher:
         raw_results = await asyncio.gather(*tasks, return_exceptions=True)
 
         results: dict[str, ChannelDeliveryResult] = {}
-        for channel, res in zip(self._external_channels, raw_results):
+        for channel, res in zip(self._external_channels, raw_results, strict=False):
             ch_name = channel.channel_type.value
             if isinstance(res, Exception):
                 logger.error(

@@ -5,7 +5,7 @@ Contains business rules and validation for violations.
 """
 
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import field_validator
 
@@ -13,7 +13,7 @@ from app.shared.domain.base_entity import BaseEntity
 from app.shared.domain.value_objects import UserRef
 
 
-class ViolationType(str, Enum):
+class ViolationType(StrEnum):
     LATE = "LATE"
     ABSENT = "ABSENT"
     OTHER = "OTHER"

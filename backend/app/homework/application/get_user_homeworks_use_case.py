@@ -50,10 +50,8 @@ class GetUserHomeworksUseCase:
         )
 
         # Lấy deadline cá nhân của học viên cho các bài tập này
-        user_deadlines = (
-            self.homework_assignee_repo.get_user_deadlines_for_homeworks(
-                paged_hw_ids, user_id
-            )
+        user_deadlines = self.homework_assignee_repo.get_user_deadlines_for_homeworks(
+            paged_hw_ids, user_id
         )
 
         # Group submissions by homework_id

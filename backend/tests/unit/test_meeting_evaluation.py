@@ -43,7 +43,11 @@ async def test_submit_trainee_evaluation_anonymous():
         created_by=10,
         participants=[
             MeetingParticipant(user_id=10, role=ParticipantRole.TRAINER),
-            MeetingParticipant(user_id=20, role=ParticipantRole.TRAINEE, status=ParticipantStatus.JOINED),
+            MeetingParticipant(
+                user_id=20,
+                role=ParticipantRole.TRAINEE,
+                status=ParticipantStatus.JOINED,
+            ),
         ],
     )
     meeting_repo.get_by_id.return_value = mock_meeting
@@ -91,7 +95,11 @@ async def test_submit_trainee_evaluation_blocks_self_evaluation():
         created_by=10,
         participants=[
             MeetingParticipant(user_id=10, role=ParticipantRole.TRAINER),
-            MeetingParticipant(user_id=10, role=ParticipantRole.TRAINEE, status=ParticipantStatus.JOINED),
+            MeetingParticipant(
+                user_id=10,
+                role=ParticipantRole.TRAINEE,
+                status=ParticipantStatus.JOINED,
+            ),
         ],
     )
     meeting_repo.get_by_id.return_value = mock_meeting
@@ -129,8 +137,16 @@ async def test_submit_trainee_evaluation_blocks_non_trainer_target():
         created_by=10,
         participants=[
             MeetingParticipant(user_id=10, role=ParticipantRole.TRAINER),
-            MeetingParticipant(user_id=20, role=ParticipantRole.TRAINEE, status=ParticipantStatus.JOINED),
-            MeetingParticipant(user_id=30, role=ParticipantRole.TRAINEE, status=ParticipantStatus.JOINED),
+            MeetingParticipant(
+                user_id=20,
+                role=ParticipantRole.TRAINEE,
+                status=ParticipantStatus.JOINED,
+            ),
+            MeetingParticipant(
+                user_id=30,
+                role=ParticipantRole.TRAINEE,
+                status=ParticipantStatus.JOINED,
+            ),
         ],
     )
     meeting_repo.get_by_id.return_value = mock_meeting
@@ -166,7 +182,11 @@ async def test_submit_meeting_overall_evaluation_unauthorized():
         created_by=10,
         participants=[
             MeetingParticipant(user_id=10, role=ParticipantRole.TRAINER),
-            MeetingParticipant(user_id=20, role=ParticipantRole.TRAINEE, status=ParticipantStatus.JOINED),
+            MeetingParticipant(
+                user_id=20,
+                role=ParticipantRole.TRAINEE,
+                status=ParticipantStatus.JOINED,
+            ),
         ],
     )
     meeting_repo.get_by_id.return_value = mock_meeting
@@ -285,7 +305,9 @@ async def test_get_meeting_evaluation_summary_use_case():
 
     eval_repo.get_evaluations_by_meeting.return_value = [trainer_eval, trainee_eval]
 
-    use_case = GetMeetingEvaluationSummaryUseCase(meeting_repo, eval_repo, overall_eval_repo)
+    use_case = GetMeetingEvaluationSummaryUseCase(
+        meeting_repo, eval_repo, overall_eval_repo
+    )
     result = await use_case.execute(meeting_id=10)
 
     assert result.total_evaluations == 2
@@ -512,7 +534,9 @@ async def test_check_evaluation_deadline_uses_72h_bound_and_9d_window():
 
     assert res["meetings_scanned"] == 0
     meeting_repo.get_meetings_for_evaluation_deadline_check.assert_called_once()
-    called_kwargs = meeting_repo.get_meetings_for_evaluation_deadline_check.call_args.kwargs
+    called_kwargs = (
+        meeting_repo.get_meetings_for_evaluation_deadline_check.call_args.kwargs
+    )
     start_bound = called_kwargs["start_bound"]
     end_bound = called_kwargs["end_bound"]
 
@@ -524,7 +548,6 @@ async def test_check_evaluation_deadline_uses_72h_bound_and_9d_window():
     # Check end_bound is roughly now - 72 hours
     diff_end = (now - end_bound).total_seconds() / 3600
     assert abs(diff_end - MEETING_EVALUATION_DEADLINE_HOURS) < 0.1
-
 
 
 @pytest.mark.asyncio

@@ -3,7 +3,7 @@ Duty Domain Entities & Enums.
 """
 
 from datetime import date, datetime, time
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import Field, field_validator
@@ -11,7 +11,7 @@ from pydantic import Field, field_validator
 from app.shared.domain.base_entity import BaseEntity
 
 
-class DutyStatus(str, Enum):
+class DutyStatus(StrEnum):
     PENDING = "PENDING"
     AWAITING_APPROVAL = "AWAITING_APPROVAL"
     COMPLETED = "COMPLETED"

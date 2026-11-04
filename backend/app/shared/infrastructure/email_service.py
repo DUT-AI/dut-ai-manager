@@ -82,23 +82,23 @@ class EmailService:
                     <td align="center" style="padding: 20px 0;">
                         <!-- Main Card -->
                         <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="600" style="border-collapse: collapse; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
-                            
+
                             <!-- Header Image -->
                             <tr>
                                 <td align="center" style="padding: 0;">
                                     <img src="https://minio.dutai.site/dut-ai-manager-prod/540975150_122103163550994716_7679218897607609211_n%20(1).png" alt="Welcome to DUT AI" width="600" style="display: block; width: 100%; max-width: 600px; height: auto; border-top-left-radius: 16px; border-top-right-radius: 16px;">
                                 </td>
                             </tr>
-                            
+
                             <!-- Content -->
                             <tr>
                                 <td style="padding: 20px 50px;">
                                     <h1 style="color: #1a1a1a; margin: 0 0 20px 0; font-size: 24px; text-align: center;">Xin chào {name},</h1>
-                                    
+
                                     <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin-bottom: 30px; text-align: center;">
                                         Chào mừng bạn đến với <strong>DUT AI Manager</strong>. Tài khoản của bạn đã được khởi tạo thành công.
                                     </p>
-                                    
+
                                     <!-- Credentials Box -->
                                     <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; margin-bottom: 30px;">
                                         <div style="margin-bottom: 15px;">
@@ -110,18 +110,18 @@ class EmailService:
                                             <code style="display: block; font-family: 'Consolas', 'Monaco', monospace; font-size: 20px; color: #3182ce; background-color: #ebf8ff; padding: 10px; border-radius: 6px; letter-spacing: 2px;">{password}</code>
                                         </div>
                                     </div>
-                                    
-                                    <!-- Login Button -->   
+
+                                    <!-- Login Button -->
                                     <div style="text-align: center; margin-bottom: 30px;">
                                         <a href="{frontend_host}" style="background-color: #3182ce; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block; transition: background-color 0.3s;">Đăng nhập ngay</a>
                                     </div>
-                                    
+
                                     <p style="color: #718096; font-size: 14px; text-align: center; font-style: italic;">
                                         Vui lòng đổi mật khẩu ngay sau khi đăng nhập lần đầu để bảo mật tài khoản.
                                     </p>
                                 </td>
                             </tr>
-                            
+
                             <!-- Footer -->
                             <tr>
                                 <td style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #edf2f7;">
@@ -157,23 +157,23 @@ class EmailService:
                     <td align="center" style="padding: 20px 0;">
                         <!-- Main Card -->
                         <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="600" style="border-collapse: collapse; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
-                            
+
                             <!-- Header Image -->
                             <tr>
                                 <td align="center" style="padding: 0;">
                                     <img src="https://minio.dutai.site/dut-ai-manager-prod/540975150_122103163550994716_7679218897607609211_n%20(1).png" alt="Reset Password" width="600" style="display: block; width: 100%; max-width: 600px; height: auto; border-top-left-radius: 16px; border-top-right-radius: 16px;">
                                 </td>
                             </tr>
-                            
+
                             <!-- Content -->
                             <tr>
                                 <td style="padding: 20px 50px;">
                                     <h1 style="color: #1a1a1a; margin: 0 0 20px 0; font-size: 24px; text-align: center;">Yêu cầu cấp lại mật khẩu</h1>
-                                    
+
                                     <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin-bottom: 30px; text-align: center;">
                                         Xin chào <strong>{name}</strong>, chúng tôi đã nhận được yêu cầu cấp lại mật khẩu cho tài khoản <strong>{to_email}</strong> của bạn.
                                     </p>
-                                    
+
                                     <!-- Credentials Box -->
                                     <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; margin-bottom: 30px;">
                                         <div style="margin-bottom: 15px;">
@@ -185,18 +185,18 @@ class EmailService:
                                             <code style="display: block; font-family: 'Consolas', 'Monaco', monospace; font-size: 20px; color: #e53e3e; background-color: #fff5f5; padding: 10px; border-radius: 6px; letter-spacing: 2px;">{password}</code>
                                         </div>
                                     </div>
-                                    
-                                    <!-- Login Button -->   
+
+                                    <!-- Login Button -->
                                     <div style="text-align: center; margin-bottom: 30px;">
                                         <a href="{frontend_host}" style="background-color: #3182ce; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; display: inline-block; transition: background-color 0.3s;">Đăng nhập ngay</a>
                                     </div>
-                                    
+
                                     <p style="color: #718096; font-size: 14px; text-align: center; font-style: italic;">
                                         Vui lòng đổi mật khẩu ngay sau khi đăng nhập để đảm bảo an toàn cho tài khoản của bạn.
                                     </p>
                                 </td>
                             </tr>
-                            
+
                             <!-- Footer -->
                             <tr>
                                 <td style="background-color: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #edf2f7;">

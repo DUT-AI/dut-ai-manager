@@ -293,7 +293,7 @@ def test_check_in_with_card_unregistered(admin_client):
 def test_check_in_with_card_no_meeting(admin_client, db_session):
     """User có thẻ nhưng không có cuộc họp nào trong vòng 30 phút."""
     card_code = f"CARD_NOMEET_{uuid.uuid4().hex[:6]}"
-    res_user = db_session.execute(
+    db_session.execute(
         text(
             "INSERT INTO users (name, email, check_in_card_code, status, is_deleted, created_at, updated_at) "
             "VALUES ('User No Meeting', :email, :card, 'ACTIVE', false, NOW(), NOW()) "
@@ -547,7 +547,9 @@ def test_submit_trainee_evaluation_success(admin_client, mock_current_user, db_s
             json=self_eval_payload,
         )
         assert self_res.status_code == 400
-        assert "Không thể tự đánh giá chính mình" in (self_res.json().get("message") or "")
+        assert "Không thể tự đánh giá chính mình" in (
+            self_res.json().get("message") or ""
+        )
     finally:
         admin_client.delete(f"/api/v1/meetings/{meeting_id}")
 
@@ -702,4 +704,3 @@ def test_assigned_trainer_has_full_management_and_evaluation_permission(
         assert status_res.json()["is_success"] is True
     finally:
         admin_client.delete(f"/api/v1/meetings/{meeting_id}")
-

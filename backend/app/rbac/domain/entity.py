@@ -4,13 +4,13 @@ RBAC (Role Based Access Control) Domain Entities.
 Provides core business objects decoupled from database ORMs.
 """
 
-from enum import Enum
+from enum import StrEnum
 from typing import Optional
 
 from app.shared.domain.base_entity import BaseEntity
 
 
-class RoleType(str, Enum):
+class RoleType(StrEnum):
     """Role type enum"""
 
     ADMIN = "admin"  # Chủ nhiệm

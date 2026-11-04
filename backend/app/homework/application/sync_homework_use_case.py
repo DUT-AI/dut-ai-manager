@@ -38,9 +38,10 @@ class SyncHomeworkFromQuizUseCase:
             )
 
         # 0. Làm mới cấu hình và danh mục bài tập con từ Quiz API (Fail-Safe)
-        coding_exercises_count, game_questions_count = (
-            await self._refresh_quiz_metadata(homework, slug)
-        )
+        (
+            coding_exercises_count,
+            game_questions_count,
+        ) = await self._refresh_quiz_metadata(homework, slug)
 
         synced_coding = 0
         updated_coding = 0

@@ -166,9 +166,9 @@ class CheckOverdueHomeworkUseCase:
         hw_required_exercises: dict[int, set[str]] = {}
         for item in due_assignments:
             if item.homework_id not in hw_required_exercises:
-                hw_required_exercises[item.homework_id] = (
-                    await self._resolve_required_exercises(item.homework_id, item.slug)
-                )
+                hw_required_exercises[
+                    item.homework_id
+                ] = await self._resolve_required_exercises(item.homework_id, item.slug)
 
         events_published_count = 0
         for assignment in due_assignments:

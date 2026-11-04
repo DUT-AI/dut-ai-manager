@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from app.duty.domain.entity import CleaningDuty, DutyStatus
-from app.homework.domain.entity import Homework, HomeworkSubmission, SubmissionType
+from app.homework.domain.entity import Homework, HomeworkSubmission
 from app.meeting.domain.entity import Meeting, MeetingParticipant
 from app.meeting.domain.value_objects import ParticipantRole, ParticipantStatus
 from app.reminder.application.get_my_notifications_use_case import (
@@ -138,10 +138,11 @@ async def test_scan_and_send_reminders_homework_dry_run():
     hw_sub_repo = MagicMock()
     notif_repo = MagicMock()
     user_repo = MagicMock()
-    discord_service = MagicMock()
-    send_web_push_use_case = MagicMock()
+    MagicMock()
+    MagicMock()
 
     from zoneinfo import ZoneInfo
+
     from app.homework.infrastructure.homework_assignee_repository import (
         AssigneeUserInfo,
     )
@@ -212,8 +213,9 @@ async def test_duty_task_scanner():
     duty_repo = MagicMock()
     team_repo = MagicMock()
 
-    now = datetime(2026, 10, 21, 19, 30, 0)  # Rơi vào FIXED_1930
-    today_date = now.date()
+    # 1. Lúc 18:00 (cách deadline 22:00 đúng 4 tiếng) -> Khớp mốc OFFSET_4H
+    now_4h = datetime(2026, 10, 21, 18, 0, 0)
+    today_date = now_4h.date()
 
     mock_duty = CleaningDuty(
         id=50,
@@ -225,13 +227,18 @@ async def test_duty_task_scanner():
     team_repo.get_user_ids_by_teams.return_value = [101, 102]
 
     scanner = DutyTaskScanner(duty_repo=duty_repo, team_repo=team_repo)
-    candidates = scanner.scan_pending_tasks(now=now)
+    candidates_4h = scanner.scan_pending_tasks(now=now_4h)
 
-    assert len(candidates) == 2
-    assert candidates[0].user_id == 101
-    assert candidates[0].task_type == TaskType.DUTY
-    assert candidates[0].task_id == 50
-    assert ReminderStage.FIXED_1930 in candidates[0].stages
+    assert len(candidates_4h) == 2
+    assert candidates_4h[0].user_id == 101
+    assert candidates_4h[0].task_type == TaskType.DUTY
+    assert candidates_4h[0].task_id == 50
+    assert ReminderStage.OFFSET_4H in candidates_4h[0].stages
+
+    # 2. Lúc 19:30 (khung giờ cố định cũ) -> Không còn mốc FIXED_1930, không sinh ứng viên
+    now_1930 = datetime(2026, 10, 21, 19, 30, 0)
+    candidates_1930 = scanner.scan_pending_tasks(now=now_1930)
+    assert len(candidates_1930) == 0
 
 
 @pytest.mark.asyncio
@@ -300,9 +307,19 @@ async def test_meeting_evaluation_task_scanner():
         enable_evaluation=True,
         participants=[
             MeetingParticipant(user_id=10, role=ParticipantRole.TRAINER),
-            MeetingParticipant(user_id=1, role=ParticipantRole.TRAINEE, status=ParticipantStatus.COMPLETED),
-            MeetingParticipant(user_id=2, role=ParticipantRole.TRAINEE, status=ParticipantStatus.JOINED),
-            MeetingParticipant(user_id=3, role=ParticipantRole.TRAINEE, status=ParticipantStatus.NOT_JOINED),
+            MeetingParticipant(
+                user_id=1,
+                role=ParticipantRole.TRAINEE,
+                status=ParticipantStatus.COMPLETED,
+            ),
+            MeetingParticipant(
+                user_id=2, role=ParticipantRole.TRAINEE, status=ParticipantStatus.JOINED
+            ),
+            MeetingParticipant(
+                user_id=3,
+                role=ParticipantRole.TRAINEE,
+                status=ParticipantStatus.NOT_JOINED,
+            ),
         ],
     )
     meeting_repo.get_all_with_participants.return_value = [mock_meeting]
@@ -383,6 +400,7 @@ async def test_scan_and_send_reminders_use_case_with_upcoming_meeting():
 def test_homework_scanner_incomplete_submission_still_reminds():
     """Học sinh mới nộp Game nhưng chưa hoàn thành Coding thì scanner vẫn phải trả về candidate."""
     from zoneinfo import ZoneInfo
+
     from app.homework.infrastructure.homework_assignee_repository import (
         AssigneeUserInfo,
     )
@@ -435,6 +453,7 @@ def test_homework_scanner_incomplete_submission_still_reminds():
 def test_homework_scanner_failed_submission_still_reminds():
     """Học sinh nộp bài Coding nhưng bị Failed (chưa pass) thì scanner vẫn phải trả về candidate."""
     from zoneinfo import ZoneInfo
+
     from app.homework.infrastructure.homework_assignee_repository import (
         AssigneeUserInfo,
     )
@@ -485,6 +504,7 @@ def test_homework_scanner_failed_submission_still_reminds():
 def test_homework_scanner_fully_completed_skips():
     """Học sinh đã nộp đủ cả Coding (passed) và Game thì scanner phải bỏ qua."""
     from zoneinfo import ZoneInfo
+
     from app.homework.infrastructure.homework_assignee_repository import (
         AssigneeUserInfo,
     )
@@ -585,3 +605,87 @@ async def test_reminder_dispatcher_dispatch_failure():
 
     assert status == ReminderStatus.FAILED
 
+
+def test_calculate_matching_stages_pure_countdown_offsets():
+    """Kiểm tra calculate_matching_stages chỉ trả về 3 mốc đếm ngược: 24h, 4h, 1h."""
+    now = datetime(2026, 11, 4, 10, 0, 0)
+
+    # 1. Mốc 24h (khoảng 22.0h - 26.0h)
+    dl_24h = now + timedelta(hours=24)
+    stages = ReminderStage.calculate_matching_stages(deadline=dl_24h, now=now)
+    assert stages == [ReminderStage.OFFSET_1D]
+
+    # 2. Mốc 4h (khoảng 3.5h - 4.5h)
+    dl_4h = now + timedelta(hours=4)
+    stages = ReminderStage.calculate_matching_stages(deadline=dl_4h, now=now)
+    assert stages == [ReminderStage.OFFSET_4H]
+
+    # 3. Mốc 1h (khoảng 0.5h - 1.5h)
+    dl_1h = now + timedelta(hours=1)
+    stages = ReminderStage.calculate_matching_stages(deadline=dl_1h, now=now)
+    assert stages == [ReminderStage.OFFSET_1H]
+
+    # 4. Mốc 48h cũ (OFFSET_2D đã bị loại bỏ)
+    dl_48h = now + timedelta(hours=48)
+    stages = ReminderStage.calculate_matching_stages(deadline=dl_48h, now=now)
+    assert stages == []
+
+    # 5. Mốc 12h cũ (OFFSET_12H đã bị loại bỏ)
+    dl_12h = now + timedelta(hours=12)
+    stages = ReminderStage.calculate_matching_stages(deadline=dl_12h, now=now)
+    assert stages == []
+
+
+def test_calculate_matching_stages_no_fixed_hours():
+    """Kiểm tra vào các khung giờ cố định cũ (08:00, 12:00, 19:30, 22:00) không sinh mốc cố định nếu deadline không khớp mốc đếm ngược."""
+    # 08:00 sáng, deadline cách 8 tiếng (16:00) -> diff_hours = 8.0 -> []
+    now_0800 = datetime(2026, 11, 4, 8, 0, 0)
+    dl_0800 = now_0800 + timedelta(hours=8)
+    assert ReminderStage.calculate_matching_stages(deadline=dl_0800, now=now_0800) == []
+
+    # 12:00 trưa, deadline cách 8 tiếng (20:00) -> diff_hours = 8.0 -> []
+    now_1200 = datetime(2026, 11, 4, 12, 0, 0)
+    dl_1200 = now_1200 + timedelta(hours=8)
+    assert ReminderStage.calculate_matching_stages(deadline=dl_1200, now=now_1200) == []
+
+    # 19:30 tối, deadline cách 8 tiếng (03:30) -> diff_hours = 8.0 -> []
+    now_1930 = datetime(2026, 11, 4, 19, 30, 0)
+    dl_1930 = now_1930 + timedelta(hours=8)
+    assert ReminderStage.calculate_matching_stages(deadline=dl_1930, now=now_1930) == []
+
+    # 22:00 đêm, deadline cách 8 tiếng (06:00) -> diff_hours = 8.0 -> []
+    now_2200 = datetime(2026, 11, 4, 22, 0, 0)
+    dl_2200 = now_2200 + timedelta(hours=8)
+    assert ReminderStage.calculate_matching_stages(deadline=dl_2200, now=now_2200) == []
+
+
+def test_reminder_stage_is_critical():
+    """Kiểm tra chỉ có OFFSET_1H là critical, các mốc khác không phải critical."""
+    assert ReminderStage.OFFSET_1H.is_critical is True
+    assert ReminderStage.OFFSET_4H.is_critical is False
+    assert ReminderStage.OFFSET_1D.is_critical is False
+    assert ReminderStage.FIXED_2200.is_critical is False
+
+
+def test_zalo_channel_excluded_from_dispatcher_external_channels():
+    """Kiểm tra UnifiedNotificationDispatcher loại Zalo khỏi _external_channels để chống spam người dùng."""
+    from app.shared.infrastructure.notification.dispatcher import (
+        UnifiedNotificationDispatcher,
+    )
+
+    mock_user_repo = MagicMock()
+    mock_in_app = MagicMock()
+    mock_discord = MagicMock()
+    mock_zalo = MagicMock()
+    mock_web_push = MagicMock()
+
+    dispatcher = UnifiedNotificationDispatcher(
+        user_repo=mock_user_repo,
+        in_app_channel=mock_in_app,
+        discord_channel=mock_discord,
+        zalo_channel=mock_zalo,
+        web_push_channel=mock_web_push,
+    )
+
+    assert mock_zalo not in dispatcher._external_channels
+    assert dispatcher._external_channels == [mock_discord, mock_web_push]

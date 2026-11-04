@@ -56,7 +56,7 @@ class ToggleDutyScheduleUseCase:
             t_models = [self.team_repo.get_by_id(t) for t in t_ids]
             t_names = [
                 (m.team_name if m and m.team_name else f"Team {t}")
-                for m, t in zip(t_models, t_ids)
+                for m, t in zip(t_models, t_ids, strict=False)
             ]
             d.team_names = t_names
             d.team_name = ", ".join(t_names)
@@ -106,7 +106,7 @@ class ToggleDutyScheduleUseCase:
         teams = [self.team_repo.get_by_id(t) for t in target_team_ids]
         team_names = [
             (t.team_name if t and t.team_name else f"Team {t_id}")
-            for t, t_id in zip(teams, target_team_ids)
+            for t, t_id in zip(teams, target_team_ids, strict=False)
         ]
         combined_name = ", ".join(team_names)
 
@@ -173,7 +173,7 @@ class BatchCreateDutyUseCase:
         teams = [self.team_repo.get_by_id(t_id) for t_id in target_team_ids]
         team_names = [
             (t.team_name if t and t.team_name else f"Team {t_id}")
-            for t, t_id in zip(teams, target_team_ids)
+            for t, t_id in zip(teams, target_team_ids, strict=False)
         ]
         combined_name = ", ".join(team_names)
 

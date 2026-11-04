@@ -2,14 +2,14 @@
 User Domain Entity — pure Pydantic, NO ORM dependency.
 """
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import Field
 
 from app.shared.domain.base_entity import BaseEntity
 
 
-class UserStatus(str, Enum):
+class UserStatus(StrEnum):
     ACTIVE = "ACTIVE"
     INACTIVE = "INACTIVE"
 

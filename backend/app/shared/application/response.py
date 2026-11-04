@@ -1,4 +1,4 @@
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 from pydantic import BaseModel, Field
 
@@ -27,7 +27,7 @@ class PaginationMeta(BaseModel):
         )
 
 
-class ApiResponse(BaseModel, Generic[T]):
+class ApiResponse[T](BaseModel):
     """Standard API response format"""
 
     is_success: bool

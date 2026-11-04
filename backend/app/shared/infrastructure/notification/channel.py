@@ -4,14 +4,14 @@ Implements the Strategy/Adapter Pattern for Multi-Channel Notification Dispatch.
 """
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Protocol
 
 from app.shared.infrastructure.notification_payload import NotificationPayload
 from app.user.domain.entity import UserEntity as User
 
 
-class ChannelType(str, Enum):
+class ChannelType(StrEnum):
     IN_APP = "in_app"
     DISCORD = "discord"
     ZALO = "zalo"

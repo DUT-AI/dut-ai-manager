@@ -86,7 +86,7 @@ typecheck:
 	cd backend && uv run ty check app
 
 lint:
-	cd backend && uv run ruff check app tests --fix
+	cd backend && uv run ruff check app tests --fix --unsafe-fixes
 
 bandit:
 	cd backend && uv run bandit -r app

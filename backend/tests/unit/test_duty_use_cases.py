@@ -784,6 +784,7 @@ async def test_check_overdue_duties_default_target_date_delays_2_days(
     """Khi target_date is None, CheckOverdueDutiesUseCase tự động quét ngày (today - 2 ngày)."""
     from datetime import UTC, datetime, timedelta
     from zoneinfo import ZoneInfo
+
     from app.duty.domain.constants import DUTY_VIOLATION_CHECK_DELAY_DAYS
 
     mock_duty_repo.get_pending_duties_for_date.return_value = []
@@ -797,12 +798,15 @@ async def test_check_overdue_duties_default_target_date_delays_2_days(
     )
 
     now_vn = datetime.now(UTC).astimezone(ZoneInfo("Asia/Ho_Chi_Minh"))
-    expected_target_date = now_vn.date() - timedelta(days=DUTY_VIOLATION_CHECK_DELAY_DAYS)
+    expected_target_date = now_vn.date() - timedelta(
+        days=DUTY_VIOLATION_CHECK_DELAY_DAYS
+    )
 
     await uc.execute()
 
-    mock_duty_repo.get_pending_duties_for_date.assert_called_once_with(expected_target_date)
-
+    mock_duty_repo.get_pending_duties_for_date.assert_called_once_with(
+        expected_target_date
+    )
 
 
 @pytest.mark.asyncio

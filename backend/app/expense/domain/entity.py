@@ -4,14 +4,14 @@ Expense Domain Entities — pure Pydantic, NO ORM dependency.
 
 import uuid
 from datetime import date
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import Field
 
 from app.shared.domain.base_entity import BaseEntity
 
 
-class ExpenseStatus(str, Enum):
+class ExpenseStatus(StrEnum):
     UNPAID = "UNPAID"
     PAID = "PAID"
 

@@ -1,5 +1,4 @@
 from datetime import UTC, datetime
-from zoneinfo import ZoneInfo
 
 from loguru import logger
 

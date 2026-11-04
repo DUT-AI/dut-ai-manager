@@ -3,7 +3,7 @@ Auth Principal Model — pure Pydantic model representing an authenticated actor
 Decoupled from UserEntity domain entity.
 """
 
-from enum import Enum
+from enum import StrEnum
 
 from fastapi import status
 from pydantic import BaseModel, ConfigDict, Field
@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.shared.application.response import BadRequestException
 
 
-class PrincipalType(str, Enum):
+class PrincipalType(StrEnum):
     USER = "USER"
     API_KEY = "API_KEY"
 
