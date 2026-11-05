@@ -40,12 +40,13 @@ def test_strategy_registry_routing():
     hw_repo = MagicMock()
     hw_assignee_repo = MagicMock()
     hw_sub_repo = MagicMock()
+    participant_repo = MagicMock()
 
     strategies = [
         AbsenceStrategy(repo, meeting_repo),
         LateStrategy(repo, meeting_repo),
         PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo),
-        ChangeMeetingStrategy(repo, meeting_repo),
+        ChangeMeetingStrategy(repo, meeting_repo, participant_repo),
         OtherStrategy(),
     ]
     registry = PermissionStrategyRegistry(strategies)
@@ -326,6 +327,7 @@ async def test_change_meeting_strategy_lifecycle():
     """Kiểm tra side-effects của ChangeMeetingStrategy khi tạo."""
     repo = MagicMock()
     meeting_repo = MagicMock()
+    participant_repo = MagicMock()
     event_bus = MagicMock()
     event_bus.publish = AsyncMock()
 
@@ -337,7 +339,7 @@ async def test_change_meeting_strategy_lifecycle():
         participants=[],
     )
     meeting_repo.get_meeting_with_lock.return_value = meeting_b
-    strategy = ChangeMeetingStrategy(repo, meeting_repo, event_bus)
+    strategy = ChangeMeetingStrategy(repo, meeting_repo, participant_repo, event_bus)
 
     req = PermissionRequest(
         id=99,
@@ -348,8 +350,7 @@ async def test_change_meeting_strategy_lifecycle():
 
     await strategy.on_created(req, user_id=15)
 
-    assert any(p.user_id == 15 for p in meeting_b.participants)
-    meeting_repo.save.assert_called_once_with(meeting_b)
+    participant_repo.add_participant.assert_called_once()
     event_bus.publish.assert_awaited_once()
 
 

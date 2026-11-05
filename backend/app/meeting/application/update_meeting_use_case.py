@@ -1,9 +1,11 @@
 from typing import cast
 
-from app.meeting.domain.entity import Meeting, MeetingParticipant
+from app.meeting.domain.entity import Meeting
 from app.meeting.domain.events import MeetingUpdated
-from app.meeting.domain.value_objects import ParticipantRole
-from app.meeting.infrastructure.repository import MeetingRepository
+from app.meeting.infrastructure.repository import (
+    MeetingRepository,
+    ParticipantRepository,
+)
 from app.meeting.schemas import MeetingUpdate
 from app.shared.application.response import BadRequestException
 from app.shared.domain.event_bus import DomainEvent, EventBus
@@ -15,9 +17,11 @@ class UpdateMeetingUseCase:
     def __init__(
         self,
         repo: MeetingRepository,
+        participant_repo: ParticipantRepository,
         event_bus: type[EventBus] = EventBus,
     ):
         self.repo = repo
+        self.participant_repo = participant_repo
         self.event_bus = event_bus
 
     async def execute(self, meeting_id: int, data: MeetingUpdate) -> Meeting:
@@ -39,8 +43,6 @@ class UpdateMeetingUseCase:
             meeting.enable_evaluation = data.enable_evaluation
 
         if data.trainer_ids is not None or data.trainee_ids is not None:
-            existing_participants_map = {p.user_id: p for p in meeting.participants}
-
             new_trainers_set = (
                 set(data.trainer_ids)
                 if data.trainer_ids is not None
@@ -54,42 +56,25 @@ class UpdateMeetingUseCase:
             # Khử trùng lặp: Trainer ưu tiên hơn Trainee
             new_trainees_set = new_trainees_set - new_trainers_set
 
-            new_participants: list[MeetingParticipant] = []
-
-            for uid in new_trainers_set:
-                if uid in existing_participants_map:
-                    p = existing_participants_map[uid]
-                    p.role = ParticipantRole.TRAINER
-                    new_participants.append(p)
-                else:
-                    new_participants.append(
-                        MeetingParticipant(user_id=uid, role=ParticipantRole.TRAINER)
-                    )
-
-            for uid in new_trainees_set:
-                if uid in existing_participants_map:
-                    p = existing_participants_map[uid]
-                    p.role = ParticipantRole.TRAINEE
-                    new_participants.append(p)
-                else:
-                    new_participants.append(
-                        MeetingParticipant(user_id=uid, role=ParticipantRole.TRAINEE)
-                    )
-
-            meeting.participants = new_participants
+            self.participant_repo.sync_meeting_participants(
+                meeting_id=meeting.id,
+                new_trainers=new_trainers_set,
+                new_trainees=new_trainees_set,
+            )
 
         saved = self.repo.save(meeting)
+        refreshed = self.repo.get_with_participants(meeting.id) or saved
 
         await self.event_bus.publish(
             cast(
                 DomainEvent,
                 MeetingUpdated(
-                    meeting_id=cast(int, saved.id),
-                    title=saved.title,
-                    user_ids=[p.user_id for p in saved.participants],
-                    start_time=saved.start_time.isoformat(),
-                    end_time=saved.end_time.isoformat(),
+                    meeting_id=cast(int, refreshed.id),
+                    title=refreshed.title,
+                    user_ids=[p.user_id for p in refreshed.participants],
+                    start_time=refreshed.start_time.isoformat(),
+                    end_time=refreshed.end_time.isoformat(),
                 ),
             )
         )
-        return saved
+        return refreshed

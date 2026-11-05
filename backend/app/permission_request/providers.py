@@ -9,7 +9,10 @@ from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.homework.infrastructure.homework_submission_repository import (
     HomeworkSubmissionRepository,
 )
-from app.meeting.infrastructure.repository import MeetingRepository
+from app.meeting.infrastructure.repository import (
+    MeetingRepository,
+    ParticipantRepository,
+)
 from app.permission_request.application import (
     CreatePermissionRequestUseCase,
     DeletePermissionRequestUseCase,
@@ -49,6 +52,7 @@ class PermissionRequestModuleProvider(Provider):
         self,
         repo: PermissionRequestRepository,
         meeting_repo: MeetingRepository,
+        participant_repo: ParticipantRepository,
         homework_repo: HomeworkRepository,
         homework_assignee_repo: HomeworkAssigneeRepository,
         homework_submission_repo: HomeworkSubmissionRepository,
@@ -59,7 +63,7 @@ class PermissionRequestModuleProvider(Provider):
             PostponeStrategy(
                 homework_repo, homework_assignee_repo, homework_submission_repo
             ),
-            ChangeMeetingStrategy(repo, meeting_repo),
+            ChangeMeetingStrategy(repo, meeting_repo, participant_repo),
             OtherStrategy(),
         ]
         return PermissionStrategyRegistry(strategies)

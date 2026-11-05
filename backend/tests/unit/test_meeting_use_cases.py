@@ -130,51 +130,22 @@ def test_check_meeting_attendance_default_target_date_delays_2_days():
 
 
 def test_meeting_repository_save_hard_deletes_removed_participants():
-    """Kiểm tra MeetingRepository.save thực hiện session.delete đối với participant bị loại bỏ."""
-    from app.meeting.infrastructure.model import (
-        Meeting as ORMMeeting,
-    )
+    """Kiểm tra ParticipantRepository.remove_participant thực hiện session.delete trực tiếp."""
     from app.meeting.infrastructure.model import (
         MeetingParticipant as ORMParticipant,
     )
-    from app.meeting.infrastructure.repository import MeetingRepository
+    from app.meeting.infrastructure.repository import ParticipantRepository
 
     session = MagicMock()
+    orm_p = ORMParticipant(id=2, meeting_id=10, user_id=102)
+    session.scalars.return_value.first.return_value = orm_p
 
-    orm_p1 = ORMParticipant(id=1, meeting_id=10, user_id=101)
-    orm_p2 = ORMParticipant(id=2, meeting_id=10, user_id=102)
+    repo = ParticipantRepository(session=session)
+    result = repo.remove_participant(meeting_id=10, user_id=102)
 
-    orm_meeting = ORMMeeting(
-        id=10,
-        title="Test Meeting",
-        start_time=datetime(2026, 9, 10, 18, 0),
-        end_time=datetime(2026, 9, 10, 20, 0),
-    )
-    orm_meeting.participants = [orm_p1, orm_p2]
-
-    session.get.return_value = orm_meeting
-    session.scalars.return_value.all.return_value = [orm_p1, orm_p2]
-
-    repo = MeetingRepository(session=session)
-
-    # Cập nhật danh sách participant: chỉ giữ user 101, loại user 102, thêm user 103
-    domain_meeting = Meeting(
-        id=10,
-        title="Test Meeting",
-        start_time=datetime(2026, 9, 10, 18, 0),
-        end_time=datetime(2026, 9, 10, 20, 0),
-        participants=[
-            MeetingParticipant(id=1, meeting_id=10, user_id=101),
-            MeetingParticipant(user_id=103),
-        ],
-    )
-
-    repo.save(domain_meeting)
-
-    # Xác nhận session.delete được gọi cho orm_p2 (user 102 bị loại bỏ)
-    session.delete.assert_called_once_with(orm_p2)
-    session.flush.assert_called()
-    session.refresh.assert_called_with(orm_meeting)
+    assert result is True
+    session.delete.assert_called_once_with(orm_p)
+    session.flush.assert_called_once()
 
 
 def test_meeting_mapping_filters_is_deleted_participants():
@@ -220,6 +191,7 @@ def test_update_meeting_preserves_participant_attendance_status():
     from app.meeting.schemas import MeetingUpdate
 
     repo = MagicMock()
+    participant_repo = MagicMock()
     event_bus = MagicMock()
     event_bus.publish = AsyncMock()
 
@@ -241,11 +213,38 @@ def test_update_meeting_preserves_participant_attendance_status():
         participants=[existing_p],
     )
 
-    repo.get_with_participants.return_value = domain_meeting
-    # When repo.save is called, return the domain object passed to it
+    p102 = MeetingParticipant(
+        id=2,
+        meeting_id=10,
+        user_id=102,
+        role=ParticipantRole.TRAINEE,
+        status=ParticipantStatus.NOT_JOINED,
+    )
+    p101_updated = MeetingParticipant(
+        id=1,
+        meeting_id=10,
+        user_id=101,
+        role=ParticipantRole.TRAINER,
+        status=ParticipantStatus.JOINED,
+        check_in_at=check_in_dt,
+        link_image="https://example.com/face.jpg",
+    )
+
+    refreshed_meeting = Meeting(
+        id=10,
+        title="New Title",
+        start_time=datetime(2026, 9, 10, 18, 0),
+        end_time=datetime(2026, 9, 10, 20, 0),
+        participants=[p101_updated, p102],
+    )
+
+    # get_with_participants called first to get old meeting, then refreshed meeting
+    repo.get_with_participants.side_effect = [domain_meeting, refreshed_meeting]
     repo.save.side_effect = lambda m: m
 
-    use_case = UpdateMeetingUseCase(repo=repo, event_bus=event_bus)
+    use_case = UpdateMeetingUseCase(
+        repo=repo, participant_repo=participant_repo, event_bus=event_bus
+    )
 
     # Cập nhật danh sách trainers/trainees gồm user 101 (cũ - trainer) và 102 (mới - trainee)
     update_data = MeetingUpdate(
@@ -256,7 +255,11 @@ def test_update_meeting_preserves_participant_attendance_status():
 
     updated_meeting = asyncio.run(use_case.execute(meeting_id=10, data=update_data))
 
-    repo.get_with_participants.assert_called_once_with(10)
+    participant_repo.sync_meeting_participants.assert_called_once_with(
+        meeting_id=10,
+        new_trainers={101},
+        new_trainees={102},
+    )
     assert updated_meeting.title == "New Title"
     assert len(updated_meeting.participants) == 2
 
@@ -268,10 +271,10 @@ def test_update_meeting_preserves_participant_attendance_status():
     assert p101.link_image == "https://example.com/face.jpg"
 
     # Tìm participant 102 (mới)
-    p102 = next(p for p in updated_meeting.participants if p.user_id == 102)
-    assert p102.role == ParticipantRole.TRAINEE
-    assert p102.status == ParticipantStatus.NOT_JOINED
-    assert p102.check_in_at is None
+    p102_res = next(p for p in updated_meeting.participants if p.user_id == 102)
+    assert p102_res.role == ParticipantRole.TRAINEE
+    assert p102_res.status == ParticipantStatus.NOT_JOINED
+    assert p102_res.check_in_at is None
 
 
 def test_update_meeting_without_user_ids_preserves_participants():
@@ -280,6 +283,7 @@ def test_update_meeting_without_user_ids_preserves_participants():
     from app.meeting.schemas import MeetingUpdate
 
     repo = MagicMock()
+    participant_repo = MagicMock()
     event_bus = MagicMock()
     event_bus.publish = AsyncMock()
 
@@ -299,15 +303,26 @@ def test_update_meeting_without_user_ids_preserves_participants():
         participants=[existing_p],
     )
 
-    repo.get_with_participants.return_value = domain_meeting
+    refreshed_meeting = Meeting(
+        id=10,
+        title="Updated Title Only",
+        start_time=datetime(2026, 9, 10, 18, 0),
+        end_time=datetime(2026, 9, 10, 20, 0),
+        participants=[existing_p],
+    )
+
+    repo.get_with_participants.side_effect = [domain_meeting, refreshed_meeting]
     repo.save.side_effect = lambda m: m
 
-    use_case = UpdateMeetingUseCase(repo=repo, event_bus=event_bus)
+    use_case = UpdateMeetingUseCase(
+        repo=repo, participant_repo=participant_repo, event_bus=event_bus
+    )
 
     # Chỉ cập nhật title, user_ids=None
     update_data = MeetingUpdate(title="Updated Title Only")
     updated_meeting = asyncio.run(use_case.execute(meeting_id=10, data=update_data))
 
+    participant_repo.sync_meeting_participants.assert_not_called()
     assert updated_meeting.title == "Updated Title Only"
     assert len(updated_meeting.participants) == 1
     assert updated_meeting.participants[0].user_id == 101
@@ -567,6 +582,7 @@ def test_create_meeting_use_case_assigns_trainer_and_trainee_roles():
     from app.meeting.application.create_meeting_use_case import CreateMeetingUseCase
 
     repo = MagicMock()
+    participant_repo = MagicMock()
     repo.get_concurrent_participants_count.return_value = 5
 
     def mock_save(m):
@@ -577,7 +593,11 @@ def test_create_meeting_use_case_assigns_trainer_and_trainee_roles():
     event_bus = MagicMock()
     event_bus.publish = AsyncMock()
 
-    uc = CreateMeetingUseCase(repo=repo, event_bus=event_bus)
+    participant_repo.bulk_create.side_effect = lambda mid, parts: parts
+
+    uc = CreateMeetingUseCase(
+        repo=repo, participant_repo=participant_repo, event_bus=event_bus
+    )
 
     meeting_start = datetime(2026, 11, 5, 12, 0, tzinfo=UTC)
     meeting_end = datetime(2026, 11, 5, 14, 0, tzinfo=UTC)
@@ -619,6 +639,7 @@ def test_create_meeting_use_case_allows_no_trainer():
     from app.meeting.application.create_meeting_use_case import CreateMeetingUseCase
 
     repo = MagicMock()
+    participant_repo = MagicMock()
     repo.get_concurrent_participants_count.return_value = 0
 
     def mock_save(m):
@@ -629,7 +650,11 @@ def test_create_meeting_use_case_allows_no_trainer():
     event_bus = MagicMock()
     event_bus.publish = AsyncMock()
 
-    uc = CreateMeetingUseCase(repo=repo, event_bus=event_bus)
+    participant_repo.bulk_create.side_effect = lambda mid, parts: parts
+
+    uc = CreateMeetingUseCase(
+        repo=repo, participant_repo=participant_repo, event_bus=event_bus
+    )
 
     meeting = asyncio.run(
         uc.execute(

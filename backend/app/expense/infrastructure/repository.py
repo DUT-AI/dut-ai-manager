@@ -31,7 +31,7 @@ class ExpenseRepository:
             )
             .where(
                 ExpenseInvoiceModel.id == expense_id,
-                not ExpenseInvoiceModel.is_deleted,
+                ExpenseInvoiceModel.is_deleted.is_(False),
             )
         )
         return self.session.scalar(stmt)
@@ -52,7 +52,7 @@ class ExpenseRepository:
                 joinedload(ExpenseInvoiceModel.spender),
                 joinedload(ExpenseInvoiceModel.team),
             )
-            .where(not ExpenseInvoiceModel.is_deleted)
+            .where(ExpenseInvoiceModel.is_deleted.is_(False))
         )
 
         if month is not None:
@@ -88,7 +88,7 @@ class ExpenseRepository:
         page_size: int = 20,
     ) -> tuple[Sequence[ExpenseInvoiceModel], int]:
         count_stmt = select(func.count(ExpenseInvoiceModel.id)).where(
-            not ExpenseInvoiceModel.is_deleted
+            ExpenseInvoiceModel.is_deleted.is_(False)
         )
         if month is not None:
             count_stmt = count_stmt.where(
@@ -115,7 +115,7 @@ class ExpenseRepository:
                 joinedload(ExpenseInvoiceModel.spender),
                 joinedload(ExpenseInvoiceModel.team),
             )
-            .where(not ExpenseInvoiceModel.is_deleted)
+            .where(ExpenseInvoiceModel.is_deleted.is_(False))
         )
 
         if month is not None:
@@ -154,7 +154,7 @@ class ExpenseRepository:
         stmt = select(
             ExpenseInvoiceModel.status,
             func.coalesce(func.sum(ExpenseInvoiceModel.amount), 0),
-        ).where(not ExpenseInvoiceModel.is_deleted)
+        ).where(ExpenseInvoiceModel.is_deleted.is_(False))
 
         if month is not None:
             stmt = stmt.where(

@@ -1,6 +1,6 @@
 from datetime import date
 
-from sqlalchemy import desc, extract, func, or_, select
+from sqlalchemy import desc, extract, func, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.meeting.domain.value_objects import ParticipantStatus
@@ -163,10 +163,7 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         )
         if meeting_ids:
             stmt = stmt.where(
-                or_(
-                    ORMModel.payload["meeting_id"].as_integer().in_(meeting_ids),
-                    ORMModel.payload["meeting_id"].as_integer().is_(None),
-                )
+                ORMModel.payload["meeting_id"].as_integer().in_(meeting_ids),
             )
 
         rows = self.session.scalars(stmt).unique().all()

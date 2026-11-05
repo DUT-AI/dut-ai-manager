@@ -4,7 +4,7 @@ from sqlalchemy import and_, case, desc, extract, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.meeting.domain.participant import MeetingParticipant as DomainParticipant
-from app.meeting.domain.value_objects import ParticipantStatus
+from app.meeting.domain.value_objects import ParticipantRole, ParticipantStatus
 from app.meeting.infrastructure.model import Meeting as ORMMeeting
 from app.meeting.infrastructure.model import MeetingParticipant as ORMParticipant
 from app.shared.infrastructure.base_repository import BaseRepository
@@ -185,6 +185,135 @@ class ParticipantRepository(BaseRepository[ORMParticipant, DomainParticipant]):
             orm.is_deleted = True
             self.session.add(orm)
         return True
+
+    def remove_participant(self, meeting_id: int, user_id: int) -> bool:
+        """Xóa trực tiếp (hard delete) bản ghi participant khỏi buổi họp."""
+        stmt = select(ORMParticipant).where(
+            ORMParticipant.meeting_id == meeting_id,
+            ORMParticipant.user_id == user_id,
+        )
+        orm = self.session.scalars(stmt).first()
+        if not orm:
+            return False
+        self.session.delete(orm)
+        self.session.flush()
+        return True
+
+    def add_participant(self, domain: DomainParticipant) -> DomainParticipant:
+        """Thêm mới hoặc cập nhật/kích hoạt lại participant trong buổi họp."""
+        stmt = select(ORMParticipant).where(
+            ORMParticipant.meeting_id == domain.meeting_id,
+            ORMParticipant.user_id == domain.user_id,
+        )
+        orm = self.session.scalars(stmt).first()
+        role_val = (
+            domain.role.value
+            if isinstance(domain.role, ParticipantRole)
+            else (domain.role or ParticipantRole.TRAINEE.value)
+        )
+        if not orm:
+            orm = ORMParticipant(
+                meeting_id=domain.meeting_id,
+                user_id=domain.user_id,
+                role=role_val,
+                status=domain.status or ParticipantStatus.NOT_JOINED,
+                check_in_at=domain.check_in_at,
+                check_out_at=domain.check_out_at,
+                link_image=domain.link_image,
+                client_event_id=domain.client_event_id,
+            )
+            self.session.add(orm)
+        else:
+            orm.role = role_val
+            orm.status = domain.status or ParticipantStatus.NOT_JOINED
+            orm.is_deleted = False
+            orm.check_in_at = domain.check_in_at
+            orm.check_out_at = domain.check_out_at
+            orm.link_image = domain.link_image
+            orm.client_event_id = domain.client_event_id
+            self.session.add(orm)
+        self.session.flush()
+        return self._to_domain(orm)
+
+    def bulk_create(
+        self, meeting_id: int, participants: list[DomainParticipant]
+    ) -> list[DomainParticipant]:
+        """Tạo danh sách participants ban đầu khi tạo meeting mới."""
+        created_orms: list[ORMParticipant] = []
+        for dp in participants:
+            role_val = (
+                dp.role.value
+                if isinstance(dp.role, ParticipantRole)
+                else (dp.role or ParticipantRole.TRAINEE.value)
+            )
+            po = ORMParticipant(
+                meeting_id=meeting_id,
+                user_id=dp.user_id,
+                role=role_val,
+                status=dp.status or ParticipantStatus.NOT_JOINED,
+                check_in_at=dp.check_in_at,
+                check_out_at=dp.check_out_at,
+                link_image=dp.link_image,
+                client_event_id=dp.client_event_id,
+            )
+            self.session.add(po)
+            created_orms.append(po)
+        self.session.flush()
+        return [self._to_domain(po) for po in created_orms]
+
+    def sync_meeting_participants(
+        self,
+        meeting_id: int,
+        new_trainers: set[int],
+        new_trainees: set[int],
+    ) -> None:
+        """Đồng bộ danh sách Trainer và Trainee của meeting theo set user_id."""
+        stmt = select(ORMParticipant).where(
+            ORMParticipant.meeting_id == meeting_id,
+        )
+        existing_participants = self.session.scalars(stmt).all()
+        existing_map = {p.user_id: p for p in existing_participants}
+
+        all_target_user_ids = new_trainers | new_trainees
+
+        # 1. Hard delete các participant không còn trong danh sách mới
+        for old_user_id, old_p in existing_map.items():
+            if old_user_id not in all_target_user_ids:
+                self.session.delete(old_p)
+
+        # 2. Cập nhật hoặc thêm mới Trainer
+        for uid in new_trainers:
+            if uid in existing_map:
+                existing = existing_map[uid]
+                existing.role = ParticipantRole.TRAINER.value
+                existing.is_deleted = False
+                self.session.add(existing)
+            else:
+                po = ORMParticipant(
+                    meeting_id=meeting_id,
+                    user_id=uid,
+                    role=ParticipantRole.TRAINER.value,
+                    status=ParticipantStatus.NOT_JOINED,
+                )
+                self.session.add(po)
+
+        # 3. Cập nhật hoặc thêm mới Trainee
+        for uid in new_trainees:
+            if uid in existing_map:
+                existing = existing_map[uid]
+                existing.role = ParticipantRole.TRAINEE.value
+                existing.is_deleted = False
+                self.session.add(existing)
+            else:
+                po = ORMParticipant(
+                    meeting_id=meeting_id,
+                    user_id=uid,
+                    role=ParticipantRole.TRAINEE.value,
+                    status=ParticipantStatus.NOT_JOINED,
+                )
+                self.session.add(po)
+
+        self.session.flush()
 
     def get_by_user_and_month(
         self, user_id: int, month: int, year: int

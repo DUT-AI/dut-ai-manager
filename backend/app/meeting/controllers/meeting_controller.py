@@ -64,7 +64,7 @@ async def create_meeting(
         enable_evaluation=data.enable_evaluation,
         trainer_ids=data.trainer_ids,
         trainee_ids=data.trainee_ids,
-        creator_id=current_user.id,
+        creator_id=current_user.user_id,
     )
     return ApiResponse.success(
         data=MeetingResponse.from_domain(meeting),

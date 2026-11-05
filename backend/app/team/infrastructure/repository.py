@@ -12,7 +12,7 @@ class TeamRepository:
     def get_all_with_members(self, skip: int = 0, limit: int = 100) -> list[TeamEntity]:
         statement = (
             select(TeamModel)
-            .where(not TeamModel.is_deleted)
+            .where(TeamModel.is_deleted.is_(False))
             .options(
                 selectinload(TeamModel.team_members).joinedload(TeamMemberModel.user)
             )
@@ -28,13 +28,15 @@ class TeamRepository:
     ) -> tuple[list[TeamEntity], int]:
         from sqlalchemy import func
 
-        count_stmt = select(func.count(TeamModel.id)).where(not TeamModel.is_deleted)
+        count_stmt = select(func.count(TeamModel.id)).where(
+            TeamModel.is_deleted.is_(False)
+        )
         total = self.session.scalar(count_stmt) or 0
 
         offset = (page - 1) * page_size
         statement = (
             select(TeamModel)
-            .where(not TeamModel.is_deleted)
+            .where(TeamModel.is_deleted.is_(False))
             .options(
                 selectinload(TeamModel.team_members).joinedload(TeamMemberModel.user)
             )
@@ -49,7 +51,7 @@ class TeamRepository:
         statement = (
             select(TeamModel)
             .where(
-                not TeamModel.is_deleted,
+                TeamModel.is_deleted.is_(False),
                 TeamModel.id == team_id,
             )
             .options(
@@ -65,7 +67,7 @@ class TeamRepository:
 
     def get_by_id(self, team_id: int) -> TeamEntity | None:
         statement = select(TeamModel).where(
-            TeamModel.id == team_id, not TeamModel.is_deleted
+            TeamModel.id == team_id, TeamModel.is_deleted.is_(False)
         )
         model = self.session.scalars(statement).first()
         return model.to_entity() if model else None
@@ -121,14 +123,14 @@ class TeamRepository:
 
     def get_team_ids_by_user(self, user_id: int) -> list[int]:
         statement = select(TeamMemberModel.team_id).where(
-            not TeamMemberModel.is_deleted,
+            TeamMemberModel.is_deleted.is_(False),
             TeamMemberModel.user_id == user_id,
         )
         return list(self.session.scalars(statement).all())
 
     def get_user_ids_by_teams(self, team_ids: list[int]) -> list[int]:
         statement = select(TeamMemberModel.user_id).where(
-            not TeamMemberModel.is_deleted,
+            TeamMemberModel.is_deleted.is_(False),
             TeamMemberModel.team_id.in_(team_ids),
         )
         return list(set(self.session.scalars(statement).all()))

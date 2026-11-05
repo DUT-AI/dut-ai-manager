@@ -86,7 +86,7 @@ class InvoiceRepository(BaseRepository[InvoiceModel, Invoice]):
         from sqlalchemy import func
 
         count_stmt = select(func.count(InvoiceModel.id)).where(
-            not InvoiceModel.is_deleted
+            InvoiceModel.is_deleted.is_(False)
         )
         if user_id is not None:
             count_stmt = count_stmt.where(InvoiceModel.user_id == user_id)
@@ -98,7 +98,7 @@ class InvoiceRepository(BaseRepository[InvoiceModel, Invoice]):
             count_stmt = count_stmt.where(InvoiceModel.billing_period == billing_period)
         total = self.session.scalar(count_stmt) or 0
 
-        statement = select(InvoiceModel).where(not InvoiceModel.is_deleted)
+        statement = select(InvoiceModel).where(InvoiceModel.is_deleted.is_(False))
         if user_id is not None:
             statement = statement.where(InvoiceModel.user_id == user_id)
         if team_id is not None:
@@ -157,7 +157,7 @@ class InvoiceRepository(BaseRepository[InvoiceModel, Invoice]):
         stmt = select(
             InvoiceModel.status,
             func.coalesce(func.sum(InvoiceModel.amount), 0),
-        ).where(not InvoiceModel.is_deleted)
+        ).where(InvoiceModel.is_deleted.is_(False))
 
         if billing_period is not None:
             stmt = stmt.where(InvoiceModel.billing_period == billing_period)

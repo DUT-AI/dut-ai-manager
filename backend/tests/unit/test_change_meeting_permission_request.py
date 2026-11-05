@@ -32,11 +32,15 @@ from app.permission_request.domain.value_objects import RequestCategory
 from app.user.domain.entity import UserEntity as User
 
 
-def _create_change_meeting_uc(permission_repo, meeting_repo, event_bus=None):
+def _create_change_meeting_uc(
+    permission_repo, meeting_repo, participant_repo=None, event_bus=None
+):
     bus = event_bus or MagicMock()
+    p_repo = participant_repo or MagicMock()
     strategy = ChangeMeetingStrategy(
         permission_repo=permission_repo,
         meeting_repo=meeting_repo,
+        participant_repo=p_repo,
         event_bus=bus,
     )
     registry = PermissionStrategyRegistry([strategy])
@@ -51,6 +55,7 @@ def _create_change_meeting_uc(permission_repo, meeting_repo, event_bus=None):
 async def test_change_meeting_success_from_a_to_b():
     permission_repo = MagicMock()
     meeting_repo = MagicMock()
+    participant_repo = MagicMock()
     event_bus = MagicMock()
     event_bus.publish = AsyncMock()
 
@@ -89,6 +94,7 @@ async def test_change_meeting_success_from_a_to_b():
     use_case = _create_change_meeting_uc(
         permission_repo=permission_repo,
         meeting_repo=meeting_repo,
+        participant_repo=participant_repo,
         event_bus=event_bus,
     )
 
@@ -106,13 +112,16 @@ async def test_change_meeting_success_from_a_to_b():
     assert result.meeting_id == 102
     assert result.old_meeting_id == 101
 
-    # 2. Kiểm tra rút khỏi Meeting A
-    assert not any(p.user_id == 10 for p in meeting_a.participants)
-    meeting_repo.save.assert_any_call(meeting_a)
+    # 2. Kiểm tra rút khỏi Meeting A qua participant_repo
+    participant_repo.remove_participant.assert_called_once_with(
+        meeting_id=101, user_id=10
+    )
 
-    # 3. Kiểm tra thêm vào Meeting B
-    assert any(p.user_id == 10 for p in meeting_b.participants)
-    meeting_repo.save.assert_any_call(meeting_b)
+    # 3. Kiểm tra thêm vào Meeting B qua participant_repo
+    participant_repo.add_participant.assert_called_once()
+    added_p = participant_repo.add_participant.call_args[0][0]
+    assert added_p.user_id == 10
+    assert added_p.meeting_id == 102
 
     # 4. Kiểm tra hủy đơn cũ
     permission_repo.cancel_active_requests_by_meeting.assert_called_once_with(
@@ -132,6 +141,7 @@ async def test_change_meeting_success_from_a_to_b():
 async def test_change_meeting_new_registration_without_old_meeting():
     permission_repo = MagicMock()
     meeting_repo = MagicMock()
+    participant_repo = MagicMock()
     event_bus = MagicMock()
     event_bus.publish = AsyncMock()
 
@@ -156,6 +166,7 @@ async def test_change_meeting_new_registration_without_old_meeting():
     use_case = _create_change_meeting_uc(
         permission_repo=permission_repo,
         meeting_repo=meeting_repo,
+        participant_repo=participant_repo,
         event_bus=event_bus,
     )
 
@@ -169,7 +180,11 @@ async def test_change_meeting_new_registration_without_old_meeting():
 
     assert result.category == RequestCategory.CHANGE_MEETING
     assert result.old_meeting_id is None
-    assert any(p.user_id == 15 for p in meeting_b.participants)
+    participant_repo.remove_participant.assert_not_called()
+    participant_repo.add_participant.assert_called_once()
+    added_p = participant_repo.add_participant.call_args[0][0]
+    assert added_p.user_id == 15
+    assert added_p.meeting_id == 102
     permission_repo.cancel_active_requests_by_meeting.assert_not_called()
 
 
@@ -219,6 +234,7 @@ async def test_change_meeting_rejects_when_meeting_b_is_full():
 async def test_change_meeting_considers_absence_requests_as_available_seats():
     permission_repo = MagicMock()
     meeting_repo = MagicMock()
+    participant_repo = MagicMock()
     event_bus = MagicMock()
     event_bus.publish = AsyncMock()
 
@@ -249,6 +265,7 @@ async def test_change_meeting_considers_absence_requests_as_available_seats():
     use_case = _create_change_meeting_uc(
         permission_repo=permission_repo,
         meeting_repo=meeting_repo,
+        participant_repo=participant_repo,
         event_bus=event_bus,
     )
 
@@ -262,7 +279,10 @@ async def test_change_meeting_considers_absence_requests_as_available_seats():
     )
 
     assert result.category == RequestCategory.CHANGE_MEETING
-    assert any(p.user_id == 888 for p in meeting_b.participants)
+    participant_repo.add_participant.assert_called_once()
+    added_p = participant_repo.add_participant.call_args[0][0]
+    assert added_p.user_id == 888
+    assert added_p.meeting_id == 104
 
 
 @pytest.mark.asyncio

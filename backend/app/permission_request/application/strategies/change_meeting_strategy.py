@@ -6,8 +6,11 @@ from fastapi import HTTPException
 
 from app.core.config import settings
 from app.meeting.domain.entity import MeetingParticipant
-from app.meeting.domain.value_objects import ParticipantStatus
-from app.meeting.infrastructure.repository import MeetingRepository
+from app.meeting.domain.value_objects import ParticipantRole, ParticipantStatus
+from app.meeting.infrastructure.repository import (
+    MeetingRepository,
+    ParticipantRepository,
+)
 from app.permission_request.application.strategies.base import PermissionStrategy
 from app.permission_request.domain.entity import PermissionRequest
 from app.permission_request.domain.events import MeetingParticipantTransferred
@@ -30,10 +33,12 @@ class ChangeMeetingStrategy(PermissionStrategy[ChangeMeetingPayload]):
         self,
         permission_repo: PermissionRequestRepository,
         meeting_repo: MeetingRepository,
+        participant_repo: ParticipantRepository,
         event_bus: type[EventBus] = EventBus,
     ):
         self.permission_repo = permission_repo
         self.meeting_repo = meeting_repo
+        self.participant_repo = participant_repo
         self.event_bus = event_bus
 
     @property
@@ -103,12 +108,9 @@ class ChangeMeetingStrategy(PermissionStrategy[ChangeMeetingPayload]):
 
         # 1. Xử lý rút khỏi Meeting A (nếu có old_meeting_id)
         if old_meeting_id:
-            old_meeting = self.meeting_repo.get_with_participants(old_meeting_id)
-            if old_meeting:
-                old_meeting.participants = [
-                    p for p in old_meeting.participants if p.user_id != user_id
-                ]
-                self.meeting_repo.save(old_meeting)
+            self.participant_repo.remove_participant(
+                meeting_id=old_meeting_id, user_id=user_id
+            )
 
             # Tự động hủy đơn xin vắng / đi trễ cũ tại Meeting A
             self.permission_repo.cancel_active_requests_by_meeting(
@@ -116,21 +118,14 @@ class ChangeMeetingStrategy(PermissionStrategy[ChangeMeetingPayload]):
             )
 
         # 2. Thêm participant vào Meeting B
-        meeting_b = self.meeting_repo.get_meeting_with_lock(meeting_id)
-        if meeting_b:
-            is_already_in_b = any(
-                p.user_id == user_id and not p.is_deleted
-                for p in meeting_b.participants
+        self.participant_repo.add_participant(
+            MeetingParticipant(
+                user_id=user_id,
+                meeting_id=meeting_id,
+                role=ParticipantRole.TRAINEE,
+                status=ParticipantStatus.NOT_JOINED,
             )
-            if not is_already_in_b:
-                meeting_b.participants.append(
-                    MeetingParticipant(
-                        user_id=user_id,
-                        meeting_id=meeting_id,
-                        status=ParticipantStatus.NOT_JOINED,
-                    )
-                )
-                self.meeting_repo.save(meeting_b)
+        )
 
         # 3. Phát sự kiện DomainEvent MeetingParticipantTransferred
         await self.event_bus.publish(

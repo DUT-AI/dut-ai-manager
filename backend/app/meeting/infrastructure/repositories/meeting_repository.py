@@ -5,7 +5,7 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session, contains_eager, joinedload, selectinload
 
 from app.meeting.domain.meeting import Meeting as DomainMeeting
-from app.meeting.domain.value_objects import ParticipantRole, ParticipantStatus
+from app.meeting.domain.value_objects import ParticipantStatus
 from app.meeting.infrastructure.model import Meeting as ORMMeeting
 from app.meeting.infrastructure.model import MeetingParticipant as ORMParticipant
 from app.shared.application.query_support_utils import build_query_support
@@ -291,7 +291,6 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         return result if result else 0
 
     def save(self, domain: DomainMeeting) -> DomainMeeting:  # noqa: C901
-        is_new = domain.id is None
         if domain.id:
             orm = self.session.get(ORMMeeting, domain.id)
             if not orm:
@@ -322,75 +321,9 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         self.session.flush()
         domain.id = orm.id
 
-        if is_new and domain.participants:
-            for dp in domain.participants:
-                role_val = (
-                    dp.role.value
-                    if isinstance(dp.role, ParticipantRole)
-                    else (dp.role or ParticipantRole.TRAINEE.value)
-                )
-                po = ORMParticipant(
-                    meeting_id=orm.id,
-                    user_id=dp.user_id,
-                    role=role_val,
-                    status=dp.status,
-                    check_in_at=dp.check_in_at,
-                    link_image=dp.link_image,
-                )
-                self.session.add(po)
-            self.session.flush()
-        elif (
-            not is_new
-            and hasattr(domain, "participants")
-            and domain.participants is not None
-        ):
-            # Sync participants correctly with hard delete for removed participants
-            stmt = select(ORMParticipant).where(
-                ORMParticipant.meeting_id == orm.id,
-            )
-            existing_participants = self.session.scalars(stmt).all()
-
-            existing_user_ids = {p.user_id: p for p in existing_participants}
-            new_user_ids = {p.user_id: p for p in domain.participants}
-
-            # 1. Hard delete participants not in the new list
-            for old_user_id, old_p in existing_user_ids.items():
-                if old_user_id not in new_user_ids:
-                    self.session.delete(old_p)
-
-            # 2. Add or update participants
-            for new_user_id, new_p in new_user_ids.items():
-                role_val = (
-                    new_p.role.value
-                    if isinstance(new_p.role, ParticipantRole)
-                    else (new_p.role or ParticipantRole.TRAINEE.value)
-                )
-                if new_user_id not in existing_user_ids:
-                    po = ORMParticipant(
-                        meeting_id=orm.id,
-                        user_id=new_user_id,
-                        role=role_val,
-                        status=new_p.status,
-                        check_in_at=new_p.check_in_at,
-                        check_out_at=new_p.check_out_at,
-                        link_image=new_p.link_image,
-                    )
-                    self.session.add(po)
-                else:
-                    existing = existing_user_ids[new_user_id]
-                    existing.role = role_val
-                    existing.is_deleted = False
-                    existing.status = new_p.status
-                    existing.check_in_at = new_p.check_in_at
-                    existing.check_out_at = new_p.check_out_at
-                    existing.link_image = new_p.link_image
-                    self.session.add(existing)
-
-            self.session.flush()
-
-        # Commit handled by middleware; refresh to get updated participants for return
+        # Commit handled by middleware; refresh to get updated meeting for return
         self.session.refresh(orm)
-        return self.get_with_participants(orm.id) or self._to_domain(orm)
+        return self._to_domain(orm)
 
     def delete(self, meeting_id: int) -> bool:
         orm = self.session.get(ORMMeeting, meeting_id)

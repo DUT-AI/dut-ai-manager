@@ -77,8 +77,10 @@ class MeetingModuleProvider(Provider):
         return GetUpcomingMeetingsWithSeatsUseCase(meeting_repo, permission_repo)
 
     @provide
-    def create_meeting_uc(self, repo: MeetingRepository) -> CreateMeetingUseCase:
-        return CreateMeetingUseCase(repo)
+    def create_meeting_uc(
+        self, repo: MeetingRepository, participant_repo: ParticipantRepository
+    ) -> CreateMeetingUseCase:
+        return CreateMeetingUseCase(repo, participant_repo)
 
     @provide
     def check_in_uc(
@@ -115,8 +117,10 @@ class MeetingModuleProvider(Provider):
         return CheckOutUseCase(meeting_repo, participant_repo)
 
     @provide
-    def update_meeting_uc(self, repo: MeetingRepository) -> UpdateMeetingUseCase:
-        return UpdateMeetingUseCase(repo)
+    def update_meeting_uc(
+        self, repo: MeetingRepository, participant_repo: ParticipantRepository
+    ) -> UpdateMeetingUseCase:
+        return UpdateMeetingUseCase(repo, participant_repo)
 
     @provide
     def update_participant_status_uc(

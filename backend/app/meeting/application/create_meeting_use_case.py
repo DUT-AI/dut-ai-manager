@@ -5,7 +5,10 @@ from app.core.config import settings
 from app.meeting.domain.entity import Meeting, MeetingParticipant
 from app.meeting.domain.events import MeetingCreated
 from app.meeting.domain.value_objects import ParticipantRole
-from app.meeting.infrastructure.repository import MeetingRepository
+from app.meeting.infrastructure.repository import (
+    MeetingRepository,
+    ParticipantRepository,
+)
 from app.shared.application.response import BadRequestException
 from app.shared.domain.event_bus import DomainEvent, EventBus
 
@@ -16,9 +19,11 @@ class CreateMeetingUseCase:
     def __init__(
         self,
         repo: MeetingRepository,
+        participant_repo: ParticipantRepository,
         event_bus: type[EventBus] = EventBus,
     ):
         self.repo = repo
+        self.participant_repo = participant_repo
         self.event_bus = event_bus
 
     async def execute(
@@ -26,12 +31,12 @@ class CreateMeetingUseCase:
         title: str,
         start_time: datetime,
         end_time: datetime,
+        creator_id: int,
         content: str | None = None,
         require_check_in: bool = True,
         enable_evaluation: bool = False,
         trainer_ids: list[int] | None = None,
         trainee_ids: list[int] | None = None,
-        creator_id: int | None = None,
     ) -> Meeting:
         trainers_set = set(trainer_ids or [])
         trainees_set = (
@@ -69,6 +74,11 @@ class CreateMeetingUseCase:
         )
 
         saved_meeting = self.repo.save(meeting)
+        if participants and saved_meeting.id:
+            saved_participants = self.participant_repo.bulk_create(
+                saved_meeting.id, participants
+            )
+            saved_meeting.participants = saved_participants
 
         all_user_ids = [p.user_id for p in participants]
         await self.event_bus.publish(
