@@ -44,6 +44,17 @@ export const homeworkSubmissionSchema = z.object({
 });
 export type HomeworkSubmission = z.infer<typeof homeworkSubmissionSchema>;
 
+export const exerciseSummarySchema = z.object({
+  id: z.string().optional(),
+  exercise_id: z.string().optional(),
+  title: z.string(),
+  order_index: z.number().optional(),
+  completed_count: z.number().optional().default(0),
+  total_assigned: z.number().optional().default(0),
+  completion_rate: z.number().optional().default(0),
+});
+export type ExerciseSummary = z.infer<typeof exerciseSummarySchema>;
+
 export const homeworkSchema = z.object({
   id: z.number(),
   title: z.string(),
@@ -53,6 +64,7 @@ export const homeworkSchema = z.object({
   requires_coding: z.boolean().optional(),
   requires_game: z.boolean().optional(),
   assignee_ids: z.array(z.number()).optional(),
+  coding_exercises: z.array(exerciseSummarySchema).optional(),
   created_at: z.string(),
   updated_at: z.string(),
   created_by: z.number().optional(),
@@ -114,17 +126,6 @@ export const homeworkReportResponseSchema = z.object({
   unsubmitted_count: z.number(),
 });
 export type HomeworkReportResponse = z.infer<typeof homeworkReportResponseSchema>;
-
-export const exerciseSummarySchema = z.object({
-  id: z.string().optional(),
-  exercise_id: z.string().optional(),
-  title: z.string(),
-  order_index: z.number().optional(),
-  completed_count: z.number().optional().default(0),
-  total_assigned: z.number().optional().default(0),
-  completion_rate: z.number().optional().default(0),
-});
-export type ExerciseSummary = z.infer<typeof exerciseSummarySchema>;
 
 export const studentExerciseStatusSchema = z.object({
   exercise_id: z.string(),

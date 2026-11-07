@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { Modal, Button, Typography, Spin, Tooltip } from 'antd';
+import React, { useState, useMemo } from 'react';
+import { Modal, Button, Typography, Spin, Tooltip, Tabs, Tag } from 'antd';
 import {
   HistoryOutlined,
   FullscreenOutlined,
   FullscreenExitOutlined,
+  CodeOutlined,
+  TrophyOutlined,
 } from '@ant-design/icons';
 import { useHomeworkSubmissions, useHomework } from '@/features/homework/hooks/useHomeworks';
 import type { UserSubmissionInfo, ExerciseSummary } from '@/features/homework/types/homework.types';
@@ -33,7 +35,40 @@ export const SubmissionHistoryModal: React.FC<SubmissionHistoryModalProps> = ({
     open && user ? user.user_id : null
   );
 
-  const hasCodingReq = (user?.total_coding_required ?? 0) > 0;
+  const requiresCoding = homework?.requires_coding ?? true;
+  const requiresGame = homework?.requires_game ?? false;
+  const hasBoth = requiresCoding && requiresGame;
+
+  // Tách biệt dứt khoát bài nộp Coding và Game
+  const codingSubmissions = useMemo(
+    () => (submissions || []).filter((s) => s.submission_type === 'CODING'),
+    [submissions]
+  );
+  const gameSubmissions = useMemo(
+    () => (submissions || []).filter((s) => s.submission_type === 'GAME'),
+    [submissions]
+  );
+
+  const isGamePassed = useMemo(
+    () => gameSubmissions.some((s) => s.is_passed),
+    [gameSubmissions]
+  );
+
+  const totalCodingRequired = allExercises && allExercises.length > 0
+    ? allExercises.length
+    : (user?.total_coding_required ?? 0);
+
+  const completedCodingCount = useMemo(() => {
+    if (!allExercises || allExercises.length === 0) {
+      return user?.total_coding_completed ?? 0;
+    }
+    const passedExIds = new Set(
+      codingSubmissions.filter((s) => s.is_passed).map((s) => s.exercise_id)
+    );
+    return allExercises.filter((ex) => passedExIds.has(ex.exercise_id || ex.id)).length;
+  }, [allExercises, codingSubmissions, user?.total_coding_completed]);
+
+  const hasCodingReq = totalCodingRequired > 0;
 
   return (
     <Modal
@@ -49,14 +84,16 @@ export const SubmissionHistoryModal: React.FC<SubmissionHistoryModalProps> = ({
                   Lịch sử nộp bài chi tiết
                 </span>
                 {hasCodingReq && (
-                  <span className={`text-xs px-2 py-0.5 rounded-md font-semibold ${
-                    user?.total_coding_completed === user?.total_coding_required
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300'
-                      : (user?.total_coding_completed ?? 0) > 0
-                        ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/60 dark:text-amber-300'
-                        : 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/60 dark:text-rose-300'
-                  }`}>
-                    {user?.total_coding_completed ?? 0}/{user?.total_coding_required} bài con
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-md font-semibold ${
+                      completedCodingCount === totalCodingRequired
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300'
+                        : completedCodingCount > 0
+                          ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/60 dark:text-amber-300'
+                          : 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/60 dark:text-rose-300'
+                    }`}
+                  >
+                    {completedCodingCount}/{totalCodingRequired} bài con
                   </span>
                 )}
               </div>
@@ -105,9 +142,67 @@ export const SubmissionHistoryModal: React.FC<SubmissionHistoryModalProps> = ({
             <Spin />
             <span className="text-xs">Đang tải dữ liệu bài nộp...</span>
           </div>
+        ) : hasBoth ? (
+          <Tabs
+            defaultActiveKey="coding"
+            items={[
+              {
+                key: 'coding',
+                label: (
+                  <span className="flex items-center gap-2 font-semibold text-sm">
+                    <CodeOutlined className="text-indigo-600" />
+                    Bài tập Coding
+                    <Tag color={codingSubmissions.length > 0 ? 'success' : 'default'} className="m-0 text-xs rounded-md">
+                      {codingSubmissions.length > 0 ? `${codingSubmissions.length} lần nộp` : 'Chưa nộp'}
+                    </Tag>
+                  </span>
+                ),
+                children: (
+                  <div className="pt-2">
+                    <UnifiedSubmissionTimeline
+                      submissions={codingSubmissions}
+                      type="CODING"
+                      deadline={homework?.deadline}
+                      showExerciseOverview={true}
+                      allExercises={allExercises}
+                    />
+                  </div>
+                ),
+              },
+              {
+                key: 'game',
+                label: (
+                  <span className="flex items-center gap-2 font-semibold text-sm">
+                    <TrophyOutlined className="text-purple-600" />
+                    Trắc nghiệm Game
+                    <Tag color={isGamePassed ? 'success' : 'default'} className="m-0 text-xs rounded-md">
+                      {isGamePassed ? 'Đã hoàn thành' : 'Chưa hoàn thành'}
+                    </Tag>
+                  </span>
+                ),
+                children: (
+                  <div className="pt-2">
+                    <UnifiedSubmissionTimeline
+                      submissions={gameSubmissions}
+                      type="GAME"
+                      deadline={homework?.deadline}
+                      showExerciseOverview={false}
+                    />
+                  </div>
+                ),
+              },
+            ]}
+          />
+        ) : requiresGame && !requiresCoding ? (
+          <UnifiedSubmissionTimeline
+            submissions={gameSubmissions}
+            type="GAME"
+            deadline={homework?.deadline}
+            showExerciseOverview={false}
+          />
         ) : (
           <UnifiedSubmissionTimeline
-            submissions={submissions}
+            submissions={codingSubmissions}
             type="CODING"
             deadline={homework?.deadline}
             showExerciseOverview={true}
@@ -118,4 +213,3 @@ export const SubmissionHistoryModal: React.FC<SubmissionHistoryModalProps> = ({
     </Modal>
   );
 };
-

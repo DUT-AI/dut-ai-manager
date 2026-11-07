@@ -102,7 +102,12 @@ export const SubmissionItemCard: React.FC<SubmissionItemCardProps> = ({
           <div className="flex justify-between items-center text-gray-600 dark:text-gray-300">
             <span>Điểm số:</span>
             <span className="font-bold text-sm text-emerald-600 dark:text-emerald-400">
-              {submission.score} <span className="text-xs text-gray-400 font-normal">/ 10</span>
+              {submission.score}{' '}
+              {isCoding ? (
+                <span className="text-xs text-gray-400 font-normal">/ 10</span>
+              ) : (
+                <span className="text-xs text-gray-400 font-normal">điểm</span>
+              )}
             </span>
           </div>
         )}
@@ -112,7 +117,12 @@ export const SubmissionItemCard: React.FC<SubmissionItemCardProps> = ({
             <span>Số câu đúng:</span>
             <span className="font-semibold text-emerald-600 dark:text-emerald-400">
               {submission.correctCount}
-              {submission.totalQuestions ? ` / ${submission.totalQuestions}` : ''} câu (100%)
+              {submission.totalQuestions ? ` / ${submission.totalQuestions}` : ''} câu
+              {submission.totalQuestions && submission.totalQuestions > 0 ? (
+                <span className="text-xs font-normal text-gray-500 ml-1">
+                  ({Math.round((submission.correctCount / submission.totalQuestions) * 100)}%)
+                </span>
+              ) : null}
             </span>
           </div>
         )}

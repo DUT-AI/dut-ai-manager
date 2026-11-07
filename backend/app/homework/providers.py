@@ -76,10 +76,14 @@ class HomeworkModuleProvider(Provider):
         self,
         homework_repo: HomeworkRepository,
         homework_assignee_repo: HomeworkAssigneeRepository,
+        quiz_api: QuizApiClient,
+        homework_submission_repo: HomeworkSubmissionRepository,
     ) -> GetHomeworkDetailUseCase:
         return GetHomeworkDetailUseCase(
             homework_repo=homework_repo,
             homework_assignee_repo=homework_assignee_repo,
+            quiz_api=quiz_api,
+            homework_submission_repo=homework_submission_repo,
         )
 
     @provide

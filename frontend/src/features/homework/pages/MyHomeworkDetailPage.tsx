@@ -66,12 +66,24 @@ export const MyHomeworkDetailPage: React.FC = () => {
   );
 
   const isCodingSubmitted = codingSubmissions.length > 0;
-  const isGameSubmitted = gameSubmissions.length > 0;
+  const isGamePassed = useMemo(
+    () => (gameSubmissions || []).some((s) => s.is_passed),
+    [gameSubmissions]
+  );
+  const isCodingCompleted = useMemo(() => {
+    const exercises = homework?.coding_exercises || [];
+    if (exercises.length === 0) return codingSubmissions.length > 0;
+    const passedExIds = new Set(
+      codingSubmissions.filter((s) => s.is_passed).map((s) => s.exercise_id)
+    );
+    return exercises.every((ex) => passedExIds.has(ex.exercise_id || ex.id));
+  }, [homework?.coding_exercises, codingSubmissions]);
+
   const isFullyPassed = hasBoth
-    ? isCodingSubmitted && isGameSubmitted
+    ? isCodingCompleted && isGamePassed
     : hasOnlyCoding
-      ? isCodingSubmitted
-      : isGameSubmitted;
+      ? isCodingCompleted
+      : isGamePassed;
 
   if (isLoading && !homework) {
     return (
@@ -188,9 +200,9 @@ export const MyHomeworkDetailPage: React.FC = () => {
           message={
             <span className="text-gray-800 dark:text-gray-200">
               <b>Tiêu chuẩn hoàn thành:</b>{' '}
-              {hasBoth && 'Nộp file bài tập Coding và Hoàn thành Game trắc nghiệm (đúng 100%).'}
+              {hasBoth && 'Nộp file bài tập Coding và Hoàn thành Game trắc nghiệm.'}
               {hasOnlyCoding && 'Nộp file bài tập Coding thành công lên hệ thống Quiz.'}
-              {hasOnlyGame && 'Hoàn thành Game trắc nghiệm đúng 100% câu hỏi.'}
+              {hasOnlyGame && 'Hoàn thành bài tập Game trắc nghiệm.'}
             </span>
           }
         />
@@ -227,6 +239,7 @@ export const MyHomeworkDetailPage: React.FC = () => {
                       deadline={homework.deadline}
                       homeworkLink={homework.link}
                       showExerciseOverview={true}
+                      allExercises={homework.coding_exercises}
                     />
                   </div>
                 ),
@@ -237,13 +250,13 @@ export const MyHomeworkDetailPage: React.FC = () => {
                   <span className="flex items-center gap-2 font-semibold text-sm">
                     <TrophyOutlined className="text-purple-600" />
                     Trắc nghiệm Game
-                    {isGameSubmitted ? (
+                    {isGamePassed ? (
                       <Tag color="success" className="m-0 text-xs rounded-md">
-                        Đã xong 100%
+                        Đã hoàn thành
                       </Tag>
                     ) : (
                       <Tag color="default" className="m-0 text-xs rounded-md">
-                        Chưa xong
+                        Chưa hoàn thành
                       </Tag>
                     )}
                   </span>
@@ -276,6 +289,7 @@ export const MyHomeworkDetailPage: React.FC = () => {
               deadline={homework.deadline}
               homeworkLink={homework.link}
               showExerciseOverview={true}
+              allExercises={homework.coding_exercises}
             />
           </div>
         ) : hasOnlyGame ? (
@@ -301,6 +315,7 @@ export const MyHomeworkDetailPage: React.FC = () => {
             deadline={homework.deadline}
             homeworkLink={homework.link}
             showExerciseOverview={true}
+            allExercises={homework.coding_exercises}
           />
         )}
       </Card>

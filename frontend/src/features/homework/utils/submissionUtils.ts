@@ -99,17 +99,24 @@ export function normalizeSubmissions(rawList?: SubmissionHistoryItem[] | null): 
 }
 
 /**
- * Groups submissions by exercise_id. If allExercises is provided, ensures all exercises from the lesson
- * are represented in the resulting array in order, even if the student hasn't submitted them yet.
+ * Groups coding submissions by exercise_id.
+ * Strict & No-fallback:
+ * - Only processes submissions with submissionType === 'CODING'.
+ * - If allExercises is provided, strictly represents all exercises from the lesson in order.
+ * - Never creates a fallback '__general__' ("Bài tập chung") group for Game or null exercise IDs.
  */
 export function groupSubmissionsByExercise(
   submissions: NormalizedSubmission[],
   allExercises?: ExerciseSummary[] | null
 ): ExerciseGroupSummary[] {
+  // 1. Strict filtering: Only accept CODING submissions
+  const codingSubs = (submissions || []).filter((s) => s.submissionType === 'CODING');
+
   const groupMap = new Map<string, NormalizedSubmission[]>();
 
-  for (const sub of submissions) {
-    const key = sub.exerciseId || '__general__';
+  for (const sub of codingSubs) {
+    if (!sub.exerciseId) continue;
+    const key = sub.exerciseId;
     if (!groupMap.has(key)) {
       groupMap.set(key, []);
     }
@@ -119,7 +126,7 @@ export function groupSubmissionsByExercise(
   const summaries: ExerciseGroupSummary[] = [];
   const processedKeys = new Set<string>();
 
-  // 1. If allExercises is provided, include all exercises from the lesson in order
+  // 2. If allExercises is provided, include all exercises from the lesson in order
   if (allExercises && allExercises.length > 0) {
     for (const ex of allExercises) {
       const key = ex.exercise_id || ex.id;
@@ -149,31 +156,29 @@ export function groupSubmissionsByExercise(
         isPassed,
       });
     }
-  }
+  } else {
+    // 3. Fallback only when allExercises is absent: Group existing coding exercises with valid IDs
+    for (const [key, subs] of groupMap.entries()) {
+      const sortedDesc = [...subs].sort(
+        (a, b) => dayjs(b.submittedAt).valueOf() - dayjs(a.submittedAt).valueOf()
+      );
+      const latest = sortedDesc[0];
+      const scores = subs.map((s) => s.score).filter((s): s is number => s !== null);
+      const bestScore = scores.length > 0 ? Math.max(...scores) : null;
+      const isPassed = subs.some((s) => s.isPassed);
 
-  // 2. Include any remaining submission groups not in allExercises
-  for (const [key, subs] of groupMap.entries()) {
-    if (processedKeys.has(key)) continue;
-
-    const sortedDesc = [...subs].sort(
-      (a, b) => dayjs(b.submittedAt).valueOf() - dayjs(a.submittedAt).valueOf()
-    );
-    const latest = sortedDesc[0];
-    const scores = subs.map((s) => s.score).filter((s): s is number => s !== null);
-    const bestScore = scores.length > 0 ? Math.max(...scores) : null;
-    const isPassed = subs.some((s) => s.isPassed);
-
-    summaries.push({
-      exerciseId: key,
-      exerciseTitle:
-        latest.exerciseTitle ||
-        (key === '__general__' ? 'Bài tập chung' : `Bài tập #${key.slice(0, 8)}`),
-      submissions: sortedDesc,
-      attemptCount: subs.length,
-      bestScore,
-      latestSubmittedAt: latest.submittedAt,
-      isPassed,
-    });
+      summaries.push({
+        exerciseId: key,
+        exerciseTitle:
+          latest?.exerciseTitle ||
+          `Bài tập #${key.slice(0, 8)}`,
+        submissions: sortedDesc,
+        attemptCount: subs.length,
+        bestScore,
+        latestSubmittedAt: latest ? latest.submittedAt : '',
+        isPassed,
+      });
+    }
   }
 
   return summaries;

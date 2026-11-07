@@ -72,10 +72,22 @@ class HomeworkResponse(HomeworkBase):
     from_entity = from_domain
 
 
+class ExerciseSummaryDTO(BaseModel):
+    """Thông tin tóm tắt của một bài tập coding con kèm số liệu hoàn thành."""
+
+    exercise_id: str
+    title: str
+    order_index: int = 0
+    completed_count: int = 0
+    total_assigned: int = 0
+    completion_rate: float = 0.0
+
+
 class HomeworkResponseDetail(HomeworkResponse):
     """DTO chi tiết bài tập bao gồm danh sách assignee_ids phục vụ màn hình chỉnh sửa/chi tiết."""
 
     assignee_ids: list[int] = Field(default_factory=list)
+    coding_exercises: list[ExerciseSummaryDTO] = Field(default_factory=list)
 
     @classmethod
     def from_domain(
@@ -83,6 +95,7 @@ class HomeworkResponseDetail(HomeworkResponse):
         hw: Any,
         assignee_ids: list[int] | None = None,
         deadline: datetime | None = None,
+        coding_exercises: list[ExerciseSummaryDTO] | None = None,
     ) -> "HomeworkResponseDetail":
         return cls(
             id=hw.id,
@@ -96,20 +109,10 @@ class HomeworkResponseDetail(HomeworkResponse):
             updated_at=hw.updated_at,
             created_by=hw.created_by,
             assignee_ids=assignee_ids or [],
+            coding_exercises=coding_exercises or [],
         )
 
     from_entity = from_domain
-
-
-class ExerciseSummaryDTO(BaseModel):
-    """Thông tin tóm tắt của một bài tập coding con kèm số liệu hoàn thành."""
-
-    exercise_id: str
-    title: str
-    order_index: int = 0
-    completed_count: int = 0
-    total_assigned: int = 0
-    completion_rate: float = 0.0
 
 
 class StudentExerciseStatusDTO(BaseModel):

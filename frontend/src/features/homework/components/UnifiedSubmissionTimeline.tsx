@@ -82,7 +82,7 @@ export const UnifiedSubmissionTimeline: React.FC<UnifiedSubmissionTimelineProps>
                 <Text type="secondary" className="block text-sm mb-1 font-medium">
                   {isCoding
                     ? 'Chưa có lượt nộp bài tập coding nào được ghi nhận'
-                    : 'Chưa có lượt chơi game quiz nào đạt 100%'}
+                    : 'Chưa có lượt chơi game quiz nào được ghi nhận'}
                 </Text>
                 <Text type="secondary" className="text-xs">
                   Kết quả sẽ được tự động đồng bộ ngay sau khi hoàn thành trên hệ thống Quiz.
@@ -164,7 +164,7 @@ export const UnifiedSubmissionTimeline: React.FC<UnifiedSubmissionTimelineProps>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-bold text-sm text-gray-900 dark:text-gray-100">
                     {isAllCompleted
-                      ? (isCoding ? 'Đã hoàn thành tất cả bài tập Coding' : 'Đã hoàn thành Game Quiz (100%)')
+                      ? (isCoding ? 'Đã hoàn thành tất cả bài tập Coding' : 'Đã hoàn thành Game Quiz')
                       : (isCoding ? `Đã làm ${completedExerciseCount}/${totalExercisesCount} bài tập con` : 'Đã ghi nhận bài nộp')}
                   </span>
                   {deadlineObj &&

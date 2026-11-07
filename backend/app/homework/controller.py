@@ -187,7 +187,7 @@ async def get_homework(
     homework_id: int,
     get_detail_uc: FromDishka[GetHomeworkDetailUseCase],
 ):
-    result = get_detail_uc.execute(homework_id)
+    result = await get_detail_uc.execute(homework_id)
     if not result:
         raise HTTPException(status_code=404, detail="Homework not found")
     return ApiResponse.success(data=result)

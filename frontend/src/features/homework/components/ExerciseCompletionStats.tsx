@@ -140,7 +140,7 @@ export const ExerciseCompletionStats: React.FC<ExerciseCompletionStatsProps> = (
                   color="purple"
                   className="m-0 text-[11px] font-semibold rounded-md"
                 >
-                  Game Quiz (100%)
+                  Game Quiz
                 </Tag>
 
                 <span className="text-xs font-bold text-purple-600 dark:text-purple-400">
@@ -149,7 +149,7 @@ export const ExerciseCompletionStats: React.FC<ExerciseCompletionStatsProps> = (
               </div>
 
               <div className="font-semibold text-xs text-purple-950 dark:text-purple-200 line-clamp-2 min-h-[32px] leading-snug">
-                Trắc nghiệm Game hoàn thành 100% câu hỏi
+                Hoàn thành bài tập Game trắc nghiệm
               </div>
             </div>
 
