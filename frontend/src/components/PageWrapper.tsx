@@ -1,12 +1,12 @@
-import { motion } from 'motion/react';
-import { ReactNode } from 'react';
+import { motion, type Variants } from 'motion/react';
+import type { ReactNode } from 'react';
 
 interface PageWrapperProps {
     children: ReactNode;
     className?: string;
 }
 
-const pageVariants = {
+const pageVariants: Variants = {
     initial: {
         opacity: 0,
         y: 10,

@@ -9,12 +9,6 @@ export * from '../features/violations/types/violation.types';
 
 // Explicit re-exports from activity.types to avoid ambiguity with rbac.types
 export {
-  userRefSchema,
-  permissionRequestCreateSchema,
-  bonusPointCreateSchema,
-  bonusPointResponseSchema,
-  permissionRequestResponseSchema,
-  calendarEventSchema,
   type UserRef,
   type PermissionRequestCreate,
   type PermissionRequestUpdate,
@@ -22,7 +16,6 @@ export {
   type BonusPointUpdate,
   type BonusPointResponse,
   type PermissionRequestResponse,
-  type CalendarEvent,
 } from '../features/activity/types/activity.types';
 
 export * from '../features/rbac/types/rbac.types';

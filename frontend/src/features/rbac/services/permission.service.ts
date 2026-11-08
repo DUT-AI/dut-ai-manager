@@ -4,6 +4,7 @@ import type {
   PermissionCreate,
   PermissionUpdate,
   PermissionRequestResponse,
+  PermissionRequestDetailResponse,
 } from '@/features/activity/types/activity.types';
 
 export const permissionService = {
@@ -62,7 +63,7 @@ export const permissionService = {
   },
 
   async getPermissionById(id: number) {
-    const response = await axiosInstance.get<ApiResponse<PermissionRequestResponse>>(`/${this.subPath}/${id}`);
+    const response = await axiosInstance.get<ApiResponse<PermissionRequestDetailResponse>>(`/${this.subPath}/${id}`);
     return response.data.data;
   },
 

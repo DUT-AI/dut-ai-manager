@@ -201,8 +201,8 @@ const AcademicReportPage = () => {
             ),
             sorter: (a: ReportItem, b: ReportItem) => {
                 return activeTab === 'bonus'
-                    ? (a.total_points - b.total_points)
-                    : (a.total_violations - b.total_violations);
+                    ? ((a.total_points ?? 0) - (b.total_points ?? 0))
+                    : ((a.total_violations ?? 0) - (b.total_violations ?? 0));
             },
             defaultSortOrder: 'descend' as const,
         },

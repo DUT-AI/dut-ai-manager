@@ -10,7 +10,10 @@ import {
     InfoCircleOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import type { PermissionRequestResponse } from '@/features/activity/types/activity.types';
+import type {
+    PermissionRequestResponse,
+    PermissionRequestDetailResponse,
+} from '@/features/activity/types/activity.types';
 import { usePermissionRequestDetail } from '@/features/rbac/hooks/usePermissionRequests';
 import { CATEGORY_COLORS, CATEGORY_LABELS } from './constants';
 
@@ -18,7 +21,7 @@ const { Title, Text } = Typography;
 
 interface PermissionDetailDrawerProps {
     isOpen: boolean;
-    item: PermissionRequestResponse | null;
+    item: PermissionRequestResponse | PermissionRequestDetailResponse | null;
     canUpdate: boolean;
     canDelete: boolean;
     onClose: () => void;
@@ -37,7 +40,7 @@ export const PermissionDetailDrawer: React.FC<PermissionDetailDrawerProps> = ({
 }) => {
     const screens = Grid.useBreakpoint();
     const { data: detailData, isLoading } = usePermissionRequestDetail(initialItem?.id, isOpen);
-    const item = detailData || initialItem;
+    const item = (detailData || initialItem) as PermissionRequestDetailResponse | null;
 
     if (!item) return null;
 
@@ -61,7 +64,7 @@ export const PermissionDetailDrawer: React.FC<PermissionDetailDrawerProps> = ({
                         <Descriptions.Item label="Người tạo">
                             <Space>
                                 <Avatar size="small" src={item.creator?.avatar_url} icon={<UserOutlined />} />
-                                <Text strong>{item.creator?.name || `#${item.created_by}`}</Text>
+                                <Text strong>{item.creator?.name || (item.creator?.id ? `#${item.creator.id}` : 'N/A')}</Text>
                             </Space>
                         </Descriptions.Item>
                         <Descriptions.Item label="Loại phép">

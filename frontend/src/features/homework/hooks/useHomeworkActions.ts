@@ -11,16 +11,16 @@ import {
 import { useUserOptions } from '@/features/users';
 import { useTeams } from '@/features/teams';
 import { homeworkService } from '@/features/homework/services/homework.service';
-import type { Homework } from '@/features/homework/types/homework.types';
+import type { Homework, HomeworkDetail } from '@/features/homework/types/homework.types';
 
 type HomeworkModalState = {
     isFormModalOpen: boolean;
     selectedHomework: Homework | null;
-    editingHomework: Homework | null;
+    editingHomework: Homework | HomeworkDetail | null;
 };
 
 type HomeworkModalAction =
-    | { type: 'OPEN_FORM'; payload?: Homework }
+    | { type: 'OPEN_FORM'; payload?: Homework | HomeworkDetail | null }
     | { type: 'CLOSE_FORM' };
 
 const initialState: HomeworkModalState = {

@@ -68,7 +68,7 @@ const TeamManagementPage = () => {
         try {
             const payload: TeamCreate = {
                 team_name: String(values.team_name || ''),
-                member_ids: values.member_ids as number[] | undefined
+                member_ids: (values.member_ids as number[]) ?? null
             };
 
             if (editingItem) {

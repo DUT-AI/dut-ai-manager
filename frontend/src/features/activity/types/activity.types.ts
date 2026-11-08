@@ -1,33 +1,19 @@
-import { z } from 'zod';
+import type { Schema } from '@/types/api';
 
-export const userRefSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  email: z.string().nullable().optional(),
-  avatar_url: z.string().nullable().optional(),
-});
-export type UserRef = z.infer<typeof userRefSchema>;
+export type UserRef = Schema<'UserRef'>;
 
-export const permissionRequestCreateSchema = z.object({
-  category: z.string().min(1, 'Vui lòng chọn loại đơn'),
-  note: z.string().min(1, 'Vui lòng nhập lý do/ghi chú'),
-  start_time: z.string().optional(),
-  homework_id: z.number().optional(),
-  meeting_id: z.number().optional(),
-  old_meeting_id: z.number().nullable().optional(),
-});
-export type PermissionRequestCreate = z.infer<typeof permissionRequestCreateSchema>;
+export type PermissionRequestCreate = Schema<'PermissionRequestCreate'>;
 export type PermissionRequestUpdate = Partial<PermissionRequestCreate>;
 
 // Aliases for legacy code
-export const permissionCreateSchema = permissionRequestCreateSchema;
 export type PermissionCreate = PermissionRequestCreate;
 export type PermissionUpdate = PermissionRequestUpdate;
 
-export enum BonusPointType {
-  CLUB_ACTIVITY = 'CLUB_ACTIVITY', // Điểm cộng hoạt động CLB / Lab
-  OTHER = 'OTHER',                 // Điểm cộng khác (sinh hoạt, khen thưởng,...)
-}
+export const BonusPointType = {
+  CLUB_ACTIVITY: 'CLUB_ACTIVITY', // Điểm cộng hoạt động CLB / Lab
+  OTHER: 'OTHER',                 // Điểm cộng khác (sinh hoạt, khen thưởng,...)
+} as const;
+export type BonusPointType = Schema<'BonusPointType'>;
 
 export const BONUS_POINT_TYPE_LABELS: Record<string, { label: string; color: string }> = {
   CLUB_ACTIVITY: {
@@ -40,71 +26,14 @@ export const BONUS_POINT_TYPE_LABELS: Record<string, { label: string; color: str
   },
 };
 
-export const bonusPointCreateSchema = z.object({
-  user_ids: z.array(z.number()).min(1, 'Vui lòng chọn thành viên'),
-  points: z.number().min(1, 'Điểm phải lớn hơn 0'),
-  type: z.nativeEnum(BonusPointType).optional(),
-  reason: z.string().min(1, 'Vui lòng nhập lý do'),
-  date: z.string(),
-});
-export type BonusPointCreate = z.infer<typeof bonusPointCreateSchema>;
+export type BonusPointCreate = Schema<'BonusPointCreate'>;
 export type BonusPointUpdate = Partial<BonusPointCreate>;
 
-export const violationCreateSchema = z.object({
-  user_ids: z.array(z.number()).min(1, 'Vui lòng chọn thành viên'),
-  reason: z.string().min(1, 'Vui lòng nhập lý do'),
-  date: z.string(),
-});
-export type ViolationCreate = z.infer<typeof violationCreateSchema>;
+export type ViolationCreate = Schema<'ViolationCreate'>;
 export type ViolationUpdate = Partial<ViolationCreate>;
 
-export const bonusPointResponseSchema = z.object({
-  id: z.number(),
-  user_id: z.number().optional(),
-  points: z.number(),
-  type: z.string().optional().nullable(),
-  reason: z.string(),
-  date: z.string(),
-  created_at: z.string(),
-  updated_at: z.string().optional(),
-  owner: userRefSchema.nullable().optional(),
-  creator: userRefSchema.nullable().optional(),
-  updater: userRefSchema.nullable().optional(),
-});
-export type BonusPointResponse = z.infer<typeof bonusPointResponseSchema>;
+export type BonusPointResponse = Schema<'app__bonus_point__application__dtos__BonusPointResponse'>;
+export type PermissionRequestResponse = Schema<'PermissionRequestResponse'>;
+export type PermissionRequestDetailResponse = Schema<'PermissionRequestDetailResponse'>;
 
-export const permissionRequestResponseSchema = z.object({
-  id: z.number(),
-  category: z.string(),
-  note: z.string(),
-  start_time: z.string().optional(),
-  homework_id: z.number().nullable().optional(),
-  meeting_id: z.number().nullable().optional(),
-  old_meeting_id: z.number().nullable().optional(),
-  created_by: z.number().nullable().optional(),
-  updated_by: z.number().nullable().optional(),
-  created_at: z.string(),
-  updated_at: z.string(),
-  creator: userRefSchema.nullable().optional(),
-  updater: userRefSchema.nullable().optional(),
-  homework: z.any().optional(),
-  meeting: z.any().optional(),
-  old_meeting: z.any().optional(),
-});
-export type PermissionRequestResponse = z.infer<typeof permissionRequestResponseSchema>;
-
-export const calendarEventSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  date: z.string(),
-  type: z.enum(['meeting', 'homework', 'violation', 'permission', 'bonus']),
-  details: z.record(z.string(), z.unknown()).optional(),
-});
-export type CalendarEvent = z.infer<typeof calendarEventSchema>;
-
-export interface DailySummaryResponse {
-  permission_requests?: PermissionRequestResponse[];
-  bonus_points?: BonusPointResponse[];
-  violations?: any[];
-  meetings?: any[];
-}
+export type DailySummaryResponse = Schema<'DailySummaryResponse'>;

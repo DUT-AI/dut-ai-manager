@@ -5,9 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js",
-    "build": "vite build",
+    "format": "eslint . --fix",
+    "typecheck": "npm run format && tsc -b",
+    "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "generate:api": "openapi-typescript http://127.0.0.1:8001/api/v1/openapi.json -o src/types/api.generated.d.ts"
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.0",
@@ -39,8 +42,9 @@
     "eslint-plugin-react-refresh": "^0.4.24",
     "eslint-plugin-unused-imports": "^4.4.1",
     "globals": "^16.5.0",
+    "openapi-typescript": "^7.13.0",
     "tailwindcss": "^4.1.18",
-    "typescript": "~5.9.3",
+    "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4"
   }

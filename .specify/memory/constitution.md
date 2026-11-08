@@ -1,11 +1,11 @@
 <!--
 Sync Impact Report:
-- Version: v1.9.0 -> v1.10.0
+- Version: v1.10.0 -> v1.11.0
 - Ratification Date: 2026-09-25
-- Last Amended: 2026-11-05
+- Last Amended: 2026-11-08
 - Principles added / enhanced:
-  - XV. Unified Client Networking & Fail-Fast Session Renewal (MUST) (NEW) -> Mandate that all client HTTP communications use canonical `axiosInstance` (prohibiting raw `fetch` and disparate token headers), enforce single-flight promise queuing with `_retry = true` loop protection for silent token refresh, return fail-fast HTTP 401 for auth errors without false alarm toasts for guests, dynamic environment-aware cookie `Secure` flags, and mandatory `user.is_active` validation in `RefreshTokenUseCase`.
-- Rationale: Codifying client-server authentication standards, eliminating infinite retry loops, preventing inactive user token renewals, and standardizing frontend API client calls.
+  - XVI. Single Source of Truth API Contracts & Automated Type Synchronization (MUST) (NEW) -> Mandate that all client-server data contracts originate from Backend Pydantic DTOs as the Single Source of Truth, strictly prohibiting manual frontend interface duplication and type drifting, requiring automated TypeScript type generation from OpenAPI via `openapi-typescript` (`npm run generate:api`), and standardizing generic payload extraction via typed helpers (`Schema<T>`, `ApiData<...>`).
+- Rationale: Codifying automated OpenAPI-to-TypeScript contract synchronization, eliminating frontend type drift, and guaranteeing end-to-end type safety between FastAPI schemas and React components.
 -->
 
 # DUT AI Manager Constitution
@@ -99,6 +99,12 @@ All client-to-server communication and session renewal mechanisms MUST follow st
 - **Fail-Fast HTTP Status Codes & Guest Protection**: Session expiration and missing credential errors MUST return standard HTTP `401 Unauthorized` (via `BadRequestException(status_code=401)` on the backend), strictly prohibiting HTTP 200 responses with `{ is_success: false }` for authentication failures. The client interceptor MUST differentiate between unauthenticated guests (e.g. missing token) and expired sessions, preventing false alarm "Phiên đăng nhập đã hết hạn" notifications for visitors.
 - **Environment-Aware Cookie Security & Active Account Integrity**: Auth cookies (`access_token`, `refresh_token`) MUST enforce `HttpOnly`, `SameSite=Lax`, and dynamic `Secure` flags (`secure=settings.is_cookie_secure`) bound to `settings.ENVIRONMENT == "production"`. Token issuing and renewal use cases (`RefreshTokenUseCase`) MUST verify account active status (`user.is_active`), immediately revoking token renewal rights for locked or inactive users.
 
+### XVI. Single Source of Truth API Contracts & Automated Type Synchronization (MUST)
+Tất cả các giao tiếp dữ liệu giữa Backend và Client (Frontend / Mini App) MUST tuân thủ nghiêm ngặt nguyên tắc nguồn chân lý duy nhất và sinh kiểu tự động:
+- **Backend Schema as Single Source of Truth**: Pydantic DTOs tại tầng Application của Backend là nguồn chân lý duy nhất cho toàn bộ cấu trúc dữ liệu gửi và nhận. Cấm tuyệt đối việc tự định nghĩa hoặc suy đoán dữ liệu ảo trên Client mà không xuất phát từ Schema Backend.
+- **Zero Manual Type Duplication & Type Drift Prevention**: Nghiêm cấm việc viết tay thủ công các interface/type độc lập trên Frontend cho các payload phản hồi từ Backend. Tất cả các định nghĩa kiểu TypeScript cho API phải được sinh tự động từ OpenAPI Specification (`http://127.0.0.1:8001/api/v1/openapi.json`) thông qua bộ công cụ chuẩn hóa (`openapi-typescript` / `npm run generate:api`).
+- **Strict Generic Envelope Extraction**: Client API Services và React Query hooks phải sử dụng các generic type helper chuẩn hóa (`Schema<T>`, `ApiData<...>`) để trích xuất payload bên trong envelope `ApiResponse[T]`, đảm bảo an toàn kiểu tĩnh (Type Safety) tuyệt đối tại thời điểm biên dịch và IntelliSense gợi ý mã nguồn tự động.
+
 ## Security & Compliance Standards
 
 1. **Zero Secret Leakage**: No hardcoding of passwords, JWT secrets, Discord Bot tokens, MinIO credentials, or Zalo App secrets. All configurations MUST read from environment variables managed via `app.core.config.Settings`.
@@ -122,4 +128,4 @@ All client-to-server communication and session renewal mechanisms MUST follow st
    - **MINOR**: Addition of new principles or major workflow standards.
    - **PATCH**: Non-semantic clarifications and wording updates.
 
-**Version**: 1.10.0 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-11-05
+**Version**: 1.11.0 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-11-08

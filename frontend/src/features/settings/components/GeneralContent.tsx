@@ -157,7 +157,7 @@ export const GeneralContent: React.FC = () => {
 
                     {/* Use key to reinitialize form when user data changes after refresh */}
                     <Form
-                        key={`${user?.discord_id ?? 'nd'}-${user?.check_in_card_code ? 'card-y' : 'card-n'}`}
+                        key={`${user?.discord_id ?? 'nd'}-${user?.check_in_card_code_configured ? 'card-y' : 'card-n'}`}
                         form={form}
                         layout="vertical"
                         onFinish={onUpdateSettings}

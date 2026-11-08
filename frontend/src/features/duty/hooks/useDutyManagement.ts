@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { message } from 'antd';
 import { dutyService } from '../services/duty.service';
-import type { DutyResponse, WeeklyDutyClassDto } from '../types/duty.types';
+import type { DutyResponse, WeeklyDutyClassDto, DutyChecklistItem } from '../types/duty.types';
 
 export const useDutyManagement = () => {
   const [weeklySchedule, setWeeklySchedule] = useState<WeeklyDutyClassDto[]>([]);

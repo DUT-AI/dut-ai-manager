@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import type { Schema } from '@/types/api';
 
 export const RolePermission = {
   CREATE: 'role:create',
@@ -78,39 +78,11 @@ export const BillingPermission = {
   DELETE: 'billing:delete',
 } as const;
 
-export const permissionResponseSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  description: z.string().nullable().optional(),
-  resource: z.string(),
-  action: z.string(),
-});
-export type PermissionResponse = z.infer<typeof permissionResponseSchema>;
+export type PermissionResponse = Schema<'PermissionResponse'>;
+export type RoleResponse = Schema<'RoleResponse'>;
 
-export const roleResponseSchema = z.object({
-  id: z.number(),
-  name: z.enum(['admin', 'leader', 'teammate']).or(z.string()),
-  description: z.string().nullable().optional(),
-  permissions: z.array(permissionResponseSchema).default([]),
-});
-export type RoleResponse = z.infer<typeof roleResponseSchema>;
+export type RoleCreate = Schema<'RoleCreate'>;
+export type RoleUpdate = Schema<'RoleUpdate'>;
 
-export const roleCreateSchema = z.object({
-  name: z.string().min(1, 'Vui lòng nhập tên vai trò'),
-  description: z.string().optional(),
-});
-export type RoleCreate = z.infer<typeof roleCreateSchema>;
-
-export const roleUpdateSchema = roleCreateSchema.partial();
-export type RoleUpdate = z.infer<typeof roleUpdateSchema>;
-
-export const permissionCreateSchema = z.object({
-  name: z.string().min(1, 'Vui lòng nhập tên quyền'),
-  description: z.string().optional(),
-  resource: z.string().min(1, 'Vui lòng nhập resource'),
-  action: z.string().min(1, 'Vui lòng nhập action'),
-});
-export type PermissionCreate = z.infer<typeof permissionCreateSchema>;
-
-export const permissionUpdateSchema = permissionCreateSchema.partial();
-export type PermissionUpdate = z.infer<typeof permissionUpdateSchema>;
+export type PermissionCreate = Schema<'PermissionCreate'>;
+export type PermissionUpdate = Schema<'PermissionUpdate'>;

@@ -63,8 +63,19 @@ frontend-build: ## Build frontend for production
 frontend-preview: ## Preview production build
 	cd frontend && npm run preview
 
+frontend-format: ## Tự động dọn dẹp import thừa và format code frontend
+	cd frontend && npm run format
+
 frontend-lint: ## Lint frontend code
 	cd frontend && npm run lint
+
+frontend-typecheck: ## Kiểm tra kiểu tĩnh TypeScript cho toàn bộ frontend
+	cd frontend && npm run typecheck
+
+frontend-generate-api: ## Sinh TypeScript types từ FastAPI OpenAPI đang chạy
+	@curl -s -f http://127.0.0.1:8001/api/v1/openapi.json > /dev/null 2>&1 || { printf "\033[0;31m❌ Lỗi: Backend server chưa khởi động tại http://127.0.0.1:8001.\nVui lòng khởi động backend bằng lệnh 'make backend-dev' trước khi sinh types!\033[0m\n"; exit 1; }
+	cd frontend && npm run generate:api
+
 
 # ==================== All ====================
 install: backend-install frontend-install ## Install all dependencies

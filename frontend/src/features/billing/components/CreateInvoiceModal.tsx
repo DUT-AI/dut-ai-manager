@@ -28,7 +28,7 @@ const CreateInvoiceModal = ({
   const selectedUserIds: number[] = Form.useWatch('user_ids', form) || [];
   const currentTeam = (teams || []).find(t => t.id === selectedTeamId);
   const teamMemberIds = new Set((currentTeam?.members || []).map(m => m.user_id));
-  const teamMembers = (currentTeam?.members || []).map(m => ({ id: m.user_id, name: m.user_name, email: m.user_email }));
+  const teamMembers = (currentTeam?.members || []).map(m => ({ id: m.user_id, name: m.user_name, email: m.email }));
   const otherUsers = (users || []).filter(u => !teamMemberIds.has(u.id));
 
   return (

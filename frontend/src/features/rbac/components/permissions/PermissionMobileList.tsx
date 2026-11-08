@@ -58,7 +58,7 @@ export const PermissionMobileList: React.FC<PermissionMobileListProps> = ({
                                 />
                                 <div className="flex flex-col min-w-0 flex-1">
                                     <Text strong className="truncate text-base">
-                                        {record.creator?.name || (record.created_by ? `#${record.created_by}` : 'N/A')}
+                                        {record.creator?.name || (record.creator?.id ? `#${record.creator.id}` : 'N/A')}
                                     </Text>
                                 </div>
                             </div>

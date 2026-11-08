@@ -76,7 +76,7 @@ export const MyHomeworkDetailPage: React.FC = () => {
     const passedExIds = new Set(
       codingSubmissions.filter((s) => s.is_passed).map((s) => s.exercise_id)
     );
-    return exercises.every((ex) => passedExIds.has(ex.exercise_id || ex.id));
+    return exercises.every((ex) => passedExIds.has(ex.exercise_id));
   }, [homework?.coding_exercises, codingSubmissions]);
 
   const isFullyPassed = hasBoth

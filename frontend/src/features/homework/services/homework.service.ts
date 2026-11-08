@@ -2,6 +2,7 @@ import axiosInstance from '@/services/axiosInstance';
 import type { ApiResponse } from '@/types/api.types';
 import type {
     Homework,
+    HomeworkDetail,
     HomeworkCreate,
     HomeworkUpdate,
     HomeworkReportResponse,
@@ -29,7 +30,7 @@ export const homeworkService = {
     },
 
     async getById(id: number) {
-        const response = await axiosInstance.get<ApiResponse<Homework>>(`/${this.baseUrl}/${id}`);
+        const response = await axiosInstance.get<ApiResponse<HomeworkDetail>>(`/${this.baseUrl}/${id}`);
         return response.data.data;
     },
 

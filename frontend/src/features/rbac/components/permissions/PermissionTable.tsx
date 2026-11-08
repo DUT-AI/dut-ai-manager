@@ -47,7 +47,7 @@ export const PermissionTable: React.FC<PermissionTableProps> = ({
                         />
                         <div>
                             <Text strong className="block">
-                                {user?.name || (record.created_by ? `#${record.created_by}` : 'N/A')}
+                                {user?.name || (record.creator?.id ? `#${record.creator.id}` : 'N/A')}
                             </Text>
                         </div>
                     </Space>

@@ -6,7 +6,7 @@ import type { Homework } from '@/features/homework/types/homework.types';
 const { Text } = Typography;
 
 interface DeadlineTextProps {
-    date: string;
+    date?: string | null;
     record: Homework;
     showOverdueTag?: boolean;
 }

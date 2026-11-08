@@ -116,7 +116,7 @@ export const ProfilePage: React.FC = () => {
                     <ProfileHeader user={user} />
                     <Tabs
                         activeKey={activeTab}
-                        onChange={setActiveTab}
+                        onChange={(key) => setActiveTab(key as "info" | "violations" | "bonus" | "permissions")}
                         className="mt-4"
                         items={tabItems}
                     />

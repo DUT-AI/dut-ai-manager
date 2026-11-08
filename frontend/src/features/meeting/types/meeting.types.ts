@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import type { Schema } from '@/types/api';
 
 export const ParticipantStatus = {
   NOT_JOINED: 'NOT_JOINED',
@@ -11,15 +11,6 @@ export const ParticipantStatus = {
 } as const;
 
 export type ParticipantStatus = typeof ParticipantStatus[keyof typeof ParticipantStatus];
-export const participantStatusSchema = z.enum([
-  'NOT_JOINED',
-  'JOINED',
-  'LATE_EXCUSED',
-  'LATE_UNEXCUSED',
-  'ABSENT_EXCUSED',
-  'ABSENT_UNEXCUSED',
-  'COMPLETED',
-]);
 
 export const ParticipantRole = {
   TRAINER: 'TRAINER',
@@ -27,7 +18,6 @@ export const ParticipantRole = {
 } as const;
 
 export type ParticipantRole = typeof ParticipantRole[keyof typeof ParticipantRole];
-export const participantRoleSchema = z.enum(['TRAINER', 'TRAINEE']);
 
 export interface UpdateParticipantStatusPayload {
   status: ParticipantStatus;
@@ -35,66 +25,15 @@ export interface UpdateParticipantStatusPayload {
   check_out_at?: string | null;
 }
 
-export const participantResponseSchema = z.object({
-  id: z.number(),
-  meeting_id: z.number(),
-  user_id: z.number(),
-  role: participantRoleSchema.default('TRAINEE'),
-  user_name: z.string().optional(),
-  user_avatar_url: z.string().nullable().optional(),
-  check_in_at: z.string().nullable().optional(),
-  check_out_at: z.string().nullable().optional(),
-  status: participantStatusSchema,
-  link_image: z.string().nullable().optional(),
-  created_at: z.string(),
-  updated_at: z.string(),
-});
-export type ParticipantResponse = z.infer<typeof participantResponseSchema>;
+export type ParticipantResponse = Schema<'ParticipantResponse'>;
+export type UserRef = Schema<'UserRef'>;
+export type MeetingResponse = Schema<'MeetingResponse'>;
+export type MeetingDetailResponse = Schema<'MeetingDetailResponse'>;
 
-export const userRefSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  avatar_url: z.string().nullable().optional(),
-});
-export type UserRef = z.infer<typeof userRefSchema>;
-
-export const meetingResponseSchema = z.object({
-  id: z.number(),
-  title: z.string(),
-  content: z.string().optional(),
-  start_time: z.string(),
-  end_time: z.string(),
-  require_check_in: z.boolean(),
-  enable_evaluation: z.boolean().default(false),
-  evaluation_deadline: z.string().nullable().optional(),
-  created_by: z.number().nullable().optional(),
-  trainers: z.array(userRefSchema).default([]),
-  created_at: z.string(),
-  updated_at: z.string(),
-});
-export type MeetingResponse = z.infer<typeof meetingResponseSchema>;
-
-export const meetingDetailResponseSchema = meetingResponseSchema.omit({ trainers: true }).extend({
-  trainers: z.array(participantResponseSchema).default([]),
-  trainees: z.array(participantResponseSchema).default([]),
-});
-export type MeetingDetailResponse = z.infer<typeof meetingDetailResponseSchema>;
-
-export const meetingCreateSchema = z.object({
-  title: z.string().min(1, 'Vui lòng nhập tiêu đề cuộc họp'),
-  content: z.string().optional(),
-  start_time: z.string().min(1, 'Vui lòng chọn thời gian bắt đầu'),
-  end_time: z.string().min(1, 'Vui lòng chọn thời gian kết thúc'),
-  require_check_in: z.boolean().optional(),
-  enable_evaluation: z.boolean().optional(),
-  trainer_ids: z.array(z.number()).default([]),
-  trainee_ids: z.array(z.number()).default([]),
-});
-export type MeetingCreate = z.infer<typeof meetingCreateSchema>;
+export type MeetingCreate = Schema<'MeetingCreate'>;
 export type CreateMeetingFormValues = MeetingCreate;
 
-export const meetingUpdateSchema = meetingCreateSchema.partial();
-export type MeetingUpdate = z.infer<typeof meetingUpdateSchema>;
+export type MeetingUpdate = Schema<'MeetingUpdate'>;
 export type UpdateMeetingFormValues = MeetingUpdate;
 
 // ==========================================

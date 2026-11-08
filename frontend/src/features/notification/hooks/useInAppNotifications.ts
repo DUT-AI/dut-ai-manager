@@ -40,8 +40,8 @@ export const useInAppNotifications = () => {
             });
             if (res?.data) {
                 setNotifications(res.data);
-                if (res.meta?.total !== undefined) {
-                    setTotal(res.meta.total);
+                if (res.pagination?.total !== undefined) {
+                    setTotal(res.pagination.total);
                 }
             }
         } catch {

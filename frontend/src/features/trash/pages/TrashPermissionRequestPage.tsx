@@ -27,7 +27,6 @@ export const TrashPermissionRequestPage: React.FC = () => {
     });
 
     const rawItems = useMemo(() => {
-        if (Array.isArray(permissionData?.data)) return permissionData.data;
         if (Array.isArray(permissionData)) return permissionData as unknown as PermissionRequestResponse[];
         return [];
     }, [permissionData]);

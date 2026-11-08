@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import type { Schema } from '@/types/api';
 
 export const InvoiceItemType = {
   VIOLATION: 'VIOLATION',
@@ -6,20 +6,7 @@ export const InvoiceItemType = {
   DINING: 'DINING',
   OTHER: 'OTHER',
 } as const;
-export type InvoiceItemType = (typeof InvoiceItemType)[keyof typeof InvoiceItemType];
-
-// Item Schema & Type
-export const invoiceItemSchema = z.object({
-  id: z.number().optional(),
-  invoice_id: z.number().optional(),
-  item_type: z.enum(['VIOLATION', 'FUND', 'DINING', 'OTHER']).or(z.string()),
-  amount: z.number(),
-  note: z.string().nullable().optional(),
-  reference_id: z.number().nullable().optional(),
-  created_at: z.string().optional(),
-  updated_at: z.string().optional(),
-});
-export type InvoiceItem = z.infer<typeof invoiceItemSchema>;
+export type InvoiceItemType = Schema<'InvoiceItemType'>;
 
 export const InvoiceStatus = {
   PENDING: 'PENDING',
@@ -27,88 +14,58 @@ export const InvoiceStatus = {
   CANCELLED: 'CANCELLED',
   EXPIRED: 'EXPIRED',
 } as const;
-export type InvoiceStatus = (typeof InvoiceStatus)[keyof typeof InvoiceStatus];
+export type InvoiceStatus = Schema<'InvoiceStatus'>;
 
-// Response Schema & Type
-export const invoiceSchema = z.object({
-  id: z.number(),
-  user_id: z.number(),
-  user_name: z.string().nullable().optional(),
-  team_id: z.number().nullable().optional(),
-  team_name: z.string().nullable().optional(),
-  amount: z.number().optional(),
-  total_amount: z.number().optional(),
-  status: z.enum(['PENDING', 'PAID', 'CANCELLED', 'EXPIRED']),
-  reference_code: z.string().optional(),
-  invoice_code: z.string().optional(),
-  transaction_id: z.string().nullable().optional(),
-  description: z.string().nullable().optional(),
-  billing_period: z.string(),
-  created_at: z.string(),
-  updated_at: z.string().optional(),
-  qr_url: z.string().optional(),
-  team: z.object({ id: z.number(), team_name: z.string() }).nullable().optional(),
-  items: z.array(invoiceItemSchema).default([]),
-});
-export type Invoice = z.infer<typeof invoiceSchema>;
+// OpenAPI Generated Schemas
+export type InvoiceItem = Schema<'InvoiceItemResponse'>;
+export type Invoice = Schema<'InvoiceResponse'> & {
+  // Client-compatible optional fields for UI components
+  user_name?: string | null;
+  team_name?: string | null;
+  total_amount?: number;
+  invoice_code?: string;
+};
 
-// Create Request Schema & Type
-export const createInvoiceSchema = z.object({
-  user_ids: z.array(z.number()).min(1, 'Vui lòng chọn ít nhất 1 thành viên'),
-  user_id: z.number().optional(),
-  team_id: z.number().min(1, 'Vui lòng chọn nhóm'),
-  billing_period: z.string().min(1, 'Vui lòng chọn kỳ hóa đơn'),
-  description: z.string().optional().nullable(),
-  items: z.array(invoiceItemSchema).min(1, 'Hóa đơn phải có ít nhất 1 mục'),
-});
-export type CreateInvoiceFormValues = z.infer<typeof createInvoiceSchema>;
-
-// Update Request Schema & Type
-export const updateInvoiceSchema = z.object({
-  status: z.enum(['PENDING', 'PAID', 'CANCELLED', 'EXPIRED']).optional(),
-  description: z.string().optional().nullable(),
-  items: z.array(invoiceItemSchema).optional(),
-});
-export type UpdateInvoiceFormValues = z.infer<typeof updateInvoiceSchema>;
-
-// Type Aliases & Legacy Types
-export type InvoiceStatusType = InvoiceStatus;
-export type InvoiceCreate = CreateInvoiceFormValues;
-
-// Monthly Invoice Types
-export interface MonthlyInvoiceExtraItem {
-  item_type: string;
-  amount: number;
-  note?: string;
-}
-
-export interface MonthlyInvoiceCreate {
-  month: number;
-  year: number;
-  team_id: number;
-  user_ids?: number[];
-  violation_price?: number;
-  fund_amount?: number;
-  extra_items?: MonthlyInvoiceExtraItem[];
-  execute?: boolean;
-}
-
-export interface MonthlyInvoiceItemPreview {
-  user_id?: number;
-  user_name: string;
-  violation_count: number;
-  violation_amount: number;
-  fund_amount: number;
+export type InvoiceCreate = Schema<'InvoiceCreate'>;
+export type InvoiceUpdate = Schema<'InvoiceUpdate'>;
+export type InvoiceStatusUpdate = Schema<'InvoiceStatusUpdate'>;
+export type MonthlyInvoiceCreate = Schema<'MonthlyInvoiceCreate'>;
+export type MonthlyInvoiceItemPreview = Schema<'MonthlyInvoiceItemPreview'> & {
   extra_items_amount?: number;
-  total_amount: number;
   items?: InvoiceItem[];
-}
-
-export interface MonthlyInvoicePreviewResponse {
-  items: MonthlyInvoiceItemPreview[];
+};
+export type MonthlyInvoicePreviewResponse = Schema<'MonthlyInvoicePreviewResponse'> & {
   total_users?: number;
   total_amount?: number;
+};
+
+// Form Values
+export interface CreateInvoiceFormValues {
+  user_ids: number[];
+  user_id?: number;
+  team_id: number;
+  billing_period: string;
+  description?: string | null;
+  items: Array<{
+    item_type: InvoiceItemType;
+    amount: number;
+    note?: string | null;
+    reference_id?: number | null;
+  }>;
 }
+
+export interface UpdateInvoiceFormValues {
+  status?: InvoiceStatus;
+  description?: string | null;
+  items?: Array<{
+    item_type: InvoiceItemType;
+    amount: number;
+    note?: string | null;
+    reference_id?: number | null;
+  }>;
+}
+
+export type InvoiceStatusType = InvoiceStatus;
 
 export interface BillingSummary {
   total_amount: number;

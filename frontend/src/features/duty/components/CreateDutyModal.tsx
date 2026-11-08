@@ -254,7 +254,7 @@ export const CreateDutyModal: React.FC<CreateDutyModalProps> = ({
 
   const handleFinish = async (values: {
     team_id?: number;
-    team_ids?: number[];
+    team_ids?: number[] | number;
     duty_date: Dayjs;
     time_range?: [Dayjs, Dayjs];
     note?: string;
@@ -268,11 +268,18 @@ export const CreateDutyModal: React.FC<CreateDutyModalProps> = ({
       const endTime =
         timeRange && timeRange[1] ? timeRange[1].format('HH:mm:ss') : undefined;
 
+      let formattedTeamIds: number[] | undefined = undefined;
+      if (!isEditMode) {
+        if (Array.isArray(values.team_ids)) {
+          formattedTeamIds = values.team_ids;
+        } else if (typeof values.team_ids === 'number') {
+          formattedTeamIds = [values.team_ids];
+        }
+      }
+
       const payload: CreateDutyFormValues = {
         team_id: isEditMode ? values.team_id : undefined,
-        team_ids: isEditMode
-          ? undefined
-          : (Array.isArray(values.team_ids) ? values.team_ids : [values.team_ids!]),
+        team_ids: formattedTeamIds,
         duty_date: values.duty_date.format('YYYY-MM-DD'),
         start_time: startTime,
         end_time: endTime,

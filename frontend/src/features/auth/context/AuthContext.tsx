@@ -60,7 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!user) return false;
         const roles = user.role_names?.map((r) => r.toLowerCase()) || [];
         if (roles.includes('admin')) return true;
-        const perms = user.permissions || user.permission_names || [];
+        const perms = user.permissions || [];
         return perms.includes(permission);
     };
 

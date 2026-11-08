@@ -41,7 +41,7 @@ export const HomeworkFormModal = ({
     // Helper map: teamId -> array of member user_ids
     const teamMemberMap = useMemo(() => {
         const map = new Map<number, number[]>();
-        teams.forEach(t => {
+        (teams || []).forEach(t => {
             const memberIds = (t.members || []).map(m => m.user_id);
             map.set(t.id, memberIds);
         });
@@ -52,7 +52,7 @@ export const HomeworkFormModal = ({
     const detectMatchingTeams = useCallback((assigneeIds: number[]) => {
         const idSet = new Set(assigneeIds);
         const matched: number[] = [];
-        teams.forEach(t => {
+        (teams || []).forEach(t => {
             const memberIds = (t.members || []).map(m => m.user_id);
             if (memberIds.length > 0 && memberIds.every(uid => idSet.has(uid))) {
                 matched.push(t.id);
@@ -64,7 +64,7 @@ export const HomeworkFormModal = ({
     useEffect(() => {
         if (open) {
             if (editingItem) {
-                const initialAssignees = editingItem.assignee_ids || [];
+                const initialAssignees = (editingItem as any).assignee_ids || [];
                 const matchedTeams = detectMatchingTeams(initialAssignees);
                 setSelectedTeamIds(matchedTeams);
                 setSelectedAssigneeIds(initialAssignees);
@@ -146,7 +146,7 @@ export const HomeworkFormModal = ({
     // Quick Action: Select All Users
     const handleSelectAll = () => {
         const allUserIds = users.map(u => u.id).filter((id): id is number => id !== undefined);
-        const allTeamIds = teams.map(t => t.id);
+        const allTeamIds = (teams || []).map(t => t.id);
         setSelectedTeamIds(allTeamIds);
         setSelectedAssigneeIds(allUserIds);
         form.setFieldsValue({
@@ -376,7 +376,7 @@ export const HomeworkFormModal = ({
                             filterOption={(input: string, option: any) =>
                                 (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
                             }
-                            options={teams.map(t => ({
+                            options={(teams || []).map(t => ({
                                 label: `${t.team_name} (${t.member_count} thành viên)`,
                                 value: t.id
                             }))}

@@ -1,19 +1,21 @@
-import { useState } from "react";
-import { useAuth } from "../features/auth/context/AuthContext";
-import { reportService } from "../features/academic-report/services/report.service";
-import { Card, Col, DatePicker, Empty, List, Row, Spin, Tag, Typography, Space } from "antd";
-import dayjs from "dayjs";
 import {
+    CheckCircleOutlined,
     ClockCircleOutlined,
     ExclamationCircleOutlined,
-    StarOutlined,
     FileTextOutlined,
-    TeamOutlined,
     FireOutlined,
-    CheckCircleOutlined
+    StarOutlined,
+    TeamOutlined
 } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
+import { Card, Col, DatePicker, Empty, List, Row, Space, Spin, Tag, Typography } from "antd";
+import dayjs from "dayjs";
 import { motion, type Variants } from "motion/react";
+import { useState } from "react";
+import { reportService } from "../features/academic-report/services/report.service";
+import { useAuth } from "../features/auth/context/AuthContext";
+import { userService } from "../features/users/services/user.service";
+import type { UserResponse } from "../features/users/types/user.types";
 
 const { Title, Text } = Typography;
 
@@ -69,6 +71,7 @@ const HomePage = () => {
         queryFn: () => reportService.getParticipationAnalysis(user!.id, date.month() + 1, date.year()),
         enabled: !!user?.id,
     });
+
 
     const stats = [
         {
@@ -242,41 +245,7 @@ const HomePage = () => {
                     </motion.div>
                 </Col>
 
-                <Col xs={24} lg={8}>
-                    <motion.div variants={itemVariants}>
-                        <Card
-                            title={
-                                <Space>
-                                    <TeamOutlined className="text-indigo-500" />
-                                    <span>Team Members</span>
-                                </Space>
-                            }
-                            bordered={false}
-                            className="shadow-sm border-gray-100 rounded-xl overflow-hidden h-full"
-                        >
-                            {isLoading ? (
-                                <div className="py-12 flex justify-center"><Spin /></div>
-                            ) : (
-                                <motion.div variants={listVariants}>
-                                    <List
-                                        dataSource={data?.recent_users}
-                                        renderItem={(u) => (
-                                            <motion.div variants={listItemVariants}>
-                                                <List.Item className="px-2 py-3">
-                                                    <List.Item.Meta
-                                                        avatar={<div className="w-2 h-2 rounded-full bg-green-400 mt-4" />}
-                                                        title={<Text strong className="text-sm">{u.name}</Text>}
-                                                        description={<Text type="secondary" className="text-[10px] uppercase font-bold">{u.role_names?.join(', ')}</Text>}
-                                                    />
-                                                </List.Item>
-                                            </motion.div>
-                                        )}
-                                    />
-                                </motion.div>
-                            )}
-                        </Card>
-                    </motion.div>
-                </Col>
+
             </Row>
         </motion.div>
     );
