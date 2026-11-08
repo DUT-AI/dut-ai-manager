@@ -1,7 +1,11 @@
 from datetime import UTC, datetime
 from enum import StrEnum
 
-from app.homework.domain.value_objects import SubmissionEvaluation
+from app.homework.domain.value_objects import (
+    CodingSubmissionDetails,
+    GameSubmissionDetails,
+    SubmissionEvaluation,
+)
 from app.shared.domain.base_entity import BaseEntity
 from app.shared.domain.datetime_types import ensure_utc
 
@@ -132,7 +136,7 @@ class HomeworkSubmission(BaseEntity):
     submission_type: SubmissionType
     submitted_at: datetime
     is_passed: bool = True
-    details: dict | None = None
+    details: CodingSubmissionDetails | GameSubmissionDetails | None = None
     exercise_id: str | None = None
     exercise_title: str | None = None
     score: float | None = None
@@ -161,10 +165,15 @@ class HomeworkSubmission(BaseEntity):
         score: float | None = None,
         attempt_number: int = 1,
         is_passed: bool = True,
-        details: dict | None = None,
+        details: CodingSubmissionDetails | dict | None = None,
         id: int | None = None,
     ) -> "CodingHomeworkSubmission":
         """Factory method to create a strict, strongly-typed Coding submission."""
+        parsed_details = (
+            CodingSubmissionDetails(**details)
+            if isinstance(details, dict)
+            else details
+        )
         return CodingHomeworkSubmission(
             id=id,
             homework_id=homework_id,
@@ -176,7 +185,7 @@ class HomeworkSubmission(BaseEntity):
             attempt_number=attempt_number,
             submitted_at=submitted_at,
             is_passed=is_passed,
-            details=details,
+            details=parsed_details,
         )
 
     @classmethod
@@ -188,10 +197,15 @@ class HomeworkSubmission(BaseEntity):
         score: float | None = None,
         attempt_number: int = 1,
         is_passed: bool = True,
-        details: dict | None = None,
+        details: GameSubmissionDetails | dict | None = None,
         id: int | None = None,
     ) -> "GameHomeworkSubmission":
         """Factory method to create a Game quiz submission."""
+        parsed_details = (
+            GameSubmissionDetails(**details)
+            if isinstance(details, dict)
+            else details
+        )
         return GameHomeworkSubmission(
             id=id,
             homework_id=homework_id,
@@ -201,7 +215,7 @@ class HomeworkSubmission(BaseEntity):
             attempt_number=attempt_number,
             submitted_at=submitted_at,
             is_passed=is_passed,
-            details=details,
+            details=parsed_details,
         )
 
 

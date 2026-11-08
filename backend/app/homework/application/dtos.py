@@ -1,9 +1,14 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.homework.domain.entity import SubmissionType
+from app.homework.domain.value_objects import (
+    CodingScoreDetail,
+    CodingSubmissionDetails,
+    GameSubmissionDetails,
+)
 from app.shared.domain.datetime_types import UtcDateTime
 from app.shared.domain.value_objects import UserRef
 
@@ -196,10 +201,48 @@ class HomeworkSubmissionDetailResponse(BaseModel):
     attempt_number: int = 1
     submitted_at: datetime | None = None
     is_passed: bool = True
-    details: dict[str, Any] = Field(default_factory=dict)
+    details: CodingSubmissionDetails | GameSubmissionDetails
     created_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def parse_typed_details(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            raw_details = data.get("details") or {}
+            sub_type = str(data.get("submission_type", "")).upper()
+            if not isinstance(raw_details, (CodingSubmissionDetails, GameSubmissionDetails)):
+                if sub_type == "GAME":
+                    data["details"] = GameSubmissionDetails(**raw_details)
+                else:
+                    data["details"] = CodingSubmissionDetails(**raw_details)
+        elif hasattr(data, "submission_type") and hasattr(data, "details"):
+            # ORM Model or Domain Entity
+            sub_type = getattr(data.submission_type, "value", str(data.submission_type)).upper()
+            raw_details = getattr(data, "details", {}) or {}
+            if not isinstance(raw_details, (CodingSubmissionDetails, GameSubmissionDetails)):
+                parsed_details = (
+                    GameSubmissionDetails(**raw_details)
+                    if sub_type == "GAME"
+                    else CodingSubmissionDetails(**raw_details)
+                )
+                # If data is an object, convert to dict for Pydantic instantiation
+                return {
+                    "id": getattr(data, "id", None),
+                    "homework_id": getattr(data, "homework_id", None),
+                    "user_id": getattr(data, "user_id", None),
+                    "submission_type": getattr(data, "submission_type", None),
+                    "exercise_id": getattr(data, "exercise_id", None),
+                    "exercise_title": getattr(data, "exercise_title", None),
+                    "score": getattr(data, "score", None),
+                    "attempt_number": getattr(data, "attempt_number", 1) or 1,
+                    "submitted_at": getattr(data, "submitted_at", None),
+                    "is_passed": getattr(data, "is_passed", True),
+                    "details": parsed_details,
+                    "created_at": getattr(data, "created_at", None),
+                }
+        return data
 
 
 class SyncHomeworkResult(BaseModel):

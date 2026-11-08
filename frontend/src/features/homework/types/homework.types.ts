@@ -24,9 +24,6 @@ export type ExerciseSummary = Schema<'ExerciseSummaryDTO'> & {
 
 export type UserSubmissionInfo = Schema<'UserSubmissionInfo'>;
 
-export type SubmissionHistoryItem = Schema<'HomeworkSubmissionDetailResponse'> & {
-  source?: string;
-  metadata?: Record<string, any> | null;
-};
+export type SubmissionHistoryItem = Schema<'HomeworkSubmissionDetailResponse'>;
 
 export type SyncHomeworkResult = Schema<'SyncHomeworkResult'>;

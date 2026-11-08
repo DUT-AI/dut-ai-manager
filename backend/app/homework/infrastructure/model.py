@@ -1,5 +1,7 @@
 from datetime import UTC, datetime
+from typing import Any
 
+from pydantic import BaseModel
 from sqlalchemy import (
     JSON,
     Boolean,
@@ -9,19 +11,47 @@ from sqlalchemy import (
     Index,
     Integer,
     String,
+    TypeDecorator,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.homework.domain.value_objects import (
+    CodingSubmissionDetails,
+    GameSubmissionDetails,
+)
 from app.homework.domain.entity import (
+    CodingHomeworkSubmission,
+    GameHomeworkSubmission,
     Homework as HomeworkEntity,
-)
-from app.homework.domain.entity import (
     HomeworkAssignee as HomeworkAssigneeEntity,
-)
-from app.homework.domain.entity import (
     HomeworkSubmission as HomeworkSubmissionEntity,
+    SubmissionType,
 )
 from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
+
+
+class SubmissionDetailsJSON(TypeDecorator):
+    """
+    SQLAlchemy TypeDecorator storing CodingSubmissionDetails or GameSubmissionDetails as JSON.
+    Automatically handles Pydantic BaseModel serialization and deserialization.
+    """
+
+    impl = JSON
+    cache_ok = True
+
+    def process_bind_param(self, value: Any, dialect: Any) -> Any:
+        if value is None:
+            return {}
+        if isinstance(value, BaseModel):
+            return value.model_dump()
+        return value
+
+    def process_result_value(self, value: Any, dialect: Any) -> Any:
+        if not value or not isinstance(value, dict):
+            return None
+        if "total_questions" in value or "correct_count" in value or "session_id" in value:
+            return GameSubmissionDetails(**value)
+        return CodingSubmissionDetails(**value)
 
 
 class HomeworkModel(SQLAlchemyTimestampMixin, Base):
@@ -144,8 +174,8 @@ class HomeworkSubmissionModel(Base):
     is_passed: Mapped[bool] = mapped_column(
         Boolean, default=True, server_default="true", nullable=False
     )
-    details: Mapped[dict | None] = mapped_column(
-        JSON, default=dict, server_default="{}", nullable=True
+    details: Mapped[CodingSubmissionDetails | GameSubmissionDetails | None] = mapped_column(
+        SubmissionDetailsJSON, default=None, server_default="{}", nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -165,11 +195,6 @@ class HomeworkSubmissionModel(Base):
     )
 
     def to_entity(self) -> HomeworkSubmissionEntity:
-        from app.homework.domain.entity import (
-            CodingHomeworkSubmission,
-            GameHomeworkSubmission,
-            SubmissionType,
-        )
 
         sub_type = (
             SubmissionType(self.submission_type.upper())
@@ -186,7 +211,7 @@ class HomeworkSubmissionModel(Base):
                 attempt_number=self.attempt_number or 1,
                 submitted_at=self.submitted_at,
                 is_passed=self.is_passed,
-                details=self.details or {},
+                details=self.details,
                 created_at=self.created_at,
             )
 
@@ -201,7 +226,7 @@ class HomeworkSubmissionModel(Base):
             attempt_number=self.attempt_number or 1,
             submitted_at=self.submitted_at,
             is_passed=self.is_passed,
-            details=self.details or {},
+            details=self.details,
             created_at=self.created_at,
         )
 
@@ -223,5 +248,5 @@ class HomeworkSubmissionModel(Base):
             attempt_number=entity.attempt_number,
             submitted_at=entity.submitted_at,
             is_passed=entity.is_passed,
-            details=entity.details or {},
+            details=entity.details,
         )

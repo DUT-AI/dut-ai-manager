@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import StrEnum
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -65,3 +66,28 @@ class DueHomeworkAssignment(BaseModel):
     requires_coding: bool
     requires_game: bool
     slug: str = ""
+
+
+class CodingScoreDetail(BaseModel):
+    criterion: str | None = None
+    status: bool = True
+    score: float | None = None
+    message: str | None = None
+
+
+class CodingSubmissionDetails(BaseModel):
+    submission_id: str | None = None
+    original_filename: str | None = None
+    status: str | None = None
+    score_details: list[dict[str, Any]] | list[CodingScoreDetail] | None = None
+    source: str = "webhook"
+
+
+class GameSubmissionDetails(BaseModel):
+    session_id: str | None = None
+    final_score: float | None = None
+    gold: int = 0
+    total_questions: int = 0
+    correct_count: int = 0
+    attempt_count: int = 1
+    source: str = "webhook"

@@ -2370,7 +2370,7 @@ export interface components {
             is_success: boolean;
             /** Status Code */
             status_code: number;
-            data?: components["schemas"]["app__bonus_point__application__dtos__BonusPointResponse"] | null;
+            data?: components["schemas"]["BonusPointResponse"] | null;
             /** Message */
             message: string;
             pagination?: components["schemas"]["PaginationMeta"] | null;
@@ -2919,7 +2919,7 @@ export interface components {
             /** Status Code */
             status_code: number;
             /** Data */
-            data?: components["schemas"]["app__bonus_point__application__dtos__BonusPointResponse"][] | null;
+            data?: components["schemas"]["BonusPointResponse"][] | null;
             /** Message */
             message: string;
             pagination?: components["schemas"]["PaginationMeta"] | null;
@@ -3312,10 +3312,6 @@ export interface components {
         };
         /** BonusPointResponse */
         BonusPointResponse: {
-            /** Id */
-            id: number;
-            /** User Id */
-            user_id: number;
             /** Points */
             points: number;
             /** Reason */
@@ -3325,10 +3321,15 @@ export interface components {
              * Format: date-time
              */
             date: string;
-            /** User Name */
-            user_name?: string | null;
-            /** User Avatar Url */
-            user_avatar_url?: string | null;
+            /** @default OTHER */
+            type: components["schemas"]["BonusPointType"];
+            /** Id */
+            id: number;
+            /** User Id */
+            user_id: number;
+            owner?: components["schemas"]["UserRef"] | null;
+            creator?: components["schemas"]["UserRef"] | null;
+            updater?: components["schemas"]["UserRef"] | null;
             /**
              * Created At
              * Format: date-time
@@ -3476,6 +3477,38 @@ export interface components {
             /** Idempotency Key */
             idempotency_key?: string | null;
         };
+        /** CodingScoreDetail */
+        CodingScoreDetail: {
+            /** Criterion */
+            criterion?: string | null;
+            /**
+             * Status
+             * @default true
+             */
+            status: boolean;
+            /** Score */
+            score?: number | null;
+            /** Message */
+            message?: string | null;
+        };
+        /** CodingSubmissionDetails */
+        CodingSubmissionDetails: {
+            /** Submission Id */
+            submission_id?: string | null;
+            /** Original Filename */
+            original_filename?: string | null;
+            /** Status */
+            status?: string | null;
+            /** Score Details */
+            score_details?: {
+                [key: string]: unknown;
+            }[] | components["schemas"]["CodingScoreDetail"][] | null;
+            /**
+             * Source
+             * @default webhook
+             */
+            source: string;
+        };
         /** CriteriaAverageScoreDto */
         CriteriaAverageScoreDto: {
             /** Criteria Code */
@@ -3507,7 +3540,7 @@ export interface components {
              * Bonus Points
              * @default []
              */
-            bonus_points: components["schemas"]["BonusPointResponse"][];
+            bonus_points: components["schemas"]["app__report__schemas__BonusPointResponse"][];
             /**
              * Violations
              * @default []
@@ -3524,7 +3557,7 @@ export interface components {
             /** Permission Requests */
             permission_requests: components["schemas"]["PermissionRequestResponse"][];
             /** Bonus Points */
-            bonus_points: components["schemas"]["BonusPointResponse"][];
+            bonus_points: components["schemas"]["app__report__schemas__BonusPointResponse"][];
             /** Violations */
             violations: components["schemas"]["ViolationResponse"][];
             /** Unsubmitted Homeworks */
@@ -3816,6 +3849,38 @@ export interface components {
              */
             email: string;
         };
+        /** GameSubmissionDetails */
+        GameSubmissionDetails: {
+            /** Session Id */
+            session_id?: string | null;
+            /** Final Score */
+            final_score?: number | null;
+            /**
+             * Gold
+             * @default 0
+             */
+            gold: number;
+            /**
+             * Total Questions
+             * @default 0
+             */
+            total_questions: number;
+            /**
+             * Correct Count
+             * @default 0
+             */
+            correct_count: number;
+            /**
+             * Attempt Count
+             * @default 1
+             */
+            attempt_count: number;
+            /**
+             * Source
+             * @default webhook
+             */
+            source: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -4025,9 +4090,7 @@ export interface components {
              */
             is_passed: boolean;
             /** Details */
-            details?: {
-                [key: string]: unknown;
-            };
+            details: components["schemas"]["CodingSubmissionDetails"] | components["schemas"]["GameSubmissionDetails"];
             /** Created At */
             created_at?: string | null;
         };
@@ -5750,7 +5813,11 @@ export interface components {
             zalo_access_token?: string | null;
         };
         /** BonusPointResponse */
-        app__bonus_point__application__dtos__BonusPointResponse: {
+        app__report__schemas__BonusPointResponse: {
+            /** Id */
+            id: number;
+            /** User Id */
+            user_id: number;
             /** Points */
             points: number;
             /** Reason */
@@ -5760,15 +5827,10 @@ export interface components {
              * Format: date-time
              */
             date: string;
-            /** @default OTHER */
-            type: components["schemas"]["BonusPointType"];
-            /** Id */
-            id: number;
-            /** User Id */
-            user_id: number;
-            owner?: components["schemas"]["UserRef"] | null;
-            creator?: components["schemas"]["UserRef"] | null;
-            updater?: components["schemas"]["UserRef"] | null;
+            /** User Name */
+            user_name?: string | null;
+            /** User Avatar Url */
+            user_avatar_url?: string | null;
             /**
              * Created At
              * Format: date-time

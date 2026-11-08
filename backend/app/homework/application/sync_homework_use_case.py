@@ -306,9 +306,12 @@ class SyncHomeworkFromQuizUseCase:
                         continue
 
                     session_id = s.get("session_id")
+                    game_score = s.get("final_score")
+                    if game_score is not None:
+                        game_score = float(game_score)
                     details = {
                         "session_id": session_id,
-                        "final_score": s.get("final_score", 0),
+                        "final_score": game_score,
                         "gold": s.get("gold", 0),
                         "attempt_count": s.get("attempt_count", 1),
                         "total_questions": s.get("total_questions", 0),
@@ -327,6 +330,7 @@ class SyncHomeworkFromQuizUseCase:
                         self.homework_submission_repo.update_submission(
                             existing,
                             submitted_at=sub_time,
+                            score=game_score if game_score is not None else existing.score,
                             is_passed=True,
                             details=details,
                         )
@@ -337,6 +341,7 @@ class SyncHomeworkFromQuizUseCase:
                                 homework_id=homework_id,
                                 user_id=uid,
                                 submitted_at=sub_time,
+                                score=game_score,
                                 is_passed=True,
                                 details=details,
                             )

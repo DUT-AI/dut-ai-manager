@@ -96,8 +96,9 @@ class RecordHomeworkSubmissionUseCase:
 
         exercise_id = payload.exercise_id or details.get("exercise_id")
         exercise_title = payload.exercise_title or details.get("exercise_title")
-        score = payload.score if payload.score is not None else details.get("score")
-        attempt_number = payload.attempt_number or details.get("attempt_number", 1)
+        score = payload.score if payload.score is not None else details.get("score") or details.get("final_score")
+        attempt_number = payload.attempt_number or details.get("attempt_number") or details.get("attempt_count", 1)
+        details.setdefault("source", "webhook")
 
         # 4. Lưu hoặc cập nhật bản ghi lịch sử vào database (Idempotent Upsert)
         existing = self.homework_submission_repo.find_submission_match(

@@ -83,9 +83,3 @@ export interface UpdateDutyRequest {
   end_time?: string | null;
   team_id?: number;
 }
-
-export interface SubmitDutyFormValues {
-  checklist: DutyChecklistItem[];
-  note?: string;
-  files: File[];
-}

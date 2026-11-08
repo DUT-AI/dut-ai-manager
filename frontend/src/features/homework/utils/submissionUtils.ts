@@ -1,5 +1,9 @@
 import dayjs from 'dayjs';
 import type { SubmissionHistoryItem, ExerciseSummary } from '../types/homework.types';
+import type { Schema } from '@/types/api';
+
+export type CodingSubmissionDetails = Schema<'CodingSubmissionDetails'>;
+export type GameSubmissionDetails = Schema<'GameSubmissionDetails'>;
 
 export interface NormalizedSubmission {
   id: number;
@@ -16,7 +20,8 @@ export interface NormalizedSubmission {
   filename: string | null;
   correctCount: number | null;
   totalQuestions: number | null;
-  rawDetails: Record<string, any>;
+  codingDetails?: CodingSubmissionDetails | null;
+  gameDetails?: GameSubmissionDetails | null;
 }
 
 export interface ExerciseGroupSummary {
@@ -31,30 +36,29 @@ export interface ExerciseGroupSummary {
 
 /**
  * Normalizes a raw SubmissionHistoryItem into a clean, predictable NormalizedSubmission.
- * Eliminates all fallback soup (sub.details vs sub.metadata vs top-level fields).
+ * Direct strongly-typed mapping with ZERO fallback soup.
  */
 export function normalizeSubmission(raw: SubmissionHistoryItem): NormalizedSubmission {
-  const details = raw.details || raw.metadata || {};
-  
-  // Resolve Score: prioritize top-level score, then details.final_score
-  let score: number | null = null;
-  if (typeof raw.score === 'number') {
-    score = raw.score;
-  } else if (typeof details.final_score === 'number') {
-    score = details.final_score;
-  } else if (typeof details.score === 'number') {
-    score = details.score;
+  const isCoding = raw.submission_type === 'CODING';
+  const details = raw.details;
+
+  let filename: string | null = null;
+  let correctCount: number | null = null;
+  let totalQuestions: number | null = null;
+  let codingDetails: CodingSubmissionDetails | null = null;
+  let gameDetails: GameSubmissionDetails | null = null;
+
+  if (isCoding) {
+    codingDetails = details as CodingSubmissionDetails;
+    filename = codingDetails?.original_filename || null;
+  } else {
+    gameDetails = details as GameSubmissionDetails;
+    correctCount = typeof gameDetails?.correct_count === 'number' ? gameDetails.correct_count : null;
+    totalQuestions = typeof gameDetails?.total_questions === 'number' ? gameDetails.total_questions : null;
   }
 
-  // Resolve Attempt Number
-  const attemptNumber = raw.attempt_number ?? details.attempt_number ?? 1;
-
-  // Resolve Exercise ID & Title
-  const exerciseId = raw.exercise_id ?? details.exercise_id ?? null;
-  const exerciseTitle = raw.exercise_title ?? details.exercise_title ?? (exerciseId ? `Bài tập #${String(exerciseId).slice(0, 8)}` : null);
-
-  // Resolve Source
-  const rawSource = (raw.source || details.source || '').toUpperCase();
+  // Resolve Source cleanly
+  const rawSource = ((details && 'source' in details ? details.source : '') || '').toUpperCase();
   const source: NormalizedSubmission['source'] =
     rawSource.includes('MANUAL') || rawSource.includes('SYNC')
       ? 'MANUAL_SYNC'
@@ -62,29 +66,27 @@ export function normalizeSubmission(raw: SubmissionHistoryItem): NormalizedSubmi
         ? 'WEBHOOK'
         : 'UNKNOWN';
 
-  // Resolve Game Quiz metrics
-  const correctCount = typeof details.correct_count === 'number' ? details.correct_count : null;
-  const totalQuestions = typeof details.total_questions === 'number' ? details.total_questions : null;
-
-  // Resolve filename
-  const filename = details.original_filename || details.filename || null;
+  const score = raw.score ?? (gameDetails?.final_score ?? null);
+  const exerciseId = raw.exercise_id ? String(raw.exercise_id) : null;
+  const exerciseTitle = raw.exercise_title || (exerciseId ? `Bài tập #${exerciseId.slice(0, 8)}` : null);
 
   return {
     id: raw.id,
     homeworkId: raw.homework_id,
     userId: raw.user_id,
-    submissionType: raw.submission_type,
-    exerciseId: exerciseId ? String(exerciseId) : null,
+    submissionType: isCoding ? 'CODING' : 'GAME',
+    exerciseId,
     exerciseTitle,
     score,
-    attemptNumber,
-    submittedAt: raw.submitted_at,
+    attemptNumber: raw.attempt_number || 1,
+    submittedAt: raw.submitted_at || '',
     isPassed: raw.is_passed ?? (score !== null ? score >= 5 : true),
     source,
     filename,
     correctCount,
     totalQuestions,
-    rawDetails: details,
+    codingDetails,
+    gameDetails,
   };
 }
 
@@ -100,10 +102,9 @@ export function normalizeSubmissions(rawList?: SubmissionHistoryItem[] | null): 
 
 /**
  * Groups coding submissions by exercise_id.
- * Strict & No-fallback:
+ * Strict & Clean:
  * - Only processes submissions with submissionType === 'CODING'.
  * - If allExercises is provided, strictly represents all exercises from the lesson in order.
- * - Never creates a fallback '__general__' ("Bài tập chung") group for Game or null exercise IDs.
  */
 export function groupSubmissionsByExercise(
   submissions: NormalizedSubmission[],
@@ -157,7 +158,7 @@ export function groupSubmissionsByExercise(
       });
     }
   } else {
-    // 3. Fallback only when allExercises is absent: Group existing coding exercises with valid IDs
+    // 3. Fallback when allExercises is absent: Group existing coding exercises with valid IDs
     for (const [key, subs] of groupMap.entries()) {
       const sortedDesc = [...subs].sort(
         (a, b) => dayjs(b.submittedAt).valueOf() - dayjs(a.submittedAt).valueOf()
@@ -183,4 +184,3 @@ export function groupSubmissionsByExercise(
 
   return summaries;
 }
-

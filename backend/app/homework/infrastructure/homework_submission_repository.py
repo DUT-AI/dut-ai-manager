@@ -1,11 +1,16 @@
 from datetime import datetime
 from typing import Any
 
+from pydantic import BaseModel
 from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
 from app.homework.domain.entity import (
     HomeworkSubmission as HomeworkSubmissionEntity,
+)
+from app.homework.domain.value_objects import (
+    CodingSubmissionDetails,
+    GameSubmissionDetails,
 )
 from app.homework.infrastructure.model import (
     HomeworkSubmissionModel,
@@ -188,9 +193,22 @@ class HomeworkSubmissionRepository:
         if attempt_number is not None:
             model.attempt_number = attempt_number
         if details is not None:
-            current_details = dict(model.details or {})
-            current_details.update(details)
-            model.details = current_details
+            current_dict = (
+                model.details.model_dump()
+                if isinstance(model.details, BaseModel)
+                else dict(model.details or {})
+            )
+            update_dict = (
+                details.model_dump()
+                if isinstance(details, BaseModel)
+                else dict(details)
+            )
+            current_dict.update(update_dict)
+            sub_type = str(model.submission_type).upper()
+            if sub_type == "GAME":
+                model.details = GameSubmissionDetails(**current_dict)
+            else:
+                model.details = CodingSubmissionDetails(**current_dict)
         self.session.flush()
         return model.to_entity()
 
