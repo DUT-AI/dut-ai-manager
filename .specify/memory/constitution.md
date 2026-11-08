@@ -1,11 +1,11 @@
 <!--
 Sync Impact Report:
-- Version: v1.10.0 -> v1.11.0
+- Version: v1.11.0 -> v1.12.0
 - Ratification Date: 2026-09-25
 - Last Amended: 2026-11-08
 - Principles added / enhanced:
-  - XVI. Single Source of Truth API Contracts & Automated Type Synchronization (MUST) (NEW) -> Mandate that all client-server data contracts originate from Backend Pydantic DTOs as the Single Source of Truth, strictly prohibiting manual frontend interface duplication and type drifting, requiring automated TypeScript type generation from OpenAPI via `openapi-typescript` (`npm run generate:api`), and standardizing generic payload extraction via typed helpers (`Schema<T>`, `ApiData<...>`).
-- Rationale: Codifying automated OpenAPI-to-TypeScript contract synchronization, eliminating frontend type drift, and guaranteeing end-to-end type safety between FastAPI schemas and React components.
+  - XVII. Strongly-Typed Storage & Zero Raw Dictionary Columns (MUST) (NEW) -> Mandate that all JSON / flexible metadata columns in SQLAlchemy ORM and Domain Entities be strongly typed using Pydantic BaseModels or Discriminated Unions via custom TypeDecorators (`SubmissionDetailsJSON`), strictly prohibiting `dict[str, Any]` in ORM Mapped types and domain entities to prevent raw unstructured data drift.
+- Rationale: Codifying strict type-safety for complex JSON/metadata storage across ORM models and Domain entities, eliminating raw unstructured dictionaries and defensive fallback logic.
 -->
 
 # DUT AI Manager Constitution
@@ -105,6 +105,12 @@ Tất cả các giao tiếp dữ liệu giữa Backend và Client (Frontend / Mi
 - **Zero Manual Type Duplication & Type Drift Prevention**: Nghiêm cấm việc viết tay thủ công các interface/type độc lập trên Frontend cho các payload phản hồi từ Backend. Tất cả các định nghĩa kiểu TypeScript cho API phải được sinh tự động từ OpenAPI Specification (`http://127.0.0.1:8001/api/v1/openapi.json`) thông qua bộ công cụ chuẩn hóa (`openapi-typescript` / `npm run generate:api`).
 - **Strict Generic Envelope Extraction**: Client API Services và React Query hooks phải sử dụng các generic type helper chuẩn hóa (`Schema<T>`, `ApiData<...>`) để trích xuất payload bên trong envelope `ApiResponse[T]`, đảm bảo an toàn kiểu tĩnh (Type Safety) tuyệt đối tại thời điểm biên dịch và IntelliSense gợi ý mã nguồn tự động.
 
+### XVII. Strongly-Typed Storage & Zero Raw Dictionary Columns (MUST)
+Tất cả các cột dữ liệu phức tạp dạng JSON/Metadata lưu trữ trong Database (SQLAlchemy ORM) và Domain Entities MUST được định kiểu mạnh bằng Pydantic BaseModels hoặc Discriminated Unions:
+- **Strict Prohibition of Raw Dictionaries in ORM & Entities**: Nghiêm cấm khai báo `dict[str, Any]` hoặc `dict | None` trong `Mapped[...]` của SQLAlchemy ORM Models và trong thuộc tính của Domain Entities.
+- **Automated Pydantic TypeDecorator for JSON Columns**: Các cột lưu trữ JSON phức tạp (như `details`, `metadata`) MUST sử dụng SQLAlchemy `TypeDecorator` (ví dụ `SubmissionDetailsJSON`) kế thừa từ `JSON`. TypeDecorator này chịu trách nhiệm tự động gọi `.model_dump()` khi lưu vào DB (`process_bind_param`) và deserialize tự động dict thô thành các Pydantic Value Objects cụ thể (`CodingSubmissionDetails | GameSubmissionDetails`) khi đọc từ DB (`process_result_value`).
+- **Elimination of Defensive Fallback Soup**: Toàn bộ luồng xử lý từ ORM qua Entity đến Application DTO và Frontend API contract đều được bảo đảm kiểu tĩnh 100%, loại bỏ hoàn toàn các đoạn mã phòng thủ fallback mù quáng (`details.get("xyz") || details.get("abc")`).
+
 ## Security & Compliance Standards
 
 1. **Zero Secret Leakage**: No hardcoding of passwords, JWT secrets, Discord Bot tokens, MinIO credentials, or Zalo App secrets. All configurations MUST read from environment variables managed via `app.core.config.Settings`.
@@ -128,4 +134,4 @@ Tất cả các giao tiếp dữ liệu giữa Backend và Client (Frontend / Mi
    - **MINOR**: Addition of new principles or major workflow standards.
    - **PATCH**: Non-semantic clarifications and wording updates.
 
-**Version**: 1.11.0 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-11-08
+**Version**: 1.12.0 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-11-08
