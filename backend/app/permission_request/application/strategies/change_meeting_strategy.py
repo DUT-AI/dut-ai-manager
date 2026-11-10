@@ -50,15 +50,39 @@ class ChangeMeetingStrategy(PermissionStrategy[ChangeMeetingPayload]):
         old_meeting_id = request.payload.old_meeting_id
         user_id = request.created_by
 
+        if not old_meeting_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Vui lòng chọn buổi sinh hoạt hiện tại",
+            )
+
         if not meeting_id:
             raise HTTPException(
                 status_code=400,
                 detail="Vui lòng chọn buổi họp đích muốn chuyển đến",
             )
 
-        if old_meeting_id is not None and old_meeting_id == meeting_id:
+        if old_meeting_id == meeting_id:
             raise HTTPException(
                 status_code=400, detail="Không thể đổi sang cùng một buổi họp"
+            )
+
+        # 0. Kiểm tra sự hiện diện của User tại buổi sinh hoạt hiện tại (old_meeting_id)
+        old_meeting = self.meeting_repo.get_by_id(old_meeting_id)
+        if not old_meeting:
+            raise HTTPException(
+                status_code=404,
+                detail="Không tìm thấy buổi sinh hoạt hiện tại đã chọn",
+            )
+
+        is_user_in_old_meeting = any(
+            p.user_id == user_id and not p.is_deleted
+            for p in old_meeting.participants
+        )
+        if not is_user_in_old_meeting:
+            raise HTTPException(
+                status_code=400,
+                detail="Bạn không có mặt trong danh sách tham gia của buổi sinh hoạt hiện tại đã chọn",
             )
 
         now = datetime.now(UTC)

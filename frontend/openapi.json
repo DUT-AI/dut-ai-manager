@@ -7843,7 +7843,7 @@
           "data": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/BonusPointResponse"
+                "$ref": "#/components/schemas/app__bonus_point__application__dtos__BonusPointResponse"
               },
               {
                 "type": "null"
@@ -9961,7 +9961,7 @@
             "anyOf": [
               {
                 "items": {
-                  "$ref": "#/components/schemas/BonusPointResponse"
+                  "$ref": "#/components/schemas/app__bonus_point__application__dtos__BonusPointResponse"
                 },
                 "type": "array"
               },
@@ -11423,6 +11423,14 @@
       },
       "BonusPointResponse": {
         "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "integer",
+            "title": "User Id"
+          },
           "points": {
             "type": "integer",
             "title": "Points"
@@ -11436,47 +11444,27 @@
             "format": "date-time",
             "title": "Date"
           },
-          "type": {
-            "$ref": "#/components/schemas/BonusPointType",
-            "default": "OTHER"
-          },
-          "id": {
-            "type": "integer",
-            "title": "Id"
-          },
-          "user_id": {
-            "type": "integer",
-            "title": "User Id"
-          },
-          "owner": {
+          "user_name": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/UserRef"
+                "type": "string"
               },
               {
                 "type": "null"
               }
-            ]
+            ],
+            "title": "User Name"
           },
-          "creator": {
+          "user_avatar_url": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/UserRef"
+                "type": "string"
               },
               {
                 "type": "null"
               }
-            ]
-          },
-          "updater": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/UserRef"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            ],
+            "title": "User Avatar Url"
           },
           "created_at": {
             "type": "string",
@@ -11491,11 +11479,11 @@
         },
         "type": "object",
         "required": [
+          "id",
+          "user_id",
           "points",
           "reason",
           "date",
-          "id",
-          "user_id",
           "created_at",
           "updated_at"
         ],
@@ -11991,7 +11979,7 @@
           },
           "bonus_points": {
             "items": {
-              "$ref": "#/components/schemas/app__report__schemas__BonusPointResponse"
+              "$ref": "#/components/schemas/BonusPointResponse"
             },
             "type": "array",
             "title": "Bonus Points",
@@ -12031,7 +12019,7 @@
           },
           "bonus_points": {
             "items": {
-              "$ref": "#/components/schemas/app__report__schemas__BonusPointResponse"
+              "$ref": "#/components/schemas/BonusPointResponse"
             },
             "type": "array",
             "title": "Bonus Points"
@@ -17932,16 +17920,8 @@
         "title": "ZaloPhoneLoginRequest",
         "description": "Zalo Mini App Phone Login schema"
       },
-      "app__report__schemas__BonusPointResponse": {
+      "app__bonus_point__application__dtos__BonusPointResponse": {
         "properties": {
-          "id": {
-            "type": "integer",
-            "title": "Id"
-          },
-          "user_id": {
-            "type": "integer",
-            "title": "User Id"
-          },
           "points": {
             "type": "integer",
             "title": "Points"
@@ -17955,27 +17935,47 @@
             "format": "date-time",
             "title": "Date"
           },
-          "user_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "User Name"
+          "type": {
+            "$ref": "#/components/schemas/BonusPointType",
+            "default": "OTHER"
           },
-          "user_avatar_url": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "integer",
+            "title": "User Id"
+          },
+          "owner": {
             "anyOf": [
               {
-                "type": "string"
+                "$ref": "#/components/schemas/UserRef"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "User Avatar Url"
+            ]
+          },
+          "creator": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "updater": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "created_at": {
             "type": "string",
@@ -17990,11 +17990,11 @@
         },
         "type": "object",
         "required": [
-          "id",
-          "user_id",
           "points",
           "reason",
           "date",
+          "id",
+          "user_id",
           "created_at",
           "updated_at"
         ],

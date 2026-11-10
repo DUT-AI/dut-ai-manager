@@ -32,7 +32,7 @@ export type BonusPointUpdate = Partial<BonusPointCreate>;
 export type ViolationCreate = Schema<'ViolationCreate'>;
 export type ViolationUpdate = Partial<ViolationCreate>;
 
-export type BonusPointResponse = Schema<'BonusPointResponse'>;
+export type BonusPointResponse = Schema<'app__bonus_point__application__dtos__BonusPointResponse'>;
 export type PermissionRequestResponse = Schema<'PermissionRequestResponse'>;
 export type PermissionRequestDetailResponse = Schema<'PermissionRequestDetailResponse'>;
 

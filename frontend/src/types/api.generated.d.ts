@@ -2370,7 +2370,7 @@ export interface components {
             is_success: boolean;
             /** Status Code */
             status_code: number;
-            data?: components["schemas"]["BonusPointResponse"] | null;
+            data?: components["schemas"]["app__bonus_point__application__dtos__BonusPointResponse"] | null;
             /** Message */
             message: string;
             pagination?: components["schemas"]["PaginationMeta"] | null;
@@ -2919,7 +2919,7 @@ export interface components {
             /** Status Code */
             status_code: number;
             /** Data */
-            data?: components["schemas"]["BonusPointResponse"][] | null;
+            data?: components["schemas"]["app__bonus_point__application__dtos__BonusPointResponse"][] | null;
             /** Message */
             message: string;
             pagination?: components["schemas"]["PaginationMeta"] | null;
@@ -3312,6 +3312,10 @@ export interface components {
         };
         /** BonusPointResponse */
         BonusPointResponse: {
+            /** Id */
+            id: number;
+            /** User Id */
+            user_id: number;
             /** Points */
             points: number;
             /** Reason */
@@ -3321,15 +3325,10 @@ export interface components {
              * Format: date-time
              */
             date: string;
-            /** @default OTHER */
-            type: components["schemas"]["BonusPointType"];
-            /** Id */
-            id: number;
-            /** User Id */
-            user_id: number;
-            owner?: components["schemas"]["UserRef"] | null;
-            creator?: components["schemas"]["UserRef"] | null;
-            updater?: components["schemas"]["UserRef"] | null;
+            /** User Name */
+            user_name?: string | null;
+            /** User Avatar Url */
+            user_avatar_url?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -3540,7 +3539,7 @@ export interface components {
              * Bonus Points
              * @default []
              */
-            bonus_points: components["schemas"]["app__report__schemas__BonusPointResponse"][];
+            bonus_points: components["schemas"]["BonusPointResponse"][];
             /**
              * Violations
              * @default []
@@ -3557,7 +3556,7 @@ export interface components {
             /** Permission Requests */
             permission_requests: components["schemas"]["PermissionRequestResponse"][];
             /** Bonus Points */
-            bonus_points: components["schemas"]["app__report__schemas__BonusPointResponse"][];
+            bonus_points: components["schemas"]["BonusPointResponse"][];
             /** Violations */
             violations: components["schemas"]["ViolationResponse"][];
             /** Unsubmitted Homeworks */
@@ -5813,11 +5812,7 @@ export interface components {
             zalo_access_token?: string | null;
         };
         /** BonusPointResponse */
-        app__report__schemas__BonusPointResponse: {
-            /** Id */
-            id: number;
-            /** User Id */
-            user_id: number;
+        app__bonus_point__application__dtos__BonusPointResponse: {
             /** Points */
             points: number;
             /** Reason */
@@ -5827,10 +5822,15 @@ export interface components {
              * Format: date-time
              */
             date: string;
-            /** User Name */
-            user_name?: string | null;
-            /** User Avatar Url */
-            user_avatar_url?: string | null;
+            /** @default OTHER */
+            type: components["schemas"]["BonusPointType"];
+            /** Id */
+            id: number;
+            /** User Id */
+            user_id: number;
+            owner?: components["schemas"]["UserRef"] | null;
+            creator?: components["schemas"]["UserRef"] | null;
+            updater?: components["schemas"]["UserRef"] | null;
             /**
              * Created At
              * Format: date-time

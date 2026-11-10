@@ -80,6 +80,11 @@ class CreatePermissionRequestUseCase:
         old_meeting_id: int | None,
         start_time: datetime | None,
     ) -> ChangeMeetingPayload:
+        if not old_meeting_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Vui lòng chọn buổi sinh hoạt hiện tại",
+            )
         if not meeting_id:
             raise HTTPException(
                 status_code=400,

@@ -115,15 +115,16 @@ export const PermissionFormModal: React.FC<PermissionFormModalProps> = ({
         {formCategory === RequestCategory.CHANGE_MEETING && (
           <>
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-bold text-gray-700">Buổi sinh hoạt hiện tại (đổi đi)</label>
+              <label className="text-xs font-bold text-gray-700">Buổi sinh hoạt hiện tại (đổi đi) *</label>
               <select
                 value={formOldMeetingId || ''}
                 onChange={(e) =>
                   setFormOldMeetingId?.(e.target.value ? Number(e.target.value) : undefined)
                 }
                 className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-xs outline-none focus:border-blue-500 bg-white"
+                required
               >
-                <option value="">Chưa có buổi học nào (Đăng ký mới)</option>
+                <option value="">-- Chọn buổi sinh hoạt hiện tại --</option>
                 {meetings.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.title} ({formatDate(m.start_time)})

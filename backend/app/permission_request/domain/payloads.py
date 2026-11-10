@@ -41,8 +41,8 @@ class ChangeMeetingPayload(BasePermissionPayload):
     """Payload cho đơn xin đổi buổi sinh hoạt (CHANGE_MEETING)."""
 
     category: Literal[RequestCategory.CHANGE_MEETING] = RequestCategory.CHANGE_MEETING
-    meeting_id: int | None = None
-    old_meeting_id: int | None = None
+    meeting_id: int
+    old_meeting_id: int
     start_time: datetime | None = None
 
 

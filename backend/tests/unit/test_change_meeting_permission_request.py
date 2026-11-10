@@ -82,6 +82,7 @@ async def test_change_meeting_success_from_a_to_b():
     )
 
     meeting_repo.get_meeting_with_lock.return_value = meeting_b
+    meeting_repo.get_by_id.return_value = meeting_a
     meeting_repo.get_with_participants.return_value = meeting_a
     permission_repo.get_absence_user_ids_by_meeting.return_value = set()
 
@@ -138,30 +139,11 @@ async def test_change_meeting_success_from_a_to_b():
 
 
 @pytest.mark.asyncio
-async def test_change_meeting_new_registration_without_old_meeting():
+async def test_change_meeting_rejects_without_old_meeting():
     permission_repo = MagicMock()
     meeting_repo = MagicMock()
     participant_repo = MagicMock()
     event_bus = MagicMock()
-    event_bus.publish = AsyncMock()
-
-    now = datetime.now(UTC)
-    meeting_b = Meeting(
-        id=102,
-        title="Meeting B (Ca Chiều CN)",
-        start_time=now + timedelta(days=2),
-        end_time=now + timedelta(days=2, hours=2),
-        participants=[],
-    )
-
-    meeting_repo.get_meeting_with_lock.return_value = meeting_b
-    permission_repo.get_absence_user_ids_by_meeting.return_value = set()
-
-    def _save_req_new(req):
-        req.id = req.id or 1
-        return req
-
-    permission_repo.save.side_effect = _save_req_new
 
     use_case = _create_change_meeting_uc(
         permission_repo=permission_repo,
@@ -170,22 +152,63 @@ async def test_change_meeting_new_registration_without_old_meeting():
         event_bus=event_bus,
     )
 
-    result = await use_case.execute(
-        category=RequestCategory.CHANGE_MEETING,
-        note="Học viên mới đăng ký vào ca",
-        meeting_id=102,
-        old_meeting_id=None,
-        user_id=15,
+    with pytest.raises(HTTPException) as exc_info:
+        await use_case.execute(
+            category=RequestCategory.CHANGE_MEETING,
+            note="Thiếu ca hiện tại",
+            meeting_id=102,
+            old_meeting_id=None,
+            user_id=15,
+        )
+
+    assert exc_info.value.status_code == 400
+    assert "Vui lòng chọn buổi sinh hoạt hiện tại" in exc_info.value.detail
+
+
+@pytest.mark.asyncio
+async def test_change_meeting_rejects_when_user_not_participant_in_old_meeting():
+    permission_repo = MagicMock()
+    meeting_repo = MagicMock()
+    participant_repo = MagicMock()
+    event_bus = MagicMock()
+
+    now = datetime.now(UTC)
+    meeting_a = Meeting(
+        id=101,
+        title="Meeting A",
+        start_time=now + timedelta(days=1),
+        end_time=now + timedelta(days=1, hours=2),
+        participants=[MeetingParticipant(id=1, user_id=99, meeting_id=101)],
+    )
+    meeting_b = Meeting(
+        id=102,
+        title="Meeting B",
+        start_time=now + timedelta(days=2),
+        end_time=now + timedelta(days=2, hours=2),
+        participants=[],
     )
 
-    assert result.category == RequestCategory.CHANGE_MEETING
-    assert result.old_meeting_id is None
-    participant_repo.remove_participant.assert_not_called()
-    participant_repo.add_participant.assert_called_once()
-    added_p = participant_repo.add_participant.call_args[0][0]
-    assert added_p.user_id == 15
-    assert added_p.meeting_id == 102
-    permission_repo.cancel_active_requests_by_meeting.assert_not_called()
+    meeting_repo.get_by_id.return_value = meeting_a
+    meeting_repo.get_meeting_with_lock.return_value = meeting_b
+
+    use_case = _create_change_meeting_uc(
+        permission_repo=permission_repo,
+        meeting_repo=meeting_repo,
+        participant_repo=participant_repo,
+        event_bus=event_bus,
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await use_case.execute(
+            category=RequestCategory.CHANGE_MEETING,
+            note="Không có mặt trong ca cũ",
+            meeting_id=102,
+            old_meeting_id=101,
+            user_id=15,  # user_id 15 không nằm trong meeting_a
+        )
+
+    assert exc_info.value.status_code == 400
+    assert "Bạn không có mặt trong danh sách tham gia của buổi sinh hoạt hiện tại đã chọn" in exc_info.value.detail
 
 
 @pytest.mark.asyncio
@@ -208,6 +231,15 @@ async def test_change_meeting_rejects_when_meeting_b_is_full():
         participants=participants,
     )
 
+    # Meeting A cũ
+    meeting_a = Meeting(
+        id=999,
+        title="Meeting A",
+        start_time=now + timedelta(days=1),
+        end_time=now + timedelta(days=1, hours=2),
+        participants=[MeetingParticipant(id=1, user_id=999, meeting_id=999)],
+    )
+    meeting_repo.get_by_id.return_value = meeting_a
     meeting_repo.get_meeting_with_lock.return_value = meeting_b
     permission_repo.get_absence_user_ids_by_meeting.return_value = set()
 
@@ -222,7 +254,7 @@ async def test_change_meeting_rejects_when_meeting_b_is_full():
             category=RequestCategory.CHANGE_MEETING,
             note="Xin vào ca",
             meeting_id=103,
-            old_meeting_id=None,
+            old_meeting_id=999,
             user_id=999,
         )
 
@@ -252,6 +284,14 @@ async def test_change_meeting_considers_absence_requests_as_available_seats():
         participants=participants,
     )
 
+    meeting_a = Meeting(
+        id=888,
+        title="Meeting A",
+        start_time=now + timedelta(days=1),
+        end_time=now + timedelta(days=1, hours=2),
+        participants=[MeetingParticipant(id=1, user_id=888, meeting_id=888)],
+    )
+    meeting_repo.get_by_id.return_value = meeting_a
     meeting_repo.get_meeting_with_lock.return_value = meeting_b
     # User 100 và 101 có đơn ABSENCE
     permission_repo.get_absence_user_ids_by_meeting.return_value = {100, 101}
@@ -274,7 +314,7 @@ async def test_change_meeting_considers_absence_requests_as_available_seats():
         category=RequestCategory.CHANGE_MEETING,
         note="Đổi vào ghế của người vắng",
         meeting_id=104,
-        old_meeting_id=None,
+        old_meeting_id=888,
         user_id=888,
     )
 
@@ -300,6 +340,14 @@ async def test_change_meeting_rejects_when_meeting_b_in_past():
         participants=[],
     )
 
+    meeting_a = Meeting(
+        id=10,
+        title="Meeting A",
+        start_time=now + timedelta(days=1),
+        end_time=now + timedelta(days=1, hours=2),
+        participants=[MeetingParticipant(id=1, user_id=10, meeting_id=10)],
+    )
+    meeting_repo.get_by_id.return_value = meeting_a
     meeting_repo.get_meeting_with_lock.return_value = meeting_b
 
     use_case = _create_change_meeting_uc(
@@ -313,7 +361,7 @@ async def test_change_meeting_rejects_when_meeting_b_in_past():
             category=RequestCategory.CHANGE_MEETING,
             note="Xin vào ca đã bắt đầu",
             meeting_id=105,
-            old_meeting_id=None,
+            old_meeting_id=10,
             user_id=10,
         )
 

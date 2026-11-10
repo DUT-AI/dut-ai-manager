@@ -170,9 +170,10 @@ export const PermissionFormModal: React.FC<PermissionFormModalProps> = ({
                                     <Form.Item
                                         name="old_meeting_id"
                                         label="Buổi sinh hoạt hiện tại"
-                                        tooltip="Chọn buổi sinh hoạt bạn đang tham gia, hoặc để trống nếu bạn chưa có lịch (đăng ký mới)"
+                                        rules={[{ required: true, message: 'Vui lòng chọn buổi sinh hoạt hiện tại!' }]}
+                                        tooltip="Chọn buổi sinh hoạt bạn đang tham gia cần đổi sang ca khác"
                                     >
-                                        <Select placeholder="Chọn buổi sinh hoạt hiện tại (để trống nếu đăng ký mới)" allowClear>
+                                        <Select placeholder="Chọn buổi sinh hoạt hiện tại">
                                             {(meetings || []).map((m: any) => (
                                                 <Option key={m.id} value={m.id}>
                                                     {m.title} ({dayjs(m.start_time).format('DD/MM/YYYY')})
