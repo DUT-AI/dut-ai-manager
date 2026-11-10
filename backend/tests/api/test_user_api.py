@@ -3,6 +3,8 @@ API Tests for User Controller (/api/v1/users).
 Covers success responses, 401 Unauthorized, 403 Forbidden, and 404 Not Found.
 """
 
+from sqlalchemy import text
+
 
 def test_list_users_as_admin_success(admin_client):
     """Admin có thể xem danh sách toàn bộ users."""
@@ -78,10 +80,18 @@ def test_update_me_settings_success(member_client):
     assert data["data"]["check_in_card_code_configured"] is True
 
 
-def test_update_me_settings_duplicate_card_returns_400(member_client):
+def test_update_me_settings_duplicate_card_returns_400(member_client, db_session):
     """Trùng mã thẻ check-in với người khác phải trả về 400 Bad Request."""
+    other_user = db_session.execute(
+        text(
+            "SELECT check_in_card_code FROM users "
+            "WHERE check_in_card_code IS NOT NULL AND id != 1 LIMIT 1"
+        )
+    ).fetchone()
+    duplicate_card = other_user[0] if other_user and other_user[0] else "45A55683"
+
     payload = {
-        "check_in_card_code": "CARD_999",  # Đã tồn tại trong DB
+        "check_in_card_code": duplicate_card,
     }
     res = member_client.put("/api/v1/users/me/settings", json=payload)
     assert res.status_code == 400

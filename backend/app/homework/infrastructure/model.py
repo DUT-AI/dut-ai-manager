@@ -63,6 +63,7 @@ class HomeworkModel(SQLAlchemyTimestampMixin, Base):
     title: Mapped[str] = mapped_column(String(255), index=True)
     link: Mapped[str | None] = mapped_column(String(500), default=None, nullable=True)
     slug: Mapped[str | None] = mapped_column(String(255), default=None, nullable=True)
+    file_url: Mapped[str | None] = mapped_column(String, default=None, nullable=True)
     requires_coding: Mapped[bool] = mapped_column(
         Boolean, default=True, server_default="true", nullable=False
     )
@@ -191,6 +192,13 @@ class HomeworkSubmissionModel(Base):
             "homework_id",
             "user_id",
             "exercise_id",
+        ),
+        Index(
+            "idx_hw_submissions_lookup",
+            "homework_id",
+            "user_id",
+            "submission_type",
+            "submitted_at",
         ),
     )
 

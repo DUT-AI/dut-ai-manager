@@ -4,7 +4,7 @@ Meeting ORM Models — SQLAlchemy 2.0, infrastructure layer.
 
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, String
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, String, UniqueConstraint
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -130,6 +130,9 @@ class MeetingParticipant(SQLAlchemyTimestampMixin, Base):
     """Bản ghi thành viên tham dự buổi họp (ORM Model)"""
 
     __tablename__ = "meeting_participants"
+    __table_args__ = (
+        Index("ix_meeting_participants_meeting_role", "meeting_id", "role"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     meeting_id: Mapped[int] = mapped_column(ForeignKey("meetings.id"), index=True)
@@ -298,10 +301,13 @@ class MeetingOverallEvaluation(SQLAlchemyTimestampMixin, Base):
     """Bản ghi đánh giá tổng thể buổi học do Trainer thực hiện (ORM Model - Quan hệ 1 - 1 với Meeting)"""
 
     __tablename__ = "meeting_overall_evaluations"
+    __table_args__ = (
+        UniqueConstraint("meeting_id", name="uq_meeting_overall_evaluation"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     meeting_id: Mapped[int] = mapped_column(
-        ForeignKey("meetings.id", ondelete="CASCADE"), unique=True, index=True
+        ForeignKey("meetings.id", ondelete="CASCADE"), index=True
     )
     trainer_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     scores: Mapped[list[dict]] = mapped_column(

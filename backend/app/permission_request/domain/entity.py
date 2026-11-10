@@ -67,11 +67,7 @@ class PermissionRequest[TPayload: BasePermissionPayload](BaseEntity):
     def start_time(self) -> datetime | None:
         """Thời gian bắt đầu/hạn nộp liên kết với đơn."""
         match self.payload:
-            case (
-                LatePayload(start_time=st)
-                | PostponePayload(start_time=st)
-                | ChangeMeetingPayload(start_time=st)
-            ):
+            case LatePayload(start_time=st) | PostponePayload(start_time=st):
                 return st
             case _:
                 return None

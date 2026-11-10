@@ -78,7 +78,6 @@ class CreatePermissionRequestUseCase:
     def _build_change_meeting(
         meeting_id: int | None,
         old_meeting_id: int | None,
-        start_time: datetime | None,
     ) -> ChangeMeetingPayload:
         if not old_meeting_id:
             raise HTTPException(
@@ -93,7 +92,6 @@ class CreatePermissionRequestUseCase:
         return ChangeMeetingPayload(
             meeting_id=meeting_id,
             old_meeting_id=old_meeting_id,
-            start_time=start_time or datetime.now(UTC),
         )
 
     def _build_payload(
@@ -112,9 +110,7 @@ class CreatePermissionRequestUseCase:
             case RequestCategory.POSTPONE:
                 return self._build_postpone(homework_id, start_time)
             case RequestCategory.CHANGE_MEETING:
-                return self._build_change_meeting(
-                    meeting_id, old_meeting_id, start_time
-                )
+                return self._build_change_meeting(meeting_id, old_meeting_id)
             case _:
                 return OtherPayload()
 

@@ -5,7 +5,7 @@ Duty ORM Models — SQLAlchemy 2.0.
 from datetime import date, datetime, time
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text, Time
+from sqlalchemy import Date, DateTime, ForeignKey, Index, Integer, String, Text, Time
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -21,6 +21,9 @@ class CleaningDutyModel(SQLAlchemyTimestampMixin, Base):
     """ORM mapping to 'cleaning_duties' table."""
 
     __tablename__ = "cleaning_duties"
+    __table_args__ = (
+        Index("ix_cleaning_duties_team_id_gin", "team_id", postgresql_using="gin"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     duty_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)

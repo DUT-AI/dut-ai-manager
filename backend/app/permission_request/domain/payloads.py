@@ -17,23 +17,23 @@ class AbsencePayload(BasePermissionPayload):
     """Payload cho đơn xin vắng sinh hoạt (ABSENCE)."""
 
     category: Literal[RequestCategory.ABSENCE] = RequestCategory.ABSENCE
-    meeting_id: int | None = None
+    meeting_id: int
 
 
 class LatePayload(BasePermissionPayload):
     """Payload cho đơn xin đi trễ sinh hoạt (LATE)."""
 
     category: Literal[RequestCategory.LATE] = RequestCategory.LATE
-    meeting_id: int | None = None
-    start_time: datetime | None = None
+    meeting_id: int
+    start_time: datetime
 
 
 class PostponePayload(BasePermissionPayload):
     """Payload cho đơn xin hoãn nộp bài tập (POSTPONE)."""
 
     category: Literal[RequestCategory.POSTPONE] = RequestCategory.POSTPONE
-    homework_id: int | None = None
-    start_time: datetime | None = None
+    homework_id: int
+    start_time: datetime
     old_deadline: datetime | None = None
 
 
@@ -43,7 +43,6 @@ class ChangeMeetingPayload(BasePermissionPayload):
     category: Literal[RequestCategory.CHANGE_MEETING] = RequestCategory.CHANGE_MEETING
     meeting_id: int
     old_meeting_id: int
-    start_time: datetime | None = None
 
 
 class OtherPayload(BasePermissionPayload):

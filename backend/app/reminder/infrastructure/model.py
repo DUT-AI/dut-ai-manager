@@ -34,7 +34,9 @@ class NotificationModel(Base, SQLAlchemyTimestampMixin):
     level: Mapped[str] = mapped_column(String(50), nullable=False, default="INFO")
     action_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     is_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    read_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    read_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     # Technical metadata for reminder engine, deduplication and audit logging
     task_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -120,7 +122,9 @@ class PushSubscriptionModel(Base, SQLAlchemyTimestampMixin):
     auth: Mapped[str] = mapped_column(Text, nullable=False)
     user_agent: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    last_used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_used_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     __table_args__ = (Index("idx_push_sub_user_active", "user_id", "is_active"),)
 

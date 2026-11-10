@@ -345,7 +345,7 @@ async def test_change_meeting_strategy_lifecycle():
         id=99,
         created_by=15,
         note="Đổi sang ca chiều",
-        payload=ChangeMeetingPayload(meeting_id=20, old_meeting_id=None),
+        payload=ChangeMeetingPayload(meeting_id=20, old_meeting_id=10),
     )
 
     await strategy.on_created(req, user_id=15)
@@ -370,7 +370,7 @@ def test_orm_mapping_two_way_with_json_payload():
     orm_model = ORMPermissionRequest.from_entity(entity)
     assert orm_model.id == 123
     assert orm_model.category == RequestCategory.LATE
-    assert orm_model.payload["meeting_id"] == 7
+    assert orm_model.payload.meeting_id == 7
 
     # Chuyển ngược lại domain entity
     restored_entity = orm_model.to_entity()
@@ -406,14 +406,13 @@ def test_permission_request_properties_pattern_matching():
         payload=ChangeMeetingPayload(
             meeting_id=20,
             old_meeting_id=10,
-            start_time=now,
         ),
     )
     assert req_change.category == RequestCategory.CHANGE_MEETING
     assert req_change.homework_id is None
     assert req_change.meeting_id == 20
     assert req_change.old_meeting_id == 10
-    assert req_change.start_time == now
+    assert req_change.start_time is None
 
     # 3. Absence
     req_absence = PermissionRequest(
@@ -528,8 +527,6 @@ def test_orm_model_typed_payload_parsing_and_casting():
     assert isinstance(entity_change.payload, ChangeMeetingPayload)
     assert entity_change.payload.meeting_id == 12
     assert entity_change.payload.old_meeting_id == 8
-    assert isinstance(entity_change.payload.start_time, datetime)
-    assert entity_change.payload.start_time.hour == 14
 
     # 3. Postpone request với datetime object sẵn (in-memory)
     orm_postpone = ORMPermissionRequest(
@@ -570,3 +567,84 @@ def test_count_by_user_category_month():
     assert "permission_requests.created_by" in compiled_str
     assert "permission_requests.category" in compiled_str
     assert "permission_requests.is_deleted" in compiled_str
+
+
+def test_payload_strict_validation_no_none():
+    """Kiểm tra Pydantic Value Objects không chấp nhận None cho các trường bắt buộc."""
+    from pydantic import ValidationError
+
+    # 1. AbsencePayload yêu cầu meeting_id
+    with pytest.raises(ValidationError):
+        AbsencePayload()  # type: ignore[call-arg]
+
+    # 2. LatePayload yêu cầu meeting_id và start_time
+    with pytest.raises(ValidationError):
+        LatePayload(meeting_id=1)  # type: ignore[call-arg]
+    with pytest.raises(ValidationError):
+        LatePayload(start_time=datetime.now(UTC))  # type: ignore[call-arg]
+
+    # 3. PostponePayload yêu cầu homework_id và start_time
+    with pytest.raises(ValidationError):
+        PostponePayload(homework_id=1)  # type: ignore[call-arg]
+    with pytest.raises(ValidationError):
+        PostponePayload(start_time=datetime.now(UTC))  # type: ignore[call-arg]
+
+    # 4. ChangeMeetingPayload yêu cầu meeting_id và old_meeting_id
+    with pytest.raises(ValidationError):
+        ChangeMeetingPayload(meeting_id=1)  # type: ignore[call-arg]
+
+
+def test_orm_model_raises_on_invalid_raw_payload():
+    """Kiểm tra ORMPermissionRequest chặn ngay khi raw payload thiếu dữ liệu bắt buộc."""
+    from pydantic import ValidationError
+
+    now_dt = datetime.now(UTC)
+
+    # 1. ABSENCE thiếu meeting_id
+    with pytest.raises((ValidationError, ValueError)):
+        ORMPermissionRequest(
+            id=1,
+            category=RequestCategory.ABSENCE,
+            note="Vắng",
+            payload={"category": "ABSENCE"},
+            created_by=10,
+            created_at=now_dt,
+            updated_at=now_dt,
+        )
+
+    # 2. LATE thiếu start_time
+    with pytest.raises((ValidationError, ValueError)):
+        ORMPermissionRequest(
+            id=2,
+            category=RequestCategory.LATE,
+            note="Trễ",
+            payload={"category": "LATE", "meeting_id": 10},
+            created_by=10,
+            created_at=now_dt,
+            updated_at=now_dt,
+        )
+
+    # 3. POSTPONE thiếu homework_id
+    with pytest.raises((ValidationError, ValueError)):
+        ORMPermissionRequest(
+            id=3,
+            category=RequestCategory.POSTPONE,
+            note="Hoãn",
+            payload={"category": "POSTPONE", "start_time": "2026-11-20T10:00:00Z"},
+            created_by=10,
+            created_at=now_dt,
+            updated_at=now_dt,
+        )
+
+    # 4. CHANGE_MEETING thiếu old_meeting_id
+    with pytest.raises((ValidationError, ValueError)):
+        ORMPermissionRequest(
+            id=4,
+            category=RequestCategory.CHANGE_MEETING,
+            note="Đổi ca",
+            payload={"category": "CHANGE_MEETING", "meeting_id": 10},
+            created_by=10,
+            created_at=now_dt,
+            updated_at=now_dt,
+        )
+
