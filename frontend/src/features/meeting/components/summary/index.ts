@@ -3,3 +3,5 @@ export { MeetingOverallEvaluationCard } from './MeetingOverallEvaluationCard';
 export { EvaluationOverviewCards } from './EvaluationOverviewCards';
 export { EvaluationCriteriaBreakdownCards } from './EvaluationCriteriaBreakdownCards';
 export { EvaluationFeedbackListCard } from './EvaluationFeedbackListCard';
+export { TraineeEvaluationListCard } from './TraineeEvaluationListCard';
+

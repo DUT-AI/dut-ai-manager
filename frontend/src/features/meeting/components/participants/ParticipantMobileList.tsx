@@ -33,6 +33,7 @@ interface Props {
   onEditStatus: (participant: ParticipantResponse) => void;
   onOpenOverallEvaluation?: () => void;
   overallEval?: MeetingOverallEvaluationResponse | null;
+  onViewEvaluation?: (evaluation: EvaluationResponse) => void;
 }
 
 export const ParticipantMobileList: React.FC<Props> = ({
@@ -40,12 +41,14 @@ export const ParticipantMobileList: React.FC<Props> = ({
   trainers,
   trainees,
   participants,
+  currentUserId,
   isTrainer,
   isEnded,
   traineeEvalsByReviewerId,
   onEditStatus,
   onOpenOverallEvaluation,
   overallEval,
+  onViewEvaluation,
 }) => {
   // Chuẩn hóa danh sách trainers và trainees
   const actualTrainers =
@@ -110,12 +113,22 @@ export const ParticipantMobileList: React.FC<Props> = ({
             <div className="flex items-center gap-2 flex-wrap">
               {!isTrainerItem && (
                 traineeEval ? (
-                  <Tag color="cyan" className="m-0 text-[11px] py-0 px-1.5 rounded flex items-center gap-1">
-                    <CheckCircleOutlined /> Đã đánh giá Trainer
+                  <Tag
+                    color={traineeEval.is_anonymous ? 'purple' : 'cyan'}
+                    className={`m-0 text-[11px] py-0 px-1.5 rounded flex items-center gap-1 ${
+                      onViewEvaluation ? 'cursor-pointer active:opacity-75' : ''
+                    }`}
+                    onClick={() => onViewEvaluation && onViewEvaluation(traineeEval)}
+                  >
+                    <CheckCircleOutlined />{' '}
+                    {traineeEval.is_anonymous ? 'Đã gửi (Ẩn danh)' : 'Đã đánh giá'}
+                    {record.user_id === currentUserId || isTrainer
+                      ? ` (⭐ ${traineeEval.average_score.toFixed(1)})`
+                      : ''}
                   </Tag>
                 ) : (
                   <Tag color="default" className="m-0 text-[11px] py-0 px-1.5 rounded text-gray-400">
-                    Chưa đánh giá Trainer
+                    Chưa đánh giá
                   </Tag>
                 )
               )}

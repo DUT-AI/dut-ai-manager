@@ -16,6 +16,7 @@ import { useMeetingPermissions } from '../hooks/useMeetingPermissions';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { MeetingBatchCheckInBanner } from './MeetingBatchCheckInBanner';
 import { EditParticipantStatusModal } from './EditParticipantStatusModal';
+import { EvaluationDetailModal } from './EvaluationDetailModal';
 import {
   EvaluationProgressFilterBar,
   TraineeEvaluationCard,
@@ -44,6 +45,8 @@ export const MeetingParticipantsTab: React.FC<Props> = ({
   const [editingParticipant, setEditingParticipant] = useState<ParticipantResponse | null>(null);
   const [isEditStatusModalOpen, setIsEditStatusModalOpen] = useState(false);
   const [evalFilter, setEvalFilter] = useState<'all' | 'unrated' | 'rated'>('all');
+  const [selectedEvaluation, setSelectedEvaluation] = useState<EvaluationResponse | null>(null);
+  const [isEvaluationDetailModalOpen, setIsEvaluationDetailModalOpen] = useState(false);
 
   const updateParticipantStatusMutation = useUpdateParticipantStatus();
   const { data: evalSummary, refetch: refetchEvalSummary } = useMeetingEvaluationSummary(
@@ -129,6 +132,11 @@ export const MeetingParticipantsTab: React.FC<Props> = ({
   const totalActiveTrainees = activeTrainees.length;
   const unratedCount = Math.max(0, totalActiveTrainees - traineeEvaluatedCount);
 
+  const handleViewEvaluation = (evaluation: EvaluationResponse) => {
+    setSelectedEvaluation(evaluation);
+    setIsEvaluationDetailModalOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       {/* Batch Check-in Banner */}
@@ -180,6 +188,7 @@ export const MeetingParticipantsTab: React.FC<Props> = ({
           traineeEvalsByReviewerId={traineeEvalsByReviewerId}
           onOpenOverallEvaluation={onOpenOverallEvaluation}
           overallEval={overallEval}
+          onViewEvaluation={handleViewEvaluation}
           onEditStatus={(p) => {
             setEditingParticipant(p);
             setIsEditStatusModalOpen(true);
@@ -199,6 +208,7 @@ export const MeetingParticipantsTab: React.FC<Props> = ({
           traineeEvalsByReviewerId={traineeEvalsByReviewerId}
           onOpenOverallEvaluation={onOpenOverallEvaluation}
           overallEval={overallEval}
+          onViewEvaluation={handleViewEvaluation}
           onEditStatus={(p) => {
             setEditingParticipant(p);
             setIsEditStatusModalOpen(true);
@@ -216,6 +226,15 @@ export const MeetingParticipantsTab: React.FC<Props> = ({
         }}
         onSubmit={handleUpdateStatus}
         loading={updateParticipantStatusMutation.isPending}
+      />
+
+      <EvaluationDetailModal
+        open={isEvaluationDetailModalOpen}
+        evaluation={selectedEvaluation}
+        onClose={() => {
+          setIsEvaluationDetailModalOpen(false);
+          setSelectedEvaluation(null);
+        }}
       />
     </div>
   );

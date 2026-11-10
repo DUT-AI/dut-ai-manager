@@ -11,3 +11,5 @@ export { ParticipantActionButtons } from './ParticipantActionButtons';
 export { MeetingBatchCheckInBanner } from './MeetingBatchCheckInBanner';
 export { MeetingTable } from './MeetingTable';
 export { MeetingOverallEvaluationModal } from './MeetingOverallEvaluationModal';
+export { EvaluationDetailModal } from './EvaluationDetailModal';
+

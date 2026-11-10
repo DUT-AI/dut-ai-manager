@@ -8,6 +8,7 @@ import {
   EvaluationOverviewCards,
   EvaluationCriteriaBreakdownCards,
   EvaluationFeedbackListCard,
+  TraineeEvaluationListCard,
 } from './summary';
 
 interface Props {
@@ -128,7 +129,10 @@ export const MeetingEvaluationSummaryView: React.FC<Props> = ({ meetingId }) => 
         traineeCriteria={traineeCriteria}
       />
 
-      {/* 4. Danh sách nhận xét & ý kiến đóng góp */}
+      {/* 4. Danh sách Học viên đã đánh giá */}
+      <TraineeEvaluationListCard evaluations={summary.evaluations} />
+
+      {/* 5. Danh sách nhận xét & ý kiến đóng góp */}
       <EvaluationFeedbackListCard evaluations={summary.evaluations} />
     </div>
   );

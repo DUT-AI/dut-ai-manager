@@ -1,6 +1,6 @@
 import React from 'react';
-import { Table, Avatar, Typography, Image, Tag, Empty, Button } from 'antd';
-import { UserOutlined, CheckCircleOutlined, StarFilled } from '@ant-design/icons';
+import { Table, Avatar, Typography, Image, Tag, Empty, Button, Tooltip } from 'antd';
+import { UserOutlined, CheckCircleOutlined, StarFilled, EyeOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { ColumnsType } from 'antd/es/table';
 import type {
@@ -25,6 +25,7 @@ interface Props {
   onEditStatus: (participant: ParticipantResponse) => void;
   onOpenOverallEvaluation?: () => void;
   overallEval?: MeetingOverallEvaluationResponse | null;
+  onViewEvaluation?: (evaluation: EvaluationResponse) => void;
 }
 
 export const TraineeListTable: React.FC<Props> = ({
@@ -37,6 +38,7 @@ export const TraineeListTable: React.FC<Props> = ({
   onEditStatus,
   onOpenOverallEvaluation,
   overallEval,
+  onViewEvaluation,
 }) => {
   const columns: ColumnsType<ParticipantResponse> = [
     {
@@ -113,20 +115,36 @@ export const TraineeListTable: React.FC<Props> = ({
             if (existing) {
               const isAnonymous = existing.is_anonymous;
               return (
-                <Tag
-                  color={isAnonymous ? 'purple' : 'blue'}
-                  icon={<CheckCircleOutlined />}
-                  className="text-xs py-0.5 px-2"
-                >
-                  {isAnonymous ? 'Đã gửi (Ẩn danh)' : 'Đã gửi'}
-                  {record.user_id === currentUserId
-                    ? ` (⭐ ${existing.average_score.toFixed(1)})`
-                    : ''}
-                </Tag>
+                <div className="flex items-center gap-1.5">
+                  <Tag
+                    color={isAnonymous ? 'purple' : 'blue'}
+                    icon={<CheckCircleOutlined />}
+                    className={`text-xs py-0.5 px-2 m-0 ${
+                      onViewEvaluation ? 'cursor-pointer hover:opacity-85' : ''
+                    }`}
+                    onClick={() => onViewEvaluation && onViewEvaluation(existing)}
+                  >
+                    {isAnonymous ? 'Đã gửi (Ẩn danh)' : 'Đã gửi'}
+                    {record.user_id === currentUserId || isTrainer
+                      ? ` (⭐ ${existing.average_score.toFixed(1)})`
+                      : ''}
+                  </Tag>
+                  {onViewEvaluation && (
+                    <Tooltip title="Xem chi tiết đánh giá">
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<EyeOutlined />}
+                        className="text-gray-400 hover:text-blue-600 h-6 w-6 p-0"
+                        onClick={() => onViewEvaluation(existing)}
+                      />
+                    </Tooltip>
+                  )}
+                </div>
               );
             }
             return (
-              <Tag color="default" className="text-xs py-0.5 px-2">
+              <Tag color="default" className="text-xs py-0.5 px-2 m-0">
                 Chưa gửi
               </Tag>
             );
