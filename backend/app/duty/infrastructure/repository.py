@@ -18,7 +18,6 @@ class DutyRepository:
     def get_by_id(self, duty_id: int) -> CleaningDuty | None:
         stmt = select(CleaningDutyModel).where(
             CleaningDutyModel.id == duty_id,
-            CleaningDutyModel.is_deleted.is_(False),
         )
         model = self.session.scalars(stmt).first()
         return model.to_entity() if model else None
@@ -28,7 +27,6 @@ class DutyRepository:
             select(CleaningDutyModel)
             .where(
                 CleaningDutyModel.meeting_id == meeting_id,
-                CleaningDutyModel.is_deleted.is_(False),
             )
             .order_by(CleaningDutyModel.id.asc())
         )
@@ -41,7 +39,6 @@ class DutyRepository:
         target_ids = [team_id] if isinstance(team_id, int) else team_id
         stmt = select(CleaningDutyModel).where(
             CleaningDutyModel.duty_date == duty_date,
-            CleaningDutyModel.is_deleted.is_(False),
         )
         if target_ids:
             if len(target_ids) == 1:
@@ -62,7 +59,7 @@ class DutyRepository:
         page: int = 1,
         page_size: int = 20,
     ) -> tuple[list[CleaningDuty], int]:
-        stmt = select(CleaningDutyModel).where(CleaningDutyModel.is_deleted.is_(False))
+        stmt = select(CleaningDutyModel)
 
         if start_date:
             stmt = stmt.where(CleaningDutyModel.duty_date >= start_date)
@@ -110,7 +107,6 @@ class DutyRepository:
             CleaningDutyModel.status.in_(
                 [DutyStatus.PENDING.value, DutyStatus.REJECTED.value]
             ),
-            CleaningDutyModel.is_deleted.is_(False),
         )
         models = self.session.scalars(stmt).all()
         return [m.to_entity() for m in models]
@@ -121,7 +117,6 @@ class DutyRepository:
             .where(
                 CleaningDutyModel.duty_date >= start_date,
                 CleaningDutyModel.duty_date <= end_date,
-                CleaningDutyModel.is_deleted.is_(False),
             )
             .order_by(CleaningDutyModel.duty_date.asc(), CleaningDutyModel.id.asc())
         )
@@ -181,8 +176,8 @@ class DutyRepository:
 
     def delete(self, duty_id: int) -> bool:
         model = self.session.get(CleaningDutyModel, duty_id)
-        if not model or model.is_deleted:
+        if not model:
             return False
-        model.is_deleted = True
+        self.session.delete(model)
         self.session.flush()
         return True

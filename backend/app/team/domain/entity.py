@@ -1,7 +1,7 @@
-from app.shared.domain.base_entity import BaseEntity
+from app.shared.domain.base_entity import BaseAuditEntity, BaseGenericEntity
 
 
-class TeamMemberInfo(BaseEntity):
+class TeamMemberInfo(BaseGenericEntity[int]):
     """Domain model representing a member's basic info inside a team context."""
 
     user_id: int
@@ -10,7 +10,7 @@ class TeamMemberInfo(BaseEntity):
     user_avatar_url: str | None = None
 
 
-class Team(BaseEntity):
+class Team(BaseAuditEntity):
     """Domain entity for a Team."""
 
     team_name: str

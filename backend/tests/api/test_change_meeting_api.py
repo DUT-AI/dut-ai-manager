@@ -39,9 +39,9 @@ def test_api_change_meeting_full_flow(api_client, mock_current_user, db_engine):
             res_a = conn.execute(
                 text("""
                     INSERT INTO meetings (title, content, start_time, end_time,
-                                          is_deleted, created_at, updated_at)
+                                          created_at, updated_at)
                     VALUES ('Test API Meeting A', 'Content A', :start_a, :end_a,
-                            false, NOW(), NOW())
+                            NOW(), NOW())
                     RETURNING id
                 """),
                 {"start_a": start_a, "end_a": end_a},
@@ -52,9 +52,9 @@ def test_api_change_meeting_full_flow(api_client, mock_current_user, db_engine):
             res_b = conn.execute(
                 text("""
                     INSERT INTO meetings (title, content, start_time, end_time,
-                                          is_deleted, created_at, updated_at)
+                                          created_at, updated_at)
                     VALUES ('Test API Meeting B', 'Content B', :start_b, :end_b,
-                            false, NOW(), NOW())
+                            NOW(), NOW())
                     RETURNING id
                 """),
                 {"start_b": start_b, "end_b": end_b},
@@ -65,9 +65,9 @@ def test_api_change_meeting_full_flow(api_client, mock_current_user, db_engine):
             conn.execute(
                 text("""
                     INSERT INTO meeting_participants (
-                        meeting_id, user_id, status, is_deleted, created_at, updated_at
+                        meeting_id, user_id, status, created_at, updated_at
                     )
-                    VALUES (:meeting_id, :user_id, 'NOT_JOINED', false, NOW(), NOW())
+                    VALUES (:meeting_id, :user_id, 'NOT_JOINED', NOW(), NOW())
                 """),
                 {"meeting_id": meeting_a_id, "user_id": user_id},
             )
@@ -111,7 +111,7 @@ def test_api_change_meeting_full_flow(api_client, mock_current_user, db_engine):
             in_a = conn.execute(
                 text("""
                     SELECT count(*) FROM meeting_participants
-                    WHERE meeting_id = :mid AND user_id = :uid AND is_deleted = false
+                    WHERE meeting_id = :mid AND user_id = :uid
                 """),
                 {"mid": meeting_a_id, "uid": user_id},
             ).scalar()
@@ -121,7 +121,7 @@ def test_api_change_meeting_full_flow(api_client, mock_current_user, db_engine):
             in_b = conn.execute(
                 text("""
                     SELECT count(*) FROM meeting_participants
-                    WHERE meeting_id = :mid AND user_id = :uid AND is_deleted = false
+                    WHERE meeting_id = :mid AND user_id = :uid
                 """),
                 {"mid": meeting_b_id, "uid": user_id},
             ).scalar()
@@ -171,9 +171,9 @@ def test_api_change_meeting_validation_errors(api_client, mock_current_user, db_
             res = conn.execute(
                 text("""
                     INSERT INTO meetings (title, content, start_time, end_time,
-                                          is_deleted, created_at, updated_at)
+                                          created_at, updated_at)
                     VALUES ('Test Meeting Val', 'Content', :start, :end,
-                            false, NOW(), NOW())
+                            NOW(), NOW())
                     RETURNING id
                 """),
                 {"start": start, "end": end},

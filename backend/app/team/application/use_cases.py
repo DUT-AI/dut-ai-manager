@@ -52,10 +52,7 @@ class TeamUseCases:
     def create(self, data: TeamCreate) -> TeamResponse:
         existing = self.repository.get_by_name(data.team_name)
         if existing:
-            if existing.is_deleted:
-                self.repository.delete(existing.id)
-            else:
-                raise BadRequestException(f"Tên nhóm '{data.team_name}' đã tồn tại")
+            raise BadRequestException(f"Tên nhóm '{data.team_name}' đã tồn tại")
 
         team = TeamEntity(team_name=data.team_name)
         new_team = self.repository.create(team)
@@ -78,12 +75,9 @@ class TeamUseCases:
         if data.team_name is not None and data.team_name != team.team_name:
             existing = self.repository.get_by_name(data.team_name)
             if existing and existing.id != team_id:
-                if existing.is_deleted:
-                    self.repository.delete(existing.id)
-                else:
-                    from app.shared.application.response import BadRequestException
+                from app.shared.application.response import BadRequestException
 
-                    raise BadRequestException(f"Tên nhóm '{data.team_name}' đã tồn tại")
+                raise BadRequestException(f"Tên nhóm '{data.team_name}' đã tồn tại")
             team.team_name = data.team_name
 
         self.repository.update(team)

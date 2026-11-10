@@ -31,7 +31,7 @@ class HomeworkRepository:
         deleted: bool = False,
     ) -> list[HomeworkEntity]:
         """Get all homeworks optionally with query support or pagination."""
-        statement = select(HomeworkModel).where(HomeworkModel.is_deleted == deleted)
+        statement = select(HomeworkModel)
         if query_support:
             statement = apply_query_support(statement, HomeworkModel, query_support)
         else:
@@ -40,11 +40,7 @@ class HomeworkRepository:
                     desc(
                         cast(
                             Any,
-                            (
-                                HomeworkModel.updated_at
-                                if deleted
-                                else HomeworkModel.created_at
-                            ),
+                            HomeworkModel.created_at,
                         )
                     )
                 )
@@ -62,9 +58,7 @@ class HomeworkRepository:
         page_size: int = 20,
     ) -> tuple[list[HomeworkEntity], int]:
         """Get paginated homeworks and total count with optimized COUNT query."""
-        count_stmt = select(func.count(HomeworkModel.id)).where(
-            HomeworkModel.is_deleted == deleted
-        )
+        count_stmt = select(func.count(HomeworkModel.id))
         if query_support and query_support.filters:
             count_stmt = apply_filters_only(
                 count_stmt, HomeworkModel, query_support.filters
@@ -73,7 +67,7 @@ class HomeworkRepository:
         if total == 0:
             return [], 0
 
-        statement = select(HomeworkModel).where(HomeworkModel.is_deleted == deleted)
+        statement = select(HomeworkModel)
         if query_support:
             statement = apply_query_support(statement, HomeworkModel, query_support)
             if not query_support.pagination:
@@ -114,8 +108,6 @@ class HomeworkRepository:
             )
             .where(
                 HomeworkAssigneeModel.user_id == user_id,
-                HomeworkAssigneeModel.is_deleted.is_(False),
-                HomeworkModel.is_deleted == deleted,
             )
         )
         total = self.session.scalar(count_stmt) or 0
@@ -131,8 +123,6 @@ class HomeworkRepository:
             )
             .where(
                 HomeworkAssigneeModel.user_id == user_id,
-                HomeworkAssigneeModel.is_deleted.is_(False),
-                HomeworkModel.is_deleted == deleted,
             )
             .order_by(desc(HomeworkModel.created_at))
             .offset(offset)
@@ -155,8 +145,6 @@ class HomeworkRepository:
             )
             .where(
                 HomeworkAssigneeModel.user_id == user_id,
-                HomeworkAssigneeModel.is_deleted.is_(False),
-                HomeworkModel.is_deleted == deleted,
             )
             .order_by(desc(HomeworkModel.created_at))
         )
@@ -168,7 +156,6 @@ class HomeworkRepository:
     ) -> HomeworkEntity | None:
         statement = select(HomeworkModel).where(
             HomeworkModel.id == homework_id,
-            HomeworkModel.is_deleted == deleted,
         )
         model = self.session.scalars(statement).first()
         return model.to_entity() if model else None
@@ -211,28 +198,10 @@ class HomeworkRepository:
             return True
         return False
 
-    def soft_delete(self, homework_id: int) -> bool:
-        """Đã chuyển đổi hoàn toàn sang Hard Delete: Xóa vĩnh viễn bài tập và cascade."""
-        return self.delete(homework_id)
-
-    def restore(self, homework_id: int) -> HomeworkEntity | None:
-        statement = select(HomeworkModel).where(
-            HomeworkModel.id == homework_id,
-            HomeworkModel.is_deleted,
-        )
-        model = self.session.scalars(statement).first()
-        if model:
-            model.is_deleted = False
-            self.session.add(model)
-            self.session.flush()
-            return model.to_entity()
-        return None
-
     def get_by_slug(self, slug: str) -> HomeworkEntity | None:
         """Find active homework by slug."""
         statement = select(HomeworkModel).where(
             HomeworkModel.slug == slug,
-            HomeworkModel.is_deleted.is_(False),
         )
         model = self.session.scalars(statement).first()
         return model.to_entity() if model else None

@@ -35,7 +35,7 @@ Dữ liệu khảo sát từ môi trường Production (`dut_ai_manager_prod`) n
 | `violations` | 1,227 | **853** | Vi phạm kỷ luật. Bắt buộc giữ lịch sử để tra cứu khi khiếu nại. | **GIỮ `is_deleted`** |
 | `permission_requests` | 746 | **34** | Đơn xin phép (vắng, trễ, đổi ca). Cần lưu vết đơn đã thu hồi/hủy. | **GIỮ `is_deleted`** |
 | `invoices` | 346 | **20** | Hóa đơn tài chính/thu quỹ. Bắt buộc lưu vết kiểm toán kế toán. | **GIỮ `is_deleted`** |
-| `team_members` | 256 | **19** | Thành viên nhóm (lịch sử tham gia/rời nhóm). | **GIỮ `is_deleted`** |
+| `team_members` | 256 | **19** | Thành viên nhóm (bảng liên kết Team - User). Xóa khỏi team là hard delete. | **BỎ `is_deleted` (Theo yêu cầu User)** |
 | `outgoing_invoices` | 55 | **2** | Hóa đơn chi. Bắt buộc kiểm toán tài chính. | **GIỮ `is_deleted`** |
 | `users` | 90 | **2** | Tài khoản thành viên. Khóa/vô hiệu hóa tài khoản. | **GIỮ `is_deleted`** |
 | `bonus_points` | 290 | **1** | Điểm thưởng cộng/trừ. | **GIỮ `is_deleted`** |
@@ -52,8 +52,8 @@ Dữ liệu khảo sát từ môi trường Production (`dut_ai_manager_prod`) n
    - Vấn đề: Soft delete gây duplicate meeting hoặc vướng lịch trùng nhau khi tạo lại buổi sinh hoạt cùng khung giờ.
 2. **Homeworks (`homeworks`, `homework_assignees`)**:
    - Nghiệp vụ: Khi xóa bài tập, cascade xóa phân công và bài nộp theo dạng dọn dẹp sạch sẽ.
-3. **Bảng liên kết N-N / Junction Tables (`user_roles`, `homework_assignees`)**:
-   - Nghiệp vụ: Gán và thu hồi quyền/bài tập. Xóa cứng tránh xung đột unique key khi gán lại.
+3. **Bảng liên kết N-N / Junction Tables (`user_roles`, `team_members`, `homework_assignees`)**:
+   - Nghiệp vụ: Gán và thu hồi quyền, thành viên nhóm, phân công bài tập. Xóa cứng tránh xung đột unique key khi gán lại (ví dụ user rời team rồi vào lại team cũ).
 4. **Bảng dữ liệu sự kiện / Thông báo / Tạm thời (`notifications`, `push_subscriptions`)**:
    - Nghiệp vụ: Thông báo và token thiết bị chỉ có giá trị thời điểm, đã có `is_read` và `is_active`.
 5. **Bảng chi tiết con phụ thuộc (`invoice_items`)**:

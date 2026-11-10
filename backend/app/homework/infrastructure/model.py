@@ -27,7 +27,10 @@ from app.homework.domain.entity import (
     HomeworkSubmission as HomeworkSubmissionEntity,
     SubmissionType,
 )
-from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
+from app.shared.infrastructure.base_model import (
+    Base,
+    SQLAlchemyAuditTimestampMixin,
+)
 
 
 class SubmissionDetailsJSON(TypeDecorator):
@@ -54,7 +57,7 @@ class SubmissionDetailsJSON(TypeDecorator):
         return CodingSubmissionDetails(**value)
 
 
-class HomeworkModel(SQLAlchemyTimestampMixin, Base):
+class HomeworkModel(SQLAlchemyAuditTimestampMixin, Base):
     """Homework model containing assignment details (Không còn cột deadline)"""
 
     __tablename__ = "homeworks"
@@ -90,7 +93,6 @@ class HomeworkModel(SQLAlchemyTimestampMixin, Base):
             updated_at=self.updated_at,
             created_by=self.created_by,
             updated_by=self.updated_by,
-            is_deleted=self.is_deleted,
         )
 
     @classmethod
@@ -105,7 +107,7 @@ class HomeworkModel(SQLAlchemyTimestampMixin, Base):
         )
 
 
-class HomeworkAssigneeModel(SQLAlchemyTimestampMixin, Base):
+class HomeworkAssigneeModel(SQLAlchemyAuditTimestampMixin, Base):
     """Mapping between Homework and direct User assignees with individual deadline"""
 
     __tablename__ = "homework_assignees"
@@ -131,9 +133,6 @@ class HomeworkAssigneeModel(SQLAlchemyTimestampMixin, Base):
             deadline=self.deadline,
             created_at=self.created_at,
             updated_at=self.updated_at,
-            created_by=self.created_by,
-            updated_by=self.updated_by,
-            is_deleted=self.is_deleted,
         )
 
     @classmethod

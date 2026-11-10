@@ -33,8 +33,6 @@ class ParticipantRepository(BaseRepository[ORMParticipant, DomainParticipant]):
             select(ORMParticipant)
             .join(ORMMeeting, ORMMeeting.id == ORMParticipant.meeting_id)
             .where(
-                ORMMeeting.is_deleted.is_(False),
-                ORMParticipant.is_deleted.is_(False),
                 ORMParticipant.user_id == user_id,
                 ORMMeeting.start_time < window_end,
                 ORMMeeting.end_time > window_start,
@@ -65,8 +63,6 @@ class ParticipantRepository(BaseRepository[ORMParticipant, DomainParticipant]):
             select(ORMParticipant)
             .join(ORMMeeting, ORMMeeting.id == ORMParticipant.meeting_id)
             .where(
-                ORMMeeting.is_deleted.is_(False),
-                ORMParticipant.is_deleted.is_(False),
                 ORMParticipant.user_id == user_id,
                 ORMMeeting.start_time < window_end,
                 ORMMeeting.end_time > window_start,
@@ -87,7 +83,6 @@ class ParticipantRepository(BaseRepository[ORMParticipant, DomainParticipant]):
             and_(
                 ORMParticipant.user_id == user_id,
                 ORMParticipant.meeting_id == meeting_id,
-                ORMParticipant.is_deleted.is_(False),
             )
         )
         orm = self.session.scalars(stmt).first()
@@ -142,7 +137,6 @@ class ParticipantRepository(BaseRepository[ORMParticipant, DomainParticipant]):
             .where(
                 ORMParticipant.meeting_id == meeting_id,
                 ORMParticipant.user_id == user_id,
-                ORMParticipant.is_deleted.is_(False),
             )
             .options(joinedload(ORMParticipant.user))
         )
@@ -167,7 +161,6 @@ class ParticipantRepository(BaseRepository[ORMParticipant, DomainParticipant]):
         stmt = (
             select(ORMParticipant)
             .where(
-                ORMParticipant.is_deleted.is_(False),
                 ORMParticipant.check_out_at.is_not(None),
                 ORMParticipant.check_out_at >= since,
             )
@@ -182,8 +175,7 @@ class ParticipantRepository(BaseRepository[ORMParticipant, DomainParticipant]):
         )
         orms = self.session.scalars(statement).all()
         for orm in orms:
-            orm.is_deleted = True
-            self.session.add(orm)
+            self.session.delete(orm)
         return True
 
     def remove_participant(self, meeting_id: int, user_id: int) -> bool:
@@ -226,7 +218,6 @@ class ParticipantRepository(BaseRepository[ORMParticipant, DomainParticipant]):
         else:
             orm.role = role_val
             orm.status = domain.status or ParticipantStatus.NOT_JOINED
-            orm.is_deleted = False
             orm.check_in_at = domain.check_in_at
             orm.check_out_at = domain.check_out_at
             orm.link_image = domain.link_image
@@ -286,7 +277,6 @@ class ParticipantRepository(BaseRepository[ORMParticipant, DomainParticipant]):
             if uid in existing_map:
                 existing = existing_map[uid]
                 existing.role = ParticipantRole.TRAINER.value
-                existing.is_deleted = False
                 self.session.add(existing)
             else:
                 po = ORMParticipant(
@@ -302,7 +292,6 @@ class ParticipantRepository(BaseRepository[ORMParticipant, DomainParticipant]):
             if uid in existing_map:
                 existing = existing_map[uid]
                 existing.role = ParticipantRole.TRAINEE.value
-                existing.is_deleted = False
                 self.session.add(existing)
             else:
                 po = ORMParticipant(
@@ -323,7 +312,6 @@ class ParticipantRepository(BaseRepository[ORMParticipant, DomainParticipant]):
             select(ORMParticipant)
             .join(ORMMeeting, ORMParticipant.meeting_id == ORMMeeting.id)
             .where(
-                ORMParticipant.is_deleted.is_(False),
                 ORMParticipant.user_id == user_id,
                 ORMParticipant.check_in_at.is_not(None),
                 extract("month", ORMMeeting.start_time) == month,
@@ -340,7 +328,6 @@ class ParticipantRepository(BaseRepository[ORMParticipant, DomainParticipant]):
             select(ORMParticipant)
             .join(ORMMeeting, ORMParticipant.meeting_id == ORMMeeting.id)
             .where(
-                ORMParticipant.is_deleted.is_(False),
                 ORMParticipant.check_in_at.is_not(None),
                 extract("month", ORMMeeting.start_time) == month,
                 extract("year", ORMMeeting.start_time) == year,

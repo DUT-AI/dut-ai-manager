@@ -8,7 +8,7 @@ from typing import Any
 
 from pydantic import Field, field_validator
 
-from app.shared.domain.base_entity import BaseEntity
+from app.shared.domain.base_entity import BaseAuditEntity
 
 
 class DutyStatus(StrEnum):
@@ -29,7 +29,7 @@ DEFAULT_DUTY_CHECKLIST = [
 ]
 
 
-class CleaningDuty(BaseEntity):
+class CleaningDuty(BaseAuditEntity):
     """Domain Entity representing a Cleaning Duty task."""
 
     duty_date: date

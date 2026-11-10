@@ -211,7 +211,6 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         stmt = select(ORMParticipant).where(
             ORMParticipant.meeting_id == meeting_id,
             ORMParticipant.user_id == user_id,
-            ORMParticipant.is_deleted.is_(False),
         )
         p = self.session.scalars(stmt).first()
         if p:
@@ -223,7 +222,6 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         stmt = select(ORMParticipant).where(
             ORMParticipant.meeting_id == meeting_id,
             ORMParticipant.user_id == user_id,
-            ORMParticipant.is_deleted.is_(False),
         )
         p = self.session.scalars(stmt).first()
         if p and p.status == ParticipantStatus.NOT_JOINED:
@@ -235,7 +233,6 @@ class PermissionRequestRepository(BaseRepository[ORMModel, DomainEntity]):
         stmt = select(ORMParticipant).where(
             ORMParticipant.meeting_id == meeting_id,
             ORMParticipant.user_id == user_id,
-            ORMParticipant.is_deleted.is_(False),
         )
         p = self.session.scalars(stmt).first()
         if p and p.status in (

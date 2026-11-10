@@ -123,8 +123,8 @@ class HomeworkModuleProvider(Provider):
         return GetUnsubmittedHomeworkReportUseCase(
             homework_repo=homework_repo,
             homework_submission_repo=homework_submission_repo,
-            homework_assignee_repo=homework_assignee_repo,
             user_repo=user_repo,
+            homework_assignee_repo=homework_assignee_repo,
         )
 
     @provide

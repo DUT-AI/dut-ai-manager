@@ -42,7 +42,6 @@ class MeetingEvaluationRepository(BaseRepository[ORMEvaluation, DomainEvaluation
                 ORMEvaluation.meeting_id == meeting_id,
                 ORMEvaluation.reviewer_id == reviewer_id,
                 ORMEvaluation.target_user_id == target_user_id,
-                ORMEvaluation.is_deleted.is_(False),
             )
             .options(
                 joinedload(ORMEvaluation.reviewer),
@@ -59,7 +58,6 @@ class MeetingEvaluationRepository(BaseRepository[ORMEvaluation, DomainEvaluation
             select(ORMEvaluation)
             .where(
                 ORMEvaluation.meeting_id == meeting_id,
-                ORMEvaluation.is_deleted.is_(False),
             )
             .options(
                 joinedload(ORMEvaluation.reviewer),
@@ -80,7 +78,6 @@ class MeetingEvaluationRepository(BaseRepository[ORMEvaluation, DomainEvaluation
             .where(
                 ORMEvaluation.meeting_id == meeting_id,
                 ORMEvaluation.target_user_id == target_user_id,
-                ORMEvaluation.is_deleted.is_(False),
             )
             .options(
                 joinedload(ORMEvaluation.reviewer),
@@ -94,7 +91,6 @@ class MeetingEvaluationRepository(BaseRepository[ORMEvaluation, DomainEvaluation
         stmt = select(func.count(ORMEvaluation.id)).where(
             ORMEvaluation.meeting_id == meeting_id,
             ORMEvaluation.reviewer_id == reviewer_id,
-            ORMEvaluation.is_deleted.is_(False),
         )
         return self.session.scalar(stmt) or 0
 

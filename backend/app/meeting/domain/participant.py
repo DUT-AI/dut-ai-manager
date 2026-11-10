@@ -1,11 +1,11 @@
 from datetime import datetime
 
 from app.meeting.domain.value_objects import ParticipantRole, ParticipantStatus, UserRef
-from app.shared.domain.base_entity import BaseEntity
+from app.shared.domain.base_entity import BaseAuditEntity
 from app.shared.domain.datetime_types import ensure_utc
 
 
-class MeetingParticipant(BaseEntity):
+class MeetingParticipant(BaseAuditEntity):
     """Thành viên tham gia buổi họp (Domain Entity)"""
 
     user_id: int

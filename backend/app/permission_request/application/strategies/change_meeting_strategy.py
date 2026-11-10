@@ -76,7 +76,7 @@ class ChangeMeetingStrategy(PermissionStrategy[ChangeMeetingPayload]):
             )
 
         is_user_in_old_meeting = any(
-            p.user_id == user_id and not p.is_deleted
+            p.user_id == user_id
             for p in old_meeting.participants
         )
         if not is_user_in_old_meeting:
@@ -116,7 +116,7 @@ class ChangeMeetingStrategy(PermissionStrategy[ChangeMeetingPayload]):
         )
 
         is_already_in_b = any(
-            p.user_id == user_id and not p.is_deleted for p in meeting_b.participants
+            p.user_id == user_id for p in meeting_b.participants
         )
         if not is_already_in_b and available_seats <= 0:
             raise HTTPException(

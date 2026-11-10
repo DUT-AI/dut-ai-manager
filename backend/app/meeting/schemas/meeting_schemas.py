@@ -119,7 +119,7 @@ class MeetingDetailResponse(BaseModel):
         trainees: list[ParticipantResponse] = []
 
         for p in m.participants:
-            if p.is_deleted or p.id is None:
+            if p.id is None:
                 continue
 
             p_dto = ParticipantResponse.from_domain(p)

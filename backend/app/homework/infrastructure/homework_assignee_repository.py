@@ -68,7 +68,6 @@ class HomeworkAssigneeRepository:
         # Thêm hoặc giữ nguyên
         for uid in new_uids:
             if uid in existing_assignees:
-                existing_assignees[uid].is_deleted = False
                 if default_deadline is not None:
                     target_dl = ensure_utc(default_deadline)
                     current_dl = existing_assignees[uid].deadline
@@ -109,7 +108,6 @@ class HomeworkAssigneeRepository:
 
         for uid in set(user_ids):
             if uid in existing:
-                existing[uid].is_deleted = False
                 current_dl = existing[uid].deadline
                 if (
                     force_override
@@ -135,8 +133,6 @@ class HomeworkAssigneeRepository:
             .where(
                 HomeworkAssigneeModel.homework_id == homework_id,
                 HomeworkAssigneeModel.user_id == user_id,
-                HomeworkAssigneeModel.is_deleted.is_(False),
-                HomeworkModel.is_deleted.is_(False),
             )
         )
         dl = self.session.scalar(statement)
@@ -149,7 +145,6 @@ class HomeworkAssigneeRepository:
         statement = select(HomeworkAssigneeModel).where(
             HomeworkAssigneeModel.homework_id == homework_id,
             HomeworkAssigneeModel.user_id == user_id,
-            HomeworkAssigneeModel.is_deleted.is_(False),
         )
         assignee = self.session.scalar(statement)
         if assignee:
@@ -186,8 +181,6 @@ class HomeworkAssigneeRepository:
             )
             .join(HomeworkModel, HomeworkAssigneeModel.homework_id == HomeworkModel.id)
             .where(
-                HomeworkAssigneeModel.is_deleted.is_(False),
-                HomeworkModel.is_deleted.is_(False),
                 HomeworkAssigneeModel.deadline >= start_utc,
                 HomeworkAssigneeModel.deadline <= end_utc,
             )
@@ -212,7 +205,6 @@ class HomeworkAssigneeRepository:
             self.session.scalars(
                 select(HomeworkAssigneeModel.user_id).where(
                     HomeworkAssigneeModel.homework_id == homework_id,
-                    HomeworkAssigneeModel.is_deleted.is_(False),
                 )
             ).all()
         )
@@ -230,8 +222,6 @@ class HomeworkAssigneeRepository:
             .join(UserModel, HomeworkAssigneeModel.user_id == UserModel.id)
             .where(
                 HomeworkAssigneeModel.homework_id == homework_id,
-                HomeworkAssigneeModel.is_deleted.is_(False),
-                UserModel.is_deleted.is_(False),
             )
             .order_by(UserModel.name.asc())
         )
@@ -248,8 +238,6 @@ class HomeworkAssigneeRepository:
             .join(HomeworkModel, HomeworkAssigneeModel.homework_id == HomeworkModel.id)
             .where(
                 HomeworkAssigneeModel.user_id == user_id,
-                HomeworkAssigneeModel.is_deleted.is_(False),
-                HomeworkModel.is_deleted.is_(False),
             )
         )
         return list(self.session.scalars(statement).all())
@@ -266,8 +254,6 @@ class HomeworkAssigneeRepository:
             .where(
                 HomeworkAssigneeModel.homework_id.in_(homework_ids),
                 HomeworkAssigneeModel.user_id == user_id,
-                HomeworkAssigneeModel.is_deleted.is_(False),
-                HomeworkModel.is_deleted.is_(False),
             )
         )
         rows = self.session.execute(statement).all()
@@ -289,8 +275,6 @@ class HomeworkAssigneeRepository:
             .join(HomeworkModel, HomeworkAssigneeModel.homework_id == HomeworkModel.id)
             .where(
                 HomeworkAssigneeModel.homework_id.in_(homework_ids),
-                HomeworkAssigneeModel.is_deleted.is_(False),
-                HomeworkModel.is_deleted.is_(False),
             )
             .group_by(HomeworkAssigneeModel.homework_id)
         )
@@ -338,8 +322,6 @@ class HomeworkAssigneeRepository:
             select(HomeworkAssigneeModel.deadline)
             .join(HomeworkModel, HomeworkAssigneeModel.homework_id == HomeworkModel.id)
             .where(
-                HomeworkAssigneeModel.is_deleted.is_(False),
-                HomeworkModel.is_deleted.is_(False),
                 HomeworkAssigneeModel.deadline <= end_utc,
             )
             .distinct()

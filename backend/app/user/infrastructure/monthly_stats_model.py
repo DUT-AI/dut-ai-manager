@@ -1,11 +1,14 @@
 from sqlalchemy import Float, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
+from app.shared.infrastructure.base_model import (
+    Base,
+    SQLAlchemyAuditTimestampMixin,
+)
 from app.user.domain.monthly_stats import MonthlyUserStats, UserTitle
 
 
-class MonthlyUserStatsModel(SQLAlchemyTimestampMixin, Base):
+class MonthlyUserStatsModel(SQLAlchemyAuditTimestampMixin, Base):
     """ORM model for monthly user statistics and titles"""
 
     __tablename__ = "monthly_user_stats"
@@ -41,7 +44,6 @@ class MonthlyUserStatsModel(SQLAlchemyTimestampMixin, Base):
             else None,
             created_at=self.created_at,
             updated_at=self.updated_at,
-            is_deleted=self.is_deleted,
         )
 
     @classmethod

@@ -1,6 +1,6 @@
 from enum import StrEnum
 
-from app.shared.domain.base_entity import BaseEntity
+from app.shared.domain.base_entity import BaseGenericEntity
 
 
 class UserTitle(StrEnum):
@@ -12,7 +12,7 @@ class UserTitle(StrEnum):
     INACTIVE = "Chưa hoạt động"
 
 
-class MonthlyUserStats(BaseEntity):
+class MonthlyUserStats(BaseGenericEntity[int]):
     """Thống kê và danh hiệu tháng của user"""
 
     user_id: int

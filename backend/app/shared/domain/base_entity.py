@@ -52,6 +52,15 @@ class BaseUuidEntity(BaseGenericEntity[UUID]):
     id: UUID = Field(default_factory=uuid7)
 
 
+class BaseAuditEntity(BaseGenericEntity[int], AuditEntityMixin):
+    """
+    Base domain entity with integer ID and audit fields WITHOUT soft-delete.
+    Used for entities that support pure physical hard-delete.
+    """
+
+    pass
+
+
 class BaseEntity(BaseGenericEntity[int], AuditEntityMixin, SoftDeleteEntityMixin):
     """
     Legacy base entity for integer IDs with audit fields and soft-delete.

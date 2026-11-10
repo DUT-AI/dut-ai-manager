@@ -5,7 +5,7 @@ Billing Domain Entities — pure Pydantic, NO ORM dependency.
 from datetime import date
 from enum import StrEnum
 
-from app.shared.domain.base_entity import BaseEntity
+from app.shared.domain.base_entity import BaseAuditEntity, BaseEntity
 
 
 class InvoiceStatus(StrEnum):
@@ -22,8 +22,8 @@ class InvoiceItemType(StrEnum):
     OTHER = "OTHER"
 
 
-class InvoiceItem(BaseEntity):
-    """Domain entity representing an item in an invoice."""
+class InvoiceItem(BaseAuditEntity):
+    """Domain entity representing an item in an invoice (không có soft delete)."""
 
     invoice_id: int | None = None
     item_type: InvoiceItemType
@@ -33,7 +33,7 @@ class InvoiceItem(BaseEntity):
 
 
 class Invoice(BaseEntity):
-    """Domain entity representing a billing invoice."""
+    """Domain entity representing a billing invoice (giữ soft delete)."""
 
     user_id: int
     team_id: int

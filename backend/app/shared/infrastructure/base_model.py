@@ -86,6 +86,18 @@ class SQLAlchemyAuditMixin:
     )
 
 
+class SQLAlchemyAuditTimestampMixin(
+    SQLAlchemyTimestampOnlyMixin,
+    SQLAlchemyAuditMixin,
+):
+    """
+    Composite mixin containing timestamps and user audit tracking WITHOUT soft-delete.
+    Designed for models using pure physical hard-delete (Meetings, Homeworks, Teams, etc.).
+    """
+
+    pass
+
+
 class SQLAlchemyFullAuditMixin(
     SQLAlchemyTimestampOnlyMixin,
     SQLAlchemySoftDeleteMixin,

@@ -33,7 +33,6 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         statement = (
             select(ORMMeeting)
             .where(
-                ORMMeeting.is_deleted.is_(False),
                 ORMMeeting.id == meeting_id,
             )
             .options(
@@ -49,7 +48,6 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         statement = (
             select(ORMMeeting)
             .where(
-                ORMMeeting.is_deleted.is_(False),
                 ORMMeeting.id == meeting_id,
             )
             .with_for_update(of=ORMMeeting)
@@ -68,7 +66,6 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         statement = (
             select(ORMMeeting)
             .where(
-                ORMMeeting.is_deleted.is_(False),
                 ORMMeeting.start_time >= start_threshold,
             )
             .order_by(ORMMeeting.start_time.asc())
@@ -88,7 +85,6 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         statement = (
             select(ORMMeeting)
             .where(
-                ORMMeeting.is_deleted.is_(False),
                 ORMMeeting.enable_evaluation.is_(True),
                 ORMMeeting.end_time >= start_bound,
                 ORMMeeting.end_time <= end_bound,
@@ -148,16 +144,12 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
 
         stmt = (
             select(ORMMeeting)
-            .where(ORMMeeting.is_deleted == deleted)
             .outerjoin(
                 ORMParticipant,
                 cast(
                     Any,
                     ORMParticipant.meeting_id == ORMMeeting.id,
                 ),
-            )
-            .where(
-                ORMParticipant.is_deleted.is_(False),
             )
             .options(
                 contains_eager(ORMMeeting.participants).joinedload(ORMParticipant.user),
@@ -193,9 +185,7 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
             select(ORMMeeting)
             .join(ORMParticipant, ORMMeeting.id == ORMParticipant.meeting_id)
             .where(
-                ORMMeeting.is_deleted == False,  # noqa: E712
                 ORMParticipant.user_id == user_id,
-                ORMParticipant.is_deleted == False,  # noqa: E712
             )
         )
 
@@ -207,15 +197,11 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         statement = (
             select(ORMMeeting)
             .where(
-                ORMMeeting.is_deleted.is_(False),
                 func.date(ORMMeeting.start_time) == target_date,
             )
             .outerjoin(
                 ORMParticipant,
-                and_(
-                    ORMMeeting.id == ORMParticipant.meeting_id,
-                    ORMParticipant.is_deleted.is_(False),
-                ),
+                ORMMeeting.id == ORMParticipant.meeting_id,
             )
             .options(
                 contains_eager(ORMMeeting.participants).joinedload(ORMParticipant.user)
@@ -230,17 +216,13 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         statement = (
             select(ORMMeeting)
             .where(
-                ORMMeeting.is_deleted.is_(False),
                 func.date(ORMMeeting.start_time) >= start_date,
                 func.date(ORMMeeting.start_time) <= end_date,
             )
             .order_by(ORMMeeting.start_time.asc())
             .outerjoin(
                 ORMParticipant,
-                and_(
-                    ORMMeeting.id == ORMParticipant.meeting_id,
-                    ORMParticipant.is_deleted.is_(False),
-                ),
+                ORMMeeting.id == ORMParticipant.meeting_id,
             )
             .options(
                 contains_eager(ORMMeeting.participants).joinedload(ORMParticipant.user)
@@ -252,7 +234,7 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
     def get_domain_for_check_in(self, meeting_id: int) -> DomainMeeting | None:
         """Meeting tối thiểu cho luật trễ / event (không load participants)."""
         orm = self.session.get(ORMMeeting, meeting_id)
-        if not orm or orm.is_deleted:
+        if not orm:
             return None
         return DomainMeeting(
             id=orm.id,
@@ -277,8 +259,6 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
             .select_from(ORMParticipant)
             .join(ORMMeeting)
             .where(
-                ORMMeeting.is_deleted.is_(False),
-                ORMParticipant.is_deleted.is_(False),
                 ORMMeeting.start_time < end_time,
                 ORMMeeting.end_time > start_time,
             )
@@ -342,7 +322,6 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
         start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
         stmt = select(func.count(ORMParticipant.id)).where(
-            ORMParticipant.is_deleted.is_(False),
             ORMParticipant.check_in_at.is_not(None),
             ORMParticipant.check_in_at >= start_of_day,
             ORMParticipant.status == ParticipantStatus.JOINED,
@@ -369,8 +348,6 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
             select(func.count(func.distinct(ParticipantAlias.user_id)))
             .join(ORMMeeting, ParticipantAlias.meeting_id == ORMMeeting.id)
             .where(
-                ORMMeeting.is_deleted.is_(False),
-                ParticipantAlias.is_deleted.is_(False),
                 ORMMeeting.start_time >= now,
                 ORMMeeting.start_time <= window_end,
                 ParticipantAlias.check_in_at.is_(None),
@@ -394,8 +371,6 @@ class MeetingRepository(BaseRepository[ORMMeeting, DomainMeeting]):
             select(func.count(func.distinct(ParticipantAlias.user_id)))
             .join(ORMMeeting, ParticipantAlias.meeting_id == ORMMeeting.id)
             .where(
-                ORMMeeting.is_deleted.is_(False),
-                ParticipantAlias.is_deleted.is_(False),
                 ParticipantAlias.check_in_at.is_not(None),
                 ParticipantAlias.check_out_at.is_(None),
                 ORMMeeting.end_time > now,

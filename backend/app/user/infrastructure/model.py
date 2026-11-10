@@ -17,7 +17,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.auth.infrastructure.model import AccountModel
 from app.bonus_point.infrastructure.model import BonusPointModel
 from app.rbac.infrastructure.model import RoleModel
-from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
+from app.shared.infrastructure.base_model import (
+    Base,
+    SQLAlchemyAuditTimestampMixin,
+    SQLAlchemyTimestampMixin,
+)
 from app.team.infrastructure.model import TeamMemberModel
 from app.user.domain.entity import UserEntity, UserStatus
 from app.violation.infrastructure.model import ViolationModel
@@ -31,7 +35,7 @@ if TYPE_CHECKING:
     from app.violation.infrastructure.model import ViolationModel
 
 
-class UserRoleModel(SQLAlchemyTimestampMixin, Base):
+class UserRoleModel(SQLAlchemyAuditTimestampMixin, Base):
     """Database ORM mapping to 'user_roles' table."""
 
     __tablename__ = "user_roles"

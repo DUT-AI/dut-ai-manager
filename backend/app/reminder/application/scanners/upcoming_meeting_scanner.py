@@ -41,11 +41,7 @@ class UpcomingMeetingTaskScanner(BaseTaskScanner):
                 continue
 
             for p in meeting.participants:
-                # 1. Bỏ qua nếu bản ghi thành viên bị xóa mềm
-                if p.is_deleted:
-                    continue
-
-                # 2. Bỏ qua thành viên đã điểm danh hoặc đã hoàn thành
+                # 1. Bỏ qua thành viên đã điểm danh hoặc đã hoàn thành
                 if p.status in (
                     ParticipantStatus.JOINED,
                     ParticipantStatus.COMPLETED,

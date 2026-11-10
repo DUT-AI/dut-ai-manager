@@ -235,19 +235,6 @@ async def delete_homework(
     return ApiResponse.success(data=result)
 
 
-@router.put("/{homework_id}/restore", response_model=ApiResponse[HomeworkResponse])
-@inject
-async def restore_homework(
-    homework_id: int,
-    homework_repo: FromDishka[HomeworkRepository],
-    _current_user: Annotated[CurrentUser, hasPermission(HomeworkPermission.DELETE)],
-):
-    result = homework_repo.restore(homework_id)
-    if not result:
-        raise HTTPException(status_code=404, detail="Homework not found or not deleted")
-    return ApiResponse.success(data=result)
-
-
 @router.post("/webhook/submission", response_model=ApiResponse[dict[str, Any]])
 @inject
 async def receive_submission_webhook(

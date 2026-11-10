@@ -12,7 +12,6 @@ class TeamRepository:
     def get_all_with_members(self, skip: int = 0, limit: int = 100) -> list[TeamEntity]:
         statement = (
             select(TeamModel)
-            .where(TeamModel.is_deleted.is_(False))
             .options(
                 selectinload(TeamModel.team_members).joinedload(TeamMemberModel.user)
             )
@@ -28,15 +27,12 @@ class TeamRepository:
     ) -> tuple[list[TeamEntity], int]:
         from sqlalchemy import func
 
-        count_stmt = select(func.count(TeamModel.id)).where(
-            TeamModel.is_deleted.is_(False)
-        )
+        count_stmt = select(func.count(TeamModel.id))
         total = self.session.scalar(count_stmt) or 0
 
         offset = (page - 1) * page_size
         statement = (
             select(TeamModel)
-            .where(TeamModel.is_deleted.is_(False))
             .options(
                 selectinload(TeamModel.team_members).joinedload(TeamMemberModel.user)
             )
@@ -51,7 +47,6 @@ class TeamRepository:
         statement = (
             select(TeamModel)
             .where(
-                TeamModel.is_deleted.is_(False),
                 TeamModel.id == team_id,
             )
             .options(
@@ -67,7 +62,7 @@ class TeamRepository:
 
     def get_by_id(self, team_id: int) -> TeamEntity | None:
         statement = select(TeamModel).where(
-            TeamModel.id == team_id, TeamModel.is_deleted.is_(False)
+            TeamModel.id == team_id
         )
         model = self.session.scalars(statement).first()
         return model.to_entity() if model else None
@@ -109,28 +104,22 @@ class TeamRepository:
         existing_map = {m.user_id: m for m in existing_members}
 
         for uid in user_ids:
-            if uid in existing_map:
-                existing_map[uid].is_deleted = False
-                self.session.add(existing_map[uid])
-            else:
+            if uid not in existing_map:
                 member = TeamMemberModel(team_id=team_id, user_id=uid)
                 self.session.add(member)
 
         for uid, member in existing_map.items():
             if uid not in user_ids:
-                member.is_deleted = True
-                self.session.add(member)
+                self.session.delete(member)
 
     def get_team_ids_by_user(self, user_id: int) -> list[int]:
         statement = select(TeamMemberModel.team_id).where(
-            TeamMemberModel.is_deleted.is_(False),
             TeamMemberModel.user_id == user_id,
         )
         return list(self.session.scalars(statement).all())
 
     def get_user_ids_by_teams(self, team_ids: list[int]) -> list[int]:
         statement = select(TeamMemberModel.user_id).where(
-            TeamMemberModel.is_deleted.is_(False),
             TeamMemberModel.team_id.in_(team_ids),
         )
         return list(set(self.session.scalars(statement).all()))

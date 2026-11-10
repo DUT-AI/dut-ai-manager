@@ -62,7 +62,7 @@ def test_upcoming_meeting_scanner_finds_candidate_for_offset_1h(mock_meeting_rep
 def test_upcoming_meeting_scanner_ignores_already_checked_in_participants(
     mock_meeting_repo,
 ):
-    """Thành viên đã điểm danh (JOINED hoặc COMPLETED) hoặc bị xóa mềm không được nhắc nhở."""
+    """Thành viên đã điểm danh (JOINED hoặc COMPLETED) không được nhắc nhở."""
     now = datetime(2026, 10, 21, 14, 0, 0)
     start_time = now + timedelta(hours=1)
     end_time = start_time + timedelta(hours=2)
@@ -72,21 +72,12 @@ def test_upcoming_meeting_scanner_ignores_already_checked_in_participants(
         user_id=101,
         meeting_id=10,
         status=ParticipantStatus.JOINED,
-        is_deleted=False,
     )
     p_completed = MeetingParticipant(
         id=2,
         user_id=102,
         meeting_id=10,
         status=ParticipantStatus.COMPLETED,
-        is_deleted=False,
-    )
-    p_deleted = MeetingParticipant(
-        id=3,
-        user_id=103,
-        meeting_id=10,
-        status=ParticipantStatus.NOT_JOINED,
-        is_deleted=True,
     )
 
     meeting = Meeting(
@@ -94,7 +85,7 @@ def test_upcoming_meeting_scanner_ignores_already_checked_in_participants(
         title="Họp Ban Công Nghệ",
         start_time=start_time,
         end_time=end_time,
-        participants=[p_joined, p_completed, p_deleted],
+        participants=[p_joined, p_completed],
     )
 
     mock_meeting_repo.get_all_with_participants.return_value = [meeting]

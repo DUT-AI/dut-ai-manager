@@ -38,8 +38,8 @@ def test_notification(db_session, mock_current_user):
 
     yield saved
 
-    # Cleanup
-    repo.delete_by_id(saved.id)
+    # Cleanup (Hard delete)
+    repo.hard_delete(saved.id)
     db_session.commit()
 
 

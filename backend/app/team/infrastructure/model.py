@@ -7,7 +7,10 @@ from typing import TYPE_CHECKING
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
+from app.shared.infrastructure.base_model import (
+    Base,
+    SQLAlchemyAuditTimestampMixin,
+)
 from app.team.domain.entity import Team as TeamEntity
 from app.team.domain.entity import TeamMemberInfo
 
@@ -15,7 +18,7 @@ if TYPE_CHECKING:
     from app.user.infrastructure.model import UserModel
 
 
-class TeamMemberModel(SQLAlchemyTimestampMixin, Base):
+class TeamMemberModel(SQLAlchemyAuditTimestampMixin, Base):
     """Junction table for Team and User"""
 
     __tablename__ = "team_members"
@@ -31,7 +34,7 @@ class TeamMemberModel(SQLAlchemyTimestampMixin, Base):
     )
 
 
-class TeamModel(SQLAlchemyTimestampMixin, Base):
+class TeamModel(SQLAlchemyAuditTimestampMixin, Base):
     """Team model"""
 
     __tablename__ = "teams"
@@ -48,17 +51,16 @@ class TeamModel(SQLAlchemyTimestampMixin, Base):
         member_ids = []
         # Support either full relations or just parsing.
         for tm in self.team_members:
-            if not tm.is_deleted:
-                member_ids.append(tm.user_id)
-                if tm.user:
-                    members.append(
-                        TeamMemberInfo(
-                            user_id=tm.user.id,
-                            user_name=tm.user.name,
-                            email=tm.user.email,
-                            user_avatar_url=tm.user.avatar_url,
-                        )
+            member_ids.append(tm.user_id)
+            if tm.user:
+                members.append(
+                    TeamMemberInfo(
+                        user_id=tm.user.id,
+                        user_name=tm.user.name,
+                        email=tm.user.email,
+                        user_avatar_url=tm.user.avatar_url,
                     )
+                )
 
         return TeamEntity(
             id=self.id,
@@ -69,7 +71,6 @@ class TeamModel(SQLAlchemyTimestampMixin, Base):
             updated_at=self.updated_at,
             created_by=self.created_by,
             updated_by=self.updated_by,
-            is_deleted=self.is_deleted,
         )
 
     @classmethod

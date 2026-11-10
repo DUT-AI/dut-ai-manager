@@ -148,8 +148,8 @@ def test_meeting_repository_save_hard_deletes_removed_participants():
     session.flush.assert_called_once()
 
 
-def test_meeting_mapping_filters_is_deleted_participants():
-    """Kiểm tra Meeting.to_entity() và MeetingRepository._to_domain() bỏ qua participant is_deleted=True."""
+def test_meeting_mapping_participants():
+    """Kiểm tra Meeting.to_entity() và MeetingRepository._to_domain() map đầy đủ danh sách participant (Hard Delete)."""
     from app.meeting.infrastructure.model import (
         Meeting as ORMMeeting,
     )
@@ -158,11 +158,8 @@ def test_meeting_mapping_filters_is_deleted_participants():
     )
     from app.meeting.infrastructure.repository import MeetingRepository
 
-    orm_p_active = ORMParticipant(id=1, meeting_id=10, user_id=101)
-    orm_p_active.is_deleted = False
-
-    orm_p_deleted = ORMParticipant(id=2, meeting_id=10, user_id=102)
-    orm_p_deleted.is_deleted = True
+    orm_p1 = ORMParticipant(id=1, meeting_id=10, user_id=101)
+    orm_p2 = ORMParticipant(id=2, meeting_id=10, user_id=102)
 
     orm_meeting = ORMMeeting(
         id=10,
@@ -170,19 +167,21 @@ def test_meeting_mapping_filters_is_deleted_participants():
         start_time=datetime(2026, 9, 10, 18, 0),
         end_time=datetime(2026, 9, 10, 20, 0),
     )
-    orm_meeting.participants = [orm_p_active, orm_p_deleted]
+    orm_meeting.participants = [orm_p1, orm_p2]
 
     # 1. Test model.to_entity()
     entity = orm_meeting.to_entity()
-    assert len(entity.participants) == 1
-    assert entity.participants[0].user_id == 101
+    assert len(entity.participants) == 2
+    user_ids = {p.user_id for p in entity.participants}
+    assert user_ids == {101, 102}
 
     # 2. Test repo._to_domain()
     session = MagicMock()
     repo = MeetingRepository(session=session)
     domain = repo._to_domain(orm_meeting)
-    assert len(domain.participants) == 1
-    assert domain.participants[0].user_id == 101
+    assert len(domain.participants) == 2
+    repo_user_ids = {p.user_id for p in domain.participants}
+    assert repo_user_ids == {101, 102}
 
 
 def test_update_meeting_preserves_participant_attendance_status():

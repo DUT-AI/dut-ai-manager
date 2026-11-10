@@ -7,7 +7,11 @@ Provides core business objects decoupled from database ORMs.
 from enum import StrEnum
 from typing import Optional
 
-from app.shared.domain.base_entity import BaseEntity
+from app.shared.domain.base_entity import (
+    BaseAuditEntity,
+    BaseEntity,
+    BaseGenericEntity,
+)
 
 
 class RoleType(StrEnum):
@@ -18,7 +22,7 @@ class RoleType(StrEnum):
     TEAMMATE = "teammate"  # Thành viên
 
 
-class Permission(BaseEntity):
+class Permission(BaseAuditEntity):
     """Permission entity."""
 
     name: str  # e.g., "user:read", "user:write"
@@ -28,7 +32,7 @@ class Permission(BaseEntity):
 
 
 class RolePermission(BaseEntity):
-    """Link between a Role and a Permission."""
+    """Link between a Role and a Permission (Giữ soft delete)."""
 
     role_id: int
     permission_id: int
@@ -36,7 +40,7 @@ class RolePermission(BaseEntity):
 
 
 class RoleApiKey(BaseEntity):
-    """API Key attached to a specific Role."""
+    """API Key attached to a specific Role (Giữ soft delete)."""
 
     name: str
     key_hash: str
@@ -46,7 +50,7 @@ class RoleApiKey(BaseEntity):
     role: Optional["Role"]
 
 
-class Role(BaseEntity):
+class Role(BaseAuditEntity):
     """Role entity."""
 
     name: str
@@ -60,5 +64,5 @@ class Role(BaseEntity):
         return [
             rp.permission
             for rp in self.role_permissions
-            if rp.permission and not rp.is_deleted and not rp.permission.is_deleted
+            if rp.permission and not rp.is_deleted
         ]

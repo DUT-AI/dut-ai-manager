@@ -50,11 +50,6 @@ export const homeworkService = {
         return response.data.data;
     },
 
-    async restore(id: number) {
-        const response = await axiosInstance.put<ApiResponse<Homework>>(`/${this.baseUrl}/${id}/restore`);
-        return response.data.data;
-    },
-
     // Reports
     async getUnsubmittedReport() {
         const response = await axiosInstance.get<ApiResponse<HomeworkReportResponse[]>>(`/${this.baseUrl}/report/unsubmitted`);

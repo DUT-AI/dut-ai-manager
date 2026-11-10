@@ -79,8 +79,7 @@ class MeetingEvaluationTaskScanner(BaseTaskScanner):
                 valid_trainees = [
                     p
                     for p in meeting.participants
-                    if not p.is_deleted
-                    and not meeting.is_trainer(p.user_id)
+                    if not meeting.is_trainer(p.user_id)
                     and p.status
                     in (
                         ParticipantStatus.JOINED,

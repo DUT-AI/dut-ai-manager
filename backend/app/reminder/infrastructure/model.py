@@ -18,10 +18,13 @@ from app.reminder.domain.entity import (
     ReminderStatus,
     TaskType,
 )
-from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
+from app.shared.infrastructure.base_model import (
+    Base,
+    SQLAlchemyAuditTimestampMixin,
+)
 
 
-class NotificationModel(Base, SQLAlchemyTimestampMixin):
+class NotificationModel(Base, SQLAlchemyAuditTimestampMixin):
     __tablename__ = "notifications"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
@@ -105,7 +108,7 @@ class NotificationModel(Base, SQLAlchemyTimestampMixin):
         )
 
 
-class PushSubscriptionModel(Base, SQLAlchemyTimestampMixin):
+class PushSubscriptionModel(Base, SQLAlchemyAuditTimestampMixin):
     """
     Database ORM mapping cho bảng 'push_subscriptions'.
     Lưu trữ các endpoint VAPID đã đăng ký từ trình duyệt client.

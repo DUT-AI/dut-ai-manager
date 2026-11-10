@@ -25,11 +25,15 @@ from app.meeting.domain.value_objects import (
     ParticipantRole,
     ParticipantStatus,
 )
-from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
+from app.shared.infrastructure.base_model import (
+    Base,
+    SQLAlchemyAuditTimestampMixin,
+    SQLAlchemyTimestampMixin,
+)
 from app.user.infrastructure.model import UserModel
 
 
-class Meeting(SQLAlchemyTimestampMixin, Base):
+class Meeting(SQLAlchemyAuditTimestampMixin, Base):
     """Buổi họp (ORM Model)"""
 
     __tablename__ = "meetings"
@@ -81,9 +85,8 @@ class Meeting(SQLAlchemyTimestampMixin, Base):
 
         participants_list = []
         if "participants" in self.__dict__ and self.participants:
-            active_participants = [p for p in self.participants if not p.is_deleted]
             sorted_participants = sorted(
-                active_participants,
+                self.participants,
                 key=lambda p: (
                     p.created_at or datetime.min.replace(tzinfo=UTC),
                     p.id or 0,
@@ -110,7 +113,6 @@ class Meeting(SQLAlchemyTimestampMixin, Base):
             updated_at=self.updated_at or datetime.now(UTC),
             created_by=self.created_by,
             updated_by=self.updated_by,
-            is_deleted=self.is_deleted if self.is_deleted is not None else False,
         )
 
     @classmethod
@@ -126,7 +128,7 @@ class Meeting(SQLAlchemyTimestampMixin, Base):
         )
 
 
-class MeetingParticipant(SQLAlchemyTimestampMixin, Base):
+class MeetingParticipant(SQLAlchemyAuditTimestampMixin, Base):
     """Bản ghi thành viên tham dự buổi họp (ORM Model)"""
 
     __tablename__ = "meeting_participants"
@@ -213,7 +215,7 @@ class MeetingParticipant(SQLAlchemyTimestampMixin, Base):
         )
 
 
-class MeetingEvaluation(SQLAlchemyTimestampMixin, Base):
+class MeetingEvaluation(SQLAlchemyAuditTimestampMixin, Base):
     """Bản ghi đánh giá 2 chiều trong Buổi học (ORM Model)"""
 
     __tablename__ = "meeting_evaluations"
@@ -277,7 +279,6 @@ class MeetingEvaluation(SQLAlchemyTimestampMixin, Base):
             updated_at=self.updated_at or datetime.now(UTC),
             created_by=self.created_by,
             updated_by=self.updated_by,
-            is_deleted=self.is_deleted if self.is_deleted is not None else False,
         )
 
     @classmethod
@@ -297,7 +298,7 @@ class MeetingEvaluation(SQLAlchemyTimestampMixin, Base):
         )
 
 
-class MeetingOverallEvaluation(SQLAlchemyTimestampMixin, Base):
+class MeetingOverallEvaluation(SQLAlchemyAuditTimestampMixin, Base):
     """Bản ghi đánh giá tổng thể buổi học do Trainer thực hiện (ORM Model - Quan hệ 1 - 1 với Meeting)"""
 
     __tablename__ = "meeting_overall_evaluations"
@@ -348,7 +349,6 @@ class MeetingOverallEvaluation(SQLAlchemyTimestampMixin, Base):
             updated_at=self.updated_at or datetime.now(UTC),
             created_by=self.created_by,
             updated_by=self.updated_by,
-            is_deleted=self.is_deleted if self.is_deleted is not None else False,
         )
 
     @classmethod

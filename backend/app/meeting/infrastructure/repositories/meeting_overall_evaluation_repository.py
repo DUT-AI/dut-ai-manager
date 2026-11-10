@@ -23,7 +23,6 @@ class MeetingOverallEvaluationRepository(
         existing = self.session.scalars(
             select(ORMOverallEvaluation).where(
                 ORMOverallEvaluation.meeting_id == entity.meeting_id,
-                ORMOverallEvaluation.is_deleted.is_(False),
             )
         ).first()
         if existing:
@@ -45,7 +44,6 @@ class MeetingOverallEvaluationRepository(
             select(ORMOverallEvaluation)
             .where(
                 ORMOverallEvaluation.meeting_id == meeting_id,
-                ORMOverallEvaluation.is_deleted.is_(False),
             )
             .options(joinedload(ORMOverallEvaluation.trainer))
         )
@@ -56,7 +54,6 @@ class MeetingOverallEvaluationRepository(
         """Kiểm tra buổi học đã có đánh giá tổng thể từ Trainer hay chưa."""
         stmt = select(func.count(ORMOverallEvaluation.id)).where(
             ORMOverallEvaluation.meeting_id == meeting_id,
-            ORMOverallEvaluation.is_deleted.is_(False),
         )
         return (self.session.scalar(stmt) or 0) > 0
 

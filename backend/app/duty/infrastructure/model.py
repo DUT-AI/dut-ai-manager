@@ -10,14 +10,17 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.duty.domain.entity import CleaningDuty, DutyStatus
-from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
+from app.shared.infrastructure.base_model import (
+    Base,
+    SQLAlchemyAuditTimestampMixin,
+)
 
 if TYPE_CHECKING:
     from app.meeting.infrastructure.model import Meeting
     from app.user.infrastructure.model import UserModel
 
 
-class CleaningDutyModel(SQLAlchemyTimestampMixin, Base):
+class CleaningDutyModel(SQLAlchemyAuditTimestampMixin, Base):
     """ORM mapping to 'cleaning_duties' table."""
 
     __tablename__ = "cleaning_duties"
@@ -116,5 +119,4 @@ class CleaningDutyModel(SQLAlchemyTimestampMixin, Base):
             updated_at=self.updated_at,
             created_by=self.created_by,
             updated_by=self.updated_by,
-            is_deleted=self.is_deleted,
         )

@@ -6,7 +6,7 @@ from app.homework.domain.value_objects import (
     GameSubmissionDetails,
     SubmissionEvaluation,
 )
-from app.shared.domain.base_entity import BaseEntity
+from app.shared.domain.base_entity import BaseAuditEntity, BaseEntity, BaseGenericEntity
 from app.shared.domain.datetime_types import ensure_utc
 
 
@@ -15,7 +15,7 @@ class SubmissionType(StrEnum):
     GAME = "GAME"
 
 
-class Homework(BaseEntity):
+class Homework(BaseAuditEntity):
     """Domain model containing assignment details."""
 
     title: str
@@ -120,7 +120,7 @@ class Homework(BaseEntity):
         return exercise_map, coding_general_map, game_map
 
 
-class HomeworkAssignee(BaseEntity):
+class HomeworkAssignee(BaseGenericEntity[int]):
     """Domain model for a user assigned to a homework with their individual deadline."""
 
     homework_id: int

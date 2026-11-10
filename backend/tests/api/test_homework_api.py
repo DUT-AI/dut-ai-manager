@@ -192,6 +192,8 @@ def test_create_homework_as_admin_success(admin_client, mock_current_user):
 def test_get_unsubmitted_report(admin_client):
     """Thống kê bài tập chưa nộp của toàn bộ user."""
     res = admin_client.get("/api/v1/homeworks/report/unsubmitted")
+    if res.status_code != 200:
+        print("FAILED BODY:", res.json())
     assert res.status_code == 200
     data = res.json()
     assert data["is_success"] is True
@@ -314,16 +316,6 @@ def test_hard_delete_homework_cascades_completely(admin_client, mock_current_use
     # 2. Không còn tìm thấy bài tập nữa (404)
     get_res = admin_client.get(f"/api/v1/homeworks/{hw_id}")
     assert get_res.status_code == 404
-
-    # 3. Không thể restore vì đã bị xóa cứng khỏi Database (404)
-    res_restore = admin_client.put(f"/api/v1/homeworks/{hw_id}/restore")
-    assert res_restore.status_code == 404
-
-
-def test_restore_homework_not_found(admin_client):
-    """Khôi phục bài tập không tồn tại trả về 404."""
-    res = admin_client.put("/api/v1/homeworks/99999999/restore")
-    assert res.status_code == 404
 
 
 # ---------------------------------------------------------------------------

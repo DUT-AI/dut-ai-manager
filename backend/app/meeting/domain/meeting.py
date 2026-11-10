@@ -4,11 +4,11 @@ from pydantic import Field
 
 from app.meeting.domain.participant import MeetingParticipant
 from app.meeting.domain.value_objects import ParticipantRole, UserRef
-from app.shared.domain.base_entity import BaseEntity
+from app.shared.domain.base_entity import BaseAuditEntity
 from app.shared.domain.datetime_types import ensure_utc
 
 
-class Meeting(BaseEntity):
+class Meeting(BaseAuditEntity):
     """Buổi họp / Lớp học (Domain Entity - Write Aggregate)"""
 
     title: str
@@ -26,7 +26,7 @@ class Meeting(BaseEntity):
         return [
             p
             for p in self.participants
-            if not p.is_deleted and p.role == ParticipantRole.TRAINER
+            if p.role == ParticipantRole.TRAINER
         ]
 
     @property
@@ -35,7 +35,7 @@ class Meeting(BaseEntity):
         return [
             p
             for p in self.participants
-            if not p.is_deleted and p.role == ParticipantRole.TRAINEE
+            if p.role == ParticipantRole.TRAINEE
         ]
 
     def is_trainer(self, user_id: int) -> bool:
@@ -98,7 +98,7 @@ class Meeting(BaseEntity):
         active_participants = [
             p
             for p in self.participants
-            if not p.is_deleted and p.user_id not in valid_absence_ids
+            if p.user_id not in valid_absence_ids
         ]
         occupied_count = len(active_participants)
         return max(0, max_seats - occupied_count)

@@ -9,13 +9,17 @@ from sqlalchemy import Boolean, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.rbac.domain.entity import Permission, Role, RoleApiKey, RolePermission
-from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
+from app.shared.infrastructure.base_model import (
+    Base,
+    SQLAlchemyAuditTimestampMixin,
+    SQLAlchemyTimestampMixin,
+)
 
 if TYPE_CHECKING:
     from app.user.infrastructure.model import UserModel
 
 
-class PermissionModel(SQLAlchemyTimestampMixin, Base):
+class PermissionModel(SQLAlchemyAuditTimestampMixin, Base):
     """Database ORM mapping to 'permissions' table."""
 
     __tablename__ = "permissions"
@@ -39,7 +43,6 @@ class PermissionModel(SQLAlchemyTimestampMixin, Base):
             action=self.action,
             created_at=self.created_at,
             updated_at=self.updated_at,
-            is_deleted=self.is_deleted,
         )
 
     @classmethod
@@ -52,7 +55,6 @@ class PermissionModel(SQLAlchemyTimestampMixin, Base):
             action=entity.action,
             created_at=entity.created_at or datetime.now(UTC),
             updated_at=entity.updated_at or datetime.now(UTC),
-            is_deleted=entity.is_deleted or False,
         )
 
 
@@ -148,7 +150,7 @@ class RolePermissionModel(SQLAlchemyTimestampMixin, Base):
         )
 
 
-class RoleModel(SQLAlchemyTimestampMixin, Base):
+class RoleModel(SQLAlchemyAuditTimestampMixin, Base):
     """Database ORM mapping to 'roles' table."""
 
     __tablename__ = "roles"
@@ -185,7 +187,6 @@ class RoleModel(SQLAlchemyTimestampMixin, Base):
             api_keys=api_keys,
             created_at=self.created_at,
             updated_at=self.updated_at,
-            is_deleted=self.is_deleted,
         )
 
     @classmethod
@@ -196,5 +197,4 @@ class RoleModel(SQLAlchemyTimestampMixin, Base):
             description=entity.description,
             created_at=entity.created_at or datetime.now(UTC),
             updated_at=entity.updated_at or datetime.now(UTC),
-            is_deleted=entity.is_deleted or False,
         )

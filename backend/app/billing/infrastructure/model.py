@@ -14,7 +14,11 @@ from app.billing.domain.entity import (
     InvoiceItemType,
     InvoiceStatus,
 )
-from app.shared.infrastructure.base_model import Base, SQLAlchemyTimestampMixin
+from app.shared.infrastructure.base_model import (
+    Base,
+    SQLAlchemyAuditTimestampMixin,
+    SQLAlchemyTimestampMixin,
+)
 
 if TYPE_CHECKING:
     from app.team.infrastructure.model import TeamModel
@@ -97,7 +101,7 @@ class InvoiceModel(SQLAlchemyTimestampMixin, Base):
         )
 
 
-class InvoiceItemModel(SQLAlchemyTimestampMixin, Base):
+class InvoiceItemModel(SQLAlchemyAuditTimestampMixin, Base):
     """ORM model — maps to 'invoice_items' table."""
 
     __tablename__ = "invoice_items"
@@ -125,7 +129,6 @@ class InvoiceItemModel(SQLAlchemyTimestampMixin, Base):
             updated_at=self.updated_at,
             created_by=self.created_by,
             updated_by=self.updated_by,
-            is_deleted=self.is_deleted,
         )
 
     @classmethod
@@ -142,5 +145,4 @@ class InvoiceItemModel(SQLAlchemyTimestampMixin, Base):
             updated_at=entity.updated_at or datetime.now(UTC),
             created_by=entity.created_by,
             updated_by=entity.updated_by,
-            is_deleted=entity.is_deleted,
         )

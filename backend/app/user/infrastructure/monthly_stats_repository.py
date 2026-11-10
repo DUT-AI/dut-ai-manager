@@ -33,7 +33,6 @@ class MonthlyUserStatsRepository(
             else None,
             created_at=entity.created_at,
             updated_at=entity.updated_at,
-            is_deleted=entity.is_deleted,
         )
 
     def get_by_user_and_month(
@@ -117,7 +116,6 @@ class MonthlyUserStatsRepository(
             .where(
                 MonthlyUserStatsModel.month == month,
                 MonthlyUserStatsModel.year == year,
-                MonthlyUserStatsModel.is_deleted.is_(False),
                 UserModel.is_deleted.is_(False),
             )
             .order_by(MonthlyUserStatsModel.total_bonus_points.desc())

@@ -140,7 +140,7 @@ class GetDutiesUseCase:
             )
             m_title_lower = (m.title or "").lower()
             p_ids = (
-                {p.user_id for p in m.participants if not p.is_deleted}
+                {p.user_id for p in m.participants}
                 if m.participants
                 else set()
             )
