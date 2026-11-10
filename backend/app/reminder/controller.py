@@ -17,6 +17,15 @@ from app.reminder.application.dtos import (
     UnreadCountDto,
     UnregisterPushSubscriptionRequestDto,
 )
+from app.reminder.application.clean_expired_notifications_use_case import (
+    CleanExpiredNotificationsUseCase,
+)
+from app.reminder.application.delete_all_read_notifications_use_case import (
+    DeleteAllReadNotificationsUseCase,
+)
+from app.reminder.application.delete_notification_use_case import (
+    DeleteNotificationUseCase,
+)
 from app.reminder.application.get_my_notifications_use_case import (
     GetMyNotificationsUseCase,
 )
@@ -118,6 +127,51 @@ async def mark_all_as_read(
     count = await use_case.execute(user_id=current_user.user_id)
     return ApiResponse.success(
         data=count, message=f"Đã đánh dấu {count} thông báo là đã đọc"
+    )
+
+
+@router.delete("/read-all", response_model=ApiResponse[int])
+async def delete_all_read_notifications(
+    current_user: CurrentUser,
+    use_case: FromDishka[DeleteAllReadNotificationsUseCase],
+):
+    """Xóa tất cả các thông báo đã đọc của tôi."""
+    deleted_count = await use_case.execute(user_id=current_user.user_id)
+    return ApiResponse.success(
+        data=deleted_count,
+        message=f"Đã xóa {deleted_count} thông báo đã đọc",
+    )
+
+
+@router.delete("/{id}", response_model=ApiResponse[bool])
+async def delete_notification(
+    id: int,
+    current_user: CurrentUser,
+    use_case: FromDishka[DeleteNotificationUseCase],
+):
+    """Xóa 1 thông báo của chính mình."""
+    success = await use_case.execute(
+        notification_id=id, user_id=current_user.user_id
+    )
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Không tìm thấy thông báo hoặc bạn không có quyền xóa",
+        )
+    return ApiResponse.success(data=True, message="Xóa thông báo thành công")
+
+
+@router.post("/housekeeping", response_model=ApiResponse[int])
+async def trigger_notifications_housekeeping(
+    current_user: CurrentUser,
+    use_case: FromDishka[CleanExpiredNotificationsUseCase],
+    retention_days: int = Query(30, ge=1, le=365),
+):
+    """Dọn dẹp các thông báo đã đọc quá hạn (TTL Housekeeping)."""
+    deleted_count = await use_case.execute(retention_days=retention_days)
+    return ApiResponse.success(
+        data=deleted_count,
+        message=f"Đã dọn dẹp {deleted_count} thông báo đã đọc quá hạn {retention_days} ngày",
     )
 
 

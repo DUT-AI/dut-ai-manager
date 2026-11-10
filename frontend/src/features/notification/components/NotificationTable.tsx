@@ -23,6 +23,7 @@ interface NotificationTableProps {
     pageSize: number;
     onPageChange: (page: number, pageSize: number) => void;
     onMarkAsRead: (id: number) => void;
+    onDeleteNotification?: (id: number) => void;
     onViewDetail: (notification: Notification) => void;
 }
 
@@ -47,6 +48,7 @@ const NotificationTable: React.FC<NotificationTableProps> = ({
     pageSize,
     onPageChange,
     onMarkAsRead,
+    onDeleteNotification,
     onViewDetail,
 }) => {
     const navigate = useNavigate();
@@ -166,6 +168,24 @@ const NotificationTable: React.FC<NotificationTableProps> = ({
                             onClick={() => onViewDetail(record)}
                         />
                     </Tooltip>
+                    {onDeleteNotification && (
+                        <Popconfirm
+                            title="Xóa thông báo"
+                            description="Bạn có chắc chắn muốn xóa thông báo này?"
+                            onConfirm={() => onDeleteNotification(record.id)}
+                            okText="Xóa"
+                            cancelText="Hủy"
+                            okButtonProps={{ danger: true }}
+                        >
+                            <Tooltip title="Xóa thông báo">
+                                <Button
+                                    size="small"
+                                    danger
+                                    icon={<DeleteOutlined />}
+                                />
+                            </Tooltip>
+                        </Popconfirm>
+                    )}
                 </Space>
             ),
         },

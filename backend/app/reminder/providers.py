@@ -19,6 +19,15 @@ from app.meeting.infrastructure.repository import (
     MeetingOverallEvaluationRepository,
     MeetingRepository,
 )
+from app.reminder.application.clean_expired_notifications_use_case import (
+    CleanExpiredNotificationsUseCase,
+)
+from app.reminder.application.delete_all_read_notifications_use_case import (
+    DeleteAllReadNotificationsUseCase,
+)
+from app.reminder.application.delete_notification_use_case import (
+    DeleteNotificationUseCase,
+)
 from app.reminder.application.get_my_notifications_use_case import (
     GetMyNotificationsUseCase,
 )
@@ -174,6 +183,28 @@ class ReminderModuleProvider(Provider):
     ) -> UpcomingMeetingTaskScanner:
         return UpcomingMeetingTaskScanner(
             meeting_repo=meeting_repo,
+        )
+
+    @provide
+    def delete_notification_use_case(
+        self, notification_repo: NotificationRepository
+    ) -> DeleteNotificationUseCase:
+        return DeleteNotificationUseCase(notification_repo=notification_repo)
+
+    @provide
+    def delete_all_read_notifications_use_case(
+        self, notification_repo: NotificationRepository
+    ) -> DeleteAllReadNotificationsUseCase:
+        return DeleteAllReadNotificationsUseCase(
+            notification_repo=notification_repo
+        )
+
+    @provide
+    def clean_expired_notifications_use_case(
+        self, notification_repo: NotificationRepository
+    ) -> CleanExpiredNotificationsUseCase:
+        return CleanExpiredNotificationsUseCase(
+            notification_repo=notification_repo
         )
 
     @provide

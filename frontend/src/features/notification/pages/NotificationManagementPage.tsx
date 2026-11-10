@@ -50,6 +50,8 @@ const NotificationManagementPage: React.FC = () => {
         refresh,
         markAsRead,
         markAllAsRead,
+        deleteNotification,
+        deleteAllRead,
     } = useInAppNotifications();
 
     const [selectedNotification, setSelectedNotification] =
@@ -150,6 +152,7 @@ const NotificationManagementPage: React.FC = () => {
                         onIsReadChange={setIsRead}
                         onRefresh={refresh}
                         onMarkAllAsRead={markAllAsRead}
+                        onDeleteAllRead={deleteAllRead}
                         hasUnread={unreadCount > 0}
                     />
                 </motion.div>
@@ -164,6 +167,7 @@ const NotificationManagementPage: React.FC = () => {
                         pageSize={pageSize}
                         onPageChange={handlePageChange}
                         onMarkAsRead={markAsRead}
+                        onDeleteNotification={deleteNotification}
                         onViewDetail={handleViewDetail}
                     />
                 </motion.div>

@@ -88,6 +88,31 @@ export const useInAppNotifications = () => {
         }
     };
 
+    const handleDeleteNotification = async (id: number) => {
+        try {
+            await notificationService.deleteNotification(id);
+            message.success('Đã xóa thông báo');
+            setNotifications((prev) => prev.filter((item) => item.id !== id));
+            setTotal((prev) => Math.max(0, prev - 1));
+            fetchUnreadCount();
+        } catch {
+            message.error('Không thể xóa thông báo');
+        }
+    };
+
+    const handleDeleteAllRead = async () => {
+        try {
+            const res = await notificationService.deleteAllRead();
+            const count = res.data ?? 0;
+            message.success(`Đã xóa ${count} thông báo đã đọc`);
+            setNotifications((prev) => prev.filter((item) => !item.is_read));
+            setTotal((prev) => Math.max(0, prev - count));
+            fetchNotifications();
+        } catch {
+            message.error('Không thể xóa thông báo đã đọc');
+        }
+    };
+
     return {
         notifications,
         unreadCount,
@@ -105,5 +130,7 @@ export const useInAppNotifications = () => {
         refreshCount: fetchUnreadCount,
         markAsRead: handleMarkAsRead,
         markAllAsRead: handleMarkAllAsRead,
+        deleteNotification: handleDeleteNotification,
+        deleteAllRead: handleDeleteAllRead,
     };
 };

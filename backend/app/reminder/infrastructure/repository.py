@@ -5,7 +5,7 @@ and managing reminder deduplication / cooldowns.
 
 from datetime import UTC, datetime
 
-from sqlalchemy import desc, func, select, update
+from sqlalchemy import delete, desc, func, select, update
 from sqlalchemy.orm import Session
 
 from app.reminder.domain.entity import (
@@ -96,6 +96,36 @@ class NotificationRepository(BaseRepository[NotificationModel, Notification]):
                 self.model.is_read.is_(False),
             )
             .values(is_read=True, read_at=now)
+        )
+        result = self.session.execute(stmt)
+        self.session.commit()
+        return result.rowcount or 0
+
+    def delete_by_id_and_user(self, notification_id: int, user_id: int) -> bool:
+        """Xóa 1 thông báo thuộc sở hữu của user (hard delete)."""
+        stmt = delete(self.model).where(
+            self.model.id == notification_id,
+            self.model.user_id == user_id,
+        )
+        result = self.session.execute(stmt)
+        self.session.commit()
+        return bool(result.rowcount and result.rowcount > 0)
+
+    def delete_read_by_user(self, user_id: int) -> int:
+        """Xóa tất cả các thông báo đã đọc của user (hard delete)."""
+        stmt = delete(self.model).where(
+            self.model.user_id == user_id,
+            self.model.is_read.is_(True),
+        )
+        result = self.session.execute(stmt)
+        self.session.commit()
+        return result.rowcount or 0
+
+    def delete_read_before(self, cutoff: datetime) -> int:
+        """Xóa tất cả các thông báo đã đọc cũ hơn thời điểm cutoff (TTL Housekeeping)."""
+        stmt = delete(self.model).where(
+            self.model.is_read.is_(True),
+            self.model.created_at < cutoff,
         )
         result = self.session.execute(stmt)
         self.session.commit()

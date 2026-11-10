@@ -18,6 +18,9 @@ from app.jobs.homework_checker_job import check_overdue_homework_submissions
 from app.jobs.meeting_checker_job import check_meeting_attendance
 from app.jobs.meeting_evaluation_checker_job import check_meeting_evaluations
 from app.jobs.monthly_title_job import assign_monthly_titles
+from app.jobs.notifications_housekeeping_job import (
+    clean_expired_notifications_job,
+)
 from app.jobs.reminder_scanner_job import scan_and_send_reminders
 
 # Global scheduler instance
@@ -111,6 +114,16 @@ async def start_scheduler(dishka_container: AsyncContainer) -> None:
         CronTrigger(minute="0,30", timezone="Asia/Ho_Chi_Minh"),
         id="task_deadline_reminder_check",
         name="Check and send task deadline reminders",
+        replace_existing=True,
+        kwargs={"container": dishka_container},
+    )
+
+    # Schedule notifications TTL housekeeping job at 03:00 every day
+    scheduler.add_job(
+        clean_expired_notifications_job,
+        CronTrigger(hour=3, minute=0, timezone="Asia/Ho_Chi_Minh"),
+        id="notifications_housekeeping_job",
+        name="Clean expired read notifications older than 30 days",
         replace_existing=True,
         kwargs={"container": dishka_container},
     )

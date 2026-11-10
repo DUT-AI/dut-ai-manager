@@ -1,6 +1,6 @@
 import React from 'react';
-import { Space, Select, Button } from 'antd';
-import { ReloadOutlined, CheckOutlined } from '@ant-design/icons';
+import { Space, Select, Button, Popconfirm } from 'antd';
+import { ReloadOutlined, CheckOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { NotificationCategory } from '../types/notification.types';
 
 interface NotificationFilterProps {
@@ -10,6 +10,7 @@ interface NotificationFilterProps {
     onIsReadChange: (value: boolean | undefined) => void;
     onRefresh: () => void;
     onMarkAllAsRead: () => void;
+    onDeleteAllRead?: () => void;
     hasUnread: boolean;
 }
 
@@ -20,6 +21,7 @@ const NotificationFilter: React.FC<NotificationFilterProps> = ({
     onIsReadChange,
     onRefresh,
     onMarkAllAsRead,
+    onDeleteAllRead,
     hasUnread,
 }) => {
     return (
@@ -64,6 +66,23 @@ const NotificationFilter: React.FC<NotificationFilterProps> = ({
                     >
                         Đánh dấu tất cả đã đọc
                     </Button>
+                    {onDeleteAllRead && (
+                        <Popconfirm
+                            title="Xóa thông báo đã đọc"
+                            description="Bạn có chắc muốn xóa tất cả thông báo đã đọc?"
+                            onConfirm={onDeleteAllRead}
+                            okText="Xóa tất cả"
+                            cancelText="Hủy"
+                            okButtonProps={{ danger: true }}
+                        >
+                            <Button
+                                icon={<DeleteOutlined />}
+                                danger
+                            >
+                                Dọn dẹp đã đọc
+                            </Button>
+                        </Popconfirm>
+                    )}
                     <Button
                         icon={<ReloadOutlined />}
                         onClick={onRefresh}

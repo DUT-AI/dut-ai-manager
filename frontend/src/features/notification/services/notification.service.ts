@@ -37,4 +37,18 @@ export const notificationService = {
         );
         return response.data;
     },
+
+    deleteNotification: async (id: number): Promise<ApiResponse<boolean>> => {
+        const response = await axiosInstance.delete<ApiResponse<boolean>>(
+            `/notifications/${id}`
+        );
+        return response.data;
+    },
+
+    deleteAllRead: async (): Promise<ApiResponse<number>> => {
+        const response = await axiosInstance.delete<ApiResponse<number>>(
+            '/notifications/read-all'
+        );
+        return response.data;
+    },
 };
