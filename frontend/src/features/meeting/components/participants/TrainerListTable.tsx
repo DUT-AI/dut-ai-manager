@@ -1,6 +1,6 @@
 import React from 'react';
 import { Table, Avatar, Tag, Typography, Image, Button, Tooltip, Empty, Space } from 'antd';
-import { UserOutlined, CrownOutlined, EditOutlined, StarFilled } from '@ant-design/icons';
+import { UserOutlined, CrownOutlined, EditOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { ColumnsType } from 'antd/es/table';
 import type { ParticipantResponse, MeetingResponse, MeetingDetailResponse, EvaluationResponse } from '../../types/meeting.types';

@@ -29,6 +29,7 @@ import { TeamManagementPage } from '@/features/teams';
 import { ProfilePage, UserManagementPage } from '@/features/users';
 import { ViolationManagementPage } from '@/features/violations';
 import { NotificationManagementPage } from '@/features/notification';
+import { ChatbotPage } from '@/features/chatbot';
 
 export interface RouteConfig {
     path: string;
@@ -42,6 +43,10 @@ export const dashboardRoutesConfig: RouteConfig[] = [
         path: '',
         element: <HomePage />,
         index: true,
+    },
+    {
+        path: 'assistant',
+        element: <ChatbotPage />,
     },
     {
         path: 'academic-reports',

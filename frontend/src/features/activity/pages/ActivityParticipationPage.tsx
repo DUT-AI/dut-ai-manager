@@ -15,14 +15,12 @@ import {
 import {
     SearchOutlined,
     UserOutlined,
-    CalendarOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { reportService } from '@/features/academic-report/services/report.service';
 import type { ParticipationStats } from '@/features/academic-report/types/report.types';
 import { useDebounce } from '@/hooks/useDebounce';
 import { motion, type Variants } from 'motion/react';
-import { Agentation } from 'agentation';
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;

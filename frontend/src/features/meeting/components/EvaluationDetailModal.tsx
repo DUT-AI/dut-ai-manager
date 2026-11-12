@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Avatar, Typography, Tag, Rate, Card, Divider } from 'antd';
+import { Modal, Avatar, Typography, Tag, Rate, Card } from 'antd';
 import { UserOutlined, CalendarOutlined, StarFilled } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { EvaluationResponse } from '../types/meeting.types';

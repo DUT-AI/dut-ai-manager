@@ -1088,23 +1088,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/homeworks/{homework_id}/restore": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** Restore Homework */
-        put: operations["restore_homework_api_v1_homeworks__homework_id__restore_put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/homeworks/webhook/submission": {
         parameters: {
             query?: never;
@@ -2238,6 +2221,50 @@ export interface paths {
          * @description Đánh dấu tất cả thông báo của tôi là đã đọc.
          */
         post: operations["mark_all_as_read_api_v1_notifications_read_all_post"];
+        /**
+         * Delete All Read Notifications
+         * @description Xóa tất cả các thông báo đã đọc của tôi.
+         */
+        delete: operations["delete_all_read_notifications_api_v1_notifications_read_all_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Notification
+         * @description Xóa 1 thông báo của chính mình.
+         */
+        delete: operations["delete_notification_api_v1_notifications__id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/housekeeping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Trigger Notifications Housekeeping
+         * @description Dọn dẹp các thông báo đã đọc quá hạn (TTL Housekeeping).
+         */
+        post: operations["trigger_notifications_housekeeping_api_v1_notifications_housekeeping_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2302,6 +2329,106 @@ export interface paths {
          * @description Gửi thông báo đẩy thử nghiệm tới các thiết bị đang hoạt động của tôi.
          */
         post: operations["test_push_notification_api_v1_notifications_test_push_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chatbot/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Chat Stream
+         * @description Send a message to the chatbot and receive Server-Sent Events (SSE) streaming.
+         */
+        post: operations["chat_stream_api_v1_chatbot_chat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chatbot/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Sessions
+         * @description Get active sessions of current user (max 5).
+         */
+        get: operations["get_sessions_api_v1_chatbot_sessions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chatbot/sessions/{session_id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Session Messages
+         * @description Get all messages of a session owned by current user.
+         */
+        get: operations["get_session_messages_api_v1_chatbot_sessions__session_id__messages_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chatbot/sessions/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Session
+         * @description Delete a session owned by current user.
+         */
+        delete: operations["delete_session_api_v1_chatbot_sessions__session_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/chatbot/quick-prompts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Quick Prompts
+         * @description Get role-adaptive quick prompts based on user permissions.
+         */
+        get: operations["get_quick_prompts_api_v1_chatbot_quick_prompts_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2924,6 +3051,30 @@ export interface components {
             message: string;
             pagination?: components["schemas"]["PaginationMeta"] | null;
         };
+        /** ApiResponse[list[ChatMessageDto]] */
+        ApiResponse_list_ChatMessageDto__: {
+            /** Is Success */
+            is_success: boolean;
+            /** Status Code */
+            status_code: number;
+            /** Data */
+            data?: components["schemas"]["ChatMessageDto"][] | null;
+            /** Message */
+            message: string;
+            pagination?: components["schemas"]["PaginationMeta"] | null;
+        };
+        /** ApiResponse[list[ChatSessionDto]] */
+        ApiResponse_list_ChatSessionDto__: {
+            /** Is Success */
+            is_success: boolean;
+            /** Status Code */
+            status_code: number;
+            /** Data */
+            data?: components["schemas"]["ChatSessionDto"][] | null;
+            /** Message */
+            message: string;
+            pagination?: components["schemas"]["PaginationMeta"] | null;
+        };
         /** ApiResponse[list[DutyResponse]] */
         ApiResponse_list_DutyResponse__: {
             /** Is Success */
@@ -3076,6 +3227,18 @@ export interface components {
             status_code: number;
             /** Data */
             data?: components["schemas"]["PermissionResponse"][] | null;
+            /** Message */
+            message: string;
+            pagination?: components["schemas"]["PaginationMeta"] | null;
+        };
+        /** ApiResponse[list[QuickPromptItem]] */
+        ApiResponse_list_QuickPromptItem__: {
+            /** Is Success */
+            is_success: boolean;
+            /** Status Code */
+            status_code: number;
+            /** Data */
+            data?: components["schemas"]["QuickPromptItem"][] | null;
             /** Message */
             message: string;
             pagination?: components["schemas"]["PaginationMeta"] | null;
@@ -3436,6 +3599,62 @@ export interface components {
             new_password: string;
             /** Confirm Password */
             confirm_password: string;
+        };
+        /**
+         * ChatMessageDto
+         * @description Response DTO representing an individual chat message.
+         */
+        ChatMessageDto: {
+            /** Id */
+            id: number;
+            /** Session Id */
+            session_id: number;
+            role: components["schemas"]["MessageRole"];
+            /** Content */
+            content: string;
+            metadata_info: components["schemas"]["ChatMessageMetadata"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * ChatMessageMetadata
+         * @description Strongly-typed metadata for chat messages (Constitution XVII).
+         */
+        ChatMessageMetadata: {
+            /**
+             * Model Name
+             * @default ggml-org/gemma-4-e4b-it-GGUF:Q4_0
+             */
+            model_name: string;
+            /** Reasoning Content */
+            reasoning_content?: string | null;
+            /** Tools Invoked */
+            tools_invoked?: components["schemas"]["ToolCallRecord"][];
+            /** Citations */
+            citations?: string[];
+        };
+        /**
+         * ChatSessionDto
+         * @description Response DTO representing a chat session.
+         */
+        ChatSessionDto: {
+            /** Id */
+            id: number;
+            /** Title */
+            title: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /**
          * CheckInWithCardRequest
@@ -4538,6 +4757,11 @@ export interface components {
             /** Trainee Ids */
             trainee_ids?: number[] | null;
         };
+        /**
+         * MessageRole
+         * @enum {string}
+         */
+        MessageRole: "user" | "assistant" | "system";
         /** MonthlyInvoiceCreate */
         MonthlyInvoiceCreate: {
             /** Month */
@@ -4901,6 +5125,21 @@ export interface components {
             is_active: boolean;
         };
         /**
+         * QuickPromptItem
+         * @description Response DTO for role-adaptive quick question suggestions.
+         */
+        QuickPromptItem: {
+            /** Label */
+            label: string;
+            /** Prompt */
+            prompt: string;
+            /**
+             * Category
+             * @description 'personal' hoặc 'administrative'
+             */
+            category: string;
+        };
+        /**
          * RefreshTokenRequest
          * @description Refresh token request schema
          */
@@ -5072,6 +5311,22 @@ export interface components {
             referenceCode?: string | null;
             /** Description */
             description?: string | null;
+        };
+        /**
+         * SendChatRequest
+         * @description Payload to send a message to the chatbot.
+         */
+        SendChatRequest: {
+            /**
+             * Message
+             * @description Nội dung câu hỏi của người dùng
+             */
+            message: string;
+            /**
+             * Session Id
+             * @description ID phiên trò chuyện (nếu có)
+             */
+            session_id?: number | null;
         };
         /**
          * StudentExerciseStatusDTO
@@ -5340,6 +5595,23 @@ export interface components {
              * @default bearer
              */
             token_type: string;
+        };
+        /**
+         * ToolCallRecord
+         * @description Record of a tool call invoked by the assistant.
+         */
+        ToolCallRecord: {
+            /** Tool Name */
+            tool_name: string;
+            /** Arguments */
+            arguments?: {
+                [key: string]: string | number | boolean;
+            };
+            /**
+             * Execution Status
+             * @default success
+             */
+            execution_status: string;
         };
         /** TraineeSubmitEvaluationRequest */
         TraineeSubmitEvaluationRequest: {
@@ -8230,37 +8502,6 @@ export interface operations {
             };
         };
     };
-    restore_homework_api_v1_homeworks__homework_id__restore_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                homework_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_HomeworkResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     receive_submission_webhook_api_v1_homeworks_webhook_submission_post: {
         parameters: {
             query?: never;
@@ -10286,6 +10527,88 @@ export interface operations {
             };
         };
     };
+    delete_all_read_notifications_api_v1_notifications_read_all_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_int_"];
+                };
+            };
+        };
+    };
+    delete_notification_api_v1_notifications__id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_bool_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    trigger_notifications_housekeeping_api_v1_notifications_housekeeping_post: {
+        parameters: {
+            query?: {
+                retention_days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_int_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_push_public_key_api_v1_notifications_push_public_key_get: {
         parameters: {
             query?: never;
@@ -10388,6 +10711,141 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_TestPushResponseDto_"];
+                };
+            };
+        };
+    };
+    chat_stream_api_v1_chatbot_chat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendChatRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_sessions_api_v1_chatbot_sessions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_list_ChatSessionDto__"];
+                };
+            };
+        };
+    };
+    get_session_messages_api_v1_chatbot_sessions__session_id__messages_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_list_ChatMessageDto__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_session_api_v1_chatbot_sessions__session_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_bool_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_quick_prompts_api_v1_chatbot_quick_prompts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_list_QuickPromptItem__"];
                 };
             };
         };

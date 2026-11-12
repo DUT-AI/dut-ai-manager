@@ -5,7 +5,6 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.homework.domain.entity import SubmissionType
 from app.homework.domain.value_objects import (
-    CodingScoreDetail,
     CodingSubmissionDetails,
     GameSubmissionDetails,
 )

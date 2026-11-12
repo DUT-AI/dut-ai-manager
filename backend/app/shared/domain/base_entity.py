@@ -13,7 +13,7 @@ Supports:
 """
 
 from datetime import UTC, datetime
-from typing import Generic, TypeVar
+from typing import TypeVar
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -23,7 +23,7 @@ from app.shared.domain.uuid_utils import uuid7
 TId = TypeVar("TId")
 
 
-class BaseGenericEntity(BaseModel, Generic[TId]):
+class BaseGenericEntity[TId](BaseModel):
     """Base domain entity with generic primary key and UTC timestamps."""
 
     model_config = ConfigDict(from_attributes=True)

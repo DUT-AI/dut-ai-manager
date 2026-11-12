@@ -22,9 +22,7 @@ import {
     EditOutlined,
     DeleteOutlined,
     CalendarOutlined,
-    TeamOutlined,
     ClockCircleOutlined,
-    AppstoreOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';

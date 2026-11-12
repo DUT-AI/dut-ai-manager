@@ -6,7 +6,7 @@ import type {
   EvaluationResponse,
   MeetingOverallEvaluationResponse,
 } from '../types/meeting.types';
-import { ParticipantRole, ParticipantStatus } from '../types/meeting.types';
+import { ParticipantStatus } from '../types/meeting.types';
 import {
   useMeetingDetail,
   useUpdateParticipantStatus,

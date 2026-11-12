@@ -7,6 +7,15 @@ from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, HTTPException, Query, status
 
 from app.core.deps import CurrentUser
+from app.reminder.application.clean_expired_notifications_use_case import (
+    CleanExpiredNotificationsUseCase,
+)
+from app.reminder.application.delete_all_read_notifications_use_case import (
+    DeleteAllReadNotificationsUseCase,
+)
+from app.reminder.application.delete_notification_use_case import (
+    DeleteNotificationUseCase,
+)
 from app.reminder.application.dtos import (
     NotificationDto,
     PushPublicKeyDto,
@@ -16,15 +25,6 @@ from app.reminder.application.dtos import (
     TriggerReminderScanResponseDto,
     UnreadCountDto,
     UnregisterPushSubscriptionRequestDto,
-)
-from app.reminder.application.clean_expired_notifications_use_case import (
-    CleanExpiredNotificationsUseCase,
-)
-from app.reminder.application.delete_all_read_notifications_use_case import (
-    DeleteAllReadNotificationsUseCase,
-)
-from app.reminder.application.delete_notification_use_case import (
-    DeleteNotificationUseCase,
 )
 from app.reminder.application.get_my_notifications_use_case import (
     GetMyNotificationsUseCase,

@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import type { TablePaginationConfig } from 'antd';
 
 test.describe('useTablePagination specification and contracts', () => {
   test('verifies Constitution Article VIII pagination defaults and props', () => {

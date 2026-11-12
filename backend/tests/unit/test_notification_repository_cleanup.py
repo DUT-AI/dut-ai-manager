@@ -1,8 +1,10 @@
-from datetime import datetime, timedelta, UTC
-import pytest
+from datetime import UTC, datetime, timedelta
+
 from sqlalchemy.orm import Session
 
-from app.reminder.domain.entity import Notification, NotificationCategory, NotificationLevel
+from app.reminder.domain.entity import (
+    Notification,
+)
 from app.reminder.infrastructure.repository import NotificationRepository
 
 

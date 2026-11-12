@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Any, cast
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, contains_eager, joinedload, selectinload
 
 from app.meeting.domain.meeting import Meeting as DomainMeeting

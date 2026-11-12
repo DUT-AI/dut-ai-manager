@@ -16,6 +16,7 @@ from app.api.v1.router import api_v1_router
 from app.auth.providers import AuthModuleProvider
 from app.billing.providers import BillingModuleProvider
 from app.bonus_point.providers import BonusPointModuleProvider
+from app.chatbot.providers import ChatbotModuleProvider
 from app.core.config import settings
 from app.core.events import bootstrap_events
 from app.core.logging_config import setup_logging
@@ -118,6 +119,7 @@ def create_app():
         ZaloModuleProvider(),
         ExpenseModuleProvider(),
         ReminderModuleProvider(),
+        ChatbotModuleProvider(),
     )
     setup_dishka(container, _app)
 

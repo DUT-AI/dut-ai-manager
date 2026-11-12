@@ -22,7 +22,6 @@ import {
   CalendarOutlined,
   WarningOutlined,
   FileDoneOutlined,
-  CheckCircleOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -38,7 +37,6 @@ import { HomeworkOverviewStats } from '../components/HomeworkOverviewStats';
 import { ExerciseCompletionStats } from '../components/ExerciseCompletionStats';
 import { UserSubmissionCategoryView } from '../components/UserSubmissionCategoryView';
 import { SubmissionHistoryModal } from '../components/SubmissionHistoryModal';
-import { DeadlineText } from '../components/DeadlineText';
 
 dayjs.extend(relativeTime);
 dayjs.locale('vi');

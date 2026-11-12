@@ -4,6 +4,7 @@ import type { MenuProps } from 'antd';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import HeaderLayout from '@/components/MainLayout/Header';
+import { FloatingChatButton } from '@/features/chatbot';
 
 // Import cấu hình mới tạo
 import { sidebarMenuConfig } from '@/config/menu';
@@ -203,6 +204,7 @@ const DashboardPage = () => {
                     </div>
                 </Content>
             </Layout>
+            <FloatingChatButton />
             <style>{`
                 .custom-sidebar-menu .ant-menu-item {
                     height: 50px !important;

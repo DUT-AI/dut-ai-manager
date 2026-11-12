@@ -1,7 +1,7 @@
 import { Typography, List, Card, Badge, Button, Empty } from 'antd';
 import { VideoCameraOutlined, UserOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { ParticipantStatus, type MeetingResponse } from '@/features/meeting/types/meeting.types';
+import { type MeetingResponse } from '@/features/meeting/types/meeting.types';
 
 const { Text } = Typography;
 

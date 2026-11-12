@@ -17,6 +17,7 @@ import app.team.infrastructure.model  # noqa: F401
 import app.user.infrastructure.model  # noqa: F401
 import app.user.infrastructure.monthly_stats_model  # noqa: F401
 import app.violation.infrastructure.model  # noqa: F401
+import app.chatbot.infrastructure.models  # noqa: F401
 from alembic import context
 
 # Import settings for database URL

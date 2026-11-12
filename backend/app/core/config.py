@@ -137,6 +137,11 @@ class Settings(BaseSettings):
     QUIZ_WEBHOOK_SECRET: str = ""
     TTS_API_URL: str = ""
 
+    # LLM Chatbot Configuration
+    LLM_BASE_URL: str = "https://llm2.dutai.site/v1"
+    LLM_MODEL: str = "ggml-org/gemma-4-e4b-it-GGUF:Q4_0"
+    LLM_API_KEY: str = ""
+
     @computed_field
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:

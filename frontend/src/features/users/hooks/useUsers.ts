@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { userService } from '@/features/users/services/user.service';
-import type { UserCreate, UserUpdate, UserOptionDto, UserResponse } from '@/features/users/types/user.types';
+import type { UserCreate, UserUpdate, UserResponse } from '@/features/users/types/user.types';
 import type { PaginationMeta } from '@/types/api.types';
 
 // Query Keys

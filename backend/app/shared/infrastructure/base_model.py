@@ -14,8 +14,8 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, func
 from sqlalchemy import UUID as SQLAlchemyUUID
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from app.core.context import get_current_user_id

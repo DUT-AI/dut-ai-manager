@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Button } from 'antd';
+import { Button } from 'antd';
 import { BellOutlined } from '@ant-design/icons';
 import { useWebPush } from '../hooks/useWebPush';
 

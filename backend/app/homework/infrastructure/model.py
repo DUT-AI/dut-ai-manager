@@ -15,17 +15,23 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.homework.domain.value_objects import (
-    CodingSubmissionDetails,
-    GameSubmissionDetails,
-)
 from app.homework.domain.entity import (
     CodingHomeworkSubmission,
     GameHomeworkSubmission,
-    Homework as HomeworkEntity,
-    HomeworkAssignee as HomeworkAssigneeEntity,
-    HomeworkSubmission as HomeworkSubmissionEntity,
     SubmissionType,
+)
+from app.homework.domain.entity import (
+    Homework as HomeworkEntity,
+)
+from app.homework.domain.entity import (
+    HomeworkAssignee as HomeworkAssigneeEntity,
+)
+from app.homework.domain.entity import (
+    HomeworkSubmission as HomeworkSubmissionEntity,
+)
+from app.homework.domain.value_objects import (
+    CodingSubmissionDetails,
+    GameSubmissionDetails,
 )
 from app.shared.infrastructure.base_model import (
     Base,

@@ -15,7 +15,6 @@ import 'dayjs/locale/vi';
 
 import { useAuth } from '@/features/auth';
 import { useMyHomeworks, useUnsubmittedByUser } from '../hooks/useHomeworks';
-import type { Homework } from '../types/homework.types';
 import { HomeworkCard } from '../components';
 
 dayjs.extend(relativeTime);

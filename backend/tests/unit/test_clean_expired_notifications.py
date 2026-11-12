@@ -1,5 +1,6 @@
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
+
 import pytest
 
 from app.reminder.application.clean_expired_notifications_use_case import (

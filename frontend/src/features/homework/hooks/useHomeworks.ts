@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { homeworkService } from '@/features/homework/services/homework.service';
-import type { HomeworkCreate, HomeworkUpdate, HomeworkStatus, Homework } from '@/features/homework/types/homework.types';
+import type { HomeworkCreate, HomeworkUpdate, Homework } from '@/features/homework/types/homework.types';
 import type { PaginationMeta } from '@/types/api.types';
 
 // Query Keys

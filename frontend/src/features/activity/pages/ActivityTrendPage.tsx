@@ -1,16 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Typography,
-    Space,
 } from 'antd';
-import {
-    LineChartOutlined,
-} from '@ant-design/icons';
+
+
 import dayjs from 'dayjs';
 import { reportService } from '@/features/academic-report/services/report.service';
 import type { ActivityTrendItem } from '@/features/academic-report/types/report.types';
 import { motion, type Variants } from 'motion/react';
-import { Agentation } from 'agentation';
 
 import {
     ResponsiveContainer,

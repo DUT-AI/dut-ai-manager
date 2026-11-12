@@ -12,7 +12,6 @@ import {
 import {
     SearchOutlined,
     UserOutlined,
-    CrownOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { reportService } from '@/features/academic-report/services/report.service';
@@ -20,7 +19,6 @@ import type { TitleReportItem } from '@/features/academic-report/types/report.ty
 import { useDebounce } from '@/hooks/useDebounce';
 import { motion, type Variants } from 'motion/react';
 import { TitleBadge } from '@/features/users/components/UserTitleBadge';
-import { Agentation } from 'agentation';
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;

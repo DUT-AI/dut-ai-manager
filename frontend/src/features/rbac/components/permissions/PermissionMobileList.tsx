@@ -1,10 +1,9 @@
 import React from 'react';
-import { List, Card, Tag, Space, Avatar, Typography, Button, Popconfirm } from 'antd';
+import { List, Card, Tag, Avatar, Typography, Button, Popconfirm } from 'antd';
 import {
     UserOutlined,
     EditOutlined,
     DeleteOutlined,
-    InfoCircleOutlined,
 } from '@ant-design/icons';
 import type { PermissionRequestResponse } from '@/features/activity/types/activity.types';
 import { CATEGORY_COLORS, CATEGORY_LABELS } from './constants';

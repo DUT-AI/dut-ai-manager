@@ -4,7 +4,15 @@ Meeting ORM Models — SQLAlchemy 2.0, infrastructure layer.
 
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, String, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -28,7 +36,6 @@ from app.meeting.domain.value_objects import (
 from app.shared.infrastructure.base_model import (
     Base,
     SQLAlchemyAuditTimestampMixin,
-    SQLAlchemyTimestampMixin,
 )
 from app.user.infrastructure.model import UserModel
 

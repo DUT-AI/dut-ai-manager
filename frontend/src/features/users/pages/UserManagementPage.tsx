@@ -1,4 +1,4 @@
-import { useMemo, useReducer, useState } from 'react';
+import { useReducer, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileExcelOutlined, LockOutlined, PlusOutlined, UserOutlined } from '@ant-design/icons';
 import { Button, Card, Grid, message, Space, Typography } from 'antd';
@@ -19,7 +19,7 @@ import {
     UserMobileList,
     UserTable,
 } from '../components';
-import { UserStatus, type UserResponse } from '../types/user.types';
+import { type UserResponse } from '../types/user.types';
 import { useTablePagination } from '@/hooks';
 
 const { Title, Text } = Typography;

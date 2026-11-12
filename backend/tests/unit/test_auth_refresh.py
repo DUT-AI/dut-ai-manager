@@ -66,6 +66,7 @@ def test_refresh_token_invalid_or_expired_raises_401(unauth_client: TestClient):
 def test_refresh_token_inactive_user_raises_401(unauth_client: TestClient, db_session):
     """Khi user bị khóa hoặc inactive, POST /auth/refresh trả về 401."""
     import uuid
+
     from app.user.domain.entity import UserStatus
     from app.user.infrastructure.model import UserModel
 

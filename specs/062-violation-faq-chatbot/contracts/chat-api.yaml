@@ -1,0 +1,237 @@
+openapi: 3.1.0
+info:
+  title: DUT AI Manager - Chatbot Assistant API
+  version: 1.0.0
+  description: API phục vụ giao tiếp đối thoại trợ lý ảo giải đáp vi phạm và hỗ trợ điều hành học vụ
+
+paths:
+  /api/v1/chatbot/chat:
+    post:
+      summary: Gửi tin nhắn và nhận phản hồi dạng SSE Stream
+      description: Nhận câu hỏi từ thành viên hoặc ban quản trị, xác thực quyền hạn, gọi công cụ tra cứu tương ứng và truyền dữ liệu phản hồi dạng Server-Sent Events (SSE).
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendChatRequest'
+      responses:
+        '200':
+          description: Luồng phản hồi Server-Sent Events (SSE)
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: Các sự kiện SSE bao gồm session_created, delta, done, error
+        '400':
+          description: Yêu cầu không hợp lệ
+        '401':
+          description: Chưa xác thực danh tính
+        '429':
+          description: Gửi tin nhắn quá nhanh (Rate limited)
+
+  /api/v1/chatbot/sessions:
+    get:
+      summary: Lấy danh sách các phiên trò chuyện của người dùng
+      description: Trả về danh sách tối đa 5 phiên trò chuyện gần nhất của người dùng hiện tại, sắp xếp theo thời gian cập nhật mới nhất.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Danh sách phiên trò chuyện
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatSessionListResponse'
+
+  /api/v1/chatbot/sessions/{session_id}/messages:
+    get:
+      summary: Lấy lịch sử tin nhắn của một phiên
+      description: Trả về toàn bộ tin nhắn thuộc phiên hội thoại đã chỉ định. Chỉ chủ sở hữu phiên mới có quyền truy cập.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lịch sử tin nhắn của phiên
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatMessageListResponse'
+        '404':
+          description: Phiên trò chuyện không tồn tại hoặc không thuộc quyền sở hữu
+
+  /api/v1/chatbot/sessions/{session_id}:
+    delete:
+      summary: Xóa một phiên trò chuyện
+      description: Xóa phiên trò chuyện và toàn bộ tin nhắn thuộc phiên đó.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Đã xóa thành công phiên hội thoại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseApiResponse'
+
+  /api/v1/chatbot/quick-prompts:
+    get:
+      summary: Lấy danh sách câu hỏi gợi ý nhanh theo vai trò
+      description: Dựa trên quyền hạn của người dùng đăng nhập (Member thông thường hay Admin/Mentor), trả về danh sách các câu hỏi mẫu gợi ý thích ứng.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Danh sách gợi ý nhanh
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuickPromptsResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    SendChatRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: Nội dung câu hỏi của người dùng
+        session_id:
+          type: integer
+          nullable: true
+          description: ID của phiên trò chuyện hiện tại (nếu null, hệ thống sẽ tự động tạo phiên mới theo cơ chế FIFO 5 phiên)
+
+    ChatSessionDto:
+      type: object
+      required:
+        - id
+        - title
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ChatMessageDto:
+      type: object
+      required:
+        - id
+        - session_id
+        - role
+        - content
+        - created_at
+      properties:
+        id:
+          type: integer
+        session_id:
+          type: integer
+        role:
+          type: string
+          enum: [user, assistant, system]
+        content:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    QuickPromptItem:
+      type: object
+      required:
+        - label
+        - prompt
+        - category
+      properties:
+        label:
+          type: string
+          example: "Vi phạm tháng này"
+        prompt:
+          type: string
+          example: "Tóm tắt các vi phạm trong tháng này của tôi"
+        category:
+          type: string
+          enum: [personal, administrative]
+
+    ChatSessionListResponse:
+      type: object
+      required:
+        - is_success
+        - data
+      properties:
+        is_success:
+          type: boolean
+          default: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatSessionDto'
+
+    ChatMessageListResponse:
+      type: object
+      required:
+        - is_success
+        - data
+      properties:
+        is_success:
+          type: boolean
+          default: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatMessageDto'
+
+    QuickPromptsResponse:
+      type: object
+      required:
+        - is_success
+        - data
+      properties:
+        is_success:
+          type: boolean
+          default: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuickPromptItem'
+
+    BaseApiResponse:
+      type: object
+      required:
+        - is_success
+        - message
+      properties:
+        is_success:
+          type: boolean
+        message:
+          type: string

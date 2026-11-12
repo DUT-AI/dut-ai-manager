@@ -15,14 +15,12 @@ import {
   message,
 } from 'antd';
 import {
-  UploadOutlined,
   EyeOutlined,
   CalendarOutlined,
   HistoryOutlined,
   FilterOutlined,
   ExclamationCircleOutlined,
   CarryOutOutlined,
-  PlusOutlined,
   EditOutlined,
   DeleteOutlined,
   UndoOutlined,

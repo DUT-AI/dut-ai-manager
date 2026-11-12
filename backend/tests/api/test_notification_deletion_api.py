@@ -1,6 +1,8 @@
-from datetime import UTC, datetime, timedelta
-import pytest
-from app.reminder.domain.entity import Notification, NotificationCategory, NotificationLevel
+from datetime import UTC, datetime
+
+from app.reminder.domain.entity import (
+    Notification,
+)
 from app.reminder.infrastructure.repository import NotificationRepository
 
 

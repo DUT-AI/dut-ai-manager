@@ -14,8 +14,6 @@ import { motion, type Variants } from "motion/react";
 import { useState } from "react";
 import { reportService } from "../features/academic-report/services/report.service";
 import { useAuth } from "../features/auth/context/AuthContext";
-import { userService } from "../features/users/services/user.service";
-import type { UserResponse } from "../features/users/types/user.types";
 
 const { Title, Text } = Typography;
 

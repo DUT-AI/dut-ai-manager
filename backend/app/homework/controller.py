@@ -35,7 +35,6 @@ from app.homework.application.dtos import (
 from app.homework.infrastructure.homework_assignee_repository import (
     HomeworkAssigneeRepository,
 )
-from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.shared.application.pagination import PaginationParams
 from app.shared.application.response import ApiResponse, PaginationMeta
 

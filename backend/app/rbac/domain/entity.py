@@ -10,7 +10,6 @@ from typing import Optional
 from app.shared.domain.base_entity import (
     BaseAuditEntity,
     BaseEntity,
-    BaseGenericEntity,
 )
 
 

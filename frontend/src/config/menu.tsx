@@ -22,6 +22,7 @@ import {
     ScheduleOutlined,
     CarryOutOutlined,
     BellOutlined,
+    RobotOutlined,
 } from '@ant-design/icons';
 
 // Định nghĩa kiểu dữ liệu cho một item trong menu để hỗ trợ phân quyền sau này
@@ -39,6 +40,12 @@ export const sidebarMenuConfig: MenuItemConfig[] = [
         icon: <DashboardOutlined />,
         label: 'Tổng quan',
         path: '/dashboard',
+    },
+    {
+        key: 'assistant',
+        icon: <RobotOutlined />,
+        label: 'Trợ lý DUT AI',
+        path: '/dashboard/assistant',
     },
     {
         key: 'academic_reports',
