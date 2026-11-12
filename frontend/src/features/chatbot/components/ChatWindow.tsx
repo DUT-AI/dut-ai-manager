@@ -2,35 +2,35 @@ import React from "react";
 import { Chat } from "./ai-elements/Chat";
 import { PromptInput } from "./ai-elements/PromptInput";
 import { Suggestion } from "./ai-elements/Suggestion";
-import type { ChatMessage, QuickPromptItem } from "../types/chatbot.types";
 import { AlertCircleIcon } from "lucide-react";
+import { useChatbot } from "../hooks/useChatbot";
 
-interface ChatWindowProps {
-  messages: ChatMessage[];
-  input: string;
-  onChangeInput: (val: string) => void;
-  onSendMessage: (override?: string) => void;
-  isStreaming: boolean;
-  streamingText?: string;
-  streamingReasoning?: string;
-  activeTools?: Array<{ name: string; status: string; iteration: number }>;
-  errorMessage?: string | null;
-  onClearError?: () => void;
-  quickPrompts?: QuickPromptItem[];
+export interface ChatWindowProps {
+  sessionId?: number | null;
+  onSessionCreated?: (sessionId: number) => void;
 }
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({
-  messages,
-  input,
-  onChangeInput,
-  onSendMessage,
-  isStreaming,
-  streamingText,
-  streamingReasoning,
-  activeTools,
-  errorMessage,
-  quickPrompts = [],
+  sessionId,
+  onSessionCreated,
 }) => {
+  const {
+    messages,
+    input,
+    setInput,
+    sendMessage,
+    isStreaming,
+    streamingText,
+    streamingReasoning,
+    activeTools,
+    errorMessage,
+    setErrorMessage,
+    quickPrompts,
+  } = useChatbot({
+    sessionId,
+    onSessionCreated,
+  });
+
   return (
     <div className="flex flex-col flex-1 h-full min-h-0 bg-background text-foreground">
       {/* Messages Scroll Viewport */}
@@ -59,7 +59,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           {messages.length <= 2 && quickPrompts.length > 0 && (
             <Suggestion
               prompts={quickPrompts}
-              onSelectPrompt={(text) => onSendMessage(text)}
+              onSelectPrompt={(text) => sendMessage(text)}
               disabled={isStreaming}
             />
           )}
@@ -67,8 +67,8 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           {/* Agentic Prompt Input */}
           <PromptInput
             value={input}
-            onChange={onChangeInput}
-            onSubmit={() => onSendMessage()}
+            onChange={setInput}
+            onSubmit={() => sendMessage()}
             isLoading={isStreaming}
           />
         </div>

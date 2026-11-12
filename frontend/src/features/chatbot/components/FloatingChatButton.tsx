@@ -2,24 +2,10 @@ import React, { useState } from 'react';
 import { BotIcon, XIcon, Maximize2Icon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ChatWindow } from './ChatWindow';
-import { useChatbot } from '../hooks/useChatbot';
 
 export const FloatingChatButton: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
-
-  const {
-    messages,
-    input,
-    setInput,
-    isStreaming,
-    streamingText,
-    streamingReasoning,
-    errorMessage,
-    setErrorMessage,
-    quickPrompts,
-    sendMessage,
-  } = useChatbot();
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
@@ -63,18 +49,7 @@ export const FloatingChatButton: React.FC = () => {
 
           {/* Chat Window content */}
           <div className="flex-1 flex flex-col min-h-0">
-            <ChatWindow
-              messages={messages}
-              input={input}
-              onChangeInput={setInput}
-              onSendMessage={sendMessage}
-              isStreaming={isStreaming}
-              streamingText={streamingText}
-              streamingReasoning={streamingReasoning}
-              errorMessage={errorMessage}
-              onClearError={() => setErrorMessage(null)}
-              quickPrompts={quickPrompts}
-            />
+            <ChatWindow />
           </div>
         </div>
       )}
@@ -83,19 +58,13 @@ export const FloatingChatButton: React.FC = () => {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="group relative flex h-14 w-14 items-center justify-center rounded-full bg-primary hover:bg-primary/95 text-primary-foreground shadow-xl hover:shadow-primary/25 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
-        title="Trợ lý DUT AI"
+        className="flex size-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-xl hover:bg-primary/90 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer group focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        aria-label={isOpen ? 'Đóng cửa sổ trò chuyện' : 'Mở trợ lý ảo'}
       >
         {isOpen ? (
-          <XIcon className="size-6" />
+          <XIcon className="size-6 transition-transform group-hover:rotate-90 duration-200" />
         ) : (
-          <>
-            <BotIcon className="size-6" />
-            <span className="absolute -top-1 -right-1 flex h-4 w-4">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500" />
-            </span>
-          </>
+          <BotIcon className="size-6 animate-pulse" />
         )}
       </button>
     </div>

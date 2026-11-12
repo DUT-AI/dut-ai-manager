@@ -6,26 +6,10 @@ import {
   DeleteSessionDialog,
 } from '../components';
 import { useChatSessions } from '../hooks/useChatSessions';
-import { useChatbot } from '../hooks/useChatbot';
 
 export const ChatbotPage: React.FC = () => {
   const { sessions, deleteSession, isDeleting } = useChatSessions();
-  const {
-    sessionId,
-    messages,
-    input,
-    setInput,
-    isStreaming,
-    streamingText,
-    streamingReasoning,
-    activeTools,
-    errorMessage,
-    setErrorMessage,
-    quickPrompts,
-    sendMessage,
-    startNewChat,
-    selectSession,
-  } = useChatbot();
+  const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
 
   // Sidebar collapsible state: default open on desktop
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -41,8 +25,8 @@ export const ChatbotPage: React.FC = () => {
     if (!deletingSessionId) return;
     try {
       await deleteSession(deletingSessionId);
-      if (sessionId === deletingSessionId) {
-        startNewChat();
+      if (activeSessionId === deletingSessionId) {
+        setActiveSessionId(null);
       }
     } catch {
       // error handled in mutation
@@ -56,18 +40,18 @@ export const ChatbotPage: React.FC = () => {
       {/* Collapsible Left Sidebar */}
       <ChatSessionSidebar
         sessions={sessions}
-        activeSessionId={sessionId}
+        activeSessionId={activeSessionId}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
         onSelectSession={(id) => {
-          selectSession(id);
+          setActiveSessionId(id);
           // On mobile, automatically close sidebar after choosing a session
           if (window.innerWidth < 1024) {
             setIsSidebarOpen(false);
           }
         }}
         onNewChat={() => {
-          startNewChat();
+          setActiveSessionId(null);
           if (window.innerWidth < 1024) {
             setIsSidebarOpen(false);
           }
@@ -81,22 +65,13 @@ export const ChatbotPage: React.FC = () => {
         <ChatHeader
           isSidebarOpen={isSidebarOpen}
           onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
-          onNewChat={startNewChat}
+          onNewChat={() => setActiveSessionId(null)}
         />
 
-        {/* Chat Window */}
+        {/* Chat Window encapsulates its own useChatbot hook */}
         <ChatWindow
-          messages={messages}
-          input={input}
-          onChangeInput={setInput}
-          onSendMessage={sendMessage}
-          isStreaming={isStreaming}
-          streamingText={streamingText}
-          streamingReasoning={streamingReasoning}
-          activeTools={activeTools}
-          errorMessage={errorMessage}
-          onClearError={() => setErrorMessage(null)}
-          quickPrompts={quickPrompts}
+          sessionId={activeSessionId}
+          onSessionCreated={(newId) => setActiveSessionId(newId)}
         />
       </main>
 

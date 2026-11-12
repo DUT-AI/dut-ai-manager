@@ -1,90 +1,292 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useReducer, useState, useEffect, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { chatbotService } from '../services/chatbot.service';
 import { CHAT_SESSIONS_QUERY_KEY } from './useChatSessions';
 import type { ActiveStreamingTool, ChatMessage, QuickPromptItem } from '../types/chatbot.types';
 
-export function useChatbot(initialSessionId?: number | null) {
+export interface ChatbotState {
+  sessionId: number | null;
+  messages: ChatMessage[];
+  isStreaming: boolean;
+  streamingText: string;
+  streamingReasoning: string;
+  activeTools: ActiveStreamingTool[];
+  currentIteration: number;
+  errorMessage: string | null;
+  quickPrompts: QuickPromptItem[];
+}
+
+export type ChatbotAction =
+  | { type: 'SET_QUICK_PROMPTS'; payload: QuickPromptItem[] }
+  | { type: 'SYNC_SESSION_ID'; payload: number | null }
+  | { type: 'LOAD_MESSAGES_SUCCESS'; payload: { sessionId: number; messages: ChatMessage[] } }
+  | { type: 'LOAD_MESSAGES_ERROR'; payload: string }
+  | { type: 'START_NEW_CHAT' }
+  | { type: 'SELECT_SESSION'; payload: number }
+  | { type: 'SEND_MESSAGE_START'; payload: { userMessage: ChatMessage } }
+  | { type: 'SESSION_CREATED'; payload: number }
+  | { type: 'ITERATION_STEP'; payload: number }
+  | { type: 'TOOL_CALL_START'; payload: { name: string; iteration: number } }
+  | {
+      type: 'TOOL_CALL_END';
+      payload: { name: string; iteration: number; status: ActiveStreamingTool['status'] };
+    }
+  | { type: 'APPEND_REASONING'; payload: string }
+  | { type: 'APPEND_CHUNK'; payload: string }
+  | {
+      type: 'STREAMING_DONE';
+      payload: { messages?: ChatMessage[]; fallbackMessage?: ChatMessage };
+    }
+  | { type: 'STREAMING_ERROR'; payload: string }
+  | { type: 'SET_ERROR_MESSAGE'; payload: string | null };
+
+export function chatbotReducer(state: ChatbotState, action: ChatbotAction): ChatbotState {
+  switch (action.type) {
+    case 'SET_QUICK_PROMPTS':
+      return {
+        ...state,
+        quickPrompts: action.payload,
+      };
+
+    case 'SYNC_SESSION_ID':
+      if (state.sessionId === action.payload) return state;
+      return {
+        ...state,
+        sessionId: action.payload,
+        messages: action.payload === null ? [] : state.messages,
+        streamingText: '',
+        streamingReasoning: '',
+        activeTools: [],
+        currentIteration: 0,
+        errorMessage: null,
+        isStreaming: false,
+      };
+
+    case 'LOAD_MESSAGES_SUCCESS':
+      if (state.sessionId !== action.payload.sessionId) return state;
+      return {
+        ...state,
+        messages: action.payload.messages,
+        errorMessage: null,
+      };
+
+    case 'LOAD_MESSAGES_ERROR':
+      return {
+        ...state,
+        errorMessage: action.payload,
+      };
+
+    case 'START_NEW_CHAT':
+      return {
+        ...state,
+        sessionId: null,
+        messages: [],
+        streamingText: '',
+        streamingReasoning: '',
+        activeTools: [],
+        currentIteration: 0,
+        errorMessage: null,
+        isStreaming: false,
+      };
+
+    case 'SELECT_SESSION':
+      return {
+        ...state,
+        sessionId: action.payload,
+        streamingText: '',
+        streamingReasoning: '',
+        activeTools: [],
+        currentIteration: 0,
+        errorMessage: null,
+        isStreaming: false,
+      };
+
+    case 'SEND_MESSAGE_START':
+      return {
+        ...state,
+        messages: [...state.messages, action.payload.userMessage],
+        isStreaming: true,
+        streamingText: '',
+        streamingReasoning: '',
+        activeTools: [],
+        currentIteration: 0,
+        errorMessage: null,
+      };
+
+    case 'SESSION_CREATED':
+      return {
+        ...state,
+        sessionId: action.payload,
+      };
+
+    case 'ITERATION_STEP':
+      return {
+        ...state,
+        currentIteration: action.payload,
+      };
+
+    case 'TOOL_CALL_START':
+      return {
+        ...state,
+        activeTools: [
+          ...state.activeTools,
+          {
+            name: action.payload.name,
+            status: 'running',
+            iteration: action.payload.iteration,
+          },
+        ],
+      };
+
+    case 'TOOL_CALL_END':
+      return {
+        ...state,
+        activeTools: state.activeTools.map((t) =>
+          t.name === action.payload.name && t.iteration === action.payload.iteration
+            ? { ...t, status: action.payload.status }
+            : t
+        ),
+      };
+
+    case 'APPEND_REASONING':
+      return {
+        ...state,
+        streamingReasoning: state.streamingReasoning + action.payload,
+      };
+
+    case 'APPEND_CHUNK':
+      return {
+        ...state,
+        streamingText: state.streamingText + action.payload,
+      };
+
+    case 'STREAMING_DONE':
+      return {
+        ...state,
+        isStreaming: false,
+        streamingText: '',
+        streamingReasoning: '',
+        activeTools: [],
+        currentIteration: 0,
+        messages:
+          action.payload.messages !== undefined
+            ? action.payload.messages
+            : action.payload.fallbackMessage
+              ? [...state.messages, action.payload.fallbackMessage]
+              : state.messages,
+      };
+
+    case 'STREAMING_ERROR':
+      return {
+        ...state,
+        isStreaming: false,
+        errorMessage: action.payload,
+      };
+
+    case 'SET_ERROR_MESSAGE':
+      return {
+        ...state,
+        errorMessage: action.payload,
+      };
+
+    default:
+      return state;
+  }
+}
+
+export interface UseChatbotOptions {
+  sessionId?: number | null;
+  onSessionCreated?: (sessionId: number) => void;
+}
+
+export function useChatbot(options: UseChatbotOptions = {}) {
+  const { sessionId: externalSessionId = null, onSessionCreated } = options;
   const queryClient = useQueryClient();
-  const [sessionId, setSessionId] = useState<number | null>(initialSessionId || null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [streamingText, setStreamingText] = useState('');
-  const [streamingReasoning, setStreamingReasoning] = useState('');
-  const [activeTools, setActiveTools] = useState<ActiveStreamingTool[]>([]);
-  const [currentIteration, setCurrentIteration] = useState<number>(0);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [quickPrompts, setQuickPrompts] = useState<QuickPromptItem[]>([]);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  const [state, dispatch] = useReducer(chatbotReducer, {
+    sessionId: externalSessionId,
+    messages: [],
+    isStreaming: false,
+    streamingText: '',
+    streamingReasoning: '',
+    activeTools: [],
+    currentIteration: 0,
+    errorMessage: null,
+    quickPrompts: [],
+  });
+
+  // Sync state if external sessionId changes (e.g. from Sidebar selection or Start New Chat)
+  useEffect(() => {
+    dispatch({ type: 'SYNC_SESSION_ID', payload: externalSessionId });
+  }, [externalSessionId]);
 
   // Fetch quick prompts on mount
   useEffect(() => {
     chatbotService
       .getQuickPrompts()
-      .then((data) => setQuickPrompts(data))
+      .then((data) => dispatch({ type: 'SET_QUICK_PROMPTS', payload: data }))
       .catch(() => {});
   }, []);
 
+  // Fetch session history when sessionId changes
   useEffect(() => {
-    if (!sessionId) return;
+    if (!state.sessionId) return;
     let isCancelled = false;
+    const currentId = state.sessionId;
+
     chatbotService
-      .getSessionMessages(sessionId)
+      .getSessionMessages(currentId)
       .then((msgs) => {
         if (!isCancelled) {
-          setMessages(msgs);
-          setErrorMessage(null);
+          dispatch({
+            type: 'LOAD_MESSAGES_SUCCESS',
+            payload: { sessionId: currentId, messages: msgs },
+          });
         }
       })
       .catch(() => {
         if (!isCancelled) {
-          setErrorMessage('Không thể tải lịch sử trò chuyện.');
+          dispatch({
+            type: 'LOAD_MESSAGES_ERROR',
+            payload: 'Không thể tải lịch sử trò chuyện.',
+          });
         }
       });
+
     return () => {
       isCancelled = true;
     };
-  }, [sessionId]);
+  }, [state.sessionId]);
 
   const startNewChat = useCallback(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
-    setSessionId(null);
-    setMessages([]);
-    setStreamingText('');
-    setStreamingReasoning('');
-    setActiveTools([]);
-    setCurrentIteration(0);
-    setErrorMessage(null);
-    setIsStreaming(false);
+    dispatch({ type: 'START_NEW_CHAT' });
   }, []);
 
   const selectSession = useCallback((id: number) => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
-    setSessionId(id);
-    setStreamingText('');
-    setStreamingReasoning('');
-    setActiveTools([]);
-    setCurrentIteration(0);
-    setErrorMessage(null);
-    setIsStreaming(false);
+    dispatch({ type: 'SELECT_SESSION', payload: id });
+  }, []);
+
+  const setErrorMessage = useCallback((msg: string | null) => {
+    dispatch({ type: 'SET_ERROR_MESSAGE', payload: msg });
   }, []);
 
   const sendMessage = useCallback(
     async (promptOverride?: string) => {
       const text = (promptOverride || input).trim();
-      if (!text || isStreaming) return;
-
-      setErrorMessage(null);
+      if (!text || state.isStreaming) return;
 
       // Optimistically add user message
       const userMessage: ChatMessage = {
         id: Date.now(),
-        session_id: sessionId || 0,
+        session_id: state.sessionId || 0,
         role: 'user',
         content: text,
         metadata_info: {
@@ -92,18 +294,14 @@ export function useChatbot(initialSessionId?: number | null) {
         },
         created_at: new Date().toISOString(),
       };
-      setMessages((prev) => [...prev, userMessage]);
+
       setInput('');
-      setIsStreaming(true);
-      setStreamingText('');
-      setStreamingReasoning('');
-      setActiveTools([]);
-      setCurrentIteration(0);
+      dispatch({ type: 'SEND_MESSAGE_START', payload: { userMessage } });
 
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
-      let currentSessionId = sessionId;
+      let currentSessionId = state.sessionId;
 
       await chatbotService.streamChat(
         {
@@ -113,85 +311,89 @@ export function useChatbot(initialSessionId?: number | null) {
         {
           onSessionCreated: (newSess) => {
             currentSessionId = newSess.id;
-            setSessionId(newSess.id);
+            dispatch({ type: 'SESSION_CREATED', payload: newSess.id });
+            if (onSessionCreated) {
+              onSessionCreated(newSess.id);
+            }
             queryClient.invalidateQueries({ queryKey: CHAT_SESSIONS_QUERY_KEY });
           },
           onIterationStep: (step) => {
-            setCurrentIteration(step.iteration);
+            dispatch({ type: 'ITERATION_STEP', payload: step.iteration });
           },
           onToolCallStart: (tool) => {
-            setActiveTools((prev) => [
-              ...prev,
-              { name: tool.name, status: 'running', iteration: tool.iteration },
-            ]);
+            dispatch({
+              type: 'TOOL_CALL_START',
+              payload: { name: tool.name, iteration: tool.iteration },
+            });
           },
           onToolCallEnd: (tool) => {
-            setActiveTools((prev) =>
-              prev.map((t) =>
-                t.name === tool.name && t.iteration === tool.iteration
-                  ? { ...t, status: tool.status as ActiveStreamingTool['status'] }
-                  : t
-              )
-            );
+            dispatch({
+              type: 'TOOL_CALL_END',
+              payload: {
+                name: tool.name,
+                iteration: tool.iteration,
+                status: tool.status as ActiveStreamingTool['status'],
+              },
+            });
           },
           onReasoning: (chunk) => {
-            setStreamingReasoning((prev) => prev + chunk);
+            dispatch({ type: 'APPEND_REASONING', payload: chunk });
           },
           onChunk: (chunk) => {
-            setStreamingText((prev) => prev + chunk);
+            dispatch({ type: 'APPEND_CHUNK', payload: chunk });
           },
           onDone: (fullText) => {
-            setIsStreaming(false);
-            setStreamingText('');
-            setStreamingReasoning('');
-            setActiveTools([]);
-            setCurrentIteration(0);
-            // Reload canonical persisted messages from server to sync metadata and IDs
             if (currentSessionId) {
               chatbotService.getSessionMessages(currentSessionId).then((serverMsgs) => {
-                setMessages(serverMsgs);
+                dispatch({
+                  type: 'STREAMING_DONE',
+                  payload: { messages: serverMsgs },
+                });
               });
               queryClient.invalidateQueries({ queryKey: CHAT_SESSIONS_QUERY_KEY });
             } else {
-              setMessages((prev) => [
-                ...prev,
-                {
-                  id: Date.now() + 1,
-                  session_id: 0,
-                  role: 'assistant',
-                  content: fullText,
-                  metadata_info: {
-                    model_name: 'ggml-org/gemma-4-e4b-it-GGUF:Q4_0',
-                  },
-                  created_at: new Date().toISOString(),
+              const fallback: ChatMessage = {
+                id: Date.now() + 1,
+                session_id: 0,
+                role: 'assistant',
+                content: fullText,
+                metadata_info: {
+                  model_name: 'ggml-org/gemma-4-e4b-it-GGUF:Q4_0',
                 },
-              ]);
+                created_at: new Date().toISOString(),
+              };
+              dispatch({
+                type: 'STREAMING_DONE',
+                payload: { fallbackMessage: fallback },
+              });
             }
           },
           onError: (err) => {
-            setIsStreaming(false);
-            setErrorMessage(err || 'Đã có lỗi xảy ra trong quá trình nhận phản hồi.');
+            dispatch({
+              type: 'STREAMING_ERROR',
+              payload: err || 'Đã có lỗi xảy ra trong quá trình nhận phản hồi.',
+            });
           },
         },
         controller.signal
       );
     },
-    [input, isStreaming, sessionId, queryClient]
+    [input, state.isStreaming, state.sessionId, onSessionCreated, queryClient]
   );
 
   return {
-    sessionId,
-    messages,
+    sessionId: state.sessionId,
+    messages: state.messages,
     input,
     setInput,
-    isStreaming,
-    streamingText,
-    streamingReasoning,
-    activeTools,
-    currentIteration,
-    errorMessage,
+    isStreaming: state.isStreaming,
+    streamingText: state.streamingText,
+    streamingReasoning: state.streamingReasoning,
+    activeTools: state.activeTools,
+    currentIteration: state.currentIteration,
+    errorMessage: state.errorMessage,
     setErrorMessage,
-    quickPrompts,
+    quickPrompts: state.quickPrompts,
     sendMessage,
     startNewChat,
     selectSession,
