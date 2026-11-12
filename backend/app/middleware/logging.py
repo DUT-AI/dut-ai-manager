@@ -29,10 +29,6 @@ async def logging_middleware(request: Request, call_next):
                 if body_bytes:
                     body = body_bytes.decode("utf-8")
 
-                    async def receive():
-                        return {"type": "http.request", "body": body_bytes}
-
-                    request._receive = receive
             except Exception:  # pylint: disable=broad-exception-caught
                 body = "<Could not read body>"
 
