@@ -10,12 +10,14 @@ interface MessageProps {
   message: ChatMessage;
   isStreaming?: boolean;
   streamingReasoning?: string;
+  activeTools?: Array<{ name: string; status: string; iteration: number }>;
 }
 
 export const MessageItem: React.FC<MessageProps> = ({
   message,
   isStreaming,
   streamingReasoning,
+  activeTools,
 }) => {
   const isUser = message.role === "user";
   const reasoning = streamingReasoning || message.metadata_info?.reasoning_content;
@@ -52,6 +54,25 @@ export const MessageItem: React.FC<MessageProps> = ({
         {/* Tool Call Trace */}
         {message.metadata_info?.tools_invoked && (
           <ToolTrace tools={message.metadata_info.tools_invoked} />
+        )}
+
+        {/* Live Active Streaming Tools Trace */}
+        {isStreaming && activeTools && activeTools.length > 0 && (
+          <div className="flex flex-col gap-1 w-full">
+            {activeTools.map((t, idx) => (
+              <ToolTrace
+                key={`${t.name}-${t.iteration}-${idx}`}
+                tools={[
+                  {
+                    tool_name: t.name,
+                    arguments: {},
+                    execution_status: t.status,
+                  },
+                ]}
+                isExecuting={t.status === 'running'}
+              />
+            ))}
+          </div>
         )}
 
         {/* Main Response Markdown */}

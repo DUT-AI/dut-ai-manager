@@ -7,23 +7,17 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.chatbot.infrastructure.tools.admin.meeting_absentees import (
-    AdminGetMeetingAbsenteesTool,
-)
-from app.chatbot.infrastructure.tools.admin.summarize_violations import (
-    AdminSummarizeViolationsTool,
-)
-from app.chatbot.infrastructure.tools.admin.unsubmitted_homeworks import (
-    AdminGetUnsubmittedHomeworksTool,
-)
-from app.chatbot.infrastructure.tools.base import BaseChatbotTool
-from app.chatbot.infrastructure.tools.personal.inspect_entities import (
-    InspectEntityRecordsTool,
-)
-from app.chatbot.infrastructure.tools.personal.my_violations import GetMyViolationsTool
-from app.chatbot.infrastructure.tools.personal.violation_policies import (
+
+from app.chatbot.infrastructure.tools import (
+    BaseChatbotTool,
+    DbGetTableSchemaTool,
+    DbGetTableRelationshipsTool,
     GetViolationPoliciesTool,
+    DbListTablesTool,
+    GetMyViolationsTool,
+    DbExecuteQueryTool
 )
+
 from app.core.principal import AuthPrincipal
 
 
@@ -50,11 +44,11 @@ class ChatbotToolRegistry:
         """Register the built-in system tools."""
         default_tools: list[BaseChatbotTool] = [
             GetMyViolationsTool(),
-            InspectEntityRecordsTool(),
             GetViolationPoliciesTool(),
-            AdminSummarizeViolationsTool(),
-            AdminGetUnsubmittedHomeworksTool(),
-            AdminGetMeetingAbsenteesTool(),
+            DbListTablesTool(),
+            DbGetTableSchemaTool(),
+            DbGetTableRelationshipsTool(),
+            DbExecuteQueryTool(),
         ]
         for tool in default_tools:
             self.register(tool)
@@ -94,4 +88,10 @@ class ChatbotToolRegistry:
         if not tool.is_allowed(user):
             return {"error": "Bạn không có quyền truy cập dữ liệu từ công cụ này."}
 
-        return tool.execute(self.session, args, user)
+        try:
+            with self.session.begin_nested():
+                return tool.execute(self.session, args, user)
+        except Exception as ex:
+            return {
+                "error": f"Lỗi trong quá trình thực thi công cụ '{tool_name}': {str(ex)}"
+            }

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { chatbotService } from '../services/chatbot.service';
 import { CHAT_SESSIONS_QUERY_KEY } from './useChatSessions';
-import type { ChatMessage, QuickPromptItem } from '../types/chatbot.types';
+import type { ActiveStreamingTool, ChatMessage, QuickPromptItem } from '../types/chatbot.types';
 
 export function useChatbot(initialSessionId?: number | null) {
   const queryClient = useQueryClient();
@@ -12,6 +12,8 @@ export function useChatbot(initialSessionId?: number | null) {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   const [streamingReasoning, setStreamingReasoning] = useState('');
+  const [activeTools, setActiveTools] = useState<ActiveStreamingTool[]>([]);
+  const [currentIteration, setCurrentIteration] = useState<number>(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [quickPrompts, setQuickPrompts] = useState<QuickPromptItem[]>([]);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -53,6 +55,8 @@ export function useChatbot(initialSessionId?: number | null) {
     setMessages([]);
     setStreamingText('');
     setStreamingReasoning('');
+    setActiveTools([]);
+    setCurrentIteration(0);
     setErrorMessage(null);
     setIsStreaming(false);
   }, []);
@@ -64,6 +68,8 @@ export function useChatbot(initialSessionId?: number | null) {
     setSessionId(id);
     setStreamingText('');
     setStreamingReasoning('');
+    setActiveTools([]);
+    setCurrentIteration(0);
     setErrorMessage(null);
     setIsStreaming(false);
   }, []);
@@ -91,6 +97,8 @@ export function useChatbot(initialSessionId?: number | null) {
       setIsStreaming(true);
       setStreamingText('');
       setStreamingReasoning('');
+      setActiveTools([]);
+      setCurrentIteration(0);
 
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -108,6 +116,24 @@ export function useChatbot(initialSessionId?: number | null) {
             setSessionId(newSess.id);
             queryClient.invalidateQueries({ queryKey: CHAT_SESSIONS_QUERY_KEY });
           },
+          onIterationStep: (step) => {
+            setCurrentIteration(step.iteration);
+          },
+          onToolCallStart: (tool) => {
+            setActiveTools((prev) => [
+              ...prev,
+              { name: tool.name, status: 'running', iteration: tool.iteration },
+            ]);
+          },
+          onToolCallEnd: (tool) => {
+            setActiveTools((prev) =>
+              prev.map((t) =>
+                t.name === tool.name && t.iteration === tool.iteration
+                  ? { ...t, status: tool.status as ActiveStreamingTool['status'] }
+                  : t
+              )
+            );
+          },
           onReasoning: (chunk) => {
             setStreamingReasoning((prev) => prev + chunk);
           },
@@ -118,6 +144,8 @@ export function useChatbot(initialSessionId?: number | null) {
             setIsStreaming(false);
             setStreamingText('');
             setStreamingReasoning('');
+            setActiveTools([]);
+            setCurrentIteration(0);
             // Reload canonical persisted messages from server to sync metadata and IDs
             if (currentSessionId) {
               chatbotService.getSessionMessages(currentSessionId).then((serverMsgs) => {
@@ -159,6 +187,8 @@ export function useChatbot(initialSessionId?: number | null) {
     isStreaming,
     streamingText,
     streamingReasoning,
+    activeTools,
+    currentIteration,
     errorMessage,
     setErrorMessage,
     quickPrompts,

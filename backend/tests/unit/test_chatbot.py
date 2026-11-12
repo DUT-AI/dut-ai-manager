@@ -1,5 +1,7 @@
 """Unit tests for Chatbot domain, repository FIFO pruning, and tool RBAC security."""
 
+import pytest
+
 from app.chatbot.domain.entity import ChatSession
 from app.chatbot.infrastructure.repository import ChatRepository
 from app.chatbot.infrastructure.tools_registry import ChatbotToolRegistry
@@ -50,7 +52,7 @@ def test_chat_repository_fifo_pruning(db_session, mock_current_user):
 
 
 def test_chatbot_tools_rbac_security(db_session):
-    """Verify that regular member cannot execute admin tools."""
+    """Verify that regular member cannot execute admin database tools."""
     registry = ChatbotToolRegistry(db_session)
 
     # 1. Normal member without admin permissions
@@ -65,10 +67,11 @@ def test_chatbot_tools_rbac_security(db_session):
     tool_names = [t["function"]["name"] for t in member_tools]
     assert "get_my_violations" in tool_names
     assert "get_violation_policies" in tool_names
-    assert "admin_summarize_violations" not in tool_names
+    assert "db_execute_query" not in tool_names
+    assert "db_list_tables" not in tool_names
 
     # Trying to execute admin tool anyway should be blocked
-    res = registry.execute_tool("admin_summarize_violations", {}, member)
+    res = registry.execute_tool("db_execute_query", {"query": "SELECT * FROM users"}, member)
     assert "error" in res
 
     # 2. Admin with ViolationPermission.READ
@@ -81,7 +84,8 @@ def test_chatbot_tools_rbac_security(db_session):
     )
     admin_tools = registry.get_tool_definitions(admin)
     admin_tool_names = [t["function"]["name"] for t in admin_tools]
-    assert "admin_summarize_violations" in admin_tool_names
+    assert "db_execute_query" in admin_tool_names
+    assert "db_list_tables" in admin_tool_names
 
 
 def test_custom_tool_extensibility(db_session):
@@ -121,96 +125,236 @@ def test_custom_tool_extensibility(db_session):
     assert result == {"city": "Hue", "status": "Sunny"}
 
 
-def test_admin_get_meeting_absentees_returns_user_details(db_session, mock_current_user):
-    """Verify AdminGetMeetingAbsenteesTool returns full user details (name, email) instead of raw IDs."""
-    from app.core.permissions import MeetingPermission
-    from app.meeting.domain.value_objects import ParticipantStatus
-    from app.meeting.infrastructure.model import Meeting, MeetingParticipant
-    from app.chatbot.infrastructure.tools.admin.meeting_absentees import AdminGetMeetingAbsenteesTool
-    from datetime import datetime, UTC
+@pytest.mark.asyncio
+async def test_agent_loop_multi_step_tool_chaining(db_session, mock_current_user):
+    """Verify that SendChatMessageUseCase executes multiple tool turns (Agent Loop) in a single message."""
+    from collections.abc import AsyncGenerator
+    from typing import Any
+    from app.chatbot.application.send_chat_message_use_case import SendChatMessageUseCase
+    from app.chatbot.domain.value_objects import ToolCallRecord
 
-    # Setup meeting and participant
-    meeting = Meeting(
-        title="Test Sinh Hoạt",
-        start_time=datetime.now(UTC),
-        end_time=datetime.now(UTC),
-        evaluation_deadline=datetime.now(UTC),
-    )
-    db_session.add(meeting)
-    db_session.flush()
+    class MockMultiStepLLMClient:
+        model = "mock-model"
 
-    participant = MeetingParticipant(
-        meeting_id=meeting.id,
-        user_id=mock_current_user.id,
-        status=ParticipantStatus.ABSENT_UNEXCUSED.value,
-        role="MEMBER",
+        def __init__(self):
+            self.call_count = 0
+
+        async def stream_chat(
+            self, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None, **kwargs
+        ) -> AsyncGenerator[dict[str, Any], None]:
+            self.call_count += 1
+            if self.call_count == 1:
+                # First turn: model decides to call tool 1
+                yield {"type": "reasoning", "data": "Checking tool 1..."}
+                yield {
+                    "type": "tool_calls_complete",
+                    "data": [
+                        {
+                            "id": "call_1",
+                            "function": {"name": "get_violation_policies", "arguments": "{}"},
+                        }
+                    ],
+                }
+            elif self.call_count == 2:
+                # Second turn: model sees tool 1 result, now calls tool 2
+                yield {"type": "reasoning", "data": "Now checking my violations..."}
+                yield {
+                    "type": "tool_calls_complete",
+                    "data": [
+                        {
+                            "id": "call_2",
+                            "function": {"name": "get_my_violations", "arguments": "{}"},
+                        }
+                    ],
+                }
+            else:
+                # Third turn: model delivers final answer
+                yield {"type": "content", "data": "Bạn có 0 vi phạm theo chính sách."}
+
+    mock_llm = MockMultiStepLLMClient()
+    repo = ChatRepository(db_session)
+    registry = ChatbotToolRegistry(db_session)
+    use_case = SendChatMessageUseCase(repo=repo, llm_client=mock_llm, tool_registry=registry)
+
+    user = AuthPrincipal(
+        actor_id=mock_current_user.id,
+        actor_type=PrincipalType.USER,
+        name=mock_current_user.name,
+        email=mock_current_user.email,
+        permissions=set(),
     )
-    db_session.add(participant)
-    db_session.flush()
+
+    chunks = []
+    async for chunk in use_case.execute("Kiểm tra chính sách và vi phạm của tôi", None, user):
+        chunks.append(chunk)
+
+    full_stream = "".join(chunks)
+    assert 'type": "iteration_step", "data": {"iteration": 1' in full_stream
+    assert 'type": "iteration_step", "data": {"iteration": 2' in full_stream
+    assert 'type": "iteration_step", "data": {"iteration": 3' in full_stream
+    assert "Bạn có 0 vi phạm theo chính sách." in full_stream
+
+    # Check that both tools were recorded in assistant message metadata
+    sessions = repo.get_user_sessions(mock_current_user.id)
+    assert len(sessions) > 0
+    latest_session_id = sessions[0].id
+    messages = repo.get_session_messages(latest_session_id, mock_current_user.id)
+    assistant_msg = messages[-1]
+    assert assistant_msg.role.value == "assistant"
+    assert len(assistant_msg.metadata_info.tools_invoked) == 2
+    assert assistant_msg.metadata_info.tools_invoked[0].tool_name == "get_violation_policies"
+    assert assistant_msg.metadata_info.tools_invoked[1].tool_name == "get_my_violations"
+
+
+@pytest.mark.asyncio
+async def test_agent_loop_duplicate_tool_call_prevention(db_session, mock_current_user):
+    """Verify that Agent Loop detects duplicate tool calls and skips redundant execution."""
+    from collections.abc import AsyncGenerator
+    from typing import Any
+    from app.chatbot.application.send_chat_message_use_case import SendChatMessageUseCase
+
+    class MockLoopingLLMClient:
+        model = "mock-model"
+
+        def __init__(self):
+            self.call_count = 0
+
+        async def stream_chat(
+            self, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None, **kwargs
+        ) -> AsyncGenerator[dict[str, Any], None]:
+            self.call_count += 1
+            if self.call_count == 1:
+                # Turn 1: Call get_my_violations
+                yield {
+                    "type": "tool_calls_complete",
+                    "data": [{"id": "c1", "function": {"name": "get_my_violations", "arguments": "{}"}}],
+                }
+            elif self.call_count == 2:
+                # Turn 2: Attempt to call the exact same tool with identical arguments
+                yield {
+                    "type": "tool_calls_complete",
+                    "data": [{"id": "c2", "function": {"name": "get_my_violations", "arguments": "{}"}}],
+                }
+            else:
+                yield {"type": "content", "data": "Đã tổng hợp xong."}
+
+    mock_llm = MockLoopingLLMClient()
+    repo = ChatRepository(db_session)
+    registry = ChatbotToolRegistry(db_session)
+    use_case = SendChatMessageUseCase(repo=repo, llm_client=mock_llm, tool_registry=registry)
+
+    user = AuthPrincipal(
+        actor_id=mock_current_user.id,
+        actor_type=PrincipalType.USER,
+        name=mock_current_user.name,
+        email=mock_current_user.email,
+        permissions=set(),
+    )
+
+    chunks = [c async for c in use_case.execute("Kiểm tra lặp", None, user)]
+    full_stream = "".join(chunks)
+
+    # Check tool status reported duplicate_skipped
+    assert 'status": "duplicate_skipped"' in full_stream
+
+
+def test_agent_loop_context_pruning_only_on_threshold_overflow(db_session):
+    """Verify that context pruning triggers ONLY when token threshold is actually exceeded."""
+    from app.chatbot.application.send_chat_message_use_case import SendChatMessageUseCase
+
+    use_case = SendChatMessageUseCase(repo=None, llm_client=None, tool_registry=None)
+
+    # Normal message under threshold -> No pruning
+    messages_under = [
+        {"role": "user", "content": "Hello"},
+        {"role": "tool", "content": "A" * 1000},
+    ]
+    use_case._prune_context_history_if_needed(messages_under, max_threshold=5000)
+    assert len(messages_under[1]["content"]) == 1000
+
+    # Oversized message exceeding threshold -> Pruned
+    messages_over = [
+        {"role": "user", "content": "Hello"},
+        {"role": "tool", "content": "B" * 10000},
+    ]
+    use_case._prune_context_history_if_needed(messages_over, max_threshold=1000)
+    assert "... [Dữ liệu đã được tóm tắt" in messages_over[1]["content"]
+
+
+@pytest.mark.asyncio
+async def test_agent_dynamic_database_query_e2e(db_session, mock_current_user):
+    """Verify Agent Loop performs progressive discovery and executes read-only SQL for specific user queries."""
+    from collections.abc import AsyncGenerator
+    from typing import Any
+    from app.chatbot.application.send_chat_message_use_case import SendChatMessageUseCase
+
+    class MockSqlAgentLLMClient:
+        model = "mock-model"
+
+        def __init__(self):
+            self.turn = 0
+
+        async def stream_chat(
+            self, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None = None, **kwargs
+        ) -> AsyncGenerator[dict[str, Any], None]:
+            self.turn += 1
+            if self.turn == 1:
+                # Agent inspects relationships between users and violations
+                yield {
+                    "type": "tool_calls_complete",
+                    "data": [
+                        {
+                            "id": "c1",
+                            "function": {
+                                "name": "db_get_table_relationships",
+                                "arguments": '{"tables": ["users", "violations"]}',
+                            },
+                        }
+                    ],
+                }
+            elif self.turn == 2:
+                # Agent executes SQL query using JOIN
+                yield {
+                    "type": "tool_calls_complete",
+                    "data": [
+                        {
+                            "id": "c2",
+                            "function": {
+                                "name": "db_execute_query",
+                                "arguments": (
+                                    '{"query": "SELECT u.name, v.reason, v.date '
+                                    'FROM violations v JOIN users u ON u.id = v.user_id '
+                                    f'WHERE u.id = {mock_current_user.id}"}}'
+                                ),
+                            },
+                        }
+                    ],
+                }
+            else:
+                # Agent produces formatted summary
+                yield {"type": "content", "data": "Dưới đây là danh sách vi phạm của bạn."}
+
+    mock_llm = MockSqlAgentLLMClient()
+    repo = ChatRepository(db_session)
+    registry = ChatbotToolRegistry(db_session)
+    use_case = SendChatMessageUseCase(repo=repo, llm_client=mock_llm, tool_registry=registry)
 
     admin = AuthPrincipal(
         actor_id=mock_current_user.id,
         actor_type=PrincipalType.USER,
         name="Admin",
         email="admin@dut.vn",
-        permissions={MeetingPermission.READ.value},
+        permissions={ViolationPermission.READ.value},
     )
 
-    tool = AdminGetMeetingAbsenteesTool()
-    res = tool.execute(db_session, {}, admin)
+    chunks = [c async for c in use_case.execute("Liệt kê vi phạm của user", None, admin)]
+    full_output = "".join(chunks)
 
-    assert "absentees" in res
-    assert res["absentee_count"] >= 1
-    first_absentee = res["absentees"][0]
-    assert first_absentee["user_id"] == mock_current_user.id
-    assert first_absentee["name"] == mock_current_user.name
-    assert first_absentee["email"] == mock_current_user.email
+    assert "db_get_table_relationships" in full_output
+    assert "db_execute_query" in full_output
+    assert "Dưới đây là danh sách vi phạm của bạn." in full_output
 
 
-def test_admin_get_unsubmitted_homeworks_tool(db_session, mock_current_user):
-    """Verify AdminGetUnsubmittedHomeworksTool uses individual assignee deadlines and does not crash on hw.deadline."""
-    from datetime import datetime, UTC
-    from app.core.permissions import HomeworkPermission
-    from app.homework.infrastructure.model import (
-        HomeworkAssigneeModel,
-        HomeworkModel,
-    )
-    from app.chatbot.infrastructure.tools.admin.unsubmitted_homeworks import (
-        AdminGetUnsubmittedHomeworksTool,
-    )
-
-    hw = HomeworkModel(
-        title="Bài tập Python Cơ Bản",
-        requires_coding=True,
-    )
-    db_session.add(hw)
-    db_session.flush()
-
-    assignee = HomeworkAssigneeModel(
-        homework_id=hw.id,
-        user_id=mock_current_user.id,
-        deadline=datetime.now(UTC),
-    )
-    db_session.add(assignee)
-    db_session.flush()
-
-    admin = AuthPrincipal(
-        actor_id=mock_current_user.id,
-        actor_type=PrincipalType.USER,
-        name="Admin",
-        email="admin@dut.vn",
-        permissions={HomeworkPermission.READ.value},
-    )
-
-    tool = AdminGetUnsubmittedHomeworksTool()
-    res = tool.execute(db_session, {"homework_title": "Python"}, admin)
-
-    assert res["homework_id"] == hw.id
-    assert res["homework_title"] == "Bài tập Python Cơ Bản"
-    assert res["deadline"] is not None
-    assert res["unsubmitted_count"] == 1
-    assert res["unsubmitted_members"][0]["user_id"] == mock_current_user.id
-    assert res["unsubmitted_members"][0]["deadline"] is not None
 
 
 

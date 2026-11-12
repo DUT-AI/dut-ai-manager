@@ -3,19 +3,17 @@
 Exposes base classes, individual tools, and the extensible Tool Registry.
 """
 
-from app.chatbot.infrastructure.tools.admin.meeting_absentees import (
-    AdminGetMeetingAbsenteesTool,
-)
-from app.chatbot.infrastructure.tools.admin.summarize_violations import (
-    AdminSummarizeViolationsTool,
-)
-from app.chatbot.infrastructure.tools.admin.unsubmitted_homeworks import (
-    AdminGetUnsubmittedHomeworksTool,
-)
 from app.chatbot.infrastructure.tools.base import BaseChatbotTool
-from app.chatbot.infrastructure.tools.personal.inspect_entities import (
-    InspectEntityRecordsTool,
+from app.chatbot.infrastructure.tools.database.execute_query import (
+    DbExecuteQueryTool,
 )
+from app.chatbot.infrastructure.tools.database.get_table_relationships import (
+    DbGetTableRelationshipsTool,
+)
+from app.chatbot.infrastructure.tools.database.get_table_schema import (
+    DbGetTableSchemaTool,
+)
+from app.chatbot.infrastructure.tools.database.list_tables import DbListTablesTool
 from app.chatbot.infrastructure.tools.personal.my_violations import GetMyViolationsTool
 from app.chatbot.infrastructure.tools.personal.violation_policies import (
     GetViolationPoliciesTool,
@@ -26,9 +24,10 @@ __all__ = [
     "BaseChatbotTool",
     "ChatbotToolRegistry",
     "GetMyViolationsTool",
-    "InspectEntityRecordsTool",
     "GetViolationPoliciesTool",
-    "AdminSummarizeViolationsTool",
-    "AdminGetUnsubmittedHomeworksTool",
-    "AdminGetMeetingAbsenteesTool",
+    "DbListTablesTool",
+    "DbGetTableSchemaTool",
+    "DbGetTableRelationshipsTool",
+    "DbExecuteQueryTool",
 ]
+

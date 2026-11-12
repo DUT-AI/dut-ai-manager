@@ -21,3 +21,9 @@ export interface ChatSessionGroup {
   groupLabel: SessionDateGroupKey;
   sessions: ChatSession[];
 }
+
+export interface ActiveStreamingTool {
+  name: string;
+  status: 'running' | 'success' | 'error' | 'duplicate_skipped';
+  iteration: number;
+}

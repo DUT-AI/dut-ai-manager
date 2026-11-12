@@ -18,6 +18,7 @@ export const ChatbotPage: React.FC = () => {
     isStreaming,
     streamingText,
     streamingReasoning,
+    activeTools,
     errorMessage,
     setErrorMessage,
     quickPrompts,
@@ -92,6 +93,7 @@ export const ChatbotPage: React.FC = () => {
           isStreaming={isStreaming}
           streamingText={streamingText}
           streamingReasoning={streamingReasoning}
+          activeTools={activeTools}
           errorMessage={errorMessage}
           onClearError={() => setErrorMessage(null)}
           quickPrompts={quickPrompts}

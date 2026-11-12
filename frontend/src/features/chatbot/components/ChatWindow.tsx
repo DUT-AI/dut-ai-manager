@@ -13,6 +13,7 @@ interface ChatWindowProps {
   isStreaming: boolean;
   streamingText?: string;
   streamingReasoning?: string;
+  activeTools?: Array<{ name: string; status: string; iteration: number }>;
   errorMessage?: string | null;
   onClearError?: () => void;
   quickPrompts?: QuickPromptItem[];
@@ -26,6 +27,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   isStreaming,
   streamingText,
   streamingReasoning,
+  activeTools,
   errorMessage,
   quickPrompts = [],
 }) => {
@@ -38,6 +40,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
           isStreaming={isStreaming}
           streamingText={streamingText || ""}
           streamingReasoning={streamingReasoning || ""}
+          activeTools={activeTools}
         />
       </div>
 

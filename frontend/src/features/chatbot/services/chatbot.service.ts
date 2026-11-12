@@ -12,6 +12,9 @@ export interface StreamChatCallbacks {
   onSessionCreated?: (session: { id: number; title: string }) => void;
   onChunk: (delta: string) => void;
   onReasoning?: (delta: string) => void;
+  onIterationStep?: (step: { iteration: number; max_iterations: number }) => void;
+  onToolCallStart?: (tool: { name: string; iteration: number }) => void;
+  onToolCallEnd?: (tool: { name: string; status: string; iteration: number }) => void;
   onDone?: (fullMessage: string) => void;
   onError?: (error: string) => void;
 }
@@ -103,6 +106,12 @@ export const chatbotService = {
                 callbacks.onSessionCreated?.(eventData.data);
               } else if (eventData.type === 'reasoning') {
                 callbacks.onReasoning?.(eventData.data);
+              } else if (eventData.type === 'iteration_step') {
+                callbacks.onIterationStep?.(eventData.data);
+              } else if (eventData.type === 'tool_call_start') {
+                callbacks.onToolCallStart?.(eventData.data);
+              } else if (eventData.type === 'tool_call_end') {
+                callbacks.onToolCallEnd?.(eventData.data);
               } else if (eventData.type === 'delta' || eventData.type === 'content') {
                 accumulatedText += eventData.data;
                 callbacks.onChunk(eventData.data);
