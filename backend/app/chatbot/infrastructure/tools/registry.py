@@ -7,17 +7,15 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-
 from app.chatbot.infrastructure.tools import (
     BaseChatbotTool,
-    DbGetTableSchemaTool,
+    DbExecuteQueryTool,
     DbGetTableRelationshipsTool,
-    GetViolationPoliciesTool,
+    DbGetTableSchemaTool,
     DbListTablesTool,
     GetMyViolationsTool,
-    DbExecuteQueryTool
+    GetViolationPoliciesTool,
 )
-
 from app.core.principal import AuthPrincipal
 
 

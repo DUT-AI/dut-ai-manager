@@ -2,6 +2,7 @@
 
 import pytest
 
+from app.chatbot.domain.agent import Agent
 from app.chatbot.domain.entity import ChatSession
 from app.chatbot.infrastructure.repository import ChatRepository
 from app.chatbot.infrastructure.tools_registry import ChatbotToolRegistry
@@ -130,8 +131,10 @@ async def test_agent_loop_multi_step_tool_chaining(db_session, mock_current_user
     """Verify that SendChatMessageUseCase executes multiple tool turns (Agent Loop) in a single message."""
     from collections.abc import AsyncGenerator
     from typing import Any
-    from app.chatbot.application.send_chat_message_use_case import SendChatMessageUseCase
-    from app.chatbot.domain.value_objects import ToolCallRecord
+
+    from app.chatbot.application.send_chat_message_use_case import (
+        SendChatMessageUseCase,
+    )
 
     class MockMultiStepLLMClient:
         model = "mock-model"
@@ -174,7 +177,8 @@ async def test_agent_loop_multi_step_tool_chaining(db_session, mock_current_user
     mock_llm = MockMultiStepLLMClient()
     repo = ChatRepository(db_session)
     registry = ChatbotToolRegistry(db_session)
-    use_case = SendChatMessageUseCase(repo=repo, llm_client=mock_llm, tool_registry=registry)
+    agent = Agent(llm_client=mock_llm, tool_registry=registry)
+    use_case = SendChatMessageUseCase(repo=repo, agent=agent)
 
     user = AuthPrincipal(
         actor_id=mock_current_user.id,
@@ -211,7 +215,10 @@ async def test_agent_loop_duplicate_tool_call_prevention(db_session, mock_curren
     """Verify that Agent Loop detects duplicate tool calls and skips redundant execution."""
     from collections.abc import AsyncGenerator
     from typing import Any
-    from app.chatbot.application.send_chat_message_use_case import SendChatMessageUseCase
+
+    from app.chatbot.application.send_chat_message_use_case import (
+        SendChatMessageUseCase,
+    )
 
     class MockLoopingLLMClient:
         model = "mock-model"
@@ -241,7 +248,8 @@ async def test_agent_loop_duplicate_tool_call_prevention(db_session, mock_curren
     mock_llm = MockLoopingLLMClient()
     repo = ChatRepository(db_session)
     registry = ChatbotToolRegistry(db_session)
-    use_case = SendChatMessageUseCase(repo=repo, llm_client=mock_llm, tool_registry=registry)
+    agent = Agent(llm_client=mock_llm, tool_registry=registry)
+    use_case = SendChatMessageUseCase(repo=repo, agent=agent)
 
     user = AuthPrincipal(
         actor_id=mock_current_user.id,
@@ -261,16 +269,16 @@ async def test_agent_loop_duplicate_tool_call_prevention(db_session, mock_curren
 @pytest.mark.asyncio
 async def test_agent_loop_context_pruning_only_on_threshold_overflow(db_session):
     """Verify that context pruning triggers ONLY when token threshold is actually exceeded."""
-    from app.chatbot.application.send_chat_message_use_case import SendChatMessageUseCase
+    from app.chatbot.domain.agent import Agent
 
-    use_case = SendChatMessageUseCase(repo=None, llm_client=None, tool_registry=None)
+    agent = Agent(llm_client=None, tool_registry=None)
 
     # Normal message under threshold -> No pruning
     messages_under = [
         {"role": "user", "content": "Hello"},
         {"role": "tool", "content": "A" * 1000},
     ]
-    await use_case._prune_context_history_if_needed(messages_under, max_threshold=5000)
+    await agent.prune_context_if_needed(messages_under, max_threshold=5000)
     assert len(messages_under[1]["content"]) == 1000
 
     # Oversized message exceeding threshold -> Pruned
@@ -278,7 +286,7 @@ async def test_agent_loop_context_pruning_only_on_threshold_overflow(db_session)
         {"role": "user", "content": "Hello"},
         {"role": "tool", "content": "B" * 10000},
     ]
-    await use_case._prune_context_history_if_needed(messages_over, max_threshold=1000)
+    await agent.prune_context_if_needed(messages_over, max_threshold=1000)
     assert "... [Dữ liệu đã được tóm tắt" in messages_over[1]["content"]
 
 
@@ -287,7 +295,10 @@ async def test_agent_dynamic_database_query_e2e(db_session, mock_current_user):
     """Verify Agent Loop performs progressive discovery and executes read-only SQL for specific user queries."""
     from collections.abc import AsyncGenerator
     from typing import Any
-    from app.chatbot.application.send_chat_message_use_case import SendChatMessageUseCase
+
+    from app.chatbot.application.send_chat_message_use_case import (
+        SendChatMessageUseCase,
+    )
 
     class MockSqlAgentLLMClient:
         model = "mock-model"
@@ -338,7 +349,8 @@ async def test_agent_dynamic_database_query_e2e(db_session, mock_current_user):
     mock_llm = MockSqlAgentLLMClient()
     repo = ChatRepository(db_session)
     registry = ChatbotToolRegistry(db_session)
-    use_case = SendChatMessageUseCase(repo=repo, llm_client=mock_llm, tool_registry=registry)
+    agent = Agent(llm_client=mock_llm, tool_registry=registry)
+    use_case = SendChatMessageUseCase(repo=repo, agent=agent)
 
     admin = AuthPrincipal(
         actor_id=mock_current_user.id,

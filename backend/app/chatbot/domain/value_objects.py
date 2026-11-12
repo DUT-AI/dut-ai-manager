@@ -57,3 +57,10 @@ class ChatMessageMetadata(BaseModel):
     citations: list[str] = Field(default_factory=list)
     usage: dict[str, Any] | None = None
     timings: dict[str, Any] | None = None
+
+
+class AgentStreamEvent(BaseModel):
+    """Domain event emitted during Agent reasoning and tool loop execution."""
+
+    event_type: str
+    data: Any

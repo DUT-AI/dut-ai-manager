@@ -10,6 +10,7 @@ from app.chatbot.application import (
     GetSessionMessagesUseCase,
     SendChatMessageUseCase,
 )
+from app.chatbot.domain.agent import Agent
 from app.chatbot.infrastructure.llm_client import LLMClient
 from app.chatbot.infrastructure.repository import ChatRepository
 from app.chatbot.infrastructure.tools_registry import ChatbotToolRegistry
@@ -31,13 +32,20 @@ class ChatbotModuleProvider(Provider):
         return ChatbotToolRegistry(session)
 
     @provide
+    def get_chatbot_agent(
+        self,
+        llm_client: LLMClient,
+        tool_registry: ChatbotToolRegistry,
+    ) -> Agent:
+        return Agent(llm_client, tool_registry)
+
+    @provide
     def get_send_chat_message_uc(
         self,
         repo: ChatRepository,
-        llm_client: LLMClient,
-        tool_registry: ChatbotToolRegistry,
+        agent: Agent,
     ) -> SendChatMessageUseCase:
-        return SendChatMessageUseCase(repo, llm_client, tool_registry)
+        return SendChatMessageUseCase(repo, agent)
 
     @provide
     def get_chat_sessions_uc(self, repo: ChatRepository) -> GetChatSessionsUseCase:

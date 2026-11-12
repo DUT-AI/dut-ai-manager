@@ -97,6 +97,46 @@ class LLMClient:
         total_chars = sum(len(str(m.get("content") or "")) for m in messages)
         return max(1, total_chars // 4)
 
+    def _parse_chunk_events(
+        self,
+        chunk: dict[str, Any],
+        accumulated_tools: dict[int, dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Extract events (usage, reasoning, content, tool_calls) from a decoded SSE chunk."""
+        events: list[dict[str, Any]] = []
+        usage = chunk.get("usage")
+        timings = chunk.get("timings")
+        if usage is not None or timings is not None:
+            events.append({
+                "type": "usage",
+                "data": {
+                    "usage": usage or {},
+                    "timings": timings or {},
+                },
+            })
+
+        choices = chunk.get("choices", [])
+        if choices:
+            delta = choices[0].get("delta", {})
+            if reasoning := delta.get("reasoning_content"):
+                events.append({"type": "reasoning", "data": reasoning})
+            elif content := delta.get("content"):
+                events.append({"type": "content", "data": content})
+            elif tool_calls_delta := delta.get("tool_calls"):
+                self._accumulate_tool_delta(tool_calls_delta, accumulated_tools)
+        return events
+
+    @staticmethod
+    async def _read_sse_data(response: aiohttp.ClientResponse) -> AsyncGenerator[str, None]:
+        """Read data payloads from SSE response stream."""
+        async for line_bytes in response.content:
+            line = line_bytes.decode("utf-8").strip()
+            if line and line.startswith("data: "):
+                data_str = line[6:].strip()
+                if data_str == "[DONE]":
+                    break
+                yield data_str
+
     async def stream_chat(
         self,
         messages: list[dict[str, Any]],
@@ -136,40 +176,11 @@ class LLMClient:
                     yield {"type": "error", "data": f"Lỗi máy chủ LLM (HTTP {response.status})"}
                     return
 
-                async for line_bytes in response.content:
-                    line = line_bytes.decode("utf-8").strip()
-                    if not line or not line.startswith("data: "):
-                        continue
-                    data_str = line[6:].strip()
-                    if data_str == "[DONE]":
-                        break
-
+                async for data_str in self._read_sse_data(response):
                     try:
                         chunk = json.loads(data_str)
-
-                        # Capture usage and timings (from llama.cpp stream_options / server extension)
-                        usage = chunk.get("usage")
-                        timings = chunk.get("timings")
-                        if usage is not None or timings is not None:
-                            yield {
-                                "type": "usage",
-                                "data": {
-                                    "usage": usage or {},
-                                    "timings": timings or {},
-                                },
-                            }
-
-                        choices = chunk.get("choices", [])
-                        if not choices:
-                            continue
-                        delta = choices[0].get("delta", {})
-
-                        if reasoning := delta.get("reasoning_content"):
-                            yield {"type": "reasoning", "data": reasoning}
-                        elif content := delta.get("content"):
-                            yield {"type": "content", "data": content}
-                        elif tool_calls_delta := delta.get("tool_calls"):
-                            self._accumulate_tool_delta(tool_calls_delta, accumulated_tools)
+                        for ev in self._parse_chunk_events(chunk, accumulated_tools):
+                            yield ev
                     except json.JSONDecodeError:
                         continue
 
