@@ -67,6 +67,7 @@ export const MessageItem: React.FC<MessageProps> = ({
                     tool_name: t.name,
                     arguments: {},
                     execution_status: t.status,
+                    iteration_index: t.iteration,
                   },
                 ]}
                 isExecuting={t.status === 'running'}

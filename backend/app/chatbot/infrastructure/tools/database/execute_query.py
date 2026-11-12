@@ -80,6 +80,12 @@ class DbExecuteQueryTool(BaseChatbotTool):
                 }
         except Exception as ex:
             return {
+                "status": "FAILED",
                 "error": f"Lỗi thực thi cơ sở dữ liệu: {str(ex)}",
-                "hint": "Hãy kiểm tra lại cú pháp SQL hoặc tên cột/bảng qua tool db_get_table_schema.",
+                "instruction": (
+                    "TRUY VẤN SQL THẤT BẠI. Dữ liệu chưa được lấy thành công. "
+                    "BẠN TUYỆT ĐỐI KHÔNG ĐƯỢC BỊA ĐẶT DỮ LIỆU HOẶC TỰ KẾT THÚC CÂU TRẢ LỜI. "
+                    "Hãy đọc kỹ thông báo lỗi ở trên, gọi `db_get_table_schema` nếu cần kiểm tra lại tên cột/kiểu dữ liệu, "
+                    "và viết lại câu lệnh SQL chính xác để thực thi lại."
+                ),
             }

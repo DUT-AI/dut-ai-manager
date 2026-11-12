@@ -1,23 +1,24 @@
 """Domain Entities for Chatbot."""
 
 from datetime import UTC, datetime
+from uuid import UUID
 
 from pydantic import Field
 
 from app.chatbot.domain.value_objects import ChatMessageMetadata, MessageRole
-from app.shared.domain.base_entity import BaseGenericEntity
+from app.shared.domain.base_entity import BaseUuidEntity
 
 
-class ChatMessage(BaseGenericEntity[int]):
+class ChatMessage(BaseUuidEntity):
     """Domain entity representing a message in a chat session."""
 
-    session_id: int
+    session_id: UUID
     role: MessageRole
     content: str
     metadata_info: ChatMessageMetadata = Field(default_factory=ChatMessageMetadata)
 
 
-class ChatSession(BaseGenericEntity[int]):
+class ChatSession(BaseUuidEntity):
     """Domain entity representing a user's chat session (max 5 sessions per user)."""
 
     user_id: int

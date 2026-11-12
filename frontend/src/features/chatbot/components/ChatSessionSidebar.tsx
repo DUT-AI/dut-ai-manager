@@ -10,12 +10,12 @@ import type { ChatSession, ChatSessionGroup, SessionDateGroupKey } from "../type
 
 interface ChatSessionSidebarProps {
   sessions: ChatSession[];
-  activeSessionId: number | null;
+  activeSessionId: string | null;
   isOpen: boolean;
   onClose: () => void;
-  onSelectSession: (id: number) => void;
+  onSelectSession: (id: string) => void;
   onNewChat: () => void;
-  onRequestDeleteSession: (id: number) => void;
+  onRequestDeleteSession: (id: string) => void;
 }
 
 export const ChatSessionSidebar: React.FC<ChatSessionSidebarProps> = ({

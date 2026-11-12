@@ -9,15 +9,15 @@ import { useChatSessions } from '../hooks/useChatSessions';
 
 export const ChatbotPage: React.FC = () => {
   const { sessions, deleteSession, isDeleting } = useChatSessions();
-  const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
   // Sidebar collapsible state: default open on desktop
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Delete session modal state
-  const [deletingSessionId, setDeletingSessionId] = useState<number | null>(null);
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
 
-  const handleRequestDeleteSession = (id: number) => {
+  const handleRequestDeleteSession = (id: string) => {
     setDeletingSessionId(id);
   };
 

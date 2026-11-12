@@ -5,6 +5,7 @@ Uses flush() instead of commit() following project Clean Architecture.
 """
 
 from datetime import UTC, datetime
+from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
@@ -33,7 +34,7 @@ class ChatRepository:
         return [m.to_entity(include_messages=False) for m in models]
 
     def get_session_by_id(
-        self, session_id: int, user_id: int, include_messages: bool = False
+        self, session_id: UUID, user_id: int, include_messages: bool = False
     ) -> ChatSession | None:
         """Get a specific session owned by user_id."""
         stmt = select(ChatSessionModel).where(
@@ -79,7 +80,7 @@ class ChatRepository:
             return model.to_entity(include_messages=False)
         return session
 
-    def delete_session(self, session_id: int, user_id: int) -> bool:
+    def delete_session(self, session_id: UUID, user_id: int) -> bool:
         """Delete a chat session and cascade delete all its messages."""
         stmt = select(ChatSessionModel).where(
             ChatSessionModel.id == session_id,
@@ -106,7 +107,7 @@ class ChatRepository:
         return model.to_entity()
 
     def get_session_messages(
-        self, session_id: int, user_id: int
+        self, session_id: UUID, user_id: int
     ) -> list[ChatMessage]:
         """Get all messages of a session owned by user_id in chronological order."""
         # Verify ownership first

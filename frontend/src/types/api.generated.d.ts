@@ -3605,10 +3605,16 @@ export interface components {
          * @description Response DTO representing an individual chat message.
          */
         ChatMessageDto: {
-            /** Id */
-            id: number;
-            /** Session Id */
-            session_id: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Session Id
+             * Format: uuid
+             */
+            session_id: string;
             role: components["schemas"]["MessageRole"];
             /** Content */
             content: string;
@@ -3641,8 +3647,11 @@ export interface components {
          * @description Response DTO representing a chat session.
          */
         ChatSessionDto: {
-            /** Id */
-            id: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
             /** Title */
             title: string;
             /**
@@ -5326,7 +5335,7 @@ export interface components {
              * Session Id
              * @description ID phiên trò chuyện (nếu có)
              */
-            session_id?: number | null;
+            session_id?: string | null;
         };
         /**
          * StudentExerciseStatusDTO
@@ -5605,13 +5614,18 @@ export interface components {
             tool_name: string;
             /** Arguments */
             arguments?: {
-                [key: string]: string | number | boolean;
+                [key: string]: unknown;
             };
             /**
              * Execution Status
              * @default success
              */
             execution_status: string;
+            /**
+             * Iteration Index
+             * @default 1
+             */
+            iteration_index: number;
         };
         /** TraineeSubmitEvaluationRequest */
         TraineeSubmitEvaluationRequest: {
@@ -10773,7 +10787,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                session_id: number;
+                session_id: string;
             };
             cookie?: never;
         };
@@ -10804,7 +10818,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                session_id: number;
+                session_id: string;
             };
             cookie?: never;
         };

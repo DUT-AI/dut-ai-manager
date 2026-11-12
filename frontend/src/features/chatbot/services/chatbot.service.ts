@@ -9,7 +9,7 @@ import type {
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 export interface StreamChatCallbacks {
-  onSessionCreated?: (session: { id: number; title: string }) => void;
+  onSessionCreated?: (session: { id: string; title: string }) => void;
   onChunk: (delta: string) => void;
   onReasoning?: (delta: string) => void;
   onIterationStep?: (step: { iteration: number; max_iterations: number }) => void;
@@ -27,14 +27,14 @@ export const chatbotService = {
     return res.data.data;
   },
 
-  async getSessionMessages(sessionId: number): Promise<ChatMessage[]> {
+  async getSessionMessages(sessionId: string): Promise<ChatMessage[]> {
     const res = await axiosInstance.get<{ is_success: boolean; data: ChatMessage[] }>(
       `/chatbot/sessions/${sessionId}/messages`
     );
     return res.data.data;
   },
 
-  async deleteSession(sessionId: number): Promise<void> {
+  async deleteSession(sessionId: string): Promise<void> {
     await axiosInstance.delete(`/chatbot/sessions/${sessionId}`);
   },
 

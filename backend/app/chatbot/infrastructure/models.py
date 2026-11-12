@@ -2,8 +2,10 @@
 
 from datetime import UTC, datetime
 from typing import Any
+from uuid import UUID
 
 from pydantic import TypeAdapter
+from sqlalchemy import UUID as SQLAlchemyUUID
 from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON, TypeDecorator
@@ -12,8 +14,8 @@ from app.chatbot.domain.entity import ChatMessage, ChatSession
 from app.chatbot.domain.value_objects import ChatMessageMetadata, MessageRole
 from app.shared.infrastructure.base_model import (
     Base,
-    SQLAlchemyIntPrimaryKeyMixin,
     SQLAlchemyTimestampOnlyMixin,
+    SQLAlchemyUuidPrimaryKeyMixin,
 )
 
 
@@ -49,7 +51,7 @@ class ChatMessageMetadataJSON(TypeDecorator[ChatMessageMetadata]):
 
 
 class ChatSessionModel(
-    SQLAlchemyIntPrimaryKeyMixin, SQLAlchemyTimestampOnlyMixin, Base
+    SQLAlchemyUuidPrimaryKeyMixin, SQLAlchemyTimestampOnlyMixin, Base
 ):
     __tablename__ = "chat_sessions"
 
@@ -92,12 +94,12 @@ class ChatSessionModel(
 
 
 class ChatMessageModel(
-    SQLAlchemyIntPrimaryKeyMixin, SQLAlchemyTimestampOnlyMixin, Base
+    SQLAlchemyUuidPrimaryKeyMixin, SQLAlchemyTimestampOnlyMixin, Base
 ):
     __tablename__ = "chat_messages"
 
-    session_id: Mapped[int] = mapped_column(
-        Integer,
+    session_id: Mapped[UUID] = mapped_column(
+        SQLAlchemyUUID(as_uuid=True),
         ForeignKey("chat_sessions.id", ondelete="CASCADE"),
         index=True,
         nullable=False,

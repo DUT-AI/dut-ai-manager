@@ -5,7 +5,7 @@ import { CHAT_SESSIONS_QUERY_KEY } from './useChatSessions';
 import type { ActiveStreamingTool, ChatMessage, QuickPromptItem } from '../types/chatbot.types';
 
 export interface ChatbotState {
-  sessionId: number | null;
+  sessionId: string | null;
   messages: ChatMessage[];
   isStreaming: boolean;
   streamingText: string;
@@ -18,13 +18,13 @@ export interface ChatbotState {
 
 export type ChatbotAction =
   | { type: 'SET_QUICK_PROMPTS'; payload: QuickPromptItem[] }
-  | { type: 'SYNC_SESSION_ID'; payload: number | null }
-  | { type: 'LOAD_MESSAGES_SUCCESS'; payload: { sessionId: number; messages: ChatMessage[] } }
+  | { type: 'SYNC_SESSION_ID'; payload: string | null }
+  | { type: 'LOAD_MESSAGES_SUCCESS'; payload: { sessionId: string; messages: ChatMessage[] } }
   | { type: 'LOAD_MESSAGES_ERROR'; payload: string }
   | { type: 'START_NEW_CHAT' }
-  | { type: 'SELECT_SESSION'; payload: number }
+  | { type: 'SELECT_SESSION'; payload: string }
   | { type: 'SEND_MESSAGE_START'; payload: { userMessage: ChatMessage } }
-  | { type: 'SESSION_CREATED'; payload: number }
+  | { type: 'SESSION_CREATED'; payload: string }
   | { type: 'ITERATION_STEP'; payload: number }
   | { type: 'TOOL_CALL_START'; payload: { name: string; iteration: number } }
   | {
@@ -50,16 +50,21 @@ export function chatbotReducer(state: ChatbotState, action: ChatbotAction): Chat
 
     case 'SYNC_SESSION_ID':
       if (state.sessionId === action.payload) return state;
+      // Do NOT wipe messages if we just received a new session ID during active streaming
       return {
         ...state,
         sessionId: action.payload,
-        messages: action.payload === null ? [] : state.messages,
-        streamingText: '',
-        streamingReasoning: '',
-        activeTools: [],
-        currentIteration: 0,
+        messages: state.isStreaming
+          ? state.messages
+          : action.payload === null
+            ? []
+            : state.messages,
+        streamingText: state.isStreaming ? state.streamingText : '',
+        streamingReasoning: state.isStreaming ? state.streamingReasoning : '',
+        activeTools: state.isStreaming ? state.activeTools : [],
+        currentIteration: state.isStreaming ? state.currentIteration : 0,
         errorMessage: null,
-        isStreaming: false,
+        isStreaming: state.isStreaming,
       };
 
     case 'LOAD_MESSAGES_SUCCESS':
@@ -195,8 +200,8 @@ export function chatbotReducer(state: ChatbotState, action: ChatbotAction): Chat
 }
 
 export interface UseChatbotOptions {
-  sessionId?: number | null;
-  onSessionCreated?: (sessionId: number) => void;
+  sessionId?: string | null;
+  onSessionCreated?: (sessionId: string) => void;
 }
 
 export function useChatbot(options: UseChatbotOptions = {}) {
@@ -230,9 +235,9 @@ export function useChatbot(options: UseChatbotOptions = {}) {
       .catch(() => {});
   }, []);
 
-  // Fetch session history when sessionId changes
+  // Fetch session history when sessionId changes, but only when not currently streaming a new conversation
   useEffect(() => {
-    if (!state.sessionId) return;
+    if (!state.sessionId || state.isStreaming) return;
     let isCancelled = false;
     const currentId = state.sessionId;
 
@@ -258,7 +263,7 @@ export function useChatbot(options: UseChatbotOptions = {}) {
     return () => {
       isCancelled = true;
     };
-  }, [state.sessionId]);
+  }, [state.sessionId, state.isStreaming]);
 
   const startNewChat = useCallback(() => {
     if (abortControllerRef.current) {
@@ -267,7 +272,7 @@ export function useChatbot(options: UseChatbotOptions = {}) {
     dispatch({ type: 'START_NEW_CHAT' });
   }, []);
 
-  const selectSession = useCallback((id: number) => {
+  const selectSession = useCallback((id: string) => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -283,10 +288,10 @@ export function useChatbot(options: UseChatbotOptions = {}) {
       const text = (promptOverride || input).trim();
       if (!text || state.isStreaming) return;
 
-      // Optimistically add user message
+      // Optimistically add user message with client UUID
       const userMessage: ChatMessage = {
-        id: Date.now(),
-        session_id: state.sessionId || 0,
+        id: crypto.randomUUID(),
+        session_id: state.sessionId || '00000000-0000-0000-0000-000000000000',
         role: 'user',
         content: text,
         metadata_info: {
@@ -353,8 +358,8 @@ export function useChatbot(options: UseChatbotOptions = {}) {
               queryClient.invalidateQueries({ queryKey: CHAT_SESSIONS_QUERY_KEY });
             } else {
               const fallback: ChatMessage = {
-                id: Date.now() + 1,
-                session_id: 0,
+                id: crypto.randomUUID(),
+                session_id: '00000000-0000-0000-0000-000000000000',
                 role: 'assistant',
                 content: fullText,
                 metadata_info: {

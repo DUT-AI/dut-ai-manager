@@ -13,7 +13,7 @@ export function useChatSessions() {
   });
 
   const deleteSessionMutation = useMutation({
-    mutationFn: (sessionId: number) => chatbotService.deleteSession(sessionId),
+    mutationFn: (sessionId: string) => chatbotService.deleteSession(sessionId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: CHAT_SESSIONS_QUERY_KEY });
     },

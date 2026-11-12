@@ -56,7 +56,7 @@ class LLMClient:
         self,
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]] | None = None,
-        max_tokens: int = 1500,
+        max_tokens: int = 20000,
         temperature: float = 0.3,
     ) -> AsyncGenerator[dict[str, Any], None]:
         """Stream chat completions from the LLM endpoint yielding SSE deltas."""

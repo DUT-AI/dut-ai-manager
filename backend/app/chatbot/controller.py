@@ -1,5 +1,7 @@
 """Chatbot Controller — FastAPI router handling SSE streaming and Session REST API."""
 
+from uuid import UUID
+
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import StreamingResponse
@@ -57,7 +59,7 @@ async def get_sessions(
     sessions = uc.execute(current_user.user_id)
     dtos = [
         ChatSessionDto(
-            id=s.id,  # type: ignore[arg-type]
+            id=s.id,
             title=s.title,
             created_at=s.created_at,
             updated_at=s.updated_at,
@@ -73,7 +75,7 @@ async def get_sessions(
 )
 @inject
 async def get_session_messages(
-    session_id: int,
+    session_id: UUID,
     current_user: CurrentUser,
     uc: FromDishka[GetSessionMessagesUseCase],
 ) -> ApiResponse[list[ChatMessageDto]]:
@@ -81,7 +83,7 @@ async def get_session_messages(
     messages = uc.execute(session_id, current_user.id)
     dtos = [
         ChatMessageDto(
-            id=m.id,  # type: ignore[arg-type]
+            id=m.id,
             session_id=m.session_id,
             role=m.role,
             content=m.content,
@@ -96,7 +98,7 @@ async def get_session_messages(
 @router.delete("/sessions/{session_id}", response_model=ApiResponse[bool])
 @inject
 async def delete_session(
-    session_id: int,
+    session_id: UUID,
     current_user: CurrentUser,
     uc: FromDishka[DeleteChatSessionUseCase],
 ) -> ApiResponse[bool]:

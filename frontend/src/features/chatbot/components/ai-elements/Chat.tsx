@@ -64,8 +64,8 @@ export const Chat: React.FC<ChatProps> = ({
               <MessageScrollerItem messageId="streaming" scrollAnchor={false}>
                 <MessageItem
                   message={{
-                    id: -1,
-                    session_id: -1,
+                    id: "streaming-message",
+                    session_id: "streaming-session",
                     role: "assistant",
                     content: streamingText || "",
                     metadata_info: {

@@ -6,8 +6,8 @@ import { AlertCircleIcon } from "lucide-react";
 import { useChatbot } from "../hooks/useChatbot";
 
 export interface ChatWindowProps {
-  sessionId?: number | null;
-  onSessionCreated?: (sessionId: number) => void;
+  sessionId?: string | null;
+  onSessionCreated?: (sessionId: string) => void;
 }
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({
