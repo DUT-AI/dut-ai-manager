@@ -52,6 +52,51 @@ class LLMClient:
             if arg_chunk := func_delta.get("arguments"):
                 accumulated[idx]["function"]["arguments"] += arg_chunk
 
+    async def count_tokens(self, messages: list[dict[str, Any]]) -> int:
+        """Count input tokens via llama.cpp Anthropic-compatible /v1/messages/count_tokens endpoint.
+
+        Falls back to safe character-based approximation if API call fails.
+        """
+        # Remove /v1 if base_url ends with /v1 to reach /v1/messages/count_tokens
+        clean_base = self.base_url.rstrip("/")
+        if not clean_base.endswith("/v1"):
+            url = f"{clean_base}/v1/messages/count_tokens"
+        else:
+            url = f"{clean_base}/messages/count_tokens"
+
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["x-api-key"] = self.api_key
+
+        payload = {
+            "model": self.model,
+            "messages": [
+                {
+                    "role": m.get("role", "user"),
+                    "content": str(m.get("content") or ""),
+                }
+                for m in messages
+                if m.get("role") in {"user", "assistant", "system"}
+            ],
+        }
+
+        try:
+            timeout = aiohttp.ClientTimeout(total=5)
+            async with (
+                aiohttp.ClientSession(timeout=timeout) as session,
+                session.post(url, json=payload, headers=headers) as response,
+            ):
+                if response.status == 200:
+                    data = await response.json()
+                    if "input_tokens" in data and isinstance(data["input_tokens"], int):
+                        return data["input_tokens"]
+        except Exception as e:
+            logger.warning(f"Failed to count tokens via LLM API: {e}. Using fallback estimation.")
+
+        # Fallback estimation (~4 chars per token)
+        total_chars = sum(len(str(m.get("content") or "")) for m in messages)
+        return max(1, total_chars // 4)
+
     async def stream_chat(
         self,
         messages: list[dict[str, Any]],
@@ -71,6 +116,7 @@ class LLMClient:
             "max_tokens": max_tokens,
             "temperature": temperature,
             "stream": True,
+            "stream_options": {"include_usage": True},
         }
         if tools:
             payload["tools"] = tools
@@ -100,6 +146,19 @@ class LLMClient:
 
                     try:
                         chunk = json.loads(data_str)
+
+                        # Capture usage and timings (from llama.cpp stream_options / server extension)
+                        usage = chunk.get("usage")
+                        timings = chunk.get("timings")
+                        if usage is not None or timings is not None:
+                            yield {
+                                "type": "usage",
+                                "data": {
+                                    "usage": usage or {},
+                                    "timings": timings or {},
+                                },
+                            }
+
                         choices = chunk.get("choices", [])
                         if not choices:
                             continue

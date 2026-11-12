@@ -6,10 +6,10 @@ FROM node:20-alpine AS deps
 WORKDIR /app
 
 # Copy package files
-COPY package.json yarn.lock ./
+COPY package.json package-lock.json ./
 
-# Install dependencies
-RUN yarn install --frozen-lockfile
+# Install clean dependencies
+RUN npm ci
 
 # ================================================
 # Stage 2: Builder
@@ -27,7 +27,7 @@ ARG VITE_API_URL=/api/v1
 ENV VITE_API_URL=${VITE_API_URL}
 
 # Build the application
-RUN yarn build
+RUN npm run build
 
 # ================================================
 # Stage 3: Production (Nginx)
@@ -48,5 +48,3 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:80/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
-
-

@@ -258,7 +258,8 @@ async def test_agent_loop_duplicate_tool_call_prevention(db_session, mock_curren
     assert 'status": "duplicate_skipped"' in full_stream
 
 
-def test_agent_loop_context_pruning_only_on_threshold_overflow(db_session):
+@pytest.mark.asyncio
+async def test_agent_loop_context_pruning_only_on_threshold_overflow(db_session):
     """Verify that context pruning triggers ONLY when token threshold is actually exceeded."""
     from app.chatbot.application.send_chat_message_use_case import SendChatMessageUseCase
 
@@ -269,7 +270,7 @@ def test_agent_loop_context_pruning_only_on_threshold_overflow(db_session):
         {"role": "user", "content": "Hello"},
         {"role": "tool", "content": "A" * 1000},
     ]
-    use_case._prune_context_history_if_needed(messages_under, max_threshold=5000)
+    await use_case._prune_context_history_if_needed(messages_under, max_threshold=5000)
     assert len(messages_under[1]["content"]) == 1000
 
     # Oversized message exceeding threshold -> Pruned
@@ -277,7 +278,7 @@ def test_agent_loop_context_pruning_only_on_threshold_overflow(db_session):
         {"role": "user", "content": "Hello"},
         {"role": "tool", "content": "B" * 10000},
     ]
-    use_case._prune_context_history_if_needed(messages_over, max_threshold=1000)
+    await use_case._prune_context_history_if_needed(messages_over, max_threshold=1000)
     assert "... [Dữ liệu đã được tóm tắt" in messages_over[1]["content"]
 
 

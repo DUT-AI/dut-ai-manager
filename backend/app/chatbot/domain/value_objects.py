@@ -55,3 +55,5 @@ class ChatMessageMetadata(BaseModel):
     reasoning_content: str | None = None
     tools_invoked: list[ToolCallRecord] = Field(default_factory=list)
     citations: list[str] = Field(default_factory=list)
+    usage: dict[str, Any] | None = None
+    timings: dict[str, Any] | None = None

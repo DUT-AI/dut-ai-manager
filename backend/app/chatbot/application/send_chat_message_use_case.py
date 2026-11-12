@@ -20,7 +20,7 @@ from app.core.principal import AuthPrincipal
 
 SYSTEM_PROMPT = """
 Bạn là DUT AI Assistant - Trợ lý thông minh giải đáp vi phạm và điều hành học vụ của CLB/Lab DUT AI.
-
+        
 NGUYÊN TẮC BẮT BUỘC (CRITICAL MANDATES):
 1. Luôn trả lời bằng TIẾNG VIỆT lịch sự, rõ ràng, định dạng Markdown (tiêu đề, danh sách, bảng Markdown, in đậm từ khóa).
 
@@ -83,18 +83,14 @@ class SendChatMessageUseCase:
             llm_messages.append({"role": msg.role.value, "content": msg.content})
         return llm_messages
 
-    def _estimate_tokens(self, messages: list[dict[str, Any]]) -> int:
-        """Rough token count estimation (~4 characters per token)."""
-        total_chars = sum(len(str(m.get("content") or "")) for m in messages)
-        return total_chars // 4
 
-    def _prune_context_history_if_needed(
+    async def _prune_context_history_if_needed(
         self,
         llm_messages: list[dict[str, Any]],
         max_threshold: int = settings.CHATBOT_PRUNE_TOKEN_THRESHOLD,
     ) -> None:
         """Prunes historical tool results only when total context exceeds the safe threshold (e.g. 50k tokens)."""
-        current_tokens = self._estimate_tokens(llm_messages)
+        current_tokens = await self.llm_client.count_tokens(llm_messages)
         if current_tokens < max_threshold:
             return
 
@@ -103,7 +99,7 @@ class SendChatMessageUseCase:
             if msg.get("role") == "tool" and len(str(msg.get("content") or "")) > 300:
                 raw_content = str(msg.get("content") or "")
                 msg["content"] = raw_content[:250] + "... [Dữ liệu đã được tóm tắt để tối ưu bộ nhớ context]"
-                if self._estimate_tokens(llm_messages) < max_threshold:
+                if await self.llm_client.count_tokens(llm_messages) < max_threshold:
                     break
 
     def _execute_tools(
@@ -164,7 +160,7 @@ class SendChatMessageUseCase:
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]] | None,
         pending_tools: list[dict[str, Any]],
-        state: dict[str, str],
+        state: dict[str, Any],
     ) -> AsyncGenerator[str, None]:
         async for chunk in self.llm_client.stream_chat(messages, tools=tools):
             ctype, cdata = chunk.get("type"), chunk.get("data")
@@ -174,6 +170,9 @@ class SendChatMessageUseCase:
             elif ctype == "content":
                 state["content"] += str(cdata)
                 yield f"data: {json.dumps({'type': 'content', 'data': cdata}, ensure_ascii=False)}\n\n"
+            elif ctype == "usage" and isinstance(cdata, dict):
+                state["usage"] = cdata.get("usage")
+                state["timings"] = cdata.get("timings")
             elif ctype == "tool_calls_complete" and isinstance(cdata, list):
                 pending_tools.extend(cdata)
             elif ctype == "error":
@@ -196,7 +195,12 @@ class SendChatMessageUseCase:
         llm_messages = self._build_llm_messages(history[-8:])
         tools = self.tool_registry.get_tool_definitions(user)
 
-        state = {"content": "", "reasoning": ""}
+        state: dict[str, Any] = {
+            "content": "",
+            "reasoning": "",
+            "usage": None,
+            "timings": None,
+        }
         loop_state = AgentLoopState(max_iterations=settings.CHATBOT_MAX_ITERATIONS)
 
         # Autonomous Agent Loop (ReAct / Multi-turn)
@@ -205,7 +209,7 @@ class SendChatMessageUseCase:
             yield f"data: {json.dumps({'type': 'iteration_step', 'data': {'iteration': loop_state.iteration, 'max_iterations': loop_state.max_iterations}}, ensure_ascii=False)}\n\n"
 
             # Check and prune context only when close to overflowing (~50k tokens threshold)
-            self._prune_context_history_if_needed(llm_messages)
+            await self._prune_context_history_if_needed(llm_messages)
 
             pending_tools: list[dict[str, Any]] = []
             async for chunk in self._stream_llm_chunks(llm_messages, tools, pending_tools, state):
@@ -235,6 +239,8 @@ class SendChatMessageUseCase:
             model_name=self.llm_client.model,
             reasoning_content=state["reasoning"] or None,
             tools_invoked=loop_state.executed_tools,
+            usage=state.get("usage"),
+            timings=state.get("timings"),
         )
         self.repo.add_message(ChatMessage(session_id=session.id, role=MessageRole.ASSISTANT, content=state["content"], metadata_info=meta))
         yield f"data: {json.dumps({'type': 'done', 'data': state['content']}, ensure_ascii=False)}\n\n"
