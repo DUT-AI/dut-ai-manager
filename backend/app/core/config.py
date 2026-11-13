@@ -141,7 +141,7 @@ class Settings(BaseSettings):
     LLM_BASE_URL: str = ""
     LLM_MODEL: str = ""
     LLM_API_KEY: str = ""
-    CHATBOT_MAX_ITERATIONS: int = 5
+    CHATBOT_MAX_ITERATIONS: int = 15
     CHATBOT_LOOP_TIMEOUT_SECONDS: int = 45
     CHATBOT_PRUNE_TOKEN_THRESHOLD: int = 50_000
 

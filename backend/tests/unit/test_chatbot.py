@@ -136,9 +136,14 @@ async def test_agent_loop_multi_step_tool_chaining(db_session, mock_current_user
         SendChatMessageUseCase,
     )
 
-    class MockMultiStepLLMClient:
+    class BaseMockLLMClient:
         model = "mock-model"
 
+        async def count_tokens(self, messages: list[dict[str, Any]]) -> int:
+            total_chars = sum(len(str(m.get("content") or "")) for m in messages)
+            return max(1, total_chars // 4)
+
+    class MockMultiStepLLMClient(BaseMockLLMClient):
         def __init__(self):
             self.call_count = 0
 
@@ -223,6 +228,10 @@ async def test_agent_loop_duplicate_tool_call_prevention(db_session, mock_curren
     class MockLoopingLLMClient:
         model = "mock-model"
 
+        async def count_tokens(self, messages: list[dict[str, Any]]) -> int:
+            total_chars = sum(len(str(m.get("content") or "")) for m in messages)
+            return max(1, total_chars // 4)
+
         def __init__(self):
             self.call_count = 0
 
@@ -269,9 +278,16 @@ async def test_agent_loop_duplicate_tool_call_prevention(db_session, mock_curren
 @pytest.mark.asyncio
 async def test_agent_loop_context_pruning_only_on_threshold_overflow(db_session):
     """Verify that context pruning triggers ONLY when token threshold is actually exceeded."""
+    from typing import Any
+
     from app.chatbot.domain.agent import Agent
 
-    agent = Agent(llm_client=None, tool_registry=None)
+    class SimpleMockLLM:
+        async def count_tokens(self, messages: list[dict[str, Any]]) -> int:
+            total_chars = sum(len(str(m.get("content") or "")) for m in messages)
+            return max(1, total_chars // 4)
+
+    agent = Agent(llm_client=SimpleMockLLM(), tool_registry=None)
 
     # Normal message under threshold -> No pruning
     messages_under = [
@@ -302,6 +318,10 @@ async def test_agent_dynamic_database_query_e2e(db_session, mock_current_user):
 
     class MockSqlAgentLLMClient:
         model = "mock-model"
+
+        async def count_tokens(self, messages: list[dict[str, Any]]) -> int:
+            total_chars = sum(len(str(m.get("content") or "")) for m in messages)
+            return max(1, total_chars // 4)
 
         def __init__(self):
             self.turn = 0

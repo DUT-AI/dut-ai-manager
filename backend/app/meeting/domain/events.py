@@ -58,6 +58,7 @@ class ParticipantAbsenceRecorded(DomainEvent):
     meeting_id: int
     meeting_title: str
     meeting_date: str
+    start_time: datetime | None = None
 
 
 class ParticipantLateRecorded(DomainEvent):

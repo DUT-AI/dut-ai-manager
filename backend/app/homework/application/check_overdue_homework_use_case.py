@@ -191,6 +191,7 @@ class CheckOverdueHomeworkUseCase:
                         deadline_date=str(assignment.deadline.date()),
                         reason=reason_msg,
                         uncompleted_items=uncompleted_labels,
+                        deadline=assignment.deadline,
                     ),
                 )
             )
