@@ -5,6 +5,7 @@ from loguru import logger
 from app.permission_request.domain.events import PermissionRequestCreated
 from app.permission_request.domain.value_objects import RequestCategory
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
+from app.shared.domain.datetime_types import ensure_utc
 from app.violation.application import CreateViolationUseCase
 
 
@@ -51,10 +52,15 @@ class PermissionViolationHandler:
 
             logger.info(f"Tự động tạo vi phạm cho user {event.user_id}: {reason}")
 
+            occurrence_date = (
+                ensure_utc(event.start_time)
+                if event.start_time is not None
+                else datetime.now(UTC)
+            )
             await self.create_violation_uc.execute(
                 user_ids=[event.user_id],
                 reason=reason,
-                date=datetime.now(UTC),
+                date=occurrence_date,
                 is_system=True,
                 system_user_id=None,
             )

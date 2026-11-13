@@ -1,11 +1,11 @@
 <!--
 Sync Impact Report:
-- Version: v1.11.0 -> v1.12.0
+- Version: v1.12.0 -> v1.13.0
 - Ratification Date: 2026-09-25
-- Last Amended: 2026-11-08
+- Last Amended: 2026-11-13
 - Principles added / enhanced:
-  - XVII. Strongly-Typed Storage & Zero Raw Dictionary Columns (MUST) (NEW) -> Mandate that all JSON / flexible metadata columns in SQLAlchemy ORM and Domain Entities be strongly typed using Pydantic BaseModels or Discriminated Unions via custom TypeDecorators (`SubmissionDetailsJSON`), strictly prohibiting `dict[str, Any]` in ORM Mapped types and domain entities to prevent raw unstructured data drift.
-- Rationale: Codifying strict type-safety for complex JSON/metadata storage across ORM models and Domain entities, eliminating raw unstructured dictionaries and defensive fallback logic.
+  - XVIII. Autonomous Agent & ReAct Reasoning Separation (MUST) (NEW) -> Mandate strict separation of concerns for AI Agent / LLM reasoning workflows. Use Cases MUST act strictly as thin orchestrators (session resolution, message persistence, event streaming). ReAct reasoning loops, context window pruning policies, tool dispatching, loop guards, and agent streaming events MUST reside in dedicated Domain Services (`Agent`) and Value Objects (`AgentLoopState`, `AgentStreamEvent`). Defensive duck-typing (`hasattr`, fake fallback mocks) masking missing collaborator contracts is strictly forbidden.
+- Rationale: Codifying Domain-Driven Design boundaries and thin orchestrators for autonomous AI agents, eliminating monolithic use cases, duck-typing fallbacks, and preventing agent prompt hallucination loops.
 -->
 
 # DUT AI Manager Constitution
@@ -111,6 +111,13 @@ Tất cả các cột dữ liệu phức tạp dạng JSON/Metadata lưu trữ t
 - **Automated Pydantic TypeDecorator for JSON Columns**: Các cột lưu trữ JSON phức tạp (như `details`, `metadata`) MUST sử dụng SQLAlchemy `TypeDecorator` (ví dụ `SubmissionDetailsJSON`) kế thừa từ `JSON`. TypeDecorator này chịu trách nhiệm tự động gọi `.model_dump()` khi lưu vào DB (`process_bind_param`) và deserialize tự động dict thô thành các Pydantic Value Objects cụ thể (`CodingSubmissionDetails | GameSubmissionDetails`) khi đọc từ DB (`process_result_value`).
 - **Elimination of Defensive Fallback Soup**: Toàn bộ luồng xử lý từ ORM qua Entity đến Application DTO và Frontend API contract đều được bảo đảm kiểu tĩnh 100%, loại bỏ hoàn toàn các đoạn mã phòng thủ fallback mù quáng (`details.get("xyz") || details.get("abc")`).
 
+### XVIII. Autonomous Agent & ReAct Reasoning Separation (MUST)
+Tất cả các quy trình suy luận của AI / LLM Agent (như Chatbot ReAct loop, Multi-turn Tool calling, Context Window Management) MUST tuân thủ nghiêm ngặt ranh giới phân tách Domain-Driven Design:
+- **Thin Orchestrator Use Cases**: Use Cases tại tầng Application (ví dụ `SendChatMessageUseCase`) đóng vai trò duy nhất là **Thin Orchestrator**. Use Case chỉ chịu trách nhiệm: (1) nạp phiên/hội thoại, (2) lưu tin nhắn người dùng vào DB, (3) khởi tạo và ủy quyền hoàn toàn cho Domain Service `Agent`, (4) điều phối streaming events ra ngoài SSE, và (5) lưu kết quả tin nhắn cuối cùng của assistant. Tuyệt đối không nhúng vòng lặp ReAct, logic đếm token, logic cắt tỉa ngữ cảnh (pruning), hay gọi tool trực tiếp trong Use Case.
+- **Dedicated Agent Domain Service & Value Objects**: Vòng lặp suy luận ReAct (`run_stream`), quản lý ngân sách token (`ContextBudgetPolicy`), cắt tỉa tin nhắn cũ theo ngữ cảnh, cơ chế chống lặp vô hạn (loop guard), và dispatching công cụ (Tool Execution) MUST nằm hoàn toàn trong Domain Service `Agent` và các Value Objects chuẩn hóa (`AgentLoopState`, `AgentStreamEvent`).
+- **Strict Contract Enforcement & Prohibition of Duck-Typing Fallbacks**: Tuân thủ tuyệt đối Nguyên tắc XIV, các phụ thuộc bên ngoài của Agent (chẳng hạn `llm_client`) phải có interface/port rõ ràng với đầy đủ các phương thức bắt buộc (`count_tokens`, `generate_stream`, `list_tools`). Nghiêm cấm viết mã duck-typing phòng thủ (`hasattr(self.llm_client, "count_tokens")`, `callable(...)`) để che đậy các mock test thiếu sót hay dependency contract chắp vá. Tất cả unit test mocks phải phản ánh chính xác 100% hợp đồng của client.
+- **Anti-Hallucination & Tool Execution Nudge**: Agent Prompt và vòng lặp suy luận ReAct phải có cơ chế ngăn chặn mô hình đưa ra lời hứa hẹn suông ("Vui lòng chờ để tôi tra cứu...") mà không phát ra lệnh gọi công cụ (`tool_calls`). Hệ thống phải có fallback prompt mandate hoặc auto-nudge để buộc mô hình thực hiện tra cứu thực sự trước khi trả về câu trả lời cuối cùng cho người dùng.
+
 ## Security & Compliance Standards
 
 1. **Zero Secret Leakage**: No hardcoding of passwords, JWT secrets, Discord Bot tokens, MinIO credentials, or Zalo App secrets. All configurations MUST read from environment variables managed via `app.core.config.Settings`.
@@ -134,4 +141,4 @@ Tất cả các cột dữ liệu phức tạp dạng JSON/Metadata lưu trữ t
    - **MINOR**: Addition of new principles or major workflow standards.
    - **PATCH**: Non-semantic clarifications and wording updates.
 
-**Version**: 1.12.0 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-11-08
+**Version**: 1.13.0 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-11-13

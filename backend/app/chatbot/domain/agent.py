@@ -44,6 +44,10 @@ NGUYÊN TẮC BẮT BUỘC (CRITICAL MANDATES):
 5. NGUYÊN TẮC TRÌNH BÀY DANH SÁCH:
    - Khi hiển thị danh sách người dùng/vi phạm, LUÔN định dạng BẢNG MARKDOWN: | STT | Họ và Tên | Email/Ngày | Nội dung |.
    - TUYỆT ĐỐI KHÔNG in danh sách chỉ có mỗi số ID vô nghĩa.
+
+6. BẮT BUỘC PHÁT SINH LỆNH GỌI CÔNG CỤ, KHÔNG ĐƯỢC CHỈ HỨA HẸN (MANDATORY TOOL EXECUTION):
+   - Tuyệt đối KHÔNG ĐƯỢC chỉ trả về văn bản hứa hẹn kiểu: "Vui lòng chờ một chút", "Tôi sẽ tiến hành tra cứu ngay bây giờ", "Tôi đang truy vấn cơ sở dữ liệu..." mà không gửi kèm cấu trúc gọi công cụ (tool_calls).
+   - Khi cần dữ liệu, BẮT BUỘC PHẢI PHÁT SINH LỆNH GỌI CÔNG CỤ ngay lập tức trong cùng lượt. Nếu bạn chỉ nói bằng lời mà không phát sinh tool_calls, hệ thống sẽ bị ngắt quãng và câu trả lời sẽ bị dở dang!
 """
 
 
@@ -92,12 +96,32 @@ class Agent:
                 if await self.llm_client.count_tokens(llm_messages) < threshold:
                     break
 
+    @staticmethod
+    def _is_incomplete_promise(text: str) -> bool:
+        """Detects if model generated a promising or deferred text without executing tools."""
+        clean = text.lower().strip()
+        if not clean:
+            return False
+        promise_signals = [
+            "vui lòng chờ",
+            "chờ một chút",
+            "chờ trong giây lát",
+            "đang truy vấn",
+            "tra cứu ngay bây giờ",
+            "tiến hành tra cứu",
+            "tiến hành kiểm tra",
+            "sẽ bắt đầu bằng việc",
+            "đang kiểm tra cấu trúc",
+        ]
+        return any(sig in clean for sig in promise_signals)
+
     def _execute_tools(
         self,
         pending_tool_calls: list[dict[str, Any]],
         user: AuthPrincipal,
         llm_messages: list[dict[str, Any]],
         loop_state: AgentLoopState,
+        assistant_content: str = "",
     ) -> list[tuple[str, str, dict[str, Any]]]:
         """Executes pending tools with infinite loop prevention and records them into loop_state.
 
@@ -136,7 +160,11 @@ class Agent:
             loop_state.executed_tools.append(record)
             events.append((tool_name, status, args if isinstance(args, dict) else {}))
 
-            llm_messages.append({"role": "assistant", "content": None, "tool_calls": [tc]})
+            llm_messages.append({
+                "role": "assistant",
+                "content": assistant_content or None,
+                "tool_calls": [tc],
+            })
             llm_messages.append({
                 "role": "tool",
                 "tool_call_id": tc.get("id", "call_default"),
@@ -151,6 +179,7 @@ class Agent:
         tools: list[dict[str, Any]] | None,
         pending_tools: list[dict[str, Any]],
         state: dict[str, Any],
+        turn_state: dict[str, str] | None = None,
     ) -> AsyncGenerator[AgentStreamEvent, None]:
         """Stream chunks from LLM client and yield strongly-typed AgentStreamEvents."""
         async for chunk in self.llm_client.stream_chat(messages, tools=tools):
@@ -160,6 +189,8 @@ class Agent:
                 yield AgentStreamEvent(event_type="reasoning", data=cdata)
             elif ctype == "content":
                 state["content"] += str(cdata)
+                if turn_state is not None:
+                    turn_state["content"] += str(cdata)
                 yield AgentStreamEvent(event_type="content", data=cdata)
             elif ctype == "usage" and isinstance(cdata, dict):
                 state["usage"] = cdata.get("usage")
@@ -197,14 +228,29 @@ class Agent:
             await self.prune_context_if_needed(llm_messages)
 
             pending_tools: list[dict[str, Any]] = []
-            async for event in self._stream_llm_chunks(llm_messages, tools, pending_tools, state):
+            turn_state = {"content": ""}
+            async for event in self._stream_llm_chunks(llm_messages, tools, pending_tools, state, turn_state):
                 yield event
 
             if not pending_tools:
+                # Check if model deferred with a promise without issuing a tool call
+                if self._is_incomplete_promise(turn_state["content"]) and loop_state.iteration < loop_state.max_iterations:
+                    llm_messages.append({"role": "assistant", "content": turn_state["content"]})
+                    llm_messages.append({
+                        "role": "user",
+                        "content": (
+                            "HỆ THỐNG NHẮC NHỞ: Bạn vừa thông báo sẽ tra cứu dữ liệu nhưng chưa phát sinh lệnh gọi công cụ nào. "
+                            "Hãy phát sinh cấu trúc gọi công cụ (như db_get_table_schema, db_list_tables hoặc db_execute_query) ngay bây giờ!"
+                        ),
+                    })
+                    continue
+
                 loop_state.is_completed = True
                 break
 
-            tool_events = self._execute_tools(pending_tools, user, llm_messages, loop_state)
+            tool_events = self._execute_tools(
+                pending_tools, user, llm_messages, loop_state, assistant_content=turn_state["content"]
+            )
             for t_name, t_status, _t_args in tool_events:
                 yield AgentStreamEvent(
                     event_type="tool_call_start",
@@ -215,10 +261,10 @@ class Agent:
                     data={"name": t_name, "status": t_status, "iteration": loop_state.iteration},
                 )
 
-        if not loop_state.is_completed and not state["content"]:
+        if not loop_state.is_completed:
             llm_messages.append({
                 "role": "user",
-                "content": "Hãy tổng hợp lại toàn bộ thông tin tra cứu được ở trên để đưa ra câu trả lời chi tiết và kết luận cho người dùng.",
+                "content": "Hãy tổng hợp lại toàn bộ thông tin tra cứu được ở trên để đưa ra câu trả lời chi tiết và kết luận đầy đủ cho người dùng.",
             })
             async for event in self._stream_llm_chunks(llm_messages, None, [], state):
                 yield event

@@ -140,3 +140,43 @@ async def test_agent_context_pruning_only_on_threshold_overflow(db_session):
     ]
     await agent.prune_context_if_needed(messages_over, max_threshold=1000)
     assert "... [Dữ liệu đã được tóm tắt" in messages_over[1]["content"]
+
+
+@pytest.mark.asyncio
+async def test_agent_auto_nudges_when_promise_without_tool_call(db_session, mock_current_user):
+    """Verify Agent detects promise without tool call, nudges the model, and completes execution."""
+    responses = [
+        # Turn 1: Model promises to look up but does NOT emit tool calls
+        [
+            {"type": "content", "data": "Vui lòng chờ một chút để tôi tra cứu thông tin này."},
+        ],
+        # Turn 2: After being nudged by system, model issues real tool call
+        [
+            {
+                "type": "tool_calls_complete",
+                "data": [{"id": "c1", "function": {"name": "get_my_violations", "arguments": "{}"}}],
+            }
+        ],
+        # Turn 3: Model delivers final synthesized answer
+        [
+            {"type": "content", "data": "Dưới đây là kết quả tra cứu: Bạn có 0 vi phạm."},
+        ],
+    ]
+    mock_llm = MockLLMClient(responses)
+    tool_registry = ChatbotToolRegistry(db_session)
+    agent = Agent(llm_client=mock_llm, tool_registry=tool_registry, max_iterations=5)
+
+    user = AuthPrincipal(
+        actor_id=mock_current_user.id,
+        actor_type=PrincipalType.USER,
+        name=mock_current_user.name,
+        email=mock_current_user.email,
+        permissions=set(),
+    )
+    messages = [ChatMessage(session_id=uuid4(), role=MessageRole.USER, content="Tra cứu cho tôi")]
+
+    events = [event async for event in agent.run_stream(messages, user)]
+    complete_event = next(e for e in events if e.event_type == "complete")
+    assert "Dưới đây là kết quả tra cứu" in complete_event.data["content"]
+    assert len(complete_event.data["metadata"].tools_invoked) == 1
+    assert complete_event.data["metadata"].tools_invoked[0].tool_name == "get_my_violations"

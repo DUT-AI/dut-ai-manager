@@ -2,7 +2,7 @@
 Check Overdue Duties Use Case (for Daily Scheduled Job at 23:59).
 """
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from typing import cast
 from zoneinfo import ZoneInfo
 
@@ -14,6 +14,7 @@ from app.duty.domain.events import DutyViolated
 from app.duty.infrastructure.repository import DutyRepository
 from app.meeting.domain.value_objects import ParticipantStatus
 from app.meeting.infrastructure.repository import MeetingRepository
+from app.shared.domain.datetime_types import ensure_utc
 from app.shared.domain.event_bus import DomainEvent, EventBus
 from app.team.infrastructure.repository import TeamRepository
 from app.violation.application.create_violation_use_case import CreateViolationUseCase
@@ -63,6 +64,7 @@ class CheckOverdueDutiesUseCase:
                 continue
 
             penalized_user_ids: list[int] = []
+            meeting = None
 
             # Lấy thông tin các nhóm trực nhật
             t_ids = duty.team_id if isinstance(duty.team_id, list) else [duty.team_id]
@@ -131,15 +133,23 @@ class CheckOverdueDutiesUseCase:
 
                 reason = f"Không hoàn thành trực nhật phòng Lab ngày {date_str}"
 
+            # Xác định thời điểm xảy ra vi phạm trực nhật (UTC aware)
+            if duty.meeting_id and meeting and meeting.end_time:
+                occurrence_date = ensure_utc(meeting.end_time)
+            elif duty.meeting_id and meeting and meeting.start_time:
+                occurrence_date = ensure_utc(meeting.start_time)
+            else:
+                end_of_day_vn = datetime.combine(duty.duty_date, time(23, 59, 59))
+                occurrence_date = ensure_utc(end_of_day_vn)
+
             if penalized_user_ids:
                 logger.warning(
                     f"Tạo vi phạm cho {len(penalized_user_ids)} học viên vì không trực nhật ca {duty.id}"
                 )
-                now_dt = datetime.now(UTC)
                 await self.create_violation_use_case.execute(
                     user_ids=penalized_user_ids,
                     reason=reason,
-                    date=now_dt,
+                    date=occurrence_date,
                     is_system=True,
                 )
                 violations_count += len(penalized_user_ids)

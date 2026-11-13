@@ -15,6 +15,15 @@ from app.shared.infrastructure.base_repository import BaseRepository
 from app.violation.domain.entity import Violation
 from app.violation.infrastructure.model import ViolationModel
 
+from sqlalchemy import extract, func, or_
+
+from app.user.infrastructure.model import UserModel
+
+from app.shared.domain.query_support import (
+    apply_filters_only,
+    apply_query_support,
+)
+
 
 class ViolationRepository(BaseRepository[ViolationModel, Violation]):
     """Concrete repository using BaseRepository logic."""
@@ -62,12 +71,6 @@ class ViolationRepository(BaseRepository[ViolationModel, Violation]):
         page_size: int = 20,
     ) -> tuple[list[Violation], int]:
         """Get paginated violations with relations and total count."""
-        from sqlalchemy import func
-
-        from app.shared.domain.query_support import (
-            apply_filters_only,
-            apply_query_support,
-        )
 
         # 1. Count query
         count_stmt = select(func.count(ViolationModel.id)).where(
@@ -110,7 +113,9 @@ class ViolationRepository(BaseRepository[ViolationModel, Violation]):
         end_date: date | None = None,
     ) -> list[Violation]:
         """Get violations filtered by month/year/user/date range."""
-        statement = select(ViolationModel).where(ViolationModel.is_deleted == False)  # noqa: E712
+        statement = select(ViolationModel).where(
+            ViolationModel.is_deleted == False
+        )  # noqa: E712
 
         if user_id:
             statement = statement.where(ViolationModel.user_id == user_id)
@@ -131,12 +136,17 @@ class ViolationRepository(BaseRepository[ViolationModel, Violation]):
 
         return [m.to_entity() for m in self.session.scalars(statement).unique().all()]
 
-    def get_by_date(self, target_date: date) -> list[Violation]:
+    def get_by_date(self, target_date: date | datetime) -> list[Violation]:
         """Get all violations on a specific date (accepts date or datetime)."""
         # Tránh lỗi type hint nếu target_date là datetime
         d = target_date.date() if isinstance(target_date, datetime) else target_date
-        start = datetime.combine(d, time.min)
-        end = datetime.combine(d, time.max)
+        tz = (
+            target_date.tzinfo
+            if isinstance(target_date, datetime) and target_date.tzinfo
+            else UTC
+        )
+        start = datetime.combine(d, time.min, tzinfo=tz)
+        end = datetime.combine(d, time.max, tzinfo=tz)
 
         statement = (
             select(ViolationModel)
@@ -153,11 +163,18 @@ class ViolationRepository(BaseRepository[ViolationModel, Violation]):
         )
         return [m.to_entity() for m in self.session.scalars(statement).unique().all()]
 
-    def get_by_user_and_date(self, user_id: int, target_date: date) -> list[Violation]:
+    def get_by_user_and_date(
+        self, user_id: int, target_date: date | datetime
+    ) -> list[Violation]:
         """Get violations for a specific user on a specific date."""
         d = target_date.date() if isinstance(target_date, datetime) else target_date
-        start = datetime.combine(d, time.min)
-        end = datetime.combine(d, time.max)
+        tz = (
+            target_date.tzinfo
+            if isinstance(target_date, datetime) and target_date.tzinfo
+            else UTC
+        )
+        start = datetime.combine(d, time.min, tzinfo=tz)
+        end = datetime.combine(d, time.max, tzinfo=tz)
 
         statement = (
             select(ViolationModel)
@@ -214,10 +231,6 @@ class ViolationRepository(BaseRepository[ViolationModel, Violation]):
         keyword: str | None = None,
     ) -> list[dict]:
         """Tổng hợp vi phạm theo user (chỉ tính count)."""
-
-        from sqlalchemy import extract, func, or_
-
-        from app.user.infrastructure.model import UserModel
 
         stmt = (
             select(
@@ -285,7 +298,9 @@ class ViolationRepository(BaseRepository[ViolationModel, Violation]):
 
         statement = (
             update(ViolationModel)
-            .where(ViolationModel.id.in_(ids), ViolationModel.is_deleted == False)  # noqa: E712
+            .where(
+                ViolationModel.id.in_(ids), ViolationModel.is_deleted == False
+            )  # noqa: E712
             .values(is_deleted=True, updated_at=datetime.now(UTC))
         )
         result = self.session.execute(statement)

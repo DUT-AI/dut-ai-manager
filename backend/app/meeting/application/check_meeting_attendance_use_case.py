@@ -64,6 +64,7 @@ class CheckMeetingAttendanceUseCase:
                                 meeting_id=m_id,
                                 meeting_title=meeting.title,
                                 meeting_date=date_str,
+                                start_time=meeting.start_time,
                             ),
                         )
                     )

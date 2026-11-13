@@ -11,6 +11,7 @@ from app.meeting.infrastructure.repository import (
     MeetingOverallEvaluationRepository,
     MeetingRepository,
 )
+from app.shared.domain.datetime_types import ensure_utc
 from app.violation.domain.entity import Violation
 from app.violation.infrastructure.repository import ViolationRepository
 
@@ -86,6 +87,12 @@ class CheckEvaluationDeadlineJobUseCase:
             if e.evaluation_type == EvaluationType.TRAINEE_TO_TRAINER
         }
 
+        occurrence_date = (
+            ensure_utc(meeting.end_time) + timedelta(hours=MEETING_EVALUATION_DEADLINE_HOURS)
+            if meeting.end_time
+            else now
+        )
+
         created = 0
         for p in joined_participants:
             if p.user_id not in reviewers:
@@ -95,7 +102,7 @@ class CheckEvaluationDeadlineJobUseCase:
                 )
                 if not self.violation_repo.exists_by_user_and_reason(p.user_id, reason):
                     v = Violation.create_system_violation(
-                        user_id=p.user_id, reason=reason, date=now
+                        user_id=p.user_id, reason=reason, date=occurrence_date
                     )
                     self.violation_repo.save(v)
                     created += 1
@@ -104,6 +111,12 @@ class CheckEvaluationDeadlineJobUseCase:
     def _check_trainers(self, meeting: Meeting, now: datetime, time_str: str) -> int:
         if not meeting.id or not meeting.trainers:
             return 0
+
+        occurrence_date = (
+            ensure_utc(meeting.end_time) + timedelta(hours=MEETING_EVALUATION_DEADLINE_HOURS)
+            if meeting.end_time
+            else now
+        )
 
         created = 0
         if not self.overall_eval_repo.exists_for_meeting(meeting.id):
@@ -117,7 +130,7 @@ class CheckEvaluationDeadlineJobUseCase:
                     trainer_id, reason
                 ):
                     v = Violation.create_system_violation(
-                        user_id=trainer_id, reason=reason, date=now
+                        user_id=trainer_id, reason=reason, date=occurrence_date
                     )
                     self.violation_repo.save(v)
                     created += 1

@@ -13,6 +13,7 @@ from app.meeting.infrastructure.repository import ParticipantRepository
 from app.permission_request.domain.value_objects import RequestCategory
 from app.permission_request.infrastructure.repository import PermissionRequestRepository
 from app.shared.application.event_handler import EventHandler
+from app.shared.domain.datetime_types import ensure_utc
 from app.violation.application.create_violation_use_case import CreateViolationUseCase
 
 
@@ -85,10 +86,15 @@ class AutomatedViolationHandler(EventHandler):
             return
 
         reason = f"Vắng sinh hoạt: {event.meeting_title} (Không xin phép)"
+        occurrence_date = (
+            ensure_utc(event.start_time)
+            if getattr(event, "start_time", None) is not None
+            else now
+        )
         await self.create_violation_use_case.execute(
             user_ids=[event.user_id],
             reason=reason,
-            date=now,
+            date=occurrence_date,
             is_system=True,
             system_user_id=None,
         )
@@ -124,10 +130,15 @@ class AutomatedViolationHandler(EventHandler):
                 return
 
             reason = f"Đi trễ sinh hoạt: {event.meeting_title} (Không xin phép)"
+            occurrence_date = (
+                ensure_utc(event.check_in_at)
+                if getattr(event, "check_in_at", None) is not None
+                else now
+            )
             await self.create_violation_use_case.execute(
                 user_ids=[event.user_id],
                 reason=reason,
-                date=now,
+                date=occurrence_date,
                 is_system=True,
                 system_user_id=None,
             )
@@ -187,10 +198,15 @@ class AutomatedViolationHandler(EventHandler):
             reason = (
                 f"Đi trễ hơn thời gian xin phép ({limit_str}): {event.meeting_title}"
             )
+            occurrence_date = (
+                ensure_utc(event.check_in_at)
+                if getattr(event, "check_in_at", None) is not None
+                else now
+            )
             await self.create_violation_use_case.execute(
                 user_ids=[event.user_id],
                 reason=reason,
-                date=now,
+                date=occurrence_date,
                 is_system=True,
                 system_user_id=None,
             )
@@ -205,10 +221,15 @@ class AutomatedViolationHandler(EventHandler):
             f"🔍 [ViolationHandler] Processing overdue homework for user {event.user_id} in homework {event.homework_id}"
         )
         reason_msg = event.reason or f"Quá hạn nộp bài tập: {event.homework_title}"
+        occurrence_date = (
+            ensure_utc(event.deadline)
+            if getattr(event, "deadline", None) is not None
+            else now
+        )
         await self.create_violation_use_case.execute(
             user_ids=[event.user_id],
             reason=reason_msg,
-            date=now,
+            date=occurrence_date,
             is_system=True,
             system_user_id=None,
         )
