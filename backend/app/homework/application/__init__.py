@@ -7,6 +7,9 @@ from .create_homework_use_case import (
 from .delete_homework_use_case import (
     DeleteHomeworkUseCase,
 )
+from .dtos import (
+    HomeworkSubmissionWebhookIn,
+)
 from .get_homework_detail_use_case import (
     GetHomeworkDetailUseCase,
 )
@@ -28,8 +31,10 @@ from .get_user_homework_submissions_use_case import (
 from .get_user_homeworks_use_case import (
     GetUserHomeworksUseCase,
 )
+from .homework_exercise_resolver import (
+    HomeworkExerciseResolver,
+)
 from .record_submission_use_case import (
-    HomeworkSubmissionWebhookIn,
     RecordHomeworkSubmissionUseCase,
 )
 from .rescan_all_homeworks_use_case import (
@@ -48,6 +53,7 @@ __all__ = [
     "DeleteHomeworkUseCase",
     "GetHomeworkDetailUseCase",
     "GetHomeworkSubmissionStatusUseCase",
+    "HomeworkExerciseResolver",
     "GetHomeworksPagedUseCase",
     "GetUnsubmittedHomeworkReportUseCase",
     "GetUnsubmittedHomeworksForUserUseCase",

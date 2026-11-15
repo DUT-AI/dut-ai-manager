@@ -3,8 +3,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from app.homework.application.dtos import HomeworkSubmissionWebhookIn
 from app.homework.application.record_submission_use_case import (
-    HomeworkSubmissionWebhookIn,
     RecordHomeworkSubmissionUseCase,
 )
 from app.homework.domain.entity import Homework, HomeworkSubmission, SubmissionType

@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from app.homework.application import CheckOverdueHomeworkUseCase
+from app.homework.application import CheckOverdueHomeworkUseCase, HomeworkExerciseResolver
 from app.homework.domain.constants import HOMEWORK_VIOLATION_CHECK_DELAY_DAYS
 from app.homework.domain.entity import (
     HomeworkSubmission as HomeworkSubmissionEntity,
@@ -55,11 +55,15 @@ async def test_check_overdue_homework_publishes_event():
     quiz_api = MagicMock()
     quiz_api.get_lesson_exercises = AsyncMock(return_value=None)
 
+    exercise_resolver = HomeworkExerciseResolver(
+        quiz_api=quiz_api,
+        homework_submission_repo=submission_repo,
+    )
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=homework_repo,
         homework_submission_repo=submission_repo,
         homework_assignee_repo=assignee_repo,
-        quiz_api=quiz_api,
+        exercise_resolver=exercise_resolver,
         event_bus=event_bus,
     )
 
@@ -113,11 +117,15 @@ async def test_check_overdue_multi_exercise_partial_submission_flags_overdue():
     quiz_api = MagicMock()
     quiz_api.get_lesson_exercises = AsyncMock(return_value=None)
 
+    exercise_resolver = HomeworkExerciseResolver(
+        quiz_api=quiz_api,
+        homework_submission_repo=submission_repo,
+    )
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=homework_repo,
         homework_submission_repo=submission_repo,
         homework_assignee_repo=assignee_repo,
-        quiz_api=quiz_api,
+        exercise_resolver=exercise_resolver,
         event_bus=event_bus,
     )
 
@@ -168,11 +176,15 @@ async def test_check_overdue_multi_exercise_full_submission_passes():
     quiz_api = MagicMock()
     quiz_api.get_lesson_exercises = AsyncMock(return_value=None)
 
+    exercise_resolver = HomeworkExerciseResolver(
+        quiz_api=quiz_api,
+        homework_submission_repo=submission_repo,
+    )
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=homework_repo,
         homework_submission_repo=submission_repo,
         homework_assignee_repo=assignee_repo,
-        quiz_api=quiz_api,
+        exercise_resolver=exercise_resolver,
         event_bus=event_bus,
     )
 
@@ -193,11 +205,15 @@ async def test_check_overdue_homework_default_target_date_delays_2_days():
     quiz_api = MagicMock()
     quiz_api.get_lesson_exercises = AsyncMock(return_value=None)
 
+    exercise_resolver = HomeworkExerciseResolver(
+        quiz_api=quiz_api,
+        homework_submission_repo=submission_repo,
+    )
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=homework_repo,
         homework_submission_repo=submission_repo,
         homework_assignee_repo=assignee_repo,
-        quiz_api=quiz_api,
+        exercise_resolver=exercise_resolver,
         event_bus=event_bus,
     )
 
@@ -239,11 +255,15 @@ async def test_check_overdue_homework_flags_late_submission():
     quiz_api = MagicMock()
     quiz_api.get_lesson_exercises = AsyncMock(return_value=None)
 
+    exercise_resolver = HomeworkExerciseResolver(
+        quiz_api=quiz_api,
+        homework_submission_repo=submission_repo,
+    )
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=homework_repo,
         homework_submission_repo=submission_repo,
         homework_assignee_repo=assignee_repo,
-        quiz_api=quiz_api,
+        exercise_resolver=exercise_resolver,
         event_bus=event_bus,
     )
 
@@ -299,11 +319,15 @@ async def test_check_overdue_homework_per_assignee_independent_deadlines():
         else []
     )
 
+    exercise_resolver = HomeworkExerciseResolver(
+        quiz_api=quiz_api,
+        homework_submission_repo=submission_repo,
+    )
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=homework_repo,
         homework_submission_repo=submission_repo,
         homework_assignee_repo=assignee_repo,
-        quiz_api=quiz_api,
+        exercise_resolver=exercise_resolver,
         event_bus=event_bus,
     )
 
@@ -354,11 +378,15 @@ async def test_check_overdue_homework_uses_quiz_api_exercises():
     # User 1001 mới chỉ nộp ex_1 và ex_2, thiếu ex_3
     submission_repo.get_submitted_exercise_ids.return_value = {"ex_1", "ex_2"}
 
+    exercise_resolver = HomeworkExerciseResolver(
+        quiz_api=quiz_api,
+        homework_submission_repo=submission_repo,
+    )
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=homework_repo,
         homework_submission_repo=submission_repo,
         homework_assignee_repo=assignee_repo,
-        quiz_api=quiz_api,
+        exercise_resolver=exercise_resolver,
         event_bus=event_bus,
     )
 
@@ -408,11 +436,15 @@ async def test_check_overdue_homework_fallbacks_when_quiz_api_fails():
     # User 1002 đã nộp đủ ex_alpha
     submission_repo.get_submitted_exercise_ids.return_value = {"ex_alpha"}
 
+    exercise_resolver = HomeworkExerciseResolver(
+        quiz_api=quiz_api,
+        homework_submission_repo=submission_repo,
+    )
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=homework_repo,
         homework_submission_repo=submission_repo,
         homework_assignee_repo=assignee_repo,
-        quiz_api=quiz_api,
+        exercise_resolver=exercise_resolver,
         event_bus=event_bus,
     )
 

@@ -1,45 +1,13 @@
 from typing import Any
 
 from loguru import logger
-from pydantic import BaseModel, Field, field_validator
 
+from app.homework.application.dtos import HomeworkSubmissionWebhookIn
 from app.homework.domain.entity import HomeworkSubmission, SubmissionType
 from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.homework.infrastructure.homework_submission_repository import (
     HomeworkSubmissionRepository,
 )
-from app.shared.domain.datetime_types import UtcDateTime
-
-
-class HomeworkSubmissionWebhookIn(BaseModel):
-    """Payload schema nhận từ Quiz Webhook khi có sự kiện nộp bài hoặc hoàn thành game."""
-
-    lesson_slug: str
-    user_id: int
-    type: SubmissionType
-    submitted_at: UtcDateTime
-    is_passed: bool = True
-
-    # Chi tiết bài tập con (dành cho CODING)
-    exercise_id: str | None = None
-    exercise_title: str | None = None
-    submission_id: str | None = None
-    attempt_number: int = 1
-    score: float | None = None
-    original_filename: str | None = None
-
-    details: dict[str, Any] = Field(default_factory=dict)
-
-    @field_validator("type", mode="before")
-    @classmethod
-    def parse_submission_type(cls, v: Any) -> SubmissionType:
-        if isinstance(v, SubmissionType):
-            return v
-        if isinstance(v, str):
-            val = v.strip().upper()
-            if val in SubmissionType.__members__:
-                return SubmissionType[val]
-        raise ValueError(f"Invalid submission type: {v}. Must be CODING or GAME")
 
 
 class RecordHomeworkSubmissionUseCase:

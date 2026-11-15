@@ -1,122 +1,15 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.homework.application.dtos.common import ExerciseSummaryDTO
 from app.homework.domain.entity import SubmissionType
 from app.homework.domain.value_objects import (
     CodingSubmissionDetails,
     GameSubmissionDetails,
 )
 from app.shared.domain.datetime_types import UtcDateTime
-from app.shared.domain.value_objects import UserRef
-
-
-class HomeworkBase(BaseModel):
-    title: str
-    link: str | None = None
-    slug: str | None = None
-    requires_coding: bool = False
-    requires_game: bool = False
-
-
-class HomeworkCreate(HomeworkBase):
-    deadline: UtcDateTime
-    assignee_ids: list[int] = Field(default_factory=list)
-
-
-class HomeworkUpdate(BaseModel):
-    title: str | None = None
-    deadline: UtcDateTime | None = None
-    link: str | None = None
-    slug: str | None = None
-    requires_coding: bool | None = None
-    requires_game: bool | None = None
-    assignee_ids: list[int] | None = None
-    force_override_deadlines: bool = False
-
-
-class HomeworkResponse(HomeworkBase):
-    id: int
-    deadline: datetime | None = None
-    created_at: datetime
-    updated_at: datetime
-    created_by: int | None = None
-
-    # Computed fields (populated by use cases)
-    submission_count: int = 0
-    is_submitted: bool | None = None
-    is_overdue: bool | None = None
-    has_coding: bool = False
-    coding_submitted: bool = False
-    has_game: bool = False
-    game_submitted: bool = False
-    uncompleted_items: list[str] = Field(default_factory=list)
-
-    class Config:
-        from_attributes = True
-
-    @classmethod
-    def from_domain(
-        cls, hw: Any, deadline: datetime | None = None
-    ) -> "HomeworkResponse":
-        return cls(
-            id=hw.id,
-            title=hw.title,
-            deadline=deadline,
-            link=hw.link,
-            slug=hw.slug,
-            requires_coding=hw.requires_coding,
-            requires_game=hw.requires_game,
-            created_at=hw.created_at,
-            updated_at=hw.updated_at,
-            created_by=hw.created_by,
-        )
-
-    from_entity = from_domain
-
-
-class ExerciseSummaryDTO(BaseModel):
-    """Thông tin tóm tắt của một bài tập coding con kèm số liệu hoàn thành."""
-
-    exercise_id: str
-    title: str
-    order_index: int = 0
-    completed_count: int = 0
-    total_assigned: int = 0
-    completion_rate: float = 0.0
-
-
-class HomeworkResponseDetail(HomeworkResponse):
-    """DTO chi tiết bài tập bao gồm danh sách assignee_ids phục vụ màn hình chỉnh sửa/chi tiết."""
-
-    assignee_ids: list[int] = Field(default_factory=list)
-    coding_exercises: list[ExerciseSummaryDTO] = Field(default_factory=list)
-
-    @classmethod
-    def from_domain(
-        cls,
-        hw: Any,
-        assignee_ids: list[int] | None = None,
-        deadline: datetime | None = None,
-        coding_exercises: list[ExerciseSummaryDTO] | None = None,
-    ) -> "HomeworkResponseDetail":
-        return cls(
-            id=hw.id,
-            title=hw.title,
-            deadline=deadline,
-            link=hw.link,
-            slug=hw.slug,
-            requires_coding=hw.requires_coding,
-            requires_game=hw.requires_game,
-            created_at=hw.created_at,
-            updated_at=hw.updated_at,
-            created_by=hw.created_by,
-            assignee_ids=assignee_ids or [],
-            coding_exercises=coding_exercises or [],
-        )
-
-    from_entity = from_domain
 
 
 class StudentExerciseStatusDTO(BaseModel):
@@ -176,17 +69,14 @@ class HomeworkSubmissionStatusResponse(BaseModel):
     coding: CategorySubmissionStatus = CategorySubmissionStatus()
     game: CategorySubmissionStatus = CategorySubmissionStatus()
 
+    # Tổng số học sinh đã hoàn thành đầy đủ tất cả các phần bài tập được yêu cầu
+    total_completed_count: int = 0
+
     # Danh sách bài tập con của bài học
     coding_exercises: list[ExerciseSummaryDTO] = Field(default_factory=list)
 
     # Chi tiết theo từng học viên
     students: list[StudentHomeworkDetailDTO] = Field(default_factory=list)
-
-
-class HomeworkReportResponse(BaseModel):
-    user_id: int
-    owner: UserRef | None = None
-    unsubmitted_count: int = 0
 
 
 class HomeworkSubmissionDetailResponse(BaseModel):
@@ -216,9 +106,12 @@ class HomeworkSubmissionDetailResponse(BaseModel):
                     data["details"] = GameSubmissionDetails(**raw_details)
                 else:
                     data["details"] = CodingSubmissionDetails(**raw_details)
-        elif hasattr(data, "submission_type") and hasattr(data, "details"):
-            # ORM Model or Domain Entity
-            sub_type = getattr(data.submission_type, "value", str(data.submission_type)).upper()
+            return data
+
+        # ORM Model or Domain Entity
+        sub_type_raw = getattr(data, "submission_type", None)
+        if sub_type_raw is not None:
+            sub_type = getattr(sub_type_raw, "value", str(sub_type_raw)).upper()
             raw_details = getattr(data, "details", {}) or {}
             if not isinstance(raw_details, (CodingSubmissionDetails, GameSubmissionDetails)):
                 parsed_details = (
@@ -226,12 +119,11 @@ class HomeworkSubmissionDetailResponse(BaseModel):
                     if sub_type == "GAME"
                     else CodingSubmissionDetails(**raw_details)
                 )
-                # If data is an object, convert to dict for Pydantic instantiation
                 return {
                     "id": getattr(data, "id", None),
                     "homework_id": getattr(data, "homework_id", None),
                     "user_id": getattr(data, "user_id", None),
-                    "submission_type": getattr(data, "submission_type", None),
+                    "submission_type": sub_type_raw,
                     "exercise_id": getattr(data, "exercise_id", None),
                     "exercise_title": getattr(data, "exercise_title", None),
                     "score": getattr(data, "score", None),
@@ -244,19 +136,34 @@ class HomeworkSubmissionDetailResponse(BaseModel):
         return data
 
 
-class SyncHomeworkResult(BaseModel):
-    """Kết quả phản hồi chi tiết sau khi đồng bộ bài tập từ Quiz API."""
+class HomeworkSubmissionWebhookIn(BaseModel):
+    """Payload schema nhận từ Quiz Webhook khi có sự kiện nộp bài hoặc hoàn thành game."""
 
-    homework_id: int
-    title: str
-    requires_coding: bool
-    requires_game: bool
-    coding_exercises_count: int = 0
-    game_questions_count: int = 0
-    synced_coding_count: int = 0
-    updated_coding_count: int = 0
-    synced_game_count: int = 0
-    updated_game_count: int = 0
-    message: str
+    lesson_slug: str
+    user_id: int
+    type: SubmissionType
+    submitted_at: UtcDateTime
+    is_passed: bool = True
+
+    # Chi tiết bài tập con (dành cho CODING)
+    exercise_id: str | None = None
+    exercise_title: str | None = None
+    submission_id: str | None = None
+    attempt_number: int = 1
+    score: float | None = None
+    original_filename: str | None = None
+
+    details: dict[str, Any] = Field(default_factory=dict)
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("type", mode="before")
+    @classmethod
+    def parse_submission_type(cls, v: Any) -> SubmissionType:
+        if isinstance(v, SubmissionType):
+            return v
+        if isinstance(v, str):
+            val = v.strip().upper()
+            if val in SubmissionType.__members__:
+                return SubmissionType[val]
+        raise ValueError(f"Invalid submission type: {v}. Must be CODING or GAME")

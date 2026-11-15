@@ -57,6 +57,9 @@ class SubmissionEvaluation(BaseModel):
     coding_submitted: bool
     game_submitted: bool
     uncompleted_items: list[str]
+    coding_status: str = "NOT_SUBMITTED"
+    total_coding_required: int = 0
+    total_coding_completed: int = 0
 
 
 class DueHomeworkAssignment(BaseModel):

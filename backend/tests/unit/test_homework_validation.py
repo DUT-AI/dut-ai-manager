@@ -301,3 +301,77 @@ async def test_update_homework_uncheck_game_success(mock_homework_repo, mock_qui
     saved_entity = mock_homework_repo.save.call_args[0][0]
     assert saved_entity.requires_game is False
     assert saved_entity.requires_coding is True
+
+
+def test_evaluate_submissions_partial_coding():
+    """Kiểm tra evaluate_submissions khi học sinh mới làm 1/2 bài coding con."""
+    from app.homework.domain.entity import HomeworkSubmission, SubmissionType
+
+    hw = Homework(
+        id=1,
+        title="Bài tập con test",
+        requires_coding=True,
+        requires_game=False,
+    )
+    submissions = [
+        HomeworkSubmission(
+            id=1,
+            homework_id=1,
+            user_id=10,
+            submission_type=SubmissionType.CODING,
+            exercise_id="ex-1",
+            is_passed=True,
+            submitted_at=datetime.now(UTC),
+        )
+    ]
+    eval_result = hw.evaluate_submissions(
+        submissions, required_exercise_ids={"ex-1", "ex-2"}
+    )
+    assert eval_result.is_submitted is False
+    assert eval_result.coding_submitted is False
+    assert eval_result.coding_status == "PARTIALLY_SUBMITTED"
+    assert eval_result.total_coding_required == 2
+    assert eval_result.total_coding_completed == 1
+    assert "Còn 1/2 bài tập Coding" in eval_result.uncompleted_items
+
+
+def test_evaluate_submissions_full_coding():
+    """Kiểm tra evaluate_submissions khi học sinh làm đủ cả 2 bài coding con."""
+    from app.homework.domain.entity import HomeworkSubmission, SubmissionType
+
+    hw = Homework(
+        id=1,
+        title="Bài tập con test",
+        requires_coding=True,
+        requires_game=False,
+    )
+    submissions = [
+        HomeworkSubmission(
+            id=1,
+            homework_id=1,
+            user_id=10,
+            submission_type=SubmissionType.CODING,
+            exercise_id="ex-1",
+            is_passed=True,
+            submitted_at=datetime.now(UTC),
+        ),
+        HomeworkSubmission(
+            id=2,
+            homework_id=1,
+            user_id=10,
+            submission_type=SubmissionType.CODING,
+            exercise_id="ex-2",
+            is_passed=True,
+            submitted_at=datetime.now(UTC),
+        ),
+    ]
+    eval_result = hw.evaluate_submissions(
+        submissions, required_exercise_ids={"ex-1", "ex-2"}
+    )
+    assert eval_result.is_submitted is True
+    assert eval_result.coding_submitted is True
+    assert eval_result.coding_status == "COMPLETED"
+    assert eval_result.total_coding_required == 2
+    assert eval_result.total_coding_completed == 2
+    assert len(eval_result.uncompleted_items) == 0
+

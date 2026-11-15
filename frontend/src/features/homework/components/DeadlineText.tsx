@@ -12,7 +12,7 @@ interface DeadlineTextProps {
 }
 
 export const DeadlineText: React.FC<DeadlineTextProps> = ({ date, record, showOverdueTag = true }) => {
-    const isSubmitted = (record.submission_count ?? 0) > 0;
+    const isSubmitted = record.is_submitted ?? (record.submission_count ?? 0) > 0;
     const isOverdue = dayjs().isAfter(dayjs(date));
     const isDanger = isOverdue && !isSubmitted;
 

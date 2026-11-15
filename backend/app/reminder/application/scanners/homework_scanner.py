@@ -36,6 +36,11 @@ class HomeworkTaskScanner(BaseTaskScanner):
         candidates: list[ScannedCandidateTask] = []
         all_homeworks = self.homework_repo.get_all(limit=200)
 
+        hw_ids = [hw.id for hw in all_homeworks if hw.id]
+        required_exercises_map = (
+            self.homework_submission_repo.get_required_exercise_ids_map(hw_ids)
+        )
+
         vn_tz = ZoneInfo("Asia/Ho_Chi_Minh")
         now_utc = (
             now if now.tzinfo is not None else now.replace(tzinfo=vn_tz).astimezone(UTC)
@@ -48,6 +53,10 @@ class HomeworkTaskScanner(BaseTaskScanner):
             assignees = self.homework_assignee_repo.get_assignees_with_user_info(hw.id)
             if not assignees:
                 continue
+
+            hw_req_ex_ids = required_exercises_map.get(hw.id)
+            if not isinstance(hw_req_ex_ids, set):
+                hw_req_ex_ids = None
 
             for assignee in assignees:
                 uid = assignee.user_id
@@ -92,7 +101,9 @@ class HomeworkTaskScanner(BaseTaskScanner):
                     homework_id=hw.id, user_id=uid
                 )
                 evaluation = hw.evaluate_submissions(
-                    submissions, deadline=hw_deadline_dt
+                    submissions,
+                    deadline=hw_deadline_dt,
+                    required_exercise_ids=hw_req_ex_ids,
                 )
                 if evaluation.is_submitted:
                     continue  # Đã hoàn thành trọn vẹn cả Coding và Game -> Bỏ qua

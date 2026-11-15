@@ -5,6 +5,9 @@ import pytest
 from app.homework.application.get_homework_detail_use_case import (
     GetHomeworkDetailUseCase,
 )
+from app.homework.application.homework_exercise_resolver import (
+    HomeworkExerciseResolver,
+)
 from app.homework.domain.entity import Homework
 
 
@@ -32,11 +35,15 @@ async def test_get_homework_detail_returns_coding_exercises_from_quiz_api():
         ]
     )
 
+    exercise_resolver = HomeworkExerciseResolver(
+        quiz_api=quiz_api,
+        homework_submission_repo=homework_submission_repo,
+    )
+
     use_case = GetHomeworkDetailUseCase(
         homework_repo=homework_repo,
         homework_assignee_repo=homework_assignee_repo,
-        quiz_api=quiz_api,
-        homework_submission_repo=homework_submission_repo,
+        exercise_resolver=exercise_resolver,
     )
 
     result = await use_case.execute(79)
@@ -79,11 +86,15 @@ async def test_get_homework_detail_fallback_to_submissions_when_quiz_api_fails()
 
     homework_submission_repo.get_submissions_by_homework.return_value = [sub1, sub2]
 
+    exercise_resolver = HomeworkExerciseResolver(
+        quiz_api=quiz_api,
+        homework_submission_repo=homework_submission_repo,
+    )
+
     use_case = GetHomeworkDetailUseCase(
         homework_repo=homework_repo,
         homework_assignee_repo=homework_assignee_repo,
-        quiz_api=quiz_api,
-        homework_submission_repo=homework_submission_repo,
+        exercise_resolver=exercise_resolver,
     )
 
     result = await use_case.execute(79)

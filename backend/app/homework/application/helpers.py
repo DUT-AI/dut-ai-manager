@@ -5,8 +5,6 @@ Contains shared utilities for slug extraction and Quiz API member/leaderboard pa
 Eliminates code duplication (DRY principle) across Homework use cases.
 """
 
-import re
-
 from loguru import logger
 
 from app.homework.domain.entity import Homework as HomeworkEntity
@@ -18,34 +16,13 @@ class QuizSubmissionHelper:
 
     @staticmethod
     def extract_slug(link: str | None, slug: str | None) -> str | None:
-        """Trích xuất slug từ thuộc tính slug hoặc parse từ URL link."""
-        if slug and slug.strip():
-            return slug.strip()
-        if link and link.strip():
-            link_clean = link.strip()
-            match = re.search(r"/(?:homeworks|game|lessons)/([^/?#]+)", link_clean)
-            if match:
-                return match.group(1).strip()
-            if link_clean.startswith("http://") or link_clean.startswith("https://"):
-                candidate = (
-                    link_clean.rstrip("/")
-                    .split("/")[-1]
-                    .split("?")[0]
-                    .split("#")[0]
-                    .strip()
-                )
-                if candidate and len(candidate) > 1 and " " not in candidate:
-                    if candidate.lower() in ("game", "homeworks", "coding"):
-                        parts = [p for p in link_clean.rstrip("/").split("/") if p]
-                        if len(parts) >= 2:
-                            return parts[-2].strip()
-                    return candidate
-        return None
+        """Trích xuất slug từ thuộc tính slug hoặc parse từ URL link (ủy quyền cho HomeworkEntity)."""
+        return HomeworkEntity.extract_slug(link, slug)
 
     @classmethod
     def extract_slug_from_entity(cls, homework: HomeworkEntity) -> str | None:
-        """Trích xuất slug từ Homework entity."""
-        return cls.extract_slug(homework.link, homework.slug)
+        """Trích xuất slug từ Homework entity qua property effective_slug."""
+        return homework.effective_slug
 
     @staticmethod
     def detect_homework_type(link: str | None, slug: str | None) -> str:
@@ -131,43 +108,3 @@ class QuizSubmissionHelper:
         except Exception as exc:
             logger.warning(f"Quiz get_lesson_exercises error for slug={slug}: {exc}")
             return None
-
-    @staticmethod
-    def is_user_submitted(
-        user_id: int,
-        coding_completed_uids: set[int] | None,
-        game_completed_uids: set[int] | None,
-        requires_coding: bool | None = None,
-        requires_game: bool | None = None,
-    ) -> bool:
-        """
-        Kiểm tra xem user_id đã nộp bài tập hay chưa dựa trên kết quả từ Quiz API và yêu cầu của bài tập.
-        - Nếu có requires_coding/requires_game: tuân thủ yêu cầu được chỉ định.
-        - Nếu cả 2 đều không được chỉ định (bài cũ): fallback kiểm tra theo sự tồn tại của phần thi.
-        """
-        # 1. Nếu có cấu hình yêu cầu rõ ràng
-        if requires_coding or requires_game:
-            coding_ok = True
-            if requires_coding:
-                coding_ok = user_id in (coding_completed_uids or set())
-
-            game_ok = True
-            if requires_game:
-                game_ok = user_id in (game_completed_uids or set())
-
-            return coding_ok and game_ok
-
-        # 2. Fallback cho dữ liệu cũ chưa có requires_coding / requires_game
-        has_coding = coding_completed_uids is not None
-        has_game = game_completed_uids is not None
-
-        if has_coding and has_game:
-            return (user_id in (coding_completed_uids or set())) and (
-                user_id in (game_completed_uids or set())
-            )
-        elif has_coding:
-            return user_id in (coding_completed_uids or set())
-        elif has_game:
-            return user_id in (game_completed_uids or set())
-        else:
-            return False

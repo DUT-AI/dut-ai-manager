@@ -54,6 +54,11 @@ class GetUserHomeworksUseCase:
             paged_hw_ids, user_id
         )
 
+        # Lấy danh mục các bài tập coding con yêu cầu của các bài tập này từ DB
+        required_exercises_map = (
+            self.homework_submission_repo.get_required_exercise_ids_map(paged_hw_ids)
+        )
+
         # Group submissions by homework_id
         submissions_by_hw: dict[int, list] = {}
         for sub in user_submissions:
@@ -64,8 +69,12 @@ class GetUserHomeworksUseCase:
             assert hw.id is not None
             hw_subs = submissions_by_hw.get(hw.id, [])
             user_dl = user_deadlines.get(hw.id)
+            hw_req_ex_ids = required_exercises_map.get(hw.id)
             evaluation = hw.evaluate_submissions(
-                hw_subs, deadline=user_dl, reference_time=now
+                hw_subs,
+                deadline=user_dl,
+                reference_time=now,
+                required_exercise_ids=hw_req_ex_ids,
             )
 
             resp = HomeworkResponse(
@@ -86,6 +95,9 @@ class GetUserHomeworksUseCase:
                 has_game=hw.requires_game,
                 game_submitted=evaluation.game_submitted,
                 uncompleted_items=evaluation.uncompleted_items,
+                coding_status=evaluation.coding_status,
+                total_coding_required=evaluation.total_coding_required,
+                total_coding_completed=evaluation.total_coding_completed,
             )
             responses.append(resp)
 
