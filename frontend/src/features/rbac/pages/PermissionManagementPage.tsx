@@ -142,7 +142,7 @@ const PermissionManagementPage: React.FC = () => {
                 className={!screens.md ? 'bg-transparent shadow-none border-none' : 'shadow-sm border-gray-100 rounded-xl overflow-hidden'}
                 styles={{ body: { padding: !screens.md ? 0 : undefined } }}
             >
-                {/* Header */}
+                {/* Header & Mobile Action Bar */}
                 <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 px-3 md:px-0">
                     <Space size="middle">
                         <div className="hidden md:flex w-12 h-12 rounded-xl bg-indigo-50 items-center justify-center text-indigo-500">
@@ -153,44 +153,75 @@ const PermissionManagementPage: React.FC = () => {
                             <Text type="secondary" className="text-xs md:text-sm">Danh sách và công cụ quản lý các yêu cầu</Text>
                         </div>
                     </Space>
-                    {canCreate && (
-                        <Button
-                            type="primary"
-                            icon={<PlusOutlined />}
-                            onClick={() => {
-                                setEditingItem(null);
-                                setIsModalOpen(true);
-                            }}
-                            className="w-full md:w-auto bg-linear-to-r from-indigo-500 to-purple-600 border-none shadow-md h-10 px-6 font-semibold"
-                        >
-                            Tạo Đơn mới
-                        </Button>
-                    )}
+
+                    <div className="w-full md:w-auto flex items-center gap-2">
+                        {canCreate && (
+                            <Button
+                                type="primary"
+                                icon={<PlusOutlined />}
+                                onClick={() => {
+                                    setEditingItem(null);
+                                    setIsModalOpen(true);
+                                }}
+                                className="flex-1 md:flex-initial bg-linear-to-r from-indigo-500 to-purple-600 border-none shadow-md h-10 px-6 font-semibold"
+                            >
+                                Tạo Đơn mới
+                            </Button>
+                        )}
+
+                        {/* Trên mobile: Đặt nút phễu lọc ngay cạnh nút Tạo Đơn mới */}
+                        {!screens.md && (
+                            <PermissionFilterBar
+                                filterDate={filterDate}
+                                filterCategory={filterCategory}
+                                filterUserId={filterUserId}
+                                onDateChange={(date) => {
+                                    setFilterDate(date);
+                                    setFilterMonth(date ? date.month() + 1 : undefined);
+                                    setFilterYear(date ? date.year() : undefined);
+                                    resetPage();
+                                }}
+                                onCategoryChange={(val) => {
+                                    setFilterCategory(val);
+                                    resetPage();
+                                }}
+                                onUserChange={(val) => {
+                                    setFilterUserId(val);
+                                    resetPage();
+                                }}
+                                onReset={handleResetFilter}
+                                isMobile={true}
+                            />
+                        )}
+                    </div>
                 </motion.div>
 
-                {/* Filter Bar */}
-                <motion.div variants={itemVariants}>
-                    <PermissionFilterBar
-                        filterDate={filterDate}
-                        filterCategory={filterCategory}
-                        filterUserId={filterUserId}
-                        onDateChange={(date) => {
-                            setFilterDate(date);
-                            setFilterMonth(date ? date.month() + 1 : undefined);
-                            setFilterYear(date ? date.year() : undefined);
-                            resetPage();
-                        }}
-                        onCategoryChange={(val) => {
-                            setFilterCategory(val);
-                            resetPage();
-                        }}
-                        onUserChange={(val) => {
-                            setFilterUserId(val);
-                            resetPage();
-                        }}
-                        onReset={handleResetFilter}
-                    />
-                </motion.div>
+                {/* Desktop Filter Bar */}
+                {screens.md && (
+                    <motion.div variants={itemVariants}>
+                        <PermissionFilterBar
+                            filterDate={filterDate}
+                            filterCategory={filterCategory}
+                            filterUserId={filterUserId}
+                            onDateChange={(date) => {
+                                setFilterDate(date);
+                                setFilterMonth(date ? date.month() + 1 : undefined);
+                                setFilterYear(date ? date.year() : undefined);
+                                resetPage();
+                            }}
+                            onCategoryChange={(val) => {
+                                setFilterCategory(val);
+                                resetPage();
+                            }}
+                            onUserChange={(val) => {
+                                setFilterUserId(val);
+                                resetPage();
+                            }}
+                            onReset={handleResetFilter}
+                            isMobile={false}
+                        />
+                    </motion.div>
+                )}
 
                 {/* List / Table */}
                 <motion.div variants={itemVariants}>

@@ -36,19 +36,19 @@ class GetViolationsUseCase:
         if month:
             filters.append(
                 FilterCriterion(
-                    field="created_at", operator=FilterOperator.MONTH_EQ, value=month
+                    field="date", operator=FilterOperator.MONTH_EQ, value=month
                 )
             )
         if year:
             filters.append(
                 FilterCriterion(
-                    field="created_at", operator=FilterOperator.YEAR_EQ, value=year
+                    field="date", operator=FilterOperator.YEAR_EQ, value=year
                 )
             )
         if start_date:
             filters.append(
                 FilterCriterion(
-                    field="created_at",
+                    field="date",
                     operator=FilterOperator.GTE,
                     value=datetime.combine(start_date, time.min),
                 )
@@ -56,7 +56,7 @@ class GetViolationsUseCase:
         if end_date:
             filters.append(
                 FilterCriterion(
-                    field="created_at",
+                    field="date",
                     operator=FilterOperator.LTE,
                     value=datetime.combine(end_date, time.max),
                 )
@@ -66,7 +66,7 @@ class GetViolationsUseCase:
             page=page,
             page_size=page_size,
             filters=filters,
-            sort_by="created_at",
+            sort_by="date",
             descending=True,
         )
         return self.repo.get_paged(query_support=qs, deleted=deleted)

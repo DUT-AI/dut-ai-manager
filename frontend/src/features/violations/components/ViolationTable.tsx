@@ -35,6 +35,7 @@ const ViolationTable = ({
         {
             title: 'Thành viên',
             key: 'user',
+            width: 240,
             render: (_: unknown, record: ViolationResponse) => (
                 <Space>
                     <Avatar
@@ -44,7 +45,7 @@ const ViolationTable = ({
                         size="small"
                     />
                     <div>
-                        <Title level={5} className="!mb-0 text-sm">{record.owner?.name || 'Unknown'}</Title>
+                        <Title level={5} className="!mb-0 text-sm whitespace-nowrap">{record.owner?.name || 'Unknown'}</Title>
                     </div>
                 </Space>
             ),
@@ -54,15 +55,20 @@ const ViolationTable = ({
             dataIndex: 'reason',
             key: 'reason',
             render: (reason: string) => (
-                <Text className="max-w-[300px] block truncate" title={reason}>{reason}</Text>
+                <div className="py-1">
+                    <Text className="block whitespace-pre-wrap break-words text-gray-700 leading-relaxed font-normal">
+                        {reason}
+                    </Text>
+                </div>
             ),
         },
         {
             title: 'Thời gian',
             dataIndex: 'date',
             key: 'date',
+            width: 220,
             render: (date: string) => (
-                <Space>
+                <Space className="whitespace-nowrap text-gray-600">
                     <CalendarOutlined className="text-gray-400" />
                     <Text>{dayjs(date).format('DD/MM/YYYY HH:mm')}</Text>
                 </Space>
@@ -71,7 +77,8 @@ const ViolationTable = ({
         {
             title: 'Thao tác',
             key: 'actions',
-            width: 120,
+            width: 140,
+            align: 'center' as const,
             render: (_: unknown, record: ViolationResponse) => (
                 <Space onClick={(e) => e.stopPropagation()}>
                     <Button

@@ -75,7 +75,7 @@ const ViolationMobileList = ({
                                 <Text strong className="truncate text-base">
                                     {record.owner?.name || 'Unknown'}
                                 </Text>
-                                <Text type="danger" className="text-xs italic truncate">
+                                <Text type="danger" className="text-xs italic whitespace-normal break-words">
                                     {record.reason}
                                 </Text>
                             </div>
