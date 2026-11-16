@@ -242,6 +242,25 @@ class HomeworkAssigneeRepository:
         )
         return list(self.session.scalars(statement).all())
 
+    def get_assigned_homework_ids_for_users(
+        self, user_ids: list[int]
+    ) -> dict[int, set[int]]:
+        """Lấy mapping user_id -> set[homework_id] cho nhiều users trong 1 query duy nhất."""
+        if not user_ids:
+            return {}
+        statement = (
+            select(HomeworkAssigneeModel.user_id, HomeworkAssigneeModel.homework_id)
+            .join(HomeworkModel, HomeworkAssigneeModel.homework_id == HomeworkModel.id)
+            .where(
+                HomeworkAssigneeModel.user_id.in_(user_ids),
+            )
+        )
+        rows = self.session.execute(statement).all()
+        user_hw_map: dict[int, set[int]] = {uid: set() for uid in user_ids}
+        for uid, hw_id in rows:
+            user_hw_map.setdefault(uid, set()).add(hw_id)
+        return user_hw_map
+
     def get_user_deadlines_for_homeworks(
         self, homework_ids: list[int], user_id: int
     ) -> dict[int, datetime]:

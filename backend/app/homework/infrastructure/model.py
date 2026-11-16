@@ -58,7 +58,11 @@ class SubmissionDetailsJSON(TypeDecorator):
     def process_result_value(self, value: Any, dialect: Any) -> Any:
         if not value or not isinstance(value, dict):
             return None
-        if "total_questions" in value or "correct_count" in value or "session_id" in value:
+        if (
+            "total_questions" in value
+            or "correct_count" in value
+            or "session_id" in value
+        ):
             return GameSubmissionDetails(**value)
         return CodingSubmissionDetails(**value)
 
@@ -81,10 +85,10 @@ class HomeworkModel(SQLAlchemyAuditTimestampMixin, Base):
     )
 
     assignees: Mapped[list["HomeworkAssigneeModel"]] = relationship(
-        back_populates="homework", cascade="all, delete-orphan", lazy="selectin"
+        back_populates="homework", cascade="all, delete-orphan", lazy="select"
     )
     submissions: Mapped[list["HomeworkSubmissionModel"]] = relationship(
-        back_populates="homework", cascade="all, delete-orphan", lazy="selectin"
+        back_populates="homework", cascade="all, delete-orphan", lazy="select"
     )
 
     def to_entity(self) -> HomeworkEntity:
@@ -180,8 +184,10 @@ class HomeworkSubmissionModel(Base):
     is_passed: Mapped[bool] = mapped_column(
         Boolean, default=True, server_default="true", nullable=False
     )
-    details: Mapped[CodingSubmissionDetails | GameSubmissionDetails | None] = mapped_column(
-        SubmissionDetailsJSON, default=None, server_default="{}", nullable=True
+    details: Mapped[CodingSubmissionDetails | GameSubmissionDetails | None] = (
+        mapped_column(
+            SubmissionDetailsJSON, default=None, server_default="{}", nullable=True
+        )
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

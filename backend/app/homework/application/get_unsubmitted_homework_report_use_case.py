@@ -30,6 +30,11 @@ class GetUnsubmittedHomeworkReportUseCase:
         if not active_users:
             return []
 
+        user_ids = [u.id for u in active_users if u.id is not None]
+        user_assigned_map = (
+            self.homework_assignee_repo.get_assigned_homework_ids_for_users(user_ids)
+        )
+
         all_homeworks = self.homework_repo.get_all()
         all_submissions = self.homework_submission_repo.get_all_submissions()
 
@@ -46,9 +51,7 @@ class GetUnsubmittedHomeworkReportUseCase:
             uid = user.id
             unsubmitted_count = 0
 
-            assigned_hw_ids = set(
-                self.homework_assignee_repo.get_assigned_homework_ids(uid)
-            )
+            assigned_hw_ids = user_assigned_map.get(uid, set())
 
             for hw in all_homeworks:
                 if not hw.id:
