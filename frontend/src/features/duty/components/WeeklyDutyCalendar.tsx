@@ -24,10 +24,12 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import type { WeeklyDutyClassDto } from '../types/duty.types';
+import { RandomDutyAssignmentModal } from './RandomDutyAssignmentModal';
 
 const { Title, Text } = Typography;
 
@@ -49,6 +51,9 @@ interface WeeklyDutyCalendarProps {
       meeting_id?: number | null;
       start_time?: string | null;
       end_time?: string | null;
+      checklist?: import('../types/duty.types').DutyChecklistItem[];
+      responsible_ids?: number[];
+      random_round?: number;
     }
   ) => void;
   onOpenDetailModal: (dutyId: number) => void;
@@ -78,6 +83,22 @@ export const WeeklyDutyCalendar: React.FC<WeeklyDutyCalendarProps> = ({
   const [rejectingDutyId, setRejectingDutyId] = useState<number | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string>('');
   const [scheduleFilter, setScheduleFilter] = useState<'ALL' | 'SCHEDULED' | 'NOT_SCHEDULED'>('ALL');
+
+  // State mở Modal phân công & quay random trước khi gạt ON thật sự
+  const [randomModalState, setRandomModalState] = useState<{
+    isOpen: boolean;
+    teamId: number | number[];
+    teamName: string;
+    dutyDate: string;
+    meetingId?: number | null;
+    startTime?: string | null;
+    endTime?: string | null;
+  }>({
+    isOpen: false,
+    teamId: 0,
+    teamName: '',
+    dutyDate: '',
+  });
 
   // Lọc danh sách tuần: Luôn ẩn các ca đã COMPLETED khỏi Tab 1 (theo yêu cầu)
   const displaySchedule = useMemo(() => {
@@ -374,11 +395,23 @@ export const WeeklyDutyCalendar: React.FC<WeeklyDutyCalendarProps> = ({
                         disabled={isCompleted || isAwaitingApproval}
                         checked={isScheduled}
                         onChange={(checked) => {
-                          onToggleSchedule(item.team_id, item.duty_date, checked, {
-                            meeting_id: item.meeting_id,
-                            start_time: item.start_time ? String(item.start_time) : null,
-                            end_time: item.end_time ? String(item.end_time) : null,
-                          });
+                          if (checked) {
+                            // Chặn lại: Mở Modal quay random & xác nhận trước khi lưu/bật thật sự
+                            setRandomModalState({
+                              isOpen: true,
+                              teamId: item.team_id,
+                              teamName: item.team_name,
+                              dutyDate: item.duty_date,
+                              meetingId: item.meeting_id,
+                              startTime: item.start_time ? String(item.start_time) : null,
+                              endTime: item.end_time ? String(item.end_time) : null,
+                            });
+                          } else {
+                            // Tắt / Hủy ca trực
+                            onToggleSchedule(item.team_id, item.duty_date, false, {
+                              meeting_id: item.meeting_id,
+                            });
+                          }
                         }}
                         checkedChildren="ON"
                         unCheckedChildren="OFF"
@@ -399,6 +432,23 @@ export const WeeklyDutyCalendar: React.FC<WeeklyDutyCalendarProps> = ({
                     <div className="text-xs text-green-700 bg-green-100/60 p-1.5 rounded mt-2">
                       <CheckCircleOutlined className="mr-1" />
                       Đại diện nộp: <strong>{item.submitted_by_name}</strong>
+                    </div>
+                  )}
+
+                  {/* Hiển thị chi tiết từng bạn được phân công nếu có */}
+                  {item.checklist && item.checklist.length > 0 && item.checklist.some((c) => c.assignee_name) && (
+                    <div className="text-xs bg-indigo-50/70 border border-indigo-100 p-2 rounded-lg mt-2 space-y-1">
+                      <div className="font-semibold text-[11px] text-indigo-700 flex justify-between items-center mb-1">
+                        <span>👥 Phân công ({item.checklist.length} bạn):</span>
+                      </div>
+                      {item.checklist.map((c) => (
+                        <div key={c.id} className="flex justify-between items-center text-[11px] text-gray-700">
+                          <span className="truncate flex-1 font-medium">{c.title}:</span>
+                          <span className="text-indigo-600 font-semibold ml-1 truncate max-w-[110px]">
+                            {c.assignee_name || 'Chưa gán'}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   )}
 
@@ -434,7 +484,18 @@ export const WeeklyDutyCalendar: React.FC<WeeklyDutyCalendarProps> = ({
                         size="small"
                         icon={<CheckCircleOutlined />}
                         className="bg-emerald-600 hover:bg-emerald-500 border-none flex-1 font-medium"
-                        onClick={() => onApproveDuty && onApproveDuty(item.duty_id!)}
+                        onClick={() => {
+                          const totalChecklist = item.checklist?.length || 0;
+                          const checkedCount = item.checklist?.filter((c) => c.checked).length || 0;
+                          const imageCount = item.evidence_image_urls?.length || 0;
+
+                          // Nếu chưa tick đủ việc hoặc số ảnh ít hơn số việc -> Mở Modal chi tiết để Admin kiểm tra & xác nhận
+                          if (totalChecklist > 0 && (checkedCount < totalChecklist || imageCount < totalChecklist)) {
+                            onOpenDetailModal(item.duty_id!);
+                          } else {
+                            onApproveDuty && onApproveDuty(item.duty_id!);
+                          }
+                        }}
                       >
                         Duyệt đạt
                       </Button>
@@ -452,30 +513,22 @@ export const WeeklyDutyCalendar: React.FC<WeeklyDutyCalendarProps> = ({
                 )}
 
                 {/* Nút hành động */}
-                <div className="flex gap-2 pt-1 border-t border-gray-100">
-                  {/* Nếu bị từ chối: Quản lý hoặc thành viên trong nhóm trực thao tác nộp lại */}
-                  {isRejected && item.duty_id && onOpenSubmitModal && (
+                <div className="flex gap-2 pt-1 border-t border-gray-100 flex-wrap">
+                  {/* Khi ca trực chưa COMPLETED: Nếu bị từ chối hoặc đang trực thì học viên đều có thể nộp / nộp lại minh chứng */}
+                  {isScheduled && !isCompleted && item.duty_id && onOpenSubmitModal && (
                     <Button
                       type="primary"
-                      danger
+                      danger={isRejected || item.checklist?.some((c) => c.status === 'REJECTED')}
                       size="small"
                       icon={<UploadOutlined />}
                       className="flex-1 font-medium text-xs"
                       onClick={() => onOpenSubmitModal(item.duty_id!)}
                     >
-                      Nộp lại
-                    </Button>
-                  )}
-
-                  {isScheduled && !isCompleted && !isAwaitingApproval && !isRejected && item.duty_id && onOpenSubmitModal && (
-                    <Button
-                      type="primary"
-                      size="small"
-                      icon={<UploadOutlined />}
-                      className="flex-1 font-medium"
-                      onClick={() => onOpenSubmitModal(item.duty_id!)}
-                    >
-                      Nộp minh chứng
+                      {isRejected || item.checklist?.some((c) => c.status === 'REJECTED')
+                        ? 'Nộp lại minh chứng'
+                        : isAwaitingApproval
+                          ? 'Bổ sung minh chứng'
+                          : 'Nộp minh chứng'}
                     </Button>
                   )}
 
@@ -522,6 +575,28 @@ export const WeeklyDutyCalendar: React.FC<WeeklyDutyCalendarProps> = ({
           />
         </div>
       </Modal>
+      {/* Modal quay random & xác nhận phân công trước khi gạt ON */}
+      <RandomDutyAssignmentModal
+        isOpen={randomModalState.isOpen}
+        onClose={() => setRandomModalState((prev) => ({ ...prev, isOpen: false }))}
+        teamId={randomModalState.teamId}
+        teamName={randomModalState.teamName}
+        dutyDate={randomModalState.dutyDate}
+        meetingId={randomModalState.meetingId}
+        startTime={randomModalState.startTime}
+        endTime={randomModalState.endTime}
+        onConfirm={async (payload) => {
+          await onToggleSchedule(payload.team_id, payload.duty_date, true, {
+            meeting_id: payload.meeting_id,
+            start_time: payload.start_time,
+            end_time: payload.end_time,
+            checklist: payload.checklist,
+            responsible_ids: payload.responsible_ids,
+            random_round: payload.random_round,
+          });
+          setRandomModalState((prev) => ({ ...prev, isOpen: false }));
+        }}
+      />
     </div>
   );
 };

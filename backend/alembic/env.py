@@ -1,3 +1,10 @@
+import sys
+import pathlib
+# Ensure repository root is in PYTHONPATH for Alembic imports
+repo_root = pathlib.Path(__file__).resolve().parents[2]
+if str(repo_root) not in sys.path:
+    sys.path.append(str(repo_root))
+
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool

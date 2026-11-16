@@ -13,13 +13,17 @@ from app.core.deps import CurrentUser, hasPermission
 from app.core.permissions import DutyPermission
 from app.duty.application.dtos import (
     BatchCreateDutyRequest,
+    DutyCandidatesResponse,
     DutyResponse,
     RejectDutyRequest,
+    TeamCandidateMember,
     ToggleDutyScheduleRequest,
     UpdateDutyRequest,
     WeeklyDutyClassDto,
 )
 from app.duty.application.get_duties_use_case import GetDutiesUseCase
+from app.duty.infrastructure.repository import DutyRepository
+from app.team.infrastructure.repository import TeamRepository
 from app.duty.application.manage_duty_use_case import (
     DeleteDutyUseCase,
     RestoreDutyUseCase,
@@ -40,6 +44,66 @@ from app.shared.application.pagination import PaginationParams
 from app.shared.application.response import ApiResponse, PaginationMeta
 
 router = APIRouter(prefix="/duties", tags=["Duties"])
+
+
+@router.get(
+    "/candidates",
+    response_model=ApiResponse[DutyCandidatesResponse],
+)
+@inject
+async def get_duty_candidates(
+    team_id: int,
+    duty_repo: FromDishka[DutyRepository],
+    team_repo: FromDishka[TeamRepository],
+    _current_user: CurrentUser,
+):
+    """
+    Lấy danh sách thành viên trong lớp/nhóm và trạng thái xoay vòng để phục vụ quay random trên UI.
+    """
+    team = team_repo.get_by_id(team_id)
+    if not team:
+        raise HTTPException(status_code=404, detail="Nhóm không tồn tại")
+
+    current_round, served_ids = duty_repo.get_team_round_info(team_id)
+
+    all_members = []
+    available_members = []
+    for tm in team.members:
+        has_served = tm.user_id in served_ids
+        member_dto = TeamCandidateMember(
+            id=tm.user_id,
+            name=getattr(tm, "user_name", None) or getattr(tm, "name", None) or f"Thành viên #{tm.user_id}",
+            email=getattr(tm, "email", None),
+            avatar_url=getattr(tm, "user_avatar_url", None) or getattr(tm, "avatar_url", None),
+            served=has_served,
+        )
+        all_members.append(member_dto)
+        if not has_served:
+            available_members.append(member_dto)
+
+    # Nếu tất cả đã trực hết trong vòng này thì chuyển sang vòng tiếp theo và reset available
+    if not available_members and all_members:
+        current_round += 1
+        available_members = [
+            TeamCandidateMember(
+                id=m.id,
+                name=m.name,
+                email=m.email,
+                avatar_url=m.avatar_url,
+                served=False,
+            )
+            for m in all_members
+        ]
+
+    data = DutyCandidatesResponse(
+        team_id=team.id,
+        team_name=team.team_name,
+        current_round=current_round,
+        total_members=len(all_members),
+        all_members=all_members,
+        available_members=available_members,
+    )
+    return ApiResponse.success(data=data, message="Lấy danh sách ứng viên thành công")
 
 
 @router.get(
@@ -144,6 +208,8 @@ async def toggle_duty_schedule(
         meeting_id=body.meeting_id,
         checklist=body.checklist,
         note=body.note,
+        responsible_ids=body.responsible_ids,
+        random_round=body.random_round,
     )
     action_text = "bật" if body.enabled else "hủy"
     return ApiResponse.success(

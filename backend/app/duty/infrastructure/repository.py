@@ -149,6 +149,8 @@ class DutyRepository:
             model.approved_at = duty.approved_at
             model.rejected_by = duty.rejected_by
             model.rejected_at = duty.rejected_at
+            model.responsible_ids = duty.responsible_ids or []
+            model.random_round = duty.random_round or 1
             self.session.flush()
             return model.to_entity()
         else:
@@ -159,6 +161,8 @@ class DutyRepository:
                 team_id=parsed_team_id,
                 meeting_id=duty.meeting_id,
                 status=duty.status.value,
+                responsible_ids=duty.responsible_ids or [],
+                random_round=duty.random_round or 1,
                 checklist=duty.checklist,
                 note=duty.note,
                 evidence_image_urls=duty.evidence_image_urls,
@@ -181,3 +185,36 @@ class DutyRepository:
         self.session.delete(model)
         self.session.flush()
         return True
+
+    def get_team_round_info(self, team_id: int) -> tuple[int, set[int]]:
+        """Returns (current_round, set_of_served_user_ids_in_current_round)."""
+        stmt = select(CleaningDutyModel).where(
+            CleaningDutyModel.team_id.contains([team_id]),
+            CleaningDutyModel.status != DutyStatus.CANCELLED.value,
+        )
+        duties = self.session.scalars(stmt).all()
+        if not duties:
+            return 1, set()
+
+        max_round = max((d.random_round or 1 for d in duties), default=1)
+        served_ids: set[int] = set()
+        for d in duties:
+            if (d.random_round or 1) == max_round and d.responsible_ids:
+                # Nếu ca này đã COMPLETED: kiểm tra từng đầu việc, chỉ tính đã trực cho bạn được duyệt APPROVED hoặc ca hoàn thành không bị REJECTED
+                duty_checklist = d.checklist or []
+                rejected_user_ids = {
+                    item.get("assignee_id")
+                    for item in duty_checklist
+                    if item.get("assignee_id") and item.get("status") == "REJECTED"
+                }
+
+                # Nếu cả ca bị REJECTED hoặc VIOLATED thì cả nhóm chưa được tính hoàn thành vòng
+                if d.status in (DutyStatus.REJECTED.value, DutyStatus.VIOLATED.value):
+                    continue
+
+                for uid in d.responsible_ids:
+                    # Nếu cá nhân bạn này bị đánh dấu REJECTED (chưa đạt/không trực) -> không tính đã hoàn thành vòng
+                    if uid not in rejected_user_ids:
+                        served_ids.add(uid)
+        return max_round, served_ids
+

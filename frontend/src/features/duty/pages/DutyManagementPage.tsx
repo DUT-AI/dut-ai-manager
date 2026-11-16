@@ -530,7 +530,14 @@ export const DutyManagementPage: React.FC = () => {
         open={isDetailModalOpen}
         duty={selectedDuty}
         canManage={canManage}
-        onClose={() => setIsDetailModalOpen(false)}
+        onClose={() => {
+          setIsDetailModalOpen(false);
+          fetchWeeklySchedule(currentDate.format('YYYY-MM-DD'));
+        }}
+        onRefresh={() => {
+          fetchWeeklySchedule(currentDate.format('YYYY-MM-DD'));
+          fetchDuties();
+        }}
         onApprove={async (id) => {
           await approveDuty(id);
           fetchWeeklySchedule(currentDate.format('YYYY-MM-DD'));

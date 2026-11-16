@@ -44,6 +44,8 @@ class ToggleDutyScheduleUseCase:
         meeting_id: int | None = None,
         checklist: list[dict] | None = None,
         note: str | None = None,
+        responsible_ids: list[int] | None = None,
+        random_round: int | None = None,
     ) -> DutyResponse | None:
         target_team_ids = [team_id] if isinstance(team_id, int) else team_id
         existing = self.duty_repo.get_by_date_and_team(
@@ -90,8 +92,26 @@ class ToggleDutyScheduleUseCase:
                     existing.checklist = checklist
                 if note is not None:
                     existing.note = note
+                if responsible_ids is not None:
+                    existing.responsible_ids = responsible_ids
+                if random_round is not None:
+                    existing.random_round = random_round
                 updated = self.duty_repo.save(existing)
                 populate_team_names(updated)
+
+                # Publish notification when re-enabled
+                await self.event_bus.publish(
+                    cast(
+                        DomainEvent,
+                        DutyScheduled(
+                            duty_id=updated.id,
+                            team_id=updated.team_id,
+                            team_name=updated.team_name or "",
+                            duty_date=str(updated.duty_date),
+                            meeting_id=updated.meeting_id,
+                        ),
+                    )
+                )
                 return DutyResponse.model_validate(updated)
             populate_team_names(existing)
             return DutyResponse.model_validate(existing)
@@ -119,6 +139,8 @@ class ToggleDutyScheduleUseCase:
             team_names=team_names,
             meeting_id=matched_meeting_id,
             status=DutyStatus.PENDING,
+            responsible_ids=responsible_ids or [],
+            random_round=random_round or 1,
             checklist=checklist
             if checklist is not None
             else [dict(i) for i in DEFAULT_DUTY_CHECKLIST],

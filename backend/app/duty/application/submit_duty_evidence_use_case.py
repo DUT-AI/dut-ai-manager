@@ -136,11 +136,20 @@ class SubmitDutyEvidenceUseCase:
 
         all_urls = existing_urls + uploaded_urls
 
+        merged_note = duty.note
+        if note and note.strip():
+            trimmed = note.strip()
+            if merged_note:
+                if trimmed not in merged_note:
+                    merged_note = f"{merged_note}\n{trimmed}"
+            else:
+                merged_note = trimmed
+
         duty.submit_evidence(
             submitted_by=user_id,
             image_urls=all_urls,
             checklist=target_checklist,
-            note=note or duty.note,
+            note=merged_note,
             submitted_at=now,
         )
 

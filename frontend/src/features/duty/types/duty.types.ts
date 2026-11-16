@@ -4,6 +4,27 @@ export interface DutyChecklistItem {
   id: string;
   title: string;
   checked: boolean;
+  assignee_id?: number | null;
+  assignee_name?: string | null;
+  status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  rejection_reason?: string | null;
+}
+
+export interface TeamCandidateMember {
+  id: number;
+  name: string;
+  email?: string | null;
+  avatar_url?: string | null;
+  served?: boolean;
+}
+
+export interface DutyCandidatesResponse {
+  team_id: number;
+  team_name: string;
+  current_round: number;
+  total_members: number;
+  all_members: TeamCandidateMember[];
+  available_members: TeamCandidateMember[];
 }
 
 export interface DutyResponse {
@@ -64,6 +85,8 @@ export interface ToggleDutyScheduleRequest {
   meeting_id?: number | null;
   checklist?: DutyChecklistItem[];
   note?: string | null;
+  responsible_ids?: number[];
+  random_round?: number;
 }
 
 export interface BatchCreateDutyRequest {
