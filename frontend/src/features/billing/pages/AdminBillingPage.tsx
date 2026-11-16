@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Card, Button, Typography, Space, Form, message, Grid, Tabs, Select, DatePicker, Row, Col, Statistic, Tooltip } from 'antd';
-import { PlusOutlined, AuditOutlined, CalendarOutlined, BarChartOutlined, DollarOutlined, ImportOutlined, ExportOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { Card, Button, Typography, Space, Form, message, Grid, Tabs, Select, DatePicker, Row, Col, Statistic, Tooltip, Input } from 'antd';
+import { PlusOutlined, AuditOutlined, CalendarOutlined, BarChartOutlined, DollarOutlined, ImportOutlined, ExportOutlined, CheckCircleOutlined, ClockCircleOutlined, SearchOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useAllInvoices, useCreateInvoice, useUpdateInvoice, useUpdateInvoiceStatus, useInvoiceDetail, useDeleteInvoice, useBillingSummary } from '@/features/billing/hooks/useBilling';
 import { useUserOptions } from '@/features/users';
@@ -51,12 +51,14 @@ const AdminBillingPage = () => {
   const [filterTeam, setFilterTeam] = useState<number | undefined>(undefined);
   const [filterStatus, setFilterStatus] = useState<string | undefined>(undefined);
   const [filterPeriod, setFilterPeriod] = useState<dayjs.Dayjs | null>(null);
+  const [filterSearch, setFilterSearch] = useState<string>('');
 
   const { data: invoicesData, isLoading } = useAllInvoices({
     user_id: filterUser,
     team_id: filterTeam,
     status: filterStatus,
     billing_period: filterPeriod ? filterPeriod.startOf('month').format('YYYY-MM-DD') : undefined,
+    search: filterSearch || undefined,
   }, page, pageSize);
   const invoices = invoicesData ?? [];
   const { data: usersData } = useUserOptions();
@@ -204,7 +206,21 @@ const AdminBillingPage = () => {
 
           {/* Filters Bar */}
           <Row gutter={[16, 16]} align="middle" className="bg-gray-50/50 p-4 rounded-xl border border-gray-100 mb-4">
-            <Col xs={24} sm={12} md={6} lg={6}>
+            <Col xs={24} sm={12} md={8} lg={5}>
+              <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Mã hóa đơn</div>
+              <Input
+                placeholder="Tìm mã (VD: DUT...)"
+                prefix={<SearchOutlined className="text-gray-400" />}
+                allowClear
+                value={filterSearch}
+                onChange={(e) => {
+                  setFilterSearch(e.target.value);
+                  resetPage();
+                }}
+              />
+            </Col>
+
+            <Col xs={24} sm={12} md={8} lg={5}>
               <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Thành viên</div>
               <Select
                 showSearch
@@ -225,7 +241,7 @@ const AdminBillingPage = () => {
               </Select>
             </Col>
 
-            <Col xs={24} sm={12} md={6} lg={6}>
+            <Col xs={24} sm={12} md={8} lg={4}>
               <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Nhóm</div>
               <Select
                 showSearch
@@ -246,7 +262,7 @@ const AdminBillingPage = () => {
               </Select>
             </Col>
 
-            <Col xs={24} sm={12} md={6} lg={6}>
+            <Col xs={24} sm={12} md={8} lg={5}>
               <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Trạng thái</div>
               <Select
                 placeholder="Tất cả trạng thái"
@@ -264,7 +280,7 @@ const AdminBillingPage = () => {
               </Select>
             </Col>
 
-            <Col xs={24} sm={12} md={6} lg={6}>
+            <Col xs={24} sm={12} md={8} lg={5}>
               <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Kỳ hóa đơn</div>
               <DatePicker
                 picker="month"

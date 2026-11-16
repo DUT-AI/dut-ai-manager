@@ -56,6 +56,7 @@ class InvoiceResponse(BaseModel):
 
     id: int
     user_id: int
+    user_name: str | None = None
     team_id: int = 6
     amount: int
     status: InvoiceStatus
@@ -104,6 +105,7 @@ class InvoiceResponse(BaseModel):
         response = cls(
             id=invoice.id,
             user_id=invoice.user_id,
+            user_name=getattr(invoice, "user_name", None),
             team_id=getattr(invoice, "team_id", 6),
             amount=invoice.amount,
             status=invoice.status,

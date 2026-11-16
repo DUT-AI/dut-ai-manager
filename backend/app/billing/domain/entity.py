@@ -36,6 +36,7 @@ class Invoice(BaseEntity):
     """Domain entity representing a billing invoice (giữ soft delete)."""
 
     user_id: int
+    user_name: str | None = None
     team_id: int
     team_name: str | None = None
     amount: int = 0

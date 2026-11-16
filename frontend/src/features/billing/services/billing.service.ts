@@ -16,7 +16,7 @@ const billingService = {
   },
 
   getAllInvoices: async (
-    filters?: { user_id?: number; team_id?: number; status?: string; billing_period?: string },
+    filters?: { user_id?: number; team_id?: number; status?: string; billing_period?: string; search?: string },
     page: number = 1,
     pageSize: number = 20
   ) => {
@@ -30,6 +30,7 @@ const billingService = {
       if (filters.team_id !== undefined) apiParams.team_id = filters.team_id;
       if (filters.status !== undefined) apiParams.bill_status = filters.status;
       if (filters.billing_period !== undefined) apiParams.billing_period = filters.billing_period;
+      if (filters.search !== undefined && filters.search.trim()) apiParams.search = filters.search.trim();
     }
 
     const response = await axiosInstance.get<ApiResponse<Invoice[]>>("/billing/", {

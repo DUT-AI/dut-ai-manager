@@ -62,6 +62,7 @@ class InvoiceModel(SQLAlchemyTimestampMixin, Base):
         return Invoice(
             id=self.id,
             user_id=self.user_id,
+            user_name=self.user_rel.name if self.user_rel else None,
             team_id=self.team_id,
             team_name=self.team_rel.team_name if self.team_rel else None,
             amount=self.amount,

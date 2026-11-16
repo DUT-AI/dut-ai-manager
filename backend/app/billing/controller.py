@@ -161,6 +161,7 @@ async def get_all_invoices(
     team_id: int | None = Query(default=None),
     bill_status: InvoiceStatus | None = Query(default=None),
     billing_period: date | None = Query(default=None),
+    search: str | None = Query(default=None, description="Search by reference code"),
 ):
     """
     Get all invoices with server-side pagination (Admin only).
@@ -170,6 +171,7 @@ async def get_all_invoices(
         status=bill_status,
         billing_period=billing_period,
         team_id=team_id,
+        search=search,
         page=pagination.page,
         page_size=pagination.page_size,
     )

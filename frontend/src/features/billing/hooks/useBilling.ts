@@ -26,7 +26,7 @@ export const useMyInvoices = () => {
 };
 
 export const useAllInvoices = (
-  filters?: { user_id?: number; team_id?: number; status?: string; billing_period?: string },
+  filters?: { user_id?: number; team_id?: number; status?: string; billing_period?: string; search?: string },
   page = 1,
   pageSize = 20
 ) => {

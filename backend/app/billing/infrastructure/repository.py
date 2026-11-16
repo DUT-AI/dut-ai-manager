@@ -18,12 +18,31 @@ class InvoiceRepository(BaseRepository[InvoiceModel, Invoice]):
     def __init__(self, session: Session):
         super().__init__(session, InvoiceModel)
 
+    def get_by_id(self, invoice_id: int) -> Invoice | None:
+        """Find an invoice by ID with relationships."""
+        statement = (
+            select(InvoiceModel)
+            .where(InvoiceModel.id == invoice_id)
+            .where(InvoiceModel.is_deleted == False)  # noqa: E712
+            .options(
+                joinedload(InvoiceModel.items),
+                joinedload(InvoiceModel.user_rel),
+                joinedload(InvoiceModel.team_rel),
+            )
+        )
+        result = self.session.scalars(statement).unique().first()
+        return result.to_entity() if result else None
+
     def get_by_reference_code(self, reference_code: str) -> Invoice | None:
         """Find an invoice by its unique reference code."""
         statement = (
             select(InvoiceModel)
             .where(InvoiceModel.reference_code == reference_code)
-            .options(joinedload(InvoiceModel.items))
+            .options(
+                joinedload(InvoiceModel.items),
+                joinedload(InvoiceModel.user_rel),
+                joinedload(InvoiceModel.team_rel),
+            )
         )
         result = self.session.scalars(statement).unique().first()
         return result.to_entity() if result else None
@@ -34,7 +53,11 @@ class InvoiceRepository(BaseRepository[InvoiceModel, Invoice]):
             select(InvoiceModel)
             .where(InvoiceModel.user_id == user_id)
             .where(InvoiceModel.is_deleted == False)  # noqa: E712
-            .options(joinedload(InvoiceModel.items))
+            .options(
+                joinedload(InvoiceModel.items),
+                joinedload(InvoiceModel.user_rel),
+                joinedload(InvoiceModel.team_rel),
+            )
             .order_by(desc(InvoiceModel.created_at))
         )
         return [m.to_entity() for m in self.session.scalars(statement).unique().all()]
@@ -80,6 +103,7 @@ class InvoiceRepository(BaseRepository[InvoiceModel, Invoice]):
         status: str | None = None,
         billing_period: date | None = None,
         team_id: int | None = None,
+        search: str | None = None,
         page: int = 1,
         page_size: int = 20,
     ) -> tuple[list[Invoice], int]:
@@ -96,6 +120,10 @@ class InvoiceRepository(BaseRepository[InvoiceModel, Invoice]):
             count_stmt = count_stmt.where(InvoiceModel.status == status)
         if billing_period is not None:
             count_stmt = count_stmt.where(InvoiceModel.billing_period == billing_period)
+        if search:
+            count_stmt = count_stmt.where(
+                InvoiceModel.reference_code.ilike(f"%{search.strip()}%")
+            )
         total = self.session.scalar(count_stmt) or 0
 
         statement = select(InvoiceModel).where(InvoiceModel.is_deleted.is_(False))
@@ -107,6 +135,10 @@ class InvoiceRepository(BaseRepository[InvoiceModel, Invoice]):
             statement = statement.where(InvoiceModel.status == status)
         if billing_period is not None:
             statement = statement.where(InvoiceModel.billing_period == billing_period)
+        if search:
+            statement = statement.where(
+                InvoiceModel.reference_code.ilike(f"%{search.strip()}%")
+            )
 
         offset = (page - 1) * page_size
         statement = (
