@@ -55,8 +55,8 @@ class CreateInvoiceUseCase:
             item_type = InvoiceItemType(item["item_type"])
             amount = item.get("amount", 0)
 
-            # Rule: Violation price is fixed at 20,000 VND
-            if item_type == InvoiceItemType.VIOLATION:
+            # Default violation amount to 20,000 VND if not specified or <= 0
+            if item_type == InvoiceItemType.VIOLATION and amount <= 0:
                 amount = 20000
 
             total_amount += amount
@@ -150,9 +150,6 @@ class UpdateInvoiceUseCase:
         for item in items_data:
             item_type = InvoiceItemType(item["item_type"])
             amount = item.get("amount", 0)
-
-            if item_type == InvoiceItemType.VIOLATION:
-                amount = 20000
 
             total_amount += amount
             new_items.append(

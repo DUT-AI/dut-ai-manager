@@ -23,6 +23,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useUserOptions } from '@/features/users';
+import CurrencyInput from '@/components/CurrencyInput';
 import { useTeams } from '@/features/teams';
 import { useCreateMonthlyInvoices } from '@/features/billing/hooks/useBilling';
 import { InvoiceItemType } from '@/features/billing/types/billing.types';
@@ -297,10 +298,8 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
             label="Đơn giá 1 vi phạm (VNĐ)"
             rules={[{ required: true }]}
           >
-            <InputNumber
+            <CurrencyInput
               className="w-full"
-              formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={value => value?.replace(/\$\s?|(,*)/g, '') as any}
             />
           </Form.Item>
 
@@ -309,10 +308,8 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
             label="Tiền quỹ tháng (VNĐ)"
             rules={[{ required: true }]}
           >
-            <InputNumber
+            <CurrencyInput
               className="w-full"
-              formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={value => value?.replace(/\$\s?|(,*)/g, '') as any}
             />
           </Form.Item>
         </div>
@@ -350,10 +347,8 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
                     rules={[{ required: true, message: 'Nhập tiền' }]}
                     style={{ marginBottom: 0 }}
                   >
-                    <InputNumber
+                    <CurrencyInput
                       min={0}
-                      formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                      parser={value => (value?.replace(/\$\s?|(,*)/g, '') || 0) as any}
                       placeholder="Số tiền"
                       style={{ width: 150 }}
                     />
