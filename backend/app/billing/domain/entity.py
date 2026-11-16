@@ -15,6 +15,11 @@ class InvoiceStatus(StrEnum):
     EXPIRED = "EXPIRED"
 
 
+class FundCode(StrEnum):
+    DUT_AI = "DUT_AI"
+    DUT_MAKER = "DUT_MAKER"
+
+
 class InvoiceItemType(StrEnum):
     VIOLATION = "VIOLATION"
     FUND = "FUND"
@@ -37,7 +42,8 @@ class Invoice(BaseEntity):
 
     user_id: int
     user_name: str | None = None
-    team_id: int
+    fund_code: str = FundCode.DUT_AI
+    team_id: int | None = None
     team_name: str | None = None
     amount: int = 0
     status: InvoiceStatus = InvoiceStatus.PENDING

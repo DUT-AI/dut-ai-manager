@@ -31,8 +31,11 @@ class ExpenseInvoiceModel(SQLAlchemyTimestampMixin, Base):
     spender_id: Mapped[int] = mapped_column(
         ForeignKey("users.id"), nullable=False, index=True
     )
-    team_id: Mapped[int] = mapped_column(
-        ForeignKey("teams.id"), nullable=False, index=True
+    fund_code: Mapped[str] = mapped_column(
+        String(50), default="DUT_AI", nullable=False, index=True
+    )
+    team_id: Mapped[int | None] = mapped_column(
+        ForeignKey("teams.id"), nullable=True, default=None, index=True
     )
     status: Mapped[str] = mapped_column(
         String(50), default=ExpenseStatus.UNPAID, index=True
@@ -56,6 +59,7 @@ class ExpenseInvoiceModel(SQLAlchemyTimestampMixin, Base):
             amount=self.amount,
             description=self.description,
             spender_id=self.spender_id,
+            fund_code=getattr(self, "fund_code", "DUT_AI") or "DUT_AI",
             team_id=self.team_id,
             status=ExpenseStatus(self.status),
             payment_date=self.payment_date,
@@ -76,6 +80,7 @@ class ExpenseInvoiceModel(SQLAlchemyTimestampMixin, Base):
             amount=entity.amount,
             description=entity.description,
             spender_id=entity.spender_id,
+            fund_code=entity.fund_code or "DUT_AI",
             team_id=entity.team_id,
             status=entity.status.value
             if isinstance(entity.status, ExpenseStatus)

@@ -44,10 +44,15 @@ async def get_expense_summary(
     year: int | None = Query(None, ge=2000, le=2100),
     spender_id: int | None = Query(None),
     team_id: int | None = Query(None),
+    fund_code: str | None = Query(None),
 ):
-    """Get expense summary statistics for a given month/year, spender_id, and team_id."""
+    """Get expense summary statistics for a given month/year, spender_id, team_id, and fund_code."""
     res = summary_uc.execute(
-        month=month, year=year, spender_id=spender_id, team_id=team_id
+        month=month,
+        year=year,
+        spender_id=spender_id,
+        team_id=team_id,
+        fund_code=fund_code,
     )
     return ApiResponse.success(data=ExpenseSummaryResponse(**res))
 
@@ -66,6 +71,7 @@ async def get_expenses(
     expense_status: ExpenseStatus | None = Query(None, alias="status"),
     spender_id: int | None = Query(None),
     team_id: int | None = Query(None),
+    fund_code: str | None = Query(None),
     search: str | None = Query(None, description="Tìm kiếm theo nội dung chi hoặc ghi chú"),
 ):
     """Get list of expense invoices filtered by month/year, status, spender_id, team_id, and search."""
@@ -75,6 +81,7 @@ async def get_expenses(
         status=expense_status,
         spender_id=spender_id,
         team_id=team_id,
+        fund_code=fund_code,
         search=search,
         page=pagination.page,
         page_size=pagination.page_size,
@@ -109,6 +116,7 @@ async def create_expense(
         amount=data.amount,
         description=data.description,
         spender_id=data.spender_id,
+        fund_code=data.fund_code,
         team_id=data.team_id,
         status=data.status,
         payment_date=data.payment_date,
@@ -153,6 +161,7 @@ async def update_expense(
         amount=data.amount,
         description=data.description,
         spender_id=data.spender_id,
+        fund_code=data.fund_code,
         team_id=data.team_id,
         status=data.status,
         payment_date=data.payment_date,

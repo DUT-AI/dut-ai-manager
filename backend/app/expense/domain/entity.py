@@ -24,7 +24,8 @@ class ExpenseInvoice(BaseEntity):
     amount: int
     description: str
     spender_id: int
-    team_id: int
+    fund_code: str = "DUT_AI"
+    team_id: int | None = None
     status: ExpenseStatus = ExpenseStatus.UNPAID
     payment_date: date | None = None
     note: str | None = None

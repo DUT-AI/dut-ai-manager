@@ -16,6 +16,7 @@ export const useExpenses = (params?: {
   status?: ExpenseStatusType;
   spender_id?: number;
   team_id?: number;
+  fund_code?: string;
   search?: string;
   page?: number;
   pageSize?: number;
@@ -38,6 +39,7 @@ export const useExpenseSummary = (params?: {
   year?: number;
   spender_id?: number;
   team_id?: number;
+  fund_code?: string;
 }) => {
   return useQuery({
     queryKey: [...EXPENSE_SUMMARY_QUERY_KEY, params],

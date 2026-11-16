@@ -32,14 +32,12 @@ class CreateInvoiceUseCase:
         self,
         items_data: list[dict],
         billing_period: date,
-        team_id: int,
+        team_id: int | None = None,
+        fund_code: str = "DUT_AI",
         user_id: int | None = None,
         user_ids: list[int] | None = None,
         description: str | None = None,
     ) -> list[Invoice]:
-        if not team_id:
-            raise BadRequestException("Vui lòng chọn nhóm")
-
         # Determine target user IDs
         target_uids = (
             list(user_ids) if user_ids else ([user_id] if user_id is not None else [])
@@ -89,6 +87,7 @@ class CreateInvoiceUseCase:
 
             invoice = Invoice(
                 user_id=uid,
+                fund_code=fund_code,
                 team_id=team_id,
                 amount=total_amount,
                 status=InvoiceStatus.PENDING,
@@ -135,6 +134,8 @@ class UpdateInvoiceUseCase:
         items_data: list[dict],
         description: str | None = None,
         new_status: InvoiceStatus | None = None,
+        fund_code: str | None = None,
+        team_id: int | None = None,
     ) -> Invoice:
         # 1. Get the invoice
         invoice = self.repo.get_by_id(invoice_id)
@@ -167,6 +168,10 @@ class UpdateInvoiceUseCase:
         # 3. Update fields
         invoice.amount = total_amount
         invoice.items = new_items
+        if fund_code is not None:
+            invoice.fund_code = fund_code
+        if team_id is not None:
+            invoice.team_id = team_id
         if description is not None:
             invoice.description = description
         if new_status is not None:
@@ -305,6 +310,7 @@ class GetInvoicesUseCase:
         status: str | None = None,
         billing_period: date | None = None,
         team_id: int | None = None,
+        fund_code: str | None = None,
         skip: int = 0,
         limit: int = 100,
     ) -> list[Invoice]:
@@ -313,6 +319,7 @@ class GetInvoicesUseCase:
             status=status,
             billing_period=billing_period,
             team_id=team_id,
+            fund_code=fund_code,
             skip=skip,
             limit=limit,
         )
@@ -323,6 +330,7 @@ class GetInvoicesUseCase:
         status: str | None = None,
         billing_period: date | None = None,
         team_id: int | None = None,
+        fund_code: str | None = None,
         search: str | None = None,
         page: int = 1,
         page_size: int = 20,
@@ -332,6 +340,7 @@ class GetInvoicesUseCase:
             status=status,
             billing_period=billing_period,
             team_id=team_id,
+            fund_code=fund_code,
             search=search,
             page=page,
             page_size=page_size,
@@ -359,11 +368,13 @@ class GetInvoicesUseCase:
         self,
         billing_period: date | None = None,
         team_id: int | None = None,
+        fund_code: str | None = None,
         user_id: int | None = None,
     ) -> dict[str, int]:
         return self.repo.get_summary(
             billing_period=billing_period,
             team_id=team_id,
+            fund_code=fund_code,
             user_id=user_id,
         )
 
@@ -502,7 +513,8 @@ class CreateMonthlyInvoicesUseCase:
         self,
         month: int,
         year: int,
-        team_id: int,
+        team_id: int | None = None,
+        fund_code: str = "DUT_AI",
         user_ids: list[int] = None,
         violation_price: int = 20000,
         fund_amount: int = 50000,
@@ -513,19 +525,19 @@ class CreateMonthlyInvoicesUseCase:
             extra_items = []
         if user_ids is None:
             user_ids = []
-        if not team_id:
-            raise BadRequestException("Vui lòng chọn nhóm để gán hóa đơn")
 
-        team = self.team_repo.get_by_id_with_members(team_id)
-        if not team:
-            raise BadRequestException(f"Không tìm thấy nhóm #{team_id}")
+        team = None
+        team_member_map = {}
+        if team_id:
+            team = self.team_repo.get_by_id_with_members(team_id)
+            if team:
+                team_member_map = {m.user_id: m.user_name for m in team.members}
 
         if not user_ids:
             raise BadRequestException(
                 "Vui lòng chọn ít nhất 1 thành viên để tạo hóa đơn"
             )
 
-        team_member_map = {m.user_id: m.user_name for m in team.members}
         target_users = {}
 
         for uid in user_ids:
@@ -600,6 +612,7 @@ class CreateMonthlyInvoicesUseCase:
                 invoice = Invoice(
                     user_id=uid,
                     user_name=user_name,
+                    fund_code=fund_code,
                     team_id=team_id,
                     amount=total_amount,
                     status=InvoiceStatus.PENDING,

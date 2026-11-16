@@ -64,11 +64,27 @@ const BillingTable = ({
       }
     },
     {
+      title: 'Quỹ',
+      key: 'fund_code',
+      render: (_: unknown, record: Invoice) => {
+        const isMaker = record.fund_code === 'DUT_MAKER';
+        return (
+          <Tag color={isMaker ? 'purple' : 'cyan'}>
+            {isMaker ? 'DUT Maker' : 'DUT AI'}
+          </Tag>
+        );
+      },
+    },
+    {
       title: 'Nhóm',
       key: 'team',
-      render: (_: unknown, record: Invoice) => (
-        <Tag color="blue">{record.team?.team_name || record.team_name || 'N/A'}</Tag>
-      ),
+      render: (_: unknown, record: Invoice) => {
+        const name = record.team?.team_name || record.team_name;
+        if (!name || name === 'DUT AI' || name === 'DUT Maker') {
+          return <Text type="secondary">-</Text>;
+        }
+        return <Tag color="blue">{name}</Tag>;
+      },
     },
     {
       title: 'Số tiền',

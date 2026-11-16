@@ -26,7 +26,7 @@ export const useMyInvoices = () => {
 };
 
 export const useAllInvoices = (
-  filters?: { user_id?: number; team_id?: number; status?: string; billing_period?: string; search?: string },
+  filters?: { user_id?: number; team_id?: number; fund_code?: string; status?: string; billing_period?: string; search?: string },
   page = 1,
   pageSize = 20
 ) => {
@@ -75,7 +75,7 @@ export const useMatrixReport = (
 };
 
 export const useBillingSummary = (
-  filters?: { user_id?: number; team_id?: number; billing_period?: string }
+  filters?: { user_id?: number; team_id?: number; fund_code?: string; billing_period?: string }
 ) => {
   return useQuery({
     queryKey: billingKeys.summary(filters),

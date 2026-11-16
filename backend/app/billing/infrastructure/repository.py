@@ -68,6 +68,7 @@ class InvoiceRepository(BaseRepository[InvoiceModel, Invoice]):
         status: str | None = None,
         billing_period: date | None = None,
         team_id: int | None = None,
+        fund_code: str | None = None,
         skip: int = 0,
         limit: int = 100,
     ) -> list[Invoice]:
@@ -78,6 +79,8 @@ class InvoiceRepository(BaseRepository[InvoiceModel, Invoice]):
 
         if user_id is not None:
             statement = statement.where(InvoiceModel.user_id == user_id)
+        if fund_code is not None:
+            statement = statement.where(InvoiceModel.fund_code == fund_code)
         if team_id is not None:
             statement = statement.where(InvoiceModel.team_id == team_id)
         if status is not None:
@@ -103,6 +106,7 @@ class InvoiceRepository(BaseRepository[InvoiceModel, Invoice]):
         status: str | None = None,
         billing_period: date | None = None,
         team_id: int | None = None,
+        fund_code: str | None = None,
         search: str | None = None,
         page: int = 1,
         page_size: int = 20,
@@ -114,6 +118,8 @@ class InvoiceRepository(BaseRepository[InvoiceModel, Invoice]):
         )
         if user_id is not None:
             count_stmt = count_stmt.where(InvoiceModel.user_id == user_id)
+        if fund_code is not None:
+            count_stmt = count_stmt.where(InvoiceModel.fund_code == fund_code)
         if team_id is not None:
             count_stmt = count_stmt.where(InvoiceModel.team_id == team_id)
         if status is not None:
@@ -129,6 +135,8 @@ class InvoiceRepository(BaseRepository[InvoiceModel, Invoice]):
         statement = select(InvoiceModel).where(InvoiceModel.is_deleted.is_(False))
         if user_id is not None:
             statement = statement.where(InvoiceModel.user_id == user_id)
+        if fund_code is not None:
+            statement = statement.where(InvoiceModel.fund_code == fund_code)
         if team_id is not None:
             statement = statement.where(InvoiceModel.team_id == team_id)
         if status is not None:
@@ -181,6 +189,7 @@ class InvoiceRepository(BaseRepository[InvoiceModel, Invoice]):
         self,
         billing_period: date | None = None,
         team_id: int | None = None,
+        fund_code: str | None = None,
         user_id: int | None = None,
     ) -> dict[str, int]:
         """Calculate total, paid, and unpaid fund amounts across all matching invoices."""
@@ -193,6 +202,8 @@ class InvoiceRepository(BaseRepository[InvoiceModel, Invoice]):
 
         if billing_period is not None:
             stmt = stmt.where(InvoiceModel.billing_period == billing_period)
+        if fund_code is not None:
+            stmt = stmt.where(InvoiceModel.fund_code == fund_code)
         if team_id is not None:
             stmt = stmt.where(InvoiceModel.team_id == team_id)
         if user_id is not None:

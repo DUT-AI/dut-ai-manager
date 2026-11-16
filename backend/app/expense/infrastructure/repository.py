@@ -43,6 +43,7 @@ class ExpenseRepository:
         status: ExpenseStatus | str | None = None,
         spender_id: int | None = None,
         team_id: int | None = None,
+        fund_code: str | None = None,
         search: str | None = None,
         limit: int = 100,
         offset: int = 0,
@@ -67,6 +68,8 @@ class ExpenseRepository:
             stmt = stmt.where(ExpenseInvoiceModel.status == status_str)
         if spender_id is not None:
             stmt = stmt.where(ExpenseInvoiceModel.spender_id == spender_id)
+        if fund_code is not None:
+            stmt = stmt.where(ExpenseInvoiceModel.fund_code == fund_code)
         if team_id is not None:
             stmt = stmt.where(ExpenseInvoiceModel.team_id == team_id)
         if search and search.strip():
@@ -93,6 +96,7 @@ class ExpenseRepository:
         status: ExpenseStatus | str | None = None,
         spender_id: int | None = None,
         team_id: int | None = None,
+        fund_code: str | None = None,
         search: str | None = None,
         page: int = 1,
         page_size: int = 20,
@@ -113,6 +117,8 @@ class ExpenseRepository:
             count_stmt = count_stmt.where(ExpenseInvoiceModel.status == status_str)
         if spender_id is not None:
             count_stmt = count_stmt.where(ExpenseInvoiceModel.spender_id == spender_id)
+        if fund_code is not None:
+            count_stmt = count_stmt.where(ExpenseInvoiceModel.fund_code == fund_code)
         if team_id is not None:
             count_stmt = count_stmt.where(ExpenseInvoiceModel.team_id == team_id)
         if search and search.strip():
@@ -147,6 +153,8 @@ class ExpenseRepository:
             stmt = stmt.where(ExpenseInvoiceModel.status == status_str)
         if spender_id is not None:
             stmt = stmt.where(ExpenseInvoiceModel.spender_id == spender_id)
+        if fund_code is not None:
+            stmt = stmt.where(ExpenseInvoiceModel.fund_code == fund_code)
         if team_id is not None:
             stmt = stmt.where(ExpenseInvoiceModel.team_id == team_id)
         if search and search.strip():
@@ -176,6 +184,7 @@ class ExpenseRepository:
         year: int | None = None,
         spender_id: int | None = None,
         team_id: int | None = None,
+        fund_code: str | None = None,
     ) -> dict[str, int]:
         stmt = select(
             ExpenseInvoiceModel.status,
@@ -190,6 +199,8 @@ class ExpenseRepository:
             stmt = stmt.where(extract("year", ExpenseInvoiceModel.expense_date) == year)
         if spender_id is not None:
             stmt = stmt.where(ExpenseInvoiceModel.spender_id == spender_id)
+        if fund_code is not None:
+            stmt = stmt.where(ExpenseInvoiceModel.fund_code == fund_code)
         if team_id is not None:
             stmt = stmt.where(ExpenseInvoiceModel.team_id == team_id)
 
