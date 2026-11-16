@@ -13,6 +13,7 @@ import {
   Statistic,
   Tooltip,
   Select,
+  Input,
 } from 'antd';
 import {
   PlusOutlined,
@@ -22,6 +23,7 @@ import {
   ClockCircleOutlined,
   SwapOutlined,
   DollarOutlined,
+  SearchOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useUserOptions } from '@/features/users';
@@ -40,7 +42,8 @@ import { useTablePagination } from '@/hooks/useTablePagination';
 const { Text } = Typography;
 
 const ExpenseManagementPage: React.FC = () => {
-  // Filters: Selected Spender, Team, Status, Month/Year
+  // Filters: Selected Spender, Team, Status, Month/Year, Search
+  const [filterSearch, setFilterSearch] = useState('');
   const [filterSpender, setFilterSpender] = useState<number | undefined>(undefined);
   const [filterTeam, setFilterTeam] = useState<number | undefined>(undefined);
   const [selectedStatus, setSelectedStatus] = useState<ExpenseStatusType | undefined>(undefined);
@@ -68,6 +71,7 @@ const ExpenseManagementPage: React.FC = () => {
     status: selectedStatus,
     spender_id: filterSpender,
     team_id: filterTeam,
+    search: filterSearch ? filterSearch.trim() : undefined,
     page,
     pageSize,
   });
@@ -125,10 +129,32 @@ const ExpenseManagementPage: React.FC = () => {
       key: 'description',
       ellipsis: true,
       render: (text: string, record: ExpenseInvoice) => (
-        <div>
-          <div className="font-medium text-gray-800">{text}</div>
-          {record.note && <div className="text-xs text-gray-500 italic">Ghi chú: {record.note}</div>}
-        </div>
+        <Tooltip
+          placement="topLeft"
+          title={
+            <div className="space-y-1.5 p-1 max-w-md break-words">
+              <div>
+                <div className="font-semibold text-xs text-gray-300 mb-0.5">Nội dung chi:</div>
+                <div className="text-sm text-white font-medium whitespace-pre-wrap">{text}</div>
+              </div>
+              {record.note && (
+                <div className="pt-1.5 border-t border-gray-600/60">
+                  <div className="font-semibold text-xs text-gray-300 mb-0.5">Ghi chú:</div>
+                  <div className="text-xs text-gray-200 italic whitespace-pre-wrap">{record.note}</div>
+                </div>
+              )}
+            </div>
+          }
+        >
+          <div className="cursor-pointer max-w-full">
+            <div className="font-medium text-gray-800 truncate">{text}</div>
+            {record.note && (
+              <div className="text-xs text-gray-500 italic truncate">
+                Ghi chú: {record.note}
+              </div>
+            )}
+          </div>
+        </Tooltip>
       ),
     },
     {
@@ -270,7 +296,21 @@ const ExpenseManagementPage: React.FC = () => {
       <Card className="shadow-sm border-gray-100">
         {/* Filters Bar */}
         <Row gutter={[16, 16]} align="middle" className="bg-gray-50/50 p-4 rounded-xl border border-gray-100 mb-4">
-          <Col xs={24} sm={12} md={6} lg={6}>
+          <Col xs={24} sm={12} md={8} lg={5}>
+            <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Nội dung chi</div>
+            <Input
+              placeholder="Tìm theo nội dung, ghi chú..."
+              prefix={<SearchOutlined className="text-gray-400" />}
+              allowClear
+              value={filterSearch}
+              onChange={(e) => {
+                setFilterSearch(e.target.value);
+                resetPage();
+              }}
+            />
+          </Col>
+
+          <Col xs={24} sm={12} md={8} lg={5}>
             <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Người chi</div>
             <Select
               showSearch
@@ -292,7 +332,7 @@ const ExpenseManagementPage: React.FC = () => {
             </Select>
           </Col>
 
-          <Col xs={24} sm={12} md={6} lg={6}>
+          <Col xs={24} sm={12} md={8} lg={4}>
             <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Nhóm (Team)</div>
             <Select
               showSearch
@@ -314,7 +354,7 @@ const ExpenseManagementPage: React.FC = () => {
             </Select>
           </Col>
 
-          <Col xs={24} sm={8} md={8} lg={6}>
+          <Col xs={24} sm={12} md={8} lg={5}>
             <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Trạng thái</div>
             <Select
               placeholder="Tất cả trạng thái"
@@ -331,7 +371,7 @@ const ExpenseManagementPage: React.FC = () => {
             </Select>
           </Col>
 
-          <Col xs={24} sm={8} md={8} lg={6}>
+          <Col xs={24} sm={12} md={8} lg={5}>
             <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Kỳ hóa đơn</div>
             <DatePicker
               picker="month"

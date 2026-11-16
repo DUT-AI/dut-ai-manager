@@ -1,14 +1,17 @@
+import { useState, useEffect } from 'react';
 import Logo from '@/assets/logo.jpg';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import {
     LogoutOutlined,
     UserOutlined,
     MenuOutlined,
-    RobotOutlined
+    RobotOutlined,
+    BellOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
-import { Avatar, Dropdown, Layout, Space, Typography, Button, Tooltip } from 'antd';
-import { useNavigate } from 'react-router-dom';
+import { Avatar, Dropdown, Layout, Space, Typography, Button, Tooltip, Badge } from 'antd';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { notificationService } from '@/features/notification/services/notification.service';
 const { Header } = Layout;
 const { Title, Text } = Typography;
 
@@ -20,6 +23,25 @@ interface HeaderLayoutProps {
 const HeaderLayout = ({ showMenuButton, onMenuClick }: HeaderLayoutProps) => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
+    const [unreadCount, setUnreadCount] = useState<number>(0);
+
+    const fetchUnreadCount = async () => {
+        try {
+            const res = await notificationService.getUnreadCount();
+            if (res?.data?.unread_count !== undefined) {
+                setUnreadCount(res.data.unread_count);
+            }
+        } catch {
+            // Im lặng nếu lỗi mạng nền
+        }
+    };
+
+    useEffect(() => {
+        fetchUnreadCount();
+        const interval = setInterval(fetchUnreadCount, 30000);
+        return () => clearInterval(interval);
+    }, [location.pathname]);
 
     const handleLogout = async () => {
         await logout();
@@ -70,7 +92,18 @@ const HeaderLayout = ({ showMenuButton, onMenuClick }: HeaderLayoutProps) => {
                 </div>
             </div>
 
-            <div className="flex items-center gap-4 relative z-10">
+            <div className="flex items-center gap-3 md:gap-4 relative z-10">
+                <Tooltip title="Thông báo">
+                    <Badge count={unreadCount} size="small" offset={[-2, 4]}>
+                        <Button
+                            type="text"
+                            icon={<BellOutlined style={{ color: '#ffffff', fontSize: '20px' }} />}
+                            onClick={() => navigate('/dashboard/notifications')}
+                            className="hover:bg-white/10 flex items-center justify-center w-10 h-10 rounded-full border border-white/20 transition-all"
+                        />
+                    </Badge>
+                </Tooltip>
+
                 <Tooltip title="Robot Interface">
                     <Button
                         type="text"

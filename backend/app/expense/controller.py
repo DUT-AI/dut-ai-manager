@@ -66,14 +66,16 @@ async def get_expenses(
     expense_status: ExpenseStatus | None = Query(None, alias="status"),
     spender_id: int | None = Query(None),
     team_id: int | None = Query(None),
+    search: str | None = Query(None, description="Tìm kiếm theo nội dung chi hoặc ghi chú"),
 ):
-    """Get list of expense invoices filtered by month/year, status, spender_id, and team_id."""
+    """Get list of expense invoices filtered by month/year, status, spender_id, team_id, and search."""
     models, total = get_uc.execute(
         month=month,
         year=year,
         status=expense_status,
         spender_id=spender_id,
         team_id=team_id,
+        search=search,
         page=pagination.page,
         page_size=pagination.page_size,
     )

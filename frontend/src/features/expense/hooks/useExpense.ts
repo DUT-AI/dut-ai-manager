@@ -16,6 +16,7 @@ export const useExpenses = (params?: {
   status?: ExpenseStatusType;
   spender_id?: number;
   team_id?: number;
+  search?: string;
   page?: number;
   pageSize?: number;
 }) => {

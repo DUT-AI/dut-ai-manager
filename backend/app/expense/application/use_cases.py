@@ -84,6 +84,7 @@ class GetExpensesUseCase:
         status: ExpenseStatus | None = None,
         spender_id: int | None = None,
         team_id: int | None = None,
+        search: str | None = None,
         page: int = 1,
         page_size: int = 20,
     ) -> tuple[Sequence[ExpenseInvoiceModel], int]:
@@ -93,6 +94,7 @@ class GetExpensesUseCase:
             status=status,
             spender_id=spender_id,
             team_id=team_id,
+            search=search,
             page=page,
             page_size=page_size,
         )

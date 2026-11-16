@@ -32,6 +32,7 @@ export interface MenuItemConfig {
     label: string;
     path: string;
     permission?: string; // Tên quyền cần có để xem menu này (nếu có)
+    hideForOnlyMember?: boolean; // Ẩn với những người dùng chỉ có vai trò là thành viên
 }
 
 export const sidebarMenuConfig: MenuItemConfig[] = [
@@ -54,12 +55,6 @@ export const sidebarMenuConfig: MenuItemConfig[] = [
         path: '/dashboard/academic-reports',
     },
     {
-        key: 'notifications',
-        icon: <BellOutlined />,
-        label: 'Thông báo',
-        path: '/dashboard/notifications',
-    },
-    {
         key: 'activity_reports',
         icon: <AuditOutlined />,
         label: 'Báo cáo Hoạt động',
@@ -70,18 +65,21 @@ export const sidebarMenuConfig: MenuItemConfig[] = [
         icon: <SafetyCertificateOutlined />,
         label: 'Quản lý Quyền',
         path: '/dashboard/rbac',
+        hideForOnlyMember: true,
     },
     {
         key: 'users',
         icon: <UserOutlined />,
         label: 'Quản lý Thành viên',
         path: '/dashboard/users',
+        hideForOnlyMember: true,
     },
     {
         key: 'teams',
         icon: <TeamOutlined />,
         label: 'Quản lý Nhóm (Teams)',
         path: '/dashboard/teams',
+        hideForOnlyMember: true,
     },
     {
         key: 'bonus_points',
@@ -125,6 +123,7 @@ export const sidebarMenuConfig: MenuItemConfig[] = [
         label: 'Quản lý Bài tập',
         path: '/dashboard/homeworks',
         permission: 'homework:create',
+        hideForOnlyMember: true,
     },
     {
         key: 'invoices',
