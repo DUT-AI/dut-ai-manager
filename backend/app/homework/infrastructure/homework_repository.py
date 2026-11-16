@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.homework.domain.entity import (
     Homework as HomeworkEntity,
 )
+from app.homework.domain.ports import HomeworkRepositoryPort
 from app.homework.infrastructure.model import (
     HomeworkAssigneeModel,
     HomeworkModel,
@@ -17,7 +18,7 @@ from app.shared.domain.query_support import (
 )
 
 
-class HomeworkRepository:
+class HomeworkRepository(HomeworkRepositoryPort):
     """Repository chuyên trách quản lý bảng bài tập homeworks và các truy vấn liên quan."""
 
     def __init__(self, session: Session):

@@ -4,7 +4,7 @@ Unit test kiểm tra nguyên tắc Max Deadline Rule (Bảo lưu quyền lợi t
 """
 
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy import create_engine
@@ -128,14 +128,18 @@ def test_sync_assignees_force_override_works(db_session: Session):
 
 
 @pytest.mark.asyncio
-async def test_update_homework_use_case_protects_individual_deadlines():
+async def test_update_homework_use_case_protects_individual_deadlines(
+    in_memory_homework_repo,
+    in_memory_assignee_repo,
+):
     """
     Test Case 4: Kiểm tra UseCase UpdateHomeworkUseCase chuyển đúng force_override flag
-    cho AssigneeRepository.
+    cho AssigneeRepository và bảo lưu hạn cá nhân đúng theo luật Max Deadline.
     """
-    hw_repo = MagicMock()
-    assignee_repo = MagicMock()
-    quiz_api = MagicMock(spec=QuizApiClient)
+    fake_quiz_api = AsyncMock(spec=QuizApiClient)
+    fake_quiz_api.get_lesson_metadata = AsyncMock(
+        return_value={"slug": "python-01", "has_coding": True, "has_game": False}
+    )
 
     existing_hw = Homework(
         id=10,
@@ -144,19 +148,22 @@ async def test_update_homework_use_case_protects_individual_deadlines():
         requires_coding=True,
         requires_game=False,
     )
-    hw_repo.get_by_id.return_value = existing_hw
-    hw_repo.save.return_value = existing_hw
+    in_memory_homework_repo.add(existing_hw)
 
-    quiz_api.get_lesson_metadata = AsyncMock(
-        return_value={"slug": "python-01", "has_coding": True, "has_game": False}
+    # User 1 có hạn hoãn 15/11, User 2 có hạn gốc 10/11
+    user_1_deadline = datetime(2026, 11, 15, 12, 0, tzinfo=UTC)
+    user_2_deadline = datetime(2026, 11, 10, 12, 0, tzinfo=UTC)
+    in_memory_assignee_repo.assign_users(10, [1], user_1_deadline)
+    in_memory_assignee_repo.assign_users(10, [2], user_2_deadline)
+
+    use_case = UpdateHomeworkUseCase(
+        homework_repo=in_memory_homework_repo,
+        quiz_api=fake_quiz_api,
+        homework_assignee_repo=in_memory_assignee_repo,
     )
 
-    use_case = UpdateHomeworkUseCase(hw_repo, quiz_api, assignee_repo)
-
-    # 1. Update bình thường (force_override_deadlines=False)
-    new_dl = datetime(2026, 11, 12, 0, 0, tzinfo=UTC)
-    assignee_repo.get_assigned_user_ids.return_value = {1, 2}
-
+    # 1. Update bình thường (force_override_deadlines=False) với hạn mới 12/11
+    new_dl = datetime(2026, 11, 12, 12, 0, tzinfo=UTC)
     await use_case.execute(
         homework_id=10,
         data=HomeworkUpdate(
@@ -164,22 +171,25 @@ async def test_update_homework_use_case_protects_individual_deadlines():
             force_override_deadlines=False,
         ),
     )
-    assignee_repo.assign_users.assert_called_once_with(
-        10, {1, 2}, deadline=new_dl, force_override=False
-    )
 
-    # 2. Update với force_override_deadlines=True
-    assignee_repo.assign_users.reset_mock()
+    # Học sinh 1 (hạn hoãn 15/11 > 12/11) được bảo lưu quyền lợi
+    assert in_memory_assignee_repo.get_user_deadline(10, 1) == user_1_deadline
+    # Học sinh 2 (hạn cũ 10/11 < 12/11) được nâng lên 12/11
+    assert in_memory_assignee_repo.get_user_deadline(10, 2) == new_dl
+
+    # 2. Update với force_override_deadlines=True với hạn ép rút ngắn 09/11
+    earlier_dl = datetime(2026, 11, 9, 12, 0, tzinfo=UTC)
     await use_case.execute(
         homework_id=10,
         data=HomeworkUpdate(
-            deadline=new_dl,
+            deadline=earlier_dl,
             force_override_deadlines=True,
         ),
     )
-    assignee_repo.assign_users.assert_called_once_with(
-        10, {1, 2}, deadline=new_dl, force_override=True
-    )
+
+    # Cả 2 học sinh bị ghi đè hoàn toàn về 09/11
+    assert in_memory_assignee_repo.get_user_deadline(10, 1) == earlier_dl
+    assert in_memory_assignee_repo.get_user_deadline(10, 2) == earlier_dl
 
 
 def test_hard_delete_homework_cascades_and_removes_assignees(db_session: Session):

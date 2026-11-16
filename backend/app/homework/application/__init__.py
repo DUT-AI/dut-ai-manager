@@ -9,6 +9,7 @@ from .delete_homework_use_case import (
 )
 from .dtos import (
     HomeworkSubmissionWebhookIn,
+    HomeworkWebhookResponse,
 )
 from .get_homework_detail_use_case import (
     GetHomeworkDetailUseCase,
@@ -60,6 +61,7 @@ __all__ = [
     "GetUserHomeworkSubmissionsUseCase",
     "GetUserHomeworksUseCase",
     "HomeworkSubmissionWebhookIn",
+    "HomeworkWebhookResponse",
     "RecordHomeworkSubmissionUseCase",
     "RescanAllHomeworksUseCase",
     "SyncHomeworkFromQuizUseCase",

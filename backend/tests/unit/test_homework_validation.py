@@ -1,56 +1,35 @@
 """
 Unit test suite for Homework creation and update validation against Quiz API.
-
-Tests:
-1. Rejection when neither 'requires_coding' nor 'requires_game' is selected.
-2. Rejection when slug/link does not exist on Quiz API.
-3. Rejection when 'requires_coding' is selected but Quiz metadata has has_coding=False.
-4. Rejection when 'requires_game' is selected but Quiz metadata has has_game=False.
-5. Successful creation when selected requirements match Quiz capabilities.
-6. Similar validations for UpdateHomeworkUseCase.
-7. Verification that overdue checker only penalizes missing required components.
+Uses In-Memory Fake Repositories (Zero-Mock for persistence layer).
 """
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from app.homework.application.create_homework_use_case import CreateHomeworkUseCase
 from app.homework.application.dtos import HomeworkCreate, HomeworkUpdate
 from app.homework.application.update_homework_use_case import UpdateHomeworkUseCase
-from app.homework.domain.entity import Homework
-from app.homework.infrastructure.homework_repository import HomeworkRepository
-from app.homework.infrastructure.quiz_api import QuizApiClient
+from app.homework.domain.entity import Homework, HomeworkSubmission, SubmissionType
 from app.shared.application.response import BadRequestException
-
-
-@pytest.fixture
-def mock_homework_repo():
-    repo = MagicMock(spec=HomeworkRepository)
-    repo.save = MagicMock(side_effect=lambda hw: hw)
-    return repo
-
-
-@pytest.fixture
-def mock_quiz_api():
-    return MagicMock(spec=QuizApiClient)
-
-
-@pytest.fixture
-def mock_assignee_repo():
-    return MagicMock()
+from tests.fixtures.homework_fixtures import (
+    FakeQuizApiClient,
+    InMemoryHomeworkAssigneeRepository,
+    InMemoryHomeworkRepository,
+)
 
 
 @pytest.mark.asyncio
 async def test_create_homework_rejects_when_no_options_selected(
-    mock_homework_repo, mock_quiz_api, mock_assignee_repo
+    in_memory_homework_repo: InMemoryHomeworkRepository,
+    in_memory_assignee_repo: InMemoryHomeworkAssigneeRepository,
+    fake_quiz_api: FakeQuizApiClient,
 ):
     """Bắt lỗi khi không chọn bất kỳ option nào (cả coding và game đều False)."""
     use_case = CreateHomeworkUseCase(
-        homework_repo=mock_homework_repo,
-        quiz_api=mock_quiz_api,
-        homework_assignee_repo=mock_assignee_repo,
+        homework_repo=in_memory_homework_repo,
+        quiz_api=fake_quiz_api,  # type: ignore
+        homework_assignee_repo=in_memory_assignee_repo,
     )
 
     data = HomeworkCreate(
@@ -65,19 +44,21 @@ async def test_create_homework_rejects_when_no_options_selected(
         await use_case.execute(data)
 
     assert "Vui lòng chọn ít nhất một yêu cầu" in str(exc_info.value)
-    mock_homework_repo.save.assert_not_called()
+    assert in_memory_homework_repo.get_all() == []
 
 
 @pytest.mark.asyncio
 async def test_create_homework_rejects_when_lesson_not_found_on_quiz(
-    mock_homework_repo, mock_quiz_api, mock_assignee_repo
+    in_memory_homework_repo: InMemoryHomeworkRepository,
+    in_memory_assignee_repo: InMemoryHomeworkAssigneeRepository,
+    fake_quiz_api: FakeQuizApiClient,
 ):
     """Bắt lỗi khi slug bài học không tồn tại trên hệ thống Quiz (404/None)."""
-    mock_quiz_api.get_lesson_metadata = AsyncMock(return_value=None)
+    fake_quiz_api.set_lesson_metadata("lesson-khong-ton-tai", None)  # type: ignore
     use_case = CreateHomeworkUseCase(
-        homework_repo=mock_homework_repo,
-        quiz_api=mock_quiz_api,
-        homework_assignee_repo=mock_assignee_repo,
+        homework_repo=in_memory_homework_repo,
+        quiz_api=fake_quiz_api,  # type: ignore
+        homework_assignee_repo=in_memory_assignee_repo,
     )
 
     data = HomeworkCreate(
@@ -92,16 +73,19 @@ async def test_create_homework_rejects_when_lesson_not_found_on_quiz(
         await use_case.execute(data)
 
     assert "không tồn tại trên hệ thống Quiz" in str(exc_info.value)
-    mock_homework_repo.save.assert_not_called()
+    assert in_memory_homework_repo.get_all() == []
 
 
 @pytest.mark.asyncio
 async def test_create_homework_rejects_when_coding_not_available(
-    mock_homework_repo, mock_quiz_api, mock_assignee_repo
+    in_memory_homework_repo: InMemoryHomeworkRepository,
+    in_memory_assignee_repo: InMemoryHomeworkAssigneeRepository,
+    fake_quiz_api: FakeQuizApiClient,
 ):
     """Bắt lỗi khi chọn 'requires_coding' nhưng Quiz metadata báo chưa có bài tập coding."""
-    mock_quiz_api.get_lesson_metadata = AsyncMock(
-        return_value={
+    fake_quiz_api.set_lesson_metadata(
+        "batch-norm",
+        {
             "slug": "batch-norm",
             "name": "Batch Normalization",
             "has_coding": False,
@@ -109,12 +93,12 @@ async def test_create_homework_rejects_when_coding_not_available(
             "coding_count": 0,
             "game_question_count": 4,
             "is_ready": True,
-        }
+        },
     )
     use_case = CreateHomeworkUseCase(
-        homework_repo=mock_homework_repo,
-        quiz_api=mock_quiz_api,
-        homework_assignee_repo=mock_assignee_repo,
+        homework_repo=in_memory_homework_repo,
+        quiz_api=fake_quiz_api,  # type: ignore
+        homework_assignee_repo=in_memory_assignee_repo,
     )
 
     data = HomeworkCreate(
@@ -130,16 +114,19 @@ async def test_create_homework_rejects_when_coding_not_available(
 
     assert "chưa có bài tập coding" in str(exc_info.value)
     assert "Batch Normalization" in str(exc_info.value)
-    mock_homework_repo.save.assert_not_called()
+    assert in_memory_homework_repo.get_all() == []
 
 
 @pytest.mark.asyncio
 async def test_create_homework_rejects_when_game_not_available(
-    mock_homework_repo, mock_quiz_api, mock_assignee_repo
+    in_memory_homework_repo: InMemoryHomeworkRepository,
+    in_memory_assignee_repo: InMemoryHomeworkAssigneeRepository,
+    fake_quiz_api: FakeQuizApiClient,
 ):
     """Bắt lỗi khi chọn 'requires_game' nhưng Quiz metadata báo chưa có câu hỏi game."""
-    mock_quiz_api.get_lesson_metadata = AsyncMock(
-        return_value={
+    fake_quiz_api.set_lesson_metadata(
+        "resnet-intro",
+        {
             "slug": "resnet-intro",
             "name": "Giới thiệu ResNet",
             "has_coding": True,
@@ -147,12 +134,12 @@ async def test_create_homework_rejects_when_game_not_available(
             "coding_count": 1,
             "game_question_count": 0,
             "is_ready": True,
-        }
+        },
     )
     use_case = CreateHomeworkUseCase(
-        homework_repo=mock_homework_repo,
-        quiz_api=mock_quiz_api,
-        homework_assignee_repo=mock_assignee_repo,
+        homework_repo=in_memory_homework_repo,
+        quiz_api=fake_quiz_api,  # type: ignore
+        homework_assignee_repo=in_memory_assignee_repo,
     )
 
     data = HomeworkCreate(
@@ -168,14 +155,19 @@ async def test_create_homework_rejects_when_game_not_available(
 
     assert "chưa có câu hỏi game" in str(exc_info.value)
     assert "Giới thiệu ResNet" in str(exc_info.value)
-    mock_homework_repo.save.assert_not_called()
+    assert in_memory_homework_repo.get_all() == []
 
 
 @pytest.mark.asyncio
-async def test_create_homework_success(mock_homework_repo, mock_quiz_api):
+async def test_create_homework_success(
+    in_memory_homework_repo: InMemoryHomeworkRepository,
+    in_memory_assignee_repo: InMemoryHomeworkAssigneeRepository,
+    fake_quiz_api: FakeQuizApiClient,
+):
     """Tạo bài tập thành công khi thỏa mãn điều kiện tồn tại trên Quiz."""
-    mock_quiz_api.get_lesson_metadata = AsyncMock(
-        return_value={
+    fake_quiz_api.set_lesson_metadata(
+        "unet-01",
+        {
             "slug": "unet-01",
             "name": "Mạng UNet",
             "has_coding": True,
@@ -183,21 +175,18 @@ async def test_create_homework_success(mock_homework_repo, mock_quiz_api):
             "coding_count": 1,
             "game_question_count": 5,
             "is_ready": True,
-        }
-    )
-    mock_assignee_repo = MagicMock()
-    mock_homework_repo.save = MagicMock(
-        side_effect=lambda hw: hw.model_copy(update={"id": 999})
+        },
     )
     use_case = CreateHomeworkUseCase(
-        homework_repo=mock_homework_repo,
-        quiz_api=mock_quiz_api,
-        homework_assignee_repo=mock_assignee_repo,
+        homework_repo=in_memory_homework_repo,
+        quiz_api=fake_quiz_api,  # type: ignore
+        homework_assignee_repo=in_memory_assignee_repo,
     )
 
+    dl = datetime.now(UTC) + timedelta(days=7)
     data = HomeworkCreate(
         title="UNet Project",
-        deadline=datetime.now(UTC) + timedelta(days=7),
+        deadline=dl,
         link="https://quiz.dutai.site/lessons/unet-01",
         requires_coding=True,
         requires_game=True,
@@ -210,39 +199,48 @@ async def test_create_homework_success(mock_homework_repo, mock_quiz_api):
     assert saved.slug == "unet-01"
     assert saved.requires_coding is True
     assert saved.requires_game is True
-    mock_homework_repo.save.assert_called_once()
-    mock_assignee_repo.assign_users.assert_called_once_with(
-        saved.id, [1, 2, 3], deadline=data.deadline
-    )
+
+    # Xác minh lưu thực tế trong In-Memory Repository
+    stored_hw = in_memory_homework_repo.get_by_id(saved.id)
+    assert stored_hw is not None
+    assert stored_hw.slug == "unet-01"
+
+    # Xác minh gán assignees thực tế
+    assert in_memory_assignee_repo.get_assigned_user_ids(saved.id) == {1, 2, 3}
 
 
 @pytest.mark.asyncio
-async def test_update_homework_validation(mock_homework_repo, mock_quiz_api):
+async def test_update_homework_validation(
+    in_memory_homework_repo: InMemoryHomeworkRepository,
+    in_memory_assignee_repo: InMemoryHomeworkAssigneeRepository,
+    fake_quiz_api: FakeQuizApiClient,
+):
     """Cập nhật bài tập: xác thực điều kiện tương tự khi đổi slug hoặc đổi yêu cầu."""
-    existing_hw = Homework(
-        id=1,
-        title="Old title",
-        slug="old-slug",
-        requires_coding=False,
-        requires_game=True,
+    in_memory_homework_repo.save(
+        Homework(
+            id=1,
+            title="Old title",
+            slug="old-slug",
+            requires_coding=False,
+            requires_game=True,
+        )
     )
-    mock_homework_repo.get_by_id = MagicMock(return_value=existing_hw)
 
-    mock_quiz_api.get_lesson_metadata = AsyncMock(
-        return_value={
+    fake_quiz_api.set_lesson_metadata(
+        "new-slug",
+        {
             "slug": "new-slug",
             "name": "New Lesson",
             "has_coding": False,
             "has_game": True,
             "is_ready": True,
-        }
+        },
     )
 
-    mock_assignee_repo = MagicMock()
     use_case = UpdateHomeworkUseCase(
-        homework_repo=mock_homework_repo,
-        homework_assignee_repo=mock_assignee_repo,
-        quiz_api=mock_quiz_api,
+        homework_repo=in_memory_homework_repo,
+        homework_assignee_repo=in_memory_assignee_repo,
+        quiz_api=fake_quiz_api,  # type: ignore
     )
 
     # Thử update thành requires_coding=True khi quiz không có coding -> Phải fail
@@ -259,33 +257,37 @@ async def test_update_homework_validation(mock_homework_repo, mock_quiz_api):
 
 
 @pytest.mark.asyncio
-async def test_update_homework_uncheck_game_success(mock_homework_repo, mock_quiz_api):
+async def test_update_homework_uncheck_game_success(
+    in_memory_homework_repo: InMemoryHomeworkRepository,
+    in_memory_assignee_repo: InMemoryHomeworkAssigneeRepository,
+    fake_quiz_api: FakeQuizApiClient,
+):
     """Cập nhật bài tập: bỏ chọn requires_game thành công khi ban đầu có cả coding và game."""
-    existing_hw = Homework(
-        id=1,
-        title="Existing HW",
-        slug="test-slug",
-        requires_coding=True,
-        requires_game=True,
+    in_memory_homework_repo.save(
+        Homework(
+            id=1,
+            title="Existing HW",
+            slug="test-slug",
+            requires_coding=True,
+            requires_game=True,
+        )
     )
-    mock_homework_repo.get_by_id = MagicMock(return_value=existing_hw)
-    mock_homework_repo.save = MagicMock(side_effect=lambda hw: hw)
 
-    mock_quiz_api.get_lesson_metadata = AsyncMock(
-        return_value={
+    fake_quiz_api.set_lesson_metadata(
+        "test-slug",
+        {
             "slug": "test-slug",
             "name": "Test Lesson",
             "has_coding": True,
             "has_game": False,
             "is_ready": True,
-        }
+        },
     )
 
-    mock_assignee_repo = MagicMock()
     use_case = UpdateHomeworkUseCase(
-        homework_repo=mock_homework_repo,
-        homework_assignee_repo=mock_assignee_repo,
-        quiz_api=mock_quiz_api,
+        homework_repo=in_memory_homework_repo,
+        homework_assignee_repo=in_memory_assignee_repo,
+        quiz_api=fake_quiz_api,  # type: ignore
     )
 
     result = await use_case.execute(
@@ -297,16 +299,16 @@ async def test_update_homework_uncheck_game_success(mock_homework_repo, mock_qui
 
     assert result.requires_game is False
     assert result.requires_coding is True
-    mock_homework_repo.save.assert_called_once()
-    saved_entity = mock_homework_repo.save.call_args[0][0]
-    assert saved_entity.requires_game is False
-    assert saved_entity.requires_coding is True
+
+    # Xác minh trạng thái lưu thực tế trong RAM
+    updated_hw = in_memory_homework_repo.get_by_id(1)
+    assert updated_hw is not None
+    assert updated_hw.requires_game is False
+    assert updated_hw.requires_coding is True
 
 
 def test_evaluate_submissions_partial_coding():
     """Kiểm tra evaluate_submissions khi học sinh mới làm 1/2 bài coding con."""
-    from app.homework.domain.entity import HomeworkSubmission, SubmissionType
-
     hw = Homework(
         id=1,
         title="Bài tập con test",
@@ -337,8 +339,6 @@ def test_evaluate_submissions_partial_coding():
 
 def test_evaluate_submissions_full_coding():
     """Kiểm tra evaluate_submissions khi học sinh làm đủ cả 2 bài coding con."""
-    from app.homework.domain.entity import HomeworkSubmission, SubmissionType
-
     hw = Homework(
         id=1,
         title="Bài tập con test",
@@ -374,4 +374,3 @@ def test_evaluate_submissions_full_coding():
     assert eval_result.total_coding_required == 2
     assert eval_result.total_coding_completed == 2
     assert len(eval_result.uncompleted_items) == 0
-

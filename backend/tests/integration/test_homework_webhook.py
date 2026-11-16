@@ -3,7 +3,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.homework.application.dtos import HomeworkSubmissionWebhookIn
+from app.homework.application.dtos import (
+    HomeworkSubmissionWebhookIn,
+    HomeworkWebhookResponse,
+)
 from app.homework.application.record_submission_use_case import (
     RecordHomeworkSubmissionUseCase,
 )
@@ -42,8 +45,9 @@ async def test_webhook_ignore_external_user(mock_homework_repo, mock_submission_
     )
 
     result = await use_case.execute(payload)
-    assert result["status"] == "ignored"
-    assert "External user" in result["reason"]
+    assert isinstance(result, HomeworkWebhookResponse)
+    assert result.status == "ignored"
+    assert result.reason is not None and "External user" in result.reason
     mock_submission_repo.add_submission.assert_not_called()
 
 
@@ -65,8 +69,9 @@ async def test_webhook_ignore_nonexistent_homework(
     )
 
     result = await use_case.execute(payload)
-    assert result["status"] == "ignored"
-    assert "Homework not found" in result["reason"]
+    assert isinstance(result, HomeworkWebhookResponse)
+    assert result.status == "ignored"
+    assert result.reason is not None and "Homework not found" in result.reason
     mock_submission_repo.add_submission.assert_not_called()
 
 
@@ -104,10 +109,11 @@ async def test_webhook_record_coding_submission_success(
     )
 
     result = await use_case.execute(payload)
-    assert result["status"] == "recorded"
-    assert result["submission_id"] == 99
-    assert result["homework_id"] == 1
-    assert result["user_id"] == 42
+    assert isinstance(result, HomeworkWebhookResponse)
+    assert result.status == "recorded"
+    assert result.submission_id == 99
+    assert result.homework_id == 1
+    assert result.user_id == 42
     mock_submission_repo.add_submission.assert_called_once()
 
 
@@ -145,8 +151,9 @@ async def test_webhook_record_game_submission_success(
     )
 
     result = await use_case.execute(payload)
-    assert result["status"] == "recorded"
-    assert result["submission_id"] == 100
+    assert isinstance(result, HomeworkWebhookResponse)
+    assert result.status == "recorded"
+    assert result.submission_id == 100
     mock_submission_repo.add_submission.assert_called_once()
 
 

@@ -1,10 +1,17 @@
 from datetime import datetime
 from enum import StrEnum
-from typing import Any
+from typing import Any, NamedTuple
 
 from pydantic import BaseModel
 
 from app.shared.domain.event_bus import DomainEvent
+
+
+class AssigneeUserInfo(NamedTuple):
+    user_id: int
+    name: str
+    avatar_url: str | None
+    deadline: datetime
 
 
 class ScoreDetail(BaseModel):

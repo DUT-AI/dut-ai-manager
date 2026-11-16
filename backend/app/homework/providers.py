@@ -1,4 +1,4 @@
-from dishka import Provider, Scope, provide
+from dishka import Provider, Scope, alias, provide
 from sqlalchemy.orm import Session
 
 from app.homework.application import (
@@ -22,6 +22,11 @@ from app.homework.application.event_handlers import (
     HomeworkGradedNotificationHandler,
     HomeworkNotificationHandler,
 )
+from app.homework.domain.ports import (
+    HomeworkAssigneeRepositoryPort,
+    HomeworkRepositoryPort,
+    HomeworkSubmissionRepositoryPort,
+)
 from app.homework.infrastructure.homework_assignee_repository import (
     HomeworkAssigneeRepository,
 )
@@ -40,6 +45,18 @@ from app.user.infrastructure.repository import UserRepository
 
 class HomeworkModuleProvider(Provider):
     scope = Scope.REQUEST
+
+    homework_repo_port = alias(
+        source=HomeworkRepository, provides=HomeworkRepositoryPort
+    )
+    homework_submission_repo_port = alias(
+        source=HomeworkSubmissionRepository,
+        provides=HomeworkSubmissionRepositoryPort,
+    )
+    homework_assignee_repo_port = alias(
+        source=HomeworkAssigneeRepository,
+        provides=HomeworkAssigneeRepositoryPort,
+    )
 
     @provide
     def get_quiz_api_client(self) -> QuizApiClient:
@@ -76,7 +93,7 @@ class HomeworkModuleProvider(Provider):
     def get_homework_exercise_resolver(
         self,
         quiz_api: QuizApiClient,
-        homework_submission_repo: HomeworkSubmissionRepository,
+        homework_submission_repo: HomeworkSubmissionRepositoryPort,
     ) -> HomeworkExerciseResolver:
         return HomeworkExerciseResolver(
             quiz_api=quiz_api,
@@ -173,8 +190,8 @@ class HomeworkModuleProvider(Provider):
     @provide
     def get_record_submission_use_case(
         self,
-        homework_repo: HomeworkRepository,
-        homework_submission_repo: HomeworkSubmissionRepository,
+        homework_repo: HomeworkRepositoryPort,
+        homework_submission_repo: HomeworkSubmissionRepositoryPort,
     ) -> RecordHomeworkSubmissionUseCase:
         return RecordHomeworkSubmissionUseCase(
             homework_repo=homework_repo,
@@ -184,7 +201,7 @@ class HomeworkModuleProvider(Provider):
     @provide
     def get_user_submissions_use_case(
         self,
-        homework_submission_repo: HomeworkSubmissionRepository,
+        homework_submission_repo: HomeworkSubmissionRepositoryPort,
     ) -> GetUserHomeworkSubmissionsUseCase:
         return GetUserHomeworkSubmissionsUseCase(
             homework_submission_repo=homework_submission_repo
@@ -223,9 +240,9 @@ class HomeworkModuleProvider(Provider):
     @provide
     def get_check_overdue_use_case(
         self,
-        homework_repo: HomeworkRepository,
-        homework_submission_repo: HomeworkSubmissionRepository,
-        homework_assignee_repo: HomeworkAssigneeRepository,
+        homework_repo: HomeworkRepositoryPort,
+        homework_submission_repo: HomeworkSubmissionRepositoryPort,
+        homework_assignee_repo: HomeworkAssigneeRepositoryPort,
         exercise_resolver: HomeworkExerciseResolver,
     ) -> CheckOverdueHomeworkUseCase:
         return CheckOverdueHomeworkUseCase(

@@ -4,7 +4,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.homework.application.dtos.common import ExerciseSummaryDTO
-from app.homework.domain.entity import SubmissionType
+from app.homework.domain.entity import HomeworkSubmission, SubmissionType
 from app.homework.domain.value_objects import (
     CodingSubmissionDetails,
     GameSubmissionDetails,
@@ -98,42 +98,68 @@ class HomeworkSubmissionDetailResponse(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def parse_typed_details(cls, data: Any) -> Any:
-        if isinstance(data, dict):
-            raw_details = data.get("details") or {}
-            sub_type = str(data.get("submission_type", "")).upper()
-            if not isinstance(raw_details, (CodingSubmissionDetails, GameSubmissionDetails)):
-                if sub_type == "GAME":
-                    data["details"] = GameSubmissionDetails(**raw_details)
-                else:
-                    data["details"] = CodingSubmissionDetails(**raw_details)
-            return data
-
-        # ORM Model or Domain Entity
-        sub_type_raw = getattr(data, "submission_type", None)
-        if sub_type_raw is not None:
-            sub_type = getattr(sub_type_raw, "value", str(sub_type_raw)).upper()
-            raw_details = getattr(data, "details", {}) or {}
-            if not isinstance(raw_details, (CodingSubmissionDetails, GameSubmissionDetails)):
+        if isinstance(data, HomeworkSubmission):
+            sub_type = str(data.submission_type).upper()
+            raw_details = data.details
+            if isinstance(raw_details, (CodingSubmissionDetails, GameSubmissionDetails)):
+                parsed_details = raw_details
+            elif isinstance(raw_details, dict):
                 parsed_details = (
                     GameSubmissionDetails(**raw_details)
                     if sub_type == "GAME"
                     else CodingSubmissionDetails(**raw_details)
                 )
-                return {
-                    "id": getattr(data, "id", None),
-                    "homework_id": getattr(data, "homework_id", None),
-                    "user_id": getattr(data, "user_id", None),
-                    "submission_type": sub_type_raw,
-                    "exercise_id": getattr(data, "exercise_id", None),
-                    "exercise_title": getattr(data, "exercise_title", None),
-                    "score": getattr(data, "score", None),
-                    "attempt_number": getattr(data, "attempt_number", 1) or 1,
-                    "submitted_at": getattr(data, "submitted_at", None),
-                    "is_passed": getattr(data, "is_passed", True),
-                    "details": parsed_details,
-                    "created_at": getattr(data, "created_at", None),
-                }
+            else:
+                parsed_details = (
+                    GameSubmissionDetails()
+                    if sub_type == "GAME"
+                    else CodingSubmissionDetails()
+                )
+            return {
+                "id": data.id,
+                "homework_id": data.homework_id,
+                "user_id": data.user_id,
+                "submission_type": data.submission_type,
+                "exercise_id": data.exercise_id,
+                "exercise_title": data.exercise_title,
+                "score": data.score,
+                "attempt_number": data.attempt_number or 1,
+                "submitted_at": data.submitted_at,
+                "is_passed": data.is_passed,
+                "details": parsed_details,
+                "created_at": data.created_at,
+            }
+
+        if isinstance(data, dict):
+            raw_details = data.get("details")
+            sub_type = str(data.get("submission_type", "")).upper()
+            if not isinstance(raw_details, (CodingSubmissionDetails, GameSubmissionDetails)):
+                detail_dict = raw_details if isinstance(raw_details, dict) else {}
+                if sub_type == "GAME":
+                    data["details"] = GameSubmissionDetails(**detail_dict)
+                else:
+                    data["details"] = CodingSubmissionDetails(**detail_dict)
+            return data
+
         return data
+
+
+class HomeworkWebhookResponse(BaseModel):
+    """Phản hồi chuẩn từ Webhook nộp bài tập."""
+
+    status: str  # "recorded" | "updated" | "ignored"
+    message: str | None = None
+    reason: str | None = None
+    submission_id: int | None = None
+    homework_id: int | None = None
+    user_id: int | None = None
+    exercise_id: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+    def __getitem__(self, item: str) -> Any:
+        """Hỗ trợ backward-compatibility truy cập theo kiểu dict key."""
+        return getattr(self, item)
 
 
 class HomeworkSubmissionWebhookIn(BaseModel):
@@ -153,7 +179,7 @@ class HomeworkSubmissionWebhookIn(BaseModel):
     score: float | None = None
     original_filename: str | None = None
 
-    details: dict[str, Any] = Field(default_factory=dict)
+    details: CodingSubmissionDetails | GameSubmissionDetails | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -167,3 +193,26 @@ class HomeworkSubmissionWebhookIn(BaseModel):
             if val in SubmissionType.__members__:
                 return SubmissionType[val]
         raise ValueError(f"Invalid submission type: {v}. Must be CODING or GAME")
+
+    @model_validator(mode="before")
+    @classmethod
+    def parse_submission_details(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            raw_details = data.get("details")
+            sub_type = data.get("type")
+            if isinstance(sub_type, str):
+                sub_type_str = sub_type.strip().upper()
+            elif isinstance(sub_type, SubmissionType):
+                sub_type_str = sub_type.value.upper()
+            else:
+                sub_type_str = "CODING"
+
+            if raw_details is not None and not isinstance(
+                raw_details, (CodingSubmissionDetails, GameSubmissionDetails)
+            ):
+                if isinstance(raw_details, dict):
+                    if sub_type_str == "GAME":
+                        data["details"] = GameSubmissionDetails(**raw_details)
+                    else:
+                        data["details"] = CodingSubmissionDetails(**raw_details)
+        return data

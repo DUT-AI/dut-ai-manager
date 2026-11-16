@@ -9,16 +9,14 @@ from app.homework.application.homework_exercise_resolver import (
 )
 from app.homework.domain.constants import HOMEWORK_VIOLATION_CHECK_DELAY_DAYS
 from app.homework.domain.entity import Homework as HomeworkEntity
+from app.homework.domain.ports import (
+    HomeworkAssigneeRepositoryPort,
+    HomeworkRepositoryPort,
+    HomeworkSubmissionRepositoryPort,
+)
 from app.homework.domain.value_objects import (
     DueHomeworkAssignment,
     HomeworkOverdueDetected,
-)
-from app.homework.infrastructure.homework_assignee_repository import (
-    HomeworkAssigneeRepository,
-)
-from app.homework.infrastructure.homework_repository import HomeworkRepository
-from app.homework.infrastructure.homework_submission_repository import (
-    HomeworkSubmissionRepository,
 )
 from app.shared.domain.event_bus import DomainEvent, EventBus
 
@@ -31,9 +29,9 @@ class CheckOverdueHomeworkUseCase:
 
     def __init__(
         self,
-        homework_repo: HomeworkRepository,
-        homework_submission_repo: HomeworkSubmissionRepository,
-        homework_assignee_repo: HomeworkAssigneeRepository,
+        homework_repo: HomeworkRepositoryPort,
+        homework_submission_repo: HomeworkSubmissionRepositoryPort,
+        homework_assignee_repo: HomeworkAssigneeRepositoryPort,
         exercise_resolver: HomeworkExerciseResolver,
         event_bus: type[EventBus] = EventBus,
     ):

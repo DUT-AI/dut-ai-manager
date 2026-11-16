@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.homework.domain.entity import (
     HomeworkSubmission as HomeworkSubmissionEntity,
 )
+from app.homework.domain.ports import HomeworkSubmissionRepositoryPort
 from app.homework.domain.value_objects import (
     CodingSubmissionDetails,
     GameSubmissionDetails,
@@ -17,7 +18,7 @@ from app.homework.infrastructure.model import (
 )
 
 
-class HomeworkSubmissionRepository:
+class HomeworkSubmissionRepository(HomeworkSubmissionRepositoryPort):
     """Repository chuyên trách quản lý bảng bài nộp homework_submissions."""
 
     def __init__(self, session: Session):

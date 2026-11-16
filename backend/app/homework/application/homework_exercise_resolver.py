@@ -1,11 +1,8 @@
-from typing import Any
-
 from loguru import logger
 
 from app.homework.application.dtos import ExerciseSummaryDTO
-from app.homework.infrastructure.homework_submission_repository import (
-    HomeworkSubmissionRepository,
-)
+from app.homework.domain.entity import HomeworkSubmission
+from app.homework.domain.ports import HomeworkSubmissionRepositoryPort
 from app.homework.infrastructure.quiz_api import QuizApiClient
 
 
@@ -18,7 +15,7 @@ class HomeworkExerciseResolver:
     def __init__(
         self,
         quiz_api: QuizApiClient,
-        homework_submission_repo: HomeworkSubmissionRepository,
+        homework_submission_repo: HomeworkSubmissionRepositoryPort,
     ):
         self.quiz_api = quiz_api
         self.homework_submission_repo = homework_submission_repo
@@ -59,13 +56,13 @@ class HomeworkExerciseResolver:
         return {ex.exercise_id for ex in exercises if ex.exercise_id}
 
     def _extract_coding_exercises(
-        self, submissions: list[Any]
+        self, submissions: list[HomeworkSubmission]
     ) -> list[ExerciseSummaryDTO]:
         """Trích xuất danh mục các bài tập con từ các bản ghi bài nộp trong DB."""
         known_exercises: dict[str, str] = {}
         for sub in submissions:
-            stype = str(getattr(sub, "submission_type", "")).upper()
-            ex_id = getattr(sub, "exercise_id", None)
+            stype = str(sub.submission_type).upper()
+            ex_id = sub.exercise_id
             if (
                 stype == "CODING"
                 and ex_id
@@ -74,15 +71,10 @@ class HomeworkExerciseResolver:
                 str_ex_id = str(ex_id)
                 if str_ex_id not in known_exercises:
                     known_exercises[str_ex_id] = (
-                        getattr(sub, "exercise_title", "")
-                        or f"Bài tập #{str_ex_id[:8]}"
+                        sub.exercise_title or f"Bài tập #{str_ex_id[:8]}"
                     )
-                elif not known_exercises[str_ex_id] and getattr(
-                    sub, "exercise_title", ""
-                ):
-                    known_exercises[str_ex_id] = getattr(
-                        sub, "exercise_title", ""
-                    )
+                elif not known_exercises[str_ex_id] and sub.exercise_title:
+                    known_exercises[str_ex_id] = sub.exercise_title
 
         return [
             ExerciseSummaryDTO(

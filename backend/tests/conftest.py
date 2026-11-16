@@ -14,6 +14,8 @@ from app.core.deps import get_current_user
 from app.main import create_app
 from app.user.domain.entity import UserEntity, UserStatus
 
+pytest_plugins = ["tests.fixtures.homework_fixtures"]
+
 
 @pytest.fixture(scope="session")
 def db_engine():

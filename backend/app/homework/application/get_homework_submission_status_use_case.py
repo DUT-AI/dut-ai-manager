@@ -1,5 +1,4 @@
 from datetime import UTC, datetime
-from typing import Any
 
 from app.homework.application.dtos import (
     CategorySubmissionStatus,
@@ -12,7 +11,12 @@ from app.homework.application.dtos import (
 from app.homework.application.homework_exercise_resolver import (
     HomeworkExerciseResolver,
 )
-from app.homework.domain.entity import Homework as HomeworkEntity
+from app.homework.domain.entity import (
+    Homework as HomeworkEntity,
+)
+from app.homework.domain.entity import (
+    HomeworkSubmission,
+)
 from app.homework.infrastructure.homework_assignee_repository import (
     AssigneeUserInfo,
     HomeworkAssigneeRepository,
@@ -121,9 +125,9 @@ class GetHomeworkSubmissionStatusUseCase:
         assignee: AssigneeUserInfo,
         homework: HomeworkEntity,
         coding_exercises: list[ExerciseSummaryDTO],
-        db_exercise_map: dict[tuple[int, str], Any],
-        db_coding_general_map: dict[int, Any],
-        db_game_map: dict[int, Any],
+        db_exercise_map: dict[tuple[int, str], HomeworkSubmission],
+        db_coding_general_map: dict[int, HomeworkSubmission],
+        db_game_map: dict[int, HomeworkSubmission],
         now: datetime,
     ) -> StudentHomeworkDetailDTO:
         """Đánh giá chi tiết tiến độ hoàn thành Coding & Game của 1 học sinh cụ thể."""

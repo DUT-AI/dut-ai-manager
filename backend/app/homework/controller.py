@@ -30,6 +30,7 @@ from app.homework.application.dtos import (
     HomeworkSubmissionDetailResponse,
     HomeworkSubmissionStatusResponse,
     HomeworkUpdate,
+    HomeworkWebhookResponse,
     SyncHomeworkResult,
 )
 from app.homework.infrastructure.homework_assignee_repository import (
@@ -234,7 +235,7 @@ async def delete_homework(
     return ApiResponse.success(data=result)
 
 
-@router.post("/webhook/submission", response_model=ApiResponse[dict[str, Any]])
+@router.post("/webhook/submission", response_model=ApiResponse[HomeworkWebhookResponse])
 @inject
 async def receive_submission_webhook(
     payload: HomeworkSubmissionWebhookIn,
