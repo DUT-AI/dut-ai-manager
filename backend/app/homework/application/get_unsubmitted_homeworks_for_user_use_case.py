@@ -42,6 +42,10 @@ class GetUnsubmittedHomeworksForUserUseCase:
             homework_ids=hw_ids, user_id=user_id
         )
 
+        required_exercises_map = (
+            self.homework_submission_repo.get_required_exercise_ids_map(hw_ids)
+        )
+
         submissions_by_hw: dict[int, list] = {}
         for sub in user_submissions:
             submissions_by_hw.setdefault(sub.homework_id, []).append(sub)
@@ -52,7 +56,22 @@ class GetUnsubmittedHomeworksForUserUseCase:
             assert hw.id is not None
             hw_subs = submissions_by_hw.get(hw.id, [])
             user_dl = user_deadlines.get(hw.id)
-            if not hw.evaluate_submissions(hw_subs, deadline=user_dl).is_submitted:
-                unsubmitted.append(HomeworkResponse.from_entity(hw, deadline=user_dl))
+            hw_req_ex_ids = required_exercises_map.get(hw.id)
+            eval_result = hw.evaluate_submissions(
+                hw_subs, deadline=user_dl, required_exercise_ids=hw_req_ex_ids
+            )
+            if not eval_result.is_submitted:
+                resp = HomeworkResponse.from_entity(hw, deadline=user_dl)
+                resp.is_submitted = False
+                resp.is_overdue = eval_result.is_overdue
+                resp.has_coding = hw.requires_coding
+                resp.coding_submitted = eval_result.coding_submitted
+                resp.has_game = hw.requires_game
+                resp.game_submitted = eval_result.game_submitted
+                resp.uncompleted_items = eval_result.uncompleted_items
+                resp.coding_status = eval_result.coding_status
+                resp.total_coding_required = eval_result.total_coding_required
+                resp.total_coding_completed = eval_result.total_coding_completed
+                unsubmitted.append(resp)
 
         return unsubmitted

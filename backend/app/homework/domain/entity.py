@@ -1,3 +1,4 @@
+import re
 from datetime import UTC, datetime
 from enum import StrEnum
 
@@ -24,11 +25,43 @@ class Homework(BaseAuditEntity):
     requires_coding: bool = True
     requires_game: bool = False
 
+    @staticmethod
+    def extract_slug(link: str | None, slug: str | None) -> str | None:
+        """Trích xuất slug từ thuộc tính slug hoặc parse từ URL link (SSOT nghiệp vụ domain)."""
+        if slug and slug.strip():
+            return slug.strip()
+        if link and link.strip():
+            link_clean = link.strip()
+            match = re.search(r"/(?:homeworks|game|lessons)/([^/?#]+)", link_clean)
+            if match:
+                return match.group(1).strip()
+            if link_clean.startswith("http://") or link_clean.startswith("https://"):
+                candidate = (
+                    link_clean.rstrip("/")
+                    .split("/")[-1]
+                    .split("?")[0]
+                    .split("#")[0]
+                    .strip()
+                )
+                if candidate and len(candidate) > 1 and " " not in candidate:
+                    if candidate.lower() in ("game", "homeworks", "coding"):
+                        parts = [p for p in link_clean.rstrip("/").split("/") if p]
+                        if len(parts) >= 2:
+                            return parts[-2].strip()
+                    return candidate
+        return None
+
+    @property
+    def effective_slug(self) -> str | None:
+        """Slug hiệu lực của bài tập, trích xuất từ slug hoặc link."""
+        return self.extract_slug(self.link, self.slug)
+
     def evaluate_submissions(
         self,
         submissions: list["HomeworkSubmission"],
         deadline: datetime | None = None,
         reference_time: datetime | None = None,
+        required_exercise_ids: set[str] | None = None,
     ) -> SubmissionEvaluation:
         """Aggregate Root đối chiếu danh sách bài nộp với yêu cầu của đề bài."""
         has_coding = self.requires_coding
@@ -36,22 +69,67 @@ class Homework(BaseAuditEntity):
         if not has_coding and not has_game:
             has_coding = True
 
-        coding_submitted = any(
-            getattr(s.submission_type, "value", str(s.submission_type)).upper()
-            == "CODING"
-            and s.is_passed is True
+        total_coding_required = 0
+        total_coding_completed = 0
+        coding_status = "NOT_SUBMITTED"
+
+        # Lọc danh sách bài nộp hợp lệ trước hạn (nếu có deadline)
+        valid_submissions = [
+            s
             for s in submissions
-        )
+            if deadline is None or not s.is_late_for(deadline)
+        ]
+
+        if has_coding:
+            if required_exercise_ids and isinstance(
+                required_exercise_ids, (set, frozenset, list)
+            ):
+                req_set = set(required_exercise_ids)
+                total_coding_required = len(req_set)
+                passed_ex_ids = {
+                    str(s.exercise_id)
+                    for s in valid_submissions
+                    if getattr(s.submission_type, "value", str(s.submission_type)).upper()
+                    == "CODING"
+                    and s.is_passed is True
+                    and s.exercise_id
+                }
+                completed_coding_count = len(passed_ex_ids & req_set)
+                total_coding_completed = completed_coding_count
+                coding_status = self.determine_coding_status(
+                    completed_coding_count, total_coding_required
+                )
+                coding_submitted = coding_status == "COMPLETED"
+            else:
+                has_passed_coding = any(
+                    getattr(s.submission_type, "value", str(s.submission_type)).upper()
+                    == "CODING"
+                    and s.is_passed is True
+                    for s in valid_submissions
+                )
+                total_coding_required = 1
+                total_coding_completed = 1 if has_passed_coding else 0
+                coding_status = "COMPLETED" if has_passed_coding else "NOT_SUBMITTED"
+                coding_submitted = has_passed_coding
+        else:
+            coding_submitted = True
+            coding_status = "COMPLETED"
+
         game_submitted = any(
             getattr(s.submission_type, "value", str(s.submission_type)).upper()
             == "GAME"
             and s.is_passed is True
-            for s in submissions
+            for s in valid_submissions
         )
 
         uncompleted: list[str] = []
         if has_coding and not coding_submitted:
-            uncompleted.append("Bài tập Coding")
+            if total_coding_required > 1 and total_coding_completed > 0:
+                uncompleted.append(
+                    f"Còn {total_coding_required - total_coding_completed}/{total_coding_required} bài tập Coding"
+                )
+            else:
+                uncompleted.append("Bài tập Coding")
         if has_game and not game_submitted:
             uncompleted.append("Trắc nghiệm Game")
 
@@ -71,6 +149,9 @@ class Homework(BaseAuditEntity):
             coding_submitted=coding_submitted,
             game_submitted=game_submitted,
             uncompleted_items=uncompleted,
+            coding_status=coding_status,
+            total_coding_required=total_coding_required,
+            total_coding_completed=total_coding_completed,
         )
 
     @staticmethod
@@ -142,8 +223,10 @@ class HomeworkSubmission(BaseEntity):
     score: float | None = None
     attempt_number: int = 1
 
-    def is_late_for(self, deadline: datetime) -> bool:
+    def is_late_for(self, deadline: datetime | None) -> bool:
         """Domain Rule: Xác định bài nộp có bị trễ so với deadline hiệu lực không."""
+        if not deadline:
+            return False
         return ensure_utc(self.submitted_at) > ensure_utc(deadline)
 
     @property

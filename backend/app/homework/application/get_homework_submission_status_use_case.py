@@ -1,5 +1,4 @@
 from datetime import UTC, datetime
-from typing import Any
 
 from app.homework.application.dtos import (
     CategorySubmissionStatus,
@@ -9,7 +8,15 @@ from app.homework.application.dtos import (
     StudentHomeworkDetailDTO,
     UserSubmissionInfo,
 )
-from app.homework.domain.entity import Homework as HomeworkEntity
+from app.homework.application.homework_exercise_resolver import (
+    HomeworkExerciseResolver,
+)
+from app.homework.domain.entity import (
+    Homework as HomeworkEntity,
+)
+from app.homework.domain.entity import (
+    HomeworkSubmission,
+)
 from app.homework.infrastructure.homework_assignee_repository import (
     AssigneeUserInfo,
     HomeworkAssigneeRepository,
@@ -20,7 +27,6 @@ from app.homework.infrastructure.homework_repository import (
 from app.homework.infrastructure.homework_submission_repository import (
     HomeworkSubmissionRepository,
 )
-from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.user.infrastructure.repository import UserRepository
 
 
@@ -33,13 +39,13 @@ class GetHomeworkSubmissionStatusUseCase:
         homework_submission_repo: HomeworkSubmissionRepository,
         homework_assignee_repo: HomeworkAssigneeRepository,
         user_repo: UserRepository,
-        quiz_api: QuizApiClient,
+        exercise_resolver: HomeworkExerciseResolver,
     ):
         self.homework_repo = homework_repo
         self.homework_submission_repo = homework_submission_repo
         self.homework_assignee_repo = homework_assignee_repo
         self.user_repo = user_repo
-        self.quiz_api = quiz_api
+        self.exercise_resolver = exercise_resolver
 
     async def execute(
         self, homework_id: int
@@ -62,9 +68,9 @@ class GetHomeworkSubmissionStatusUseCase:
             homework.index_submissions(submissions)
         )
 
-        # 3. Trích xuất danh mục các bài tập con (từ Quiz API hoặc fallback DB)
-        coding_exercises = await self._get_coding_exercises(
-            homework.slug, db_exercise_map, submissions
+        # 3. Trích xuất danh mục các bài tập con (từ ExerciseResolver làm SSOT)
+        coding_exercises = await self.exercise_resolver.get_coding_exercises(
+            homework.id, homework.slug
         )
 
         # 4. Đánh giá trạng thái từng học viên
@@ -90,9 +96,22 @@ class GetHomeworkSubmissionStatusUseCase:
         # 6. Phân nhóm nộp bài Coding và Game
         coding_status, game_status = self._categorize_submissions(students)
 
+        # 7. Tính tổng số học sinh đã hoàn thành trọn vẹn mọi yêu cầu (SSOT)
+        has_c = homework.requires_coding
+        has_g = homework.requires_game
+        if not has_c and not has_g:
+            has_c = True
+        total_completed = sum(
+            1
+            for s in students
+            if (not has_c or s.coding_status == "COMPLETED")
+            and (not has_g or s.game_is_submitted)
+        )
+
         return HomeworkSubmissionStatusResponse(
             coding=coding_status,
             game=game_status,
+            total_completed_count=total_completed,
             coding_exercises=coding_exercises,
             students=students,
         )
@@ -101,67 +120,20 @@ class GetHomeworkSubmissionStatusUseCase:
     # Private Helper Methods
     # -------------------------------------------------------------------------
 
-    async def _get_coding_exercises(
-        self,
-        slug: str,
-        db_exercise_map: dict[tuple[int, str], Any],
-        submissions: list[Any],
-    ) -> list[ExerciseSummaryDTO]:
-        """Lấy danh mục các bài tập con từ Quiz API hoặc fallback từ DB."""
-        if slug:
-            try:
-                quiz_exercises = await self.quiz_api.get_lesson_exercises(slug)
-                if quiz_exercises:
-                    return [
-                        ExerciseSummaryDTO(
-                            exercise_id=str(ex["id"]),
-                            title=str(ex.get("title") or f"Bài tập {idx + 1}"),
-                            order_index=idx + 1,
-                        )
-                        for idx, ex in enumerate(quiz_exercises)
-                        if isinstance(ex, dict) and "id" in ex
-                    ]
-            except Exception:
-                pass
-        return self._extract_coding_exercises(db_exercise_map, submissions)
-
-    def _extract_coding_exercises(
-        self, db_exercise_map: dict[tuple[int, str], Any], submissions: list[Any]
-    ) -> list[ExerciseSummaryDTO]:
-        """Trích xuất danh mục các bài tập con từ các bản ghi nộp bài đã lưu."""
-        if not db_exercise_map:
-            return []
-        known_ex_ids = {k[1] for k in db_exercise_map.keys()}
-        exercises: list[ExerciseSummaryDTO] = []
-        for idx, ex_id in enumerate(sorted(known_ex_ids)):
-            title = f"Bài tập {idx + 1}"
-            for sub in submissions:
-                if sub.exercise_id == ex_id and sub.exercise_title:
-                    title = sub.exercise_title
-                    break
-            exercises.append(
-                ExerciseSummaryDTO(
-                    exercise_id=ex_id,
-                    title=title,
-                    order_index=idx + 1,
-                )
-            )
-        return exercises
-
     def _evaluate_student(
         self,
         assignee: AssigneeUserInfo,
         homework: HomeworkEntity,
         coding_exercises: list[ExerciseSummaryDTO],
-        db_exercise_map: dict[tuple[int, str], Any],
-        db_coding_general_map: dict[int, Any],
-        db_game_map: dict[int, Any],
+        db_exercise_map: dict[tuple[int, str], HomeworkSubmission],
+        db_coding_general_map: dict[int, HomeworkSubmission],
+        db_game_map: dict[int, HomeworkSubmission],
         now: datetime,
     ) -> StudentHomeworkDetailDTO:
         """Đánh giá chi tiết tiến độ hoàn thành Coding & Game của 1 học sinh cụ thể."""
         user_id = assignee.user_id
         effective_deadline = assignee.deadline
-        is_past_effective = now > effective_deadline
+        is_past_effective = now > effective_deadline if effective_deadline else False
 
         # 1. Đánh giá chi tiết từng bài coding con
         student_exercises: list[StudentExerciseStatusDTO] = []

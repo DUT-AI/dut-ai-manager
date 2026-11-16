@@ -53,17 +53,19 @@ export const MyHomeworkPage: React.FC = () => {
     const processedHomeworks = useMemo(() => {
         const now = dayjs();
         return myHomeworks.map(hw => {
-            const isSubmitted =
+            const isSubmitted = Boolean(
                 hw.is_submitted !== undefined && hw.is_submitted !== null
                     ? hw.is_submitted
                     : unsubmittedIdsSet.size > 0
                         ? !unsubmittedIdsSet.has(hw.id)
-                        : (hw.submission_count ?? 0) > 0;
+                        : false
+            );
 
-            const isOverdue =
+            const isOverdue = Boolean(
                 hw.is_overdue !== undefined && hw.is_overdue !== null
                     ? hw.is_overdue
-                    : !isSubmitted && dayjs(hw.deadline).isBefore(now);
+                    : !isSubmitted && hw.deadline && dayjs(hw.deadline).isBefore(now)
+            );
 
             return {
                 ...hw,

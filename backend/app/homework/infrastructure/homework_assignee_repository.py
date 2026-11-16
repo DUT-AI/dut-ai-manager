@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.homework.domain.ports import HomeworkAssigneeRepositoryPort
 from app.homework.domain.value_objects import DueHomeworkAssignment
 from app.homework.infrastructure.model import HomeworkAssigneeModel, HomeworkModel
 from app.shared.domain.datetime_types import ensure_utc
@@ -18,7 +19,7 @@ class AssigneeUserInfo(NamedTuple):
     deadline: datetime
 
 
-class HomeworkAssigneeRepository:
+class HomeworkAssigneeRepository(HomeworkAssigneeRepositoryPort):
     """Repository chuyên trách quản lý bảng phân công học viên homework_assignees."""
 
     def __init__(self, session: Session):
@@ -54,39 +55,66 @@ class HomeworkAssigneeRepository:
                 self.session.delete(a)
 
         added_uids = [uid for uid in new_uids if uid not in existing_assignees]
-        clean_dl: datetime | None = None
-        if added_uids:
-            if default_deadline is not None:
-                clean_dl = ensure_utc(default_deadline)
-            elif existing_assignees:
-                clean_dl = min(a.deadline for a in existing_assignees.values())
-            else:
-                raise ValueError(
-                    f"Không thể gán học viên vào bài tập {homework_id} khi thiếu deadline"
-                )
+        clean_dl = self._resolve_clean_deadline(
+            homework_id, added_uids, default_deadline, existing_assignees
+        )
 
-        # Thêm hoặc giữ nguyên
         for uid in new_uids:
-            if uid in existing_assignees:
-                if default_deadline is not None:
-                    target_dl = ensure_utc(default_deadline)
-                    current_dl = existing_assignees[uid].deadline
-                    if (
-                        force_override
-                        or current_dl is None
-                        or target_dl > ensure_utc(current_dl)
-                    ):
-                        existing_assignees[uid].deadline = target_dl
-            else:
-                assert clean_dl is not None
-                self.session.add(
-                    HomeworkAssigneeModel(
-                        homework_id=homework_id,
-                        user_id=uid,
-                        deadline=clean_dl,
-                    )
-                )
+            self._sync_single_assignee(
+                homework_id,
+                uid,
+                existing_assignees.get(uid),
+                default_deadline,
+                clean_dl,
+                force_override,
+            )
         self.session.flush()
+
+    def _resolve_clean_deadline(
+        self,
+        homework_id: int,
+        added_uids: list[int],
+        default_deadline: datetime | None,
+        existing_assignees: dict[int, HomeworkAssigneeModel],
+    ) -> datetime | None:
+        if not added_uids:
+            return None
+        if default_deadline is not None:
+            return ensure_utc(default_deadline)
+        if existing_assignees:
+            return min(a.deadline for a in existing_assignees.values())
+        raise ValueError(
+            f"Không thể gán học viên vào bài tập {homework_id} khi thiếu deadline"
+        )
+
+    def _sync_single_assignee(
+        self,
+        homework_id: int,
+        uid: int,
+        existing: HomeworkAssigneeModel | None,
+        default_deadline: datetime | None,
+        clean_dl: datetime | None,
+        force_override: bool,
+    ) -> None:
+        if existing:
+            if default_deadline is not None:
+                target_dl = ensure_utc(default_deadline)
+                current_dl = existing.deadline
+                if (
+                    force_override
+                    or current_dl is None
+                    or target_dl > ensure_utc(current_dl)
+                ):
+                    existing.deadline = target_dl
+        else:
+            assert clean_dl is not None
+            self.session.add(
+                HomeworkAssigneeModel(
+                    homework_id=homework_id,
+                    user_id=uid,
+                    deadline=clean_dl,
+                )
+            )
 
     def assign_users(
         self,

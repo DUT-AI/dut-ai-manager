@@ -62,7 +62,35 @@ class UpdateHomeworkUseCase:
                 "Bài tập bắt buộc phải có slug (hoặc đường dẫn Quiz URL hợp lệ chứa slug) để theo dõi nộp bài trên Quiz API."
             )
 
-        # Validate with Quiz API if slug or requirements changed
+        # Validate with Quiz API if requirements or slug provided
+        await self._validate_requirements(
+            extracted_slug, effective_coding, effective_game
+        )
+
+        updated = existing.model_copy(
+            update={
+                k: v
+                for k, v in {
+                    "title": data.title,
+                    "link": data.link,
+                    "slug": extracted_slug,
+                    "requires_coding": effective_coding,
+                    "requires_game": effective_game,
+                }.items()
+                if v is not None
+            }
+        )
+
+        saved = self.homework_repo.save(updated)
+        self._sync_assignees_and_deadlines(homework_id, data)
+        return saved
+
+    async def _validate_requirements(
+        self,
+        extracted_slug: str,
+        effective_coding: bool,
+        effective_game: bool,
+    ) -> None:
         metadata = await self.quiz_api.get_lesson_metadata(extracted_slug)
         if metadata is None:
             raise BadRequestException(
@@ -82,21 +110,11 @@ class UpdateHomeworkUseCase:
                 f"Bài học '{lesson_name}' chưa có {missing_str} trên hệ thống Quiz. Vui lòng bổ sung trên Quiz trước khi giao bài."
             )
 
-        updated = existing.model_copy(
-            update={
-                k: v
-                for k, v in {
-                    "title": data.title,
-                    "link": data.link,
-                    "slug": extracted_slug,
-                    "requires_coding": effective_coding,
-                    "requires_game": effective_game,
-                }.items()
-                if v is not None
-            }
-        )
-
-        saved = self.homework_repo.save(updated)
+    def _sync_assignees_and_deadlines(
+        self,
+        homework_id: int,
+        data: HomeworkUpdate,
+    ) -> None:
         if data.assignee_ids is not None:
             self.homework_assignee_repo.sync_assignees(
                 homework_id,
@@ -115,5 +133,3 @@ class UpdateHomeworkUseCase:
                     deadline=data.deadline,
                     force_override=data.force_override_deadlines,
                 )
-
-        return saved

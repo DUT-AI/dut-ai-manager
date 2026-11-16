@@ -1,11 +1,11 @@
 <!--
 Sync Impact Report:
-- Version: v1.12.0 -> v1.13.0
+- Version: v1.13.0 -> v1.14.0
 - Ratification Date: 2026-09-25
-- Last Amended: 2026-11-13
+- Last Amended: 2026-11-16
 - Principles added / enhanced:
-  - XVIII. Autonomous Agent & ReAct Reasoning Separation (MUST) (NEW) -> Mandate strict separation of concerns for AI Agent / LLM reasoning workflows. Use Cases MUST act strictly as thin orchestrators (session resolution, message persistence, event streaming). ReAct reasoning loops, context window pruning policies, tool dispatching, loop guards, and agent streaming events MUST reside in dedicated Domain Services (`Agent`) and Value Objects (`AgentLoopState`, `AgentStreamEvent`). Defensive duck-typing (`hasattr`, fake fallback mocks) masking missing collaborator contracts is strictly forbidden.
-- Rationale: Codifying Domain-Driven Design boundaries and thin orchestrators for autonomous AI agents, eliminating monolithic use cases, duck-typing fallbacks, and preventing agent prompt hallucination loops.
+  - XIX. Single Source of Truth & Zero Fallback Logic (MUST) (NEW) -> Ban dual-path fallback logic in application use cases and redundant defensive type checking (isinstance, duck-typing) across domain layers. Domain Entities and Aggregate Roots (e.g. `Homework.evaluate_submissions`) are the sole Single Source of Truth (SSOT) for business evaluations. Application use cases MUST delegate full evaluation to Aggregate Roots instead of duplicating checks via ad-hoc repository queries or fallback branches. Defensive runtime type checks (such as `isinstance(dict)` or `isinstance(datetime)`) masking missing static types are prohibited.
+- Rationale: Eliminating logic fragmentation, hidden bypasses, and defensive clutter between Application Use Cases and Domain Aggregate Roots, ensuring full architectural integrity under SSOT.
 -->
 
 # DUT AI Manager Constitution
@@ -118,6 +118,13 @@ Tất cả các quy trình suy luận của AI / LLM Agent (như Chatbot ReAct l
 - **Strict Contract Enforcement & Prohibition of Duck-Typing Fallbacks**: Tuân thủ tuyệt đối Nguyên tắc XIV, các phụ thuộc bên ngoài của Agent (chẳng hạn `llm_client`) phải có interface/port rõ ràng với đầy đủ các phương thức bắt buộc (`count_tokens`, `generate_stream`, `list_tools`). Nghiêm cấm viết mã duck-typing phòng thủ (`hasattr(self.llm_client, "count_tokens")`, `callable(...)`) để che đậy các mock test thiếu sót hay dependency contract chắp vá. Tất cả unit test mocks phải phản ánh chính xác 100% hợp đồng của client.
 - **Anti-Hallucination & Tool Execution Nudge**: Agent Prompt và vòng lặp suy luận ReAct phải có cơ chế ngăn chặn mô hình đưa ra lời hứa hẹn suông ("Vui lòng chờ để tôi tra cứu...") mà không phát ra lệnh gọi công cụ (`tool_calls`). Hệ thống phải có fallback prompt mandate hoặc auto-nudge để buộc mô hình thực hiện tra cứu thực sự trước khi trả về câu trả lời cuối cùng cho người dùng.
 
+### XIX. Single Source of Truth & Zero Fallback Logic (MUST)
+Tất cả các quyết định nghiệp vụ, đánh giá trạng thái hoàn thành (như nộp bài tập, điểm danh, tính vi phạm) MUST tuân thủ triệt để nguyên tắc Nguồn chân lý duy nhất (SSOT) và cấm tuyệt đối cơ chế Fallback hai đường:
+- **Aggregate Root as Sole Decision Maker**: Entity / Aggregate Root (như `Homework.evaluate_submissions`) là nơi DUY NHẤT nắm giữ và thực thi quy tắc nghiệp vụ đánh giá. Tầng Application Use Case KHÔNG ĐƯỢC tạo nhánh rẽ song song (dual-path fallback) hay tự ý gọi các truy vấn repository chuyên biệt (như `has_valid_submission`, `is_coding_completed`) để kiểm tra lại khi Entity đã đảm nhiệm.
+- **Zero Dual-Path Fallback**: Nghiêm cấm việc "thử đường A nếu không có bài nộp thì chạy fallback đường B". Khi không có bài nộp hoặc bài nộp rỗng, Aggregate Root phải tự thân xử lý trường hợp rỗng đó (`submissions = []`) và trả về kết quả đánh giá chuẩn (`is_submitted = False`, `uncompleted_items = [...]`).
+- **Elimination of Defensive Runtime Type Checking**: Cấm lạm dụng các kiểm tra kiểu phòng thủ thời gian chạy thừa thãi (`isinstance(..., dict)`, `isinstance(..., datetime)`) để che giấu sự lỏng lẻo trong static typing. Mọi thuộc tính và tham số truyền vào hàm phải được bảo đảm kiểu tĩnh mạnh (Strict Static Typing qua Pydantic DTOs, Value Objects và Type Annotations) ngay từ đầu.
+- **True Test Mocking Integrity**: Các bài kiểm thử (Unit / Integration Tests) phải mock chính xác các collaborator theo đúng luồng SSOT (ví dụ trả về domain entities / value objects cho `get_submissions_by_user`), tuyệt đối không duy trì các mock phụ rỗng hay mock nhánh fallback đã bị khai tử.
+
 ## Security & Compliance Standards
 
 1. **Zero Secret Leakage**: No hardcoding of passwords, JWT secrets, Discord Bot tokens, MinIO credentials, or Zalo App secrets. All configurations MUST read from environment variables managed via `app.core.config.Settings`.
@@ -141,4 +148,4 @@ Tất cả các quy trình suy luận của AI / LLM Agent (như Chatbot ReAct l
    - **MINOR**: Addition of new principles or major workflow standards.
    - **PATCH**: Non-semantic clarifications and wording updates.
 
-**Version**: 1.13.0 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-11-13
+**Version**: 1.14.0 | **Ratified**: 2026-09-25 | **Last Amended**: 2026-11-16

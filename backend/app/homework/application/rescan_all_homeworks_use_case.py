@@ -11,6 +11,9 @@ from app.homework.application.check_overdue_homework_use_case import (
     CheckOverdueHomeworkUseCase,
 )
 from app.homework.application.helpers import QuizSubmissionHelper
+from app.homework.application.homework_exercise_resolver import (
+    HomeworkExerciseResolver,
+)
 from app.homework.infrastructure.homework_assignee_repository import (
     HomeworkAssigneeRepository,
 )
@@ -18,7 +21,6 @@ from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.homework.infrastructure.homework_submission_repository import (
     HomeworkSubmissionRepository,
 )
-from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.shared.domain.event_bus import EventBus
 from app.user.infrastructure.repository import UserRepository
 
@@ -30,7 +32,7 @@ class RescanAllHomeworksUseCase:
         self,
         homework_repo: HomeworkRepository,
         homework_submission_repo: HomeworkSubmissionRepository,
-        quiz_api: QuizApiClient,
+        exercise_resolver: HomeworkExerciseResolver,
         user_repo: UserRepository,
         homework_assignee_repo: HomeworkAssigneeRepository,
         event_bus: type[EventBus] = EventBus,
@@ -39,12 +41,12 @@ class RescanAllHomeworksUseCase:
             homework_repo=homework_repo,
             homework_submission_repo=homework_submission_repo,
             homework_assignee_repo=homework_assignee_repo,
-            quiz_api=quiz_api,
+            exercise_resolver=exercise_resolver,
             event_bus=event_bus,
         )
         self.homework_repo = homework_repo
         self.homework_submission_repo = homework_submission_repo
-        self.quiz_api = quiz_api
+        self.exercise_resolver = exercise_resolver
         self.user_repo = user_repo
         self.homework_assignee_repo = homework_assignee_repo
 

@@ -38,6 +38,11 @@ class GetUnsubmittedHomeworkReportUseCase:
         all_homeworks = self.homework_repo.get_all()
         all_submissions = self.homework_submission_repo.get_all_submissions()
 
+        all_hw_ids = [hw.id for hw in all_homeworks if hw.id]
+        required_exercises_map = (
+            self.homework_submission_repo.get_required_exercise_ids_map(all_hw_ids)
+        )
+
         # Group submissions by (homework_id, user_id)
         subs_map: dict[tuple[int, int], list] = {}
         for sub in all_submissions:
@@ -60,7 +65,8 @@ class GetUnsubmittedHomeworkReportUseCase:
                     continue
 
                 hw_subs = subs_map.get((hw.id, uid), [])
-                if not hw.evaluate_submissions(hw_subs).is_submitted:
+                hw_req_ex_ids = required_exercises_map.get(hw.id)
+                if not hw.evaluate_submissions(hw_subs, required_exercise_ids=hw_req_ex_ids).is_submitted:
                     unsubmitted_count += 1
 
             reports.append(

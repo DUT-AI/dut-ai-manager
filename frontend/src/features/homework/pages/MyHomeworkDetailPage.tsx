@@ -157,11 +157,15 @@ export const MyHomeworkDetailPage: React.FC = () => {
                 </Tag>
               ) : isOverdue ? (
                 <Tag color="error" icon={<WarningOutlined />} className="text-xs rounded-md font-semibold">
-                  Quá hạn nộp
+                  {isCodingCompleted || isGamePassed ? 'Quá hạn (Làm dở)' : 'Quá hạn nộp'}
+                </Tag>
+              ) : (isCodingCompleted || isGamePassed || codingSubmissions.length > 0) ? (
+                <Tag color="warning" icon={<ClockCircleOutlined />} className="text-xs rounded-md font-semibold">
+                  Đang làm dở
                 </Tag>
               ) : (
                 <Tag color="blue" icon={<ClockCircleOutlined />} className="text-xs rounded-md font-semibold">
-                  Đang diễn ra
+                  Chưa nộp bài
                 </Tag>
               )}
             </div>

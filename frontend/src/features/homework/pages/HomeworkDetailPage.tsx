@@ -94,19 +94,25 @@ export const HomeworkDetailPage: React.FC = () => {
   const gameSubmittedCount = gameStatus.submitted.length;
   const gameTotalCount = gameSubmittedCount + gameStatus.not_submitted.length;
 
+  // SSOT: Lấy số lượng học viên hoàn thành trọn vẹn từ statusData backend
   const totalSubmitted =
-    hasCoding && !hasGame
+    statusData?.total_completed_count ??
+    (hasCoding && !hasGame
       ? codingSubmittedCount
       : !hasCoding && hasGame
         ? gameSubmittedCount
-        : Math.max(codingSubmittedCount, gameSubmittedCount);
+        : Math.max(codingSubmittedCount, gameSubmittedCount));
 
   const totalAssigned =
-    hasCoding && !hasGame
-      ? codingTotalCount
-      : !hasCoding && hasGame
-        ? gameTotalCount
-        : Math.max(codingTotalCount, gameTotalCount);
+    statusData?.students && statusData.students.length > 0
+      ? statusData.students.length
+      : homework?.assignee_ids && homework.assignee_ids.length > 0
+        ? homework.assignee_ids.length
+        : hasCoding && !hasGame
+          ? codingTotalCount
+          : !hasCoding && hasGame
+            ? gameTotalCount
+            : Math.max(codingTotalCount, gameTotalCount);
 
   const submissionPercent =
     totalAssigned > 0 ? Math.round((totalSubmitted / totalAssigned) * 100) : 0;

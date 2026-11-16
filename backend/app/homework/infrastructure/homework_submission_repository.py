@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.homework.domain.entity import (
     HomeworkSubmission as HomeworkSubmissionEntity,
 )
+from app.homework.domain.ports import HomeworkSubmissionRepositoryPort
 from app.homework.domain.value_objects import (
     CodingSubmissionDetails,
     GameSubmissionDetails,
@@ -17,7 +18,7 @@ from app.homework.infrastructure.model import (
 )
 
 
-class HomeworkSubmissionRepository:
+class HomeworkSubmissionRepository(HomeworkSubmissionRepositoryPort):
     """Repository chuyên trách quản lý bảng bài nộp homework_submissions."""
 
     def __init__(self, session: Session):
@@ -247,3 +248,32 @@ class HomeworkSubmissionRepository:
             )
         results = self.session.scalars(statement).all()
         return {str(eid) for eid in results if eid}
+
+    def get_required_exercise_ids_map(
+        self, homework_ids: list[int]
+    ) -> dict[int, set[str]]:
+        """Lấy danh mục các mã bài tập coding con của danh sách homework_ids từ database."""
+        if not homework_ids:
+            return {}
+        statement = (
+            select(
+                HomeworkSubmissionModel.homework_id,
+                HomeworkSubmissionModel.exercise_id,
+            )
+            .where(
+                HomeworkSubmissionModel.homework_id.in_(homework_ids),
+                func.upper(HomeworkSubmissionModel.submission_type) == "CODING",
+                HomeworkSubmissionModel.exercise_id.is_not(None),
+                ~HomeworkSubmissionModel.exercise_id.startswith("sync-legacy"),
+            )
+            .group_by(
+                HomeworkSubmissionModel.homework_id,
+                HomeworkSubmissionModel.exercise_id,
+            )
+        )
+        rows = self.session.execute(statement).all()
+        result: dict[int, set[str]] = {hid: set() for hid in homework_ids}
+        for hw_id, ex_id in rows:
+            if ex_id:
+                result.setdefault(hw_id, set()).add(str(ex_id))
+        return result

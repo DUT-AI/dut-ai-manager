@@ -30,11 +30,18 @@ export interface HomeworkCardProps {
 }
 
 export const HomeworkCard: React.FC<HomeworkCardProps> = ({ homework, onViewDetail }) => {
-    const isSubmitted = homework.is_submitted ?? homework.isSubmitted ?? (homework.submission_count ?? 0) > 0;
-    const isOverdue = homework.is_overdue ?? homework.isOverdue ?? (!isSubmitted && dayjs().isAfter(dayjs(homework.deadline)));
+    const isSubmitted = Boolean(homework.is_submitted ?? homework.isSubmitted);
+    const isOverdue = Boolean(homework.is_overdue ?? homework.isOverdue ?? (!isSubmitted && dayjs().isAfter(dayjs(homework.deadline))));
+
+    const isCodingPartial =
+        homework.coding_status === 'PARTIALLY_SUBMITTED' ||
+        ((homework.total_coding_required ?? 0) > 1 &&
+            (homework.total_coding_completed ?? 0) > 0 &&
+            (homework.total_coding_completed ?? 0) < (homework.total_coding_required ?? 0));
 
     const hasBoth = !!(homework.has_coding && homework.has_game);
-    const isPartial = hasBoth && !isSubmitted && !!(homework.coding_submitted || homework.game_submitted);
+    const isBothPartial = hasBoth && !isSubmitted && !!(homework.coding_submitted || homework.game_submitted);
+    const isPartial = !isSubmitted && (isCodingPartial || isBothPartial);
 
     const deadlineObj = dayjs(homework.deadline);
     const formattedDeadline = deadlineObj.format('DD/MM/YYYY HH:mm');
@@ -118,7 +125,10 @@ export const HomeworkCard: React.FC<HomeworkCardProps> = ({ homework, onViewDeta
                             ) : isPartial ? (
                                 <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300 shadow-2xs">
                                     <ClockCircleOutlined className="text-xs text-amber-600" />
-                                    Hoàn thành 1/2 • Thiếu {homework.coding_submitted ? 'Game' : 'Coding'} {isOverdue && '(Quá hạn)'}
+                                    {isCodingPartial
+                                        ? `Tiến độ Coding: ${homework.total_coding_completed}/${homework.total_coding_required} bài con ${hasBoth && !homework.game_submitted ? '• Thiếu Game' : ''}`
+                                        : `Hoàn thành một phần • Thiếu ${homework.coding_submitted ? 'Game' : 'Coding'}`}
+                                    {isOverdue && ' (Quá hạn)'}
                                 </span>
                             ) : isOverdue ? (
                                 <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-700 border border-rose-200/60 shadow-2xs">
@@ -136,10 +146,24 @@ export const HomeworkCard: React.FC<HomeworkCardProps> = ({ homework, onViewDeta
                             {homework.has_coding && (
                                 <Tag
                                     icon={<CodeOutlined />}
-                                    color={homework.coding_submitted ? 'success' : isOverdue ? 'error' : 'default'}
+                                    color={
+                                        homework.coding_status === 'COMPLETED' || homework.coding_submitted
+                                            ? 'success'
+                                            : isCodingPartial
+                                                ? 'warning'
+                                                : isOverdue
+                                                    ? 'error'
+                                                    : 'default'
+                                    }
                                     className="rounded-md font-medium text-xs m-0"
                                 >
-                                    Coding: {homework.coding_submitted ? 'Đã nộp' : 'Chưa nộp'}
+                                    Coding: {
+                                        homework.coding_status === 'COMPLETED' || homework.coding_submitted
+                                            ? 'Đã xong'
+                                            : isCodingPartial
+                                                ? `${homework.total_coding_completed}/${homework.total_coding_required} bài con`
+                                                : 'Chưa nộp'
+                                    }
                                 </Tag>
                             )}
                             {homework.has_game && (
@@ -163,7 +187,11 @@ export const HomeworkCard: React.FC<HomeworkCardProps> = ({ homework, onViewDeta
                         {/* Partial Helper Note */}
                         {isPartial && (
                             <div className="text-xs text-amber-700 bg-amber-50/80 px-2.5 py-1 rounded-md border border-amber-200/70 mt-1.5 inline-block">
-                                💡 Bạn đã hoàn thành phần <strong>{homework.coding_submitted ? 'Coding' : 'Game'}</strong>, vui lòng hoàn tất phần <strong>{homework.coding_submitted ? 'Trắc nghiệm Game' : 'Bài tập Coding'}</strong> để tính là đã nộp bài tập.
+                                💡 {homework.uncompleted_items && homework.uncompleted_items.length > 0
+                                    ? `Còn thiếu: ${homework.uncompleted_items.join(', ')}. Vui lòng hoàn thành để được tính là đã nộp bài tập.`
+                                    : isCodingPartial
+                                        ? `Bạn đã hoàn thành ${homework.total_coding_completed}/${homework.total_coding_required} bài tập Coding. Vui lòng nộp đủ các bài con còn lại.`
+                                        : `Bạn đã hoàn thành phần ${homework.coding_submitted ? 'Coding' : 'Game'}, vui lòng hoàn tất phần ${homework.coding_submitted ? 'Trắc nghiệm Game' : 'Bài tập Coding'} để tính là đã nộp bài tập.`}
                             </div>
                         )}
 
