@@ -73,6 +73,13 @@ class Homework(BaseAuditEntity):
         total_coding_completed = 0
         coding_status = "NOT_SUBMITTED"
 
+        # Lọc danh sách bài nộp hợp lệ trước hạn (nếu có deadline)
+        valid_submissions = [
+            s
+            for s in submissions
+            if deadline is None or not s.is_late_for(deadline)
+        ]
+
         if has_coding:
             if required_exercise_ids and isinstance(
                 required_exercise_ids, (set, frozenset, list)
@@ -81,7 +88,7 @@ class Homework(BaseAuditEntity):
                 total_coding_required = len(req_set)
                 passed_ex_ids = {
                     str(s.exercise_id)
-                    for s in submissions
+                    for s in valid_submissions
                     if getattr(s.submission_type, "value", str(s.submission_type)).upper()
                     == "CODING"
                     and s.is_passed is True
@@ -98,7 +105,7 @@ class Homework(BaseAuditEntity):
                     getattr(s.submission_type, "value", str(s.submission_type)).upper()
                     == "CODING"
                     and s.is_passed is True
-                    for s in submissions
+                    for s in valid_submissions
                 )
                 total_coding_required = 1
                 total_coding_completed = 1 if has_passed_coding else 0
@@ -112,7 +119,7 @@ class Homework(BaseAuditEntity):
             getattr(s.submission_type, "value", str(s.submission_type)).upper()
             == "GAME"
             and s.is_passed is True
-            for s in submissions
+            for s in valid_submissions
         )
 
         uncompleted: list[str] = []

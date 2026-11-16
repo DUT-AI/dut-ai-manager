@@ -101,11 +101,14 @@ async def test_lesson_coding_only_violation():
 
     # User 20 completed Game in DB, but did NOT complete Coding
     mock_submission_repo.get_submissions_by_homework.return_value = []
-
-    def mock_has_valid(homework_id, user_id, submission_type, deadline):
-        return submission_type == SubmissionType.GAME
-
-    mock_submission_repo.has_valid_submission.side_effect = mock_has_valid
+    mock_submission_repo.get_submissions_by_user.return_value = [
+        MagicMock(
+            submission_type=SubmissionType.GAME,
+            is_passed=True,
+            submitted_at=dl - timedelta(minutes=10),
+            is_late_for=lambda d: False,
+        )
+    ]
 
     mock_quiz_api = MagicMock(spec=QuizApiClient)
     mock_quiz_api.get_lesson_exercises = AsyncMock(return_value=[])
@@ -160,11 +163,15 @@ async def test_lesson_game_only_violation():
 
     # User 30 completed Coding, but did NOT complete Game
     mock_submission_repo.get_submissions_by_homework.return_value = []
-
-    def mock_has_valid(homework_id, user_id, submission_type, deadline):
-        return submission_type == SubmissionType.CODING
-
-    mock_submission_repo.has_valid_submission.side_effect = mock_has_valid
+    mock_submission_repo.get_submissions_by_user.return_value = [
+        MagicMock(
+            submission_type=SubmissionType.CODING,
+            is_passed=True,
+            submitted_at=dl - timedelta(minutes=10),
+            exercise_id="default",
+            is_late_for=lambda d: False,
+        )
+    ]
 
     mock_quiz_api = MagicMock(spec=QuizApiClient)
     mock_quiz_api.get_lesson_exercises = AsyncMock(return_value=[])

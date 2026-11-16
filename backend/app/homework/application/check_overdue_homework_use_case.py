@@ -1,5 +1,5 @@
 from datetime import UTC, date, datetime, timedelta
-from typing import Any, cast
+from typing import cast
 from zoneinfo import ZoneInfo
 
 from loguru import logger
@@ -9,7 +9,6 @@ from app.homework.application.homework_exercise_resolver import (
 )
 from app.homework.domain.constants import HOMEWORK_VIOLATION_CHECK_DELAY_DAYS
 from app.homework.domain.entity import Homework as HomeworkEntity
-from app.homework.domain.entity import SubmissionType
 from app.homework.domain.value_objects import (
     DueHomeworkAssignment,
     HomeworkOverdueDetected,
@@ -60,9 +59,9 @@ class CheckOverdueHomeworkUseCase:
         hw_id = assignment.homework_id
         assignee_deadline = assignment.deadline
 
-        # 1. Ưu tiên đánh giá qua Aggregate Root Homework.evaluate_submissions nếu có bài nộp
+        # 1. Đánh giá qua Aggregate Root Homework.evaluate_submissions
         hw = homework_entity or self.homework_repo.get_by_id(hw_id)
-        if not hw:
+        if not isinstance(hw, HomeworkEntity):
             hw = HomeworkEntity(
                 id=hw_id,
                 title=assignment.homework_title,
@@ -71,69 +70,18 @@ class CheckOverdueHomeworkUseCase:
                 slug=assignment.slug,
             )
 
-        submissions: list[Any] = []
-        user_subs = self.homework_submission_repo.get_submissions_by_user(
+        submissions = self.homework_submission_repo.get_submissions_by_user(
             hw_id, user_id
         )
-        if isinstance(user_subs, list):
-            submissions = user_subs
 
-        if submissions:
-            eval_result = hw.evaluate_submissions(
-                submissions,
-                deadline=assignee_deadline,
-                required_exercise_ids=required_exercise_ids,
-            )
-            if eval_result.is_submitted:
-                return []
-            return eval_result.uncompleted_items
-
-        # 2. Fallback kiểm tra từng phần mục qua các truy vấn repository chuyên biệt
-        req_coding = bool(assignment.requires_coding)
-        req_game = bool(assignment.requires_game)
-        if not req_coding and not req_game:
-            req_coding = True
-
-        uncompleted: list[str] = []
-        if req_coding and not self._is_coding_completed(
-            hw_id, user_id, assignee_deadline, required_exercise_ids
-        ):
-            uncompleted.append("bài tập coding")
-        if req_game and not self._is_game_completed(hw_id, user_id, assignee_deadline):
-            uncompleted.append("trắc nghiệm game")
-        return uncompleted
-
-    def _is_coding_completed(
-        self,
-        hw_id: int,
-        user_id: int,
-        assignee_deadline: datetime,
-        required_exercise_ids: set[str],
-    ) -> bool:
-        if required_exercise_ids:
-            submitted_ids = self.homework_submission_repo.get_submitted_exercise_ids(
-                hw_id, user_id, assignee_deadline
-            )
-            return required_exercise_ids.issubset(submitted_ids)
-        return self.homework_submission_repo.has_valid_submission(
-            hw_id,
-            user_id,
-            SubmissionType.CODING,
-            assignee_deadline,
+        eval_result = hw.evaluate_submissions(
+            submissions,
+            deadline=assignee_deadline,
+            required_exercise_ids=required_exercise_ids,
         )
-
-    def _is_game_completed(
-        self,
-        hw_id: int,
-        user_id: int,
-        assignee_deadline: datetime,
-    ) -> bool:
-        return self.homework_submission_repo.has_valid_submission(
-            hw_id,
-            user_id,
-            SubmissionType.GAME,
-            assignee_deadline,
-        )
+        if eval_result.is_submitted:
+            return []
+        return eval_result.uncompleted_items
 
     async def execute(self, target_date: date | None = None) -> int:
         """

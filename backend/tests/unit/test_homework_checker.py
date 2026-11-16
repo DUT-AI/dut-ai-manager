@@ -4,13 +4,17 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from app.homework.application import CheckOverdueHomeworkUseCase, HomeworkExerciseResolver
+from app.homework.application import (
+    CheckOverdueHomeworkUseCase,
+    HomeworkExerciseResolver,
+)
 from app.homework.domain.constants import HOMEWORK_VIOLATION_CHECK_DELAY_DAYS
 from app.homework.domain.entity import (
-    HomeworkSubmission as HomeworkSubmissionEntity,
+    CodingHomeworkSubmission,
+    SubmissionType,
 )
 from app.homework.domain.entity import (
-    SubmissionType,
+    HomeworkSubmission as HomeworkSubmissionEntity,
 )
 from app.homework.domain.value_objects import (
     DueHomeworkAssignment,
@@ -49,8 +53,18 @@ async def test_check_overdue_homework_publishes_event():
     # Không có sub-exercises con
     submission_repo.get_submissions_by_homework.return_value = []
     # User 101 có bài nộp hợp lệ trước deadline; User 102 không có
-    submission_repo.has_valid_submission.side_effect = (
-        lambda h_id, u_id, s_type, deadline: u_id == 101
+    submission_repo.get_submissions_by_user.side_effect = (
+        lambda h_id, u_id: [
+            CodingHomeworkSubmission.create_coding(
+                homework_id=h_id,
+                user_id=u_id,
+                submitted_at=datetime(2026, 9, 25, 20, 0, tzinfo=UTC),
+                is_passed=True,
+                exercise_id="default",
+            )
+        ]
+        if u_id == 101
+        else []
     )
     quiz_api = MagicMock()
     quiz_api.get_lesson_exercises = AsyncMock(return_value=None)
@@ -113,6 +127,15 @@ async def test_check_overdue_multi_exercise_partial_submission_flags_overdue():
     submission_repo.get_submissions_by_homework.return_value = [sub1, sub2]
 
     # User 201 chỉ nộp ex-1
+    submission_repo.get_submissions_by_user.return_value = [
+        CodingHomeworkSubmission.create_coding(
+            homework_id=2,
+            user_id=201,
+            submitted_at=datetime(2026, 10, 1, 20, 0, tzinfo=UTC),
+            is_passed=True,
+            exercise_id="ex-1",
+        )
+    ]
     submission_repo.get_submitted_exercise_ids.return_value = {"ex-1"}
     quiz_api = MagicMock()
     quiz_api.get_lesson_exercises = AsyncMock(return_value=None)
@@ -138,7 +161,7 @@ async def test_check_overdue_multi_exercise_partial_submission_flags_overdue():
     ]
     assert len(overdue_events) == 1
     assert overdue_events[0].user_id == 201
-    assert "bài tập coding" in overdue_events[0].reason
+    assert "bài tập coding" in overdue_events[0].reason.lower()
 
 
 @pytest.mark.asyncio
@@ -172,6 +195,22 @@ async def test_check_overdue_multi_exercise_full_submission_passes():
     submission_repo.get_submissions_by_homework.return_value = [sub1, sub2]
 
     # User 301 đã nộp cả ex-1 và ex-2
+    submission_repo.get_submissions_by_user.return_value = [
+        CodingHomeworkSubmission.create_coding(
+            homework_id=3,
+            user_id=301,
+            submitted_at=datetime(2026, 10, 1, 20, 0, tzinfo=UTC),
+            is_passed=True,
+            exercise_id="ex-1",
+        ),
+        CodingHomeworkSubmission.create_coding(
+            homework_id=3,
+            user_id=301,
+            submitted_at=datetime(2026, 10, 1, 21, 0, tzinfo=UTC),
+            is_passed=True,
+            exercise_id="ex-2",
+        ),
+    ]
     submission_repo.get_submitted_exercise_ids.return_value = {"ex-1", "ex-2"}
     quiz_api = MagicMock()
     quiz_api.get_lesson_exercises = AsyncMock(return_value=None)
@@ -250,7 +289,16 @@ async def test_check_overdue_homework_flags_late_submission():
 
     # Không có sub-exercises
     submission_repo.get_submissions_by_homework.return_value = []
-    # has_valid_submission lọc theo submitted_at <= deadline, trả False vì user nộp trễ hoặc chưa nộp
+    # User 501 nộp trễ sau deadline
+    submission_repo.get_submissions_by_user.return_value = [
+        CodingHomeworkSubmission.create_coding(
+            homework_id=10,
+            user_id=501,
+            submitted_at=datetime(2026, 10, 26, 1, 0, tzinfo=UTC),
+            is_passed=True,
+            exercise_id="default",
+        )
+    ]
     submission_repo.has_valid_submission.return_value = False
     quiz_api = MagicMock()
     quiz_api.get_lesson_exercises = AsyncMock(return_value=None)
@@ -376,6 +424,22 @@ async def test_check_overdue_homework_uses_quiz_api_exercises():
     )
 
     # User 1001 mới chỉ nộp ex_1 và ex_2, thiếu ex_3
+    submission_repo.get_submissions_by_user.return_value = [
+        CodingHomeworkSubmission.create_coding(
+            homework_id=20,
+            user_id=1001,
+            submitted_at=datetime(2026, 11, 1, 20, 0, tzinfo=UTC),
+            is_passed=True,
+            exercise_id="ex_1",
+        ),
+        CodingHomeworkSubmission.create_coding(
+            homework_id=20,
+            user_id=1001,
+            submitted_at=datetime(2026, 11, 1, 21, 0, tzinfo=UTC),
+            is_passed=True,
+            exercise_id="ex_2",
+        ),
+    ]
     submission_repo.get_submitted_exercise_ids.return_value = {"ex_1", "ex_2"}
 
     exercise_resolver = HomeworkExerciseResolver(
@@ -398,7 +462,7 @@ async def test_check_overdue_homework_uses_quiz_api_exercises():
     published = event_bus.publish.call_args[0][0]
     assert isinstance(published, HomeworkOverdueDetected)
     assert published.user_id == 1001
-    assert "bài tập coding" in published.reason
+    assert "bài tập coding" in published.reason.lower()
 
 
 @pytest.mark.asyncio
@@ -434,6 +498,15 @@ async def test_check_overdue_homework_fallbacks_when_quiz_api_fails():
     submission_repo.get_submissions_by_homework.return_value = [sub]
 
     # User 1002 đã nộp đủ ex_alpha
+    submission_repo.get_submissions_by_user.return_value = [
+        CodingHomeworkSubmission.create_coding(
+            homework_id=25,
+            user_id=1002,
+            submitted_at=datetime(2026, 11, 1, 20, 0, tzinfo=UTC),
+            is_passed=True,
+            exercise_id="ex_alpha",
+        )
+    ]
     submission_repo.get_submitted_exercise_ids.return_value = {"ex_alpha"}
 
     exercise_resolver = HomeworkExerciseResolver(

@@ -1,9 +1,9 @@
 from datetime import datetime
-from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.homework.application.dtos.common import ExerciseSummaryDTO, HomeworkBase
+from app.homework.domain.entity import Homework
 from app.shared.domain.datetime_types import UtcDateTime
 
 
@@ -47,7 +47,7 @@ class HomeworkResponse(HomeworkBase):
 
     @classmethod
     def from_domain(
-        cls, hw: Any, deadline: datetime | None = None
+        cls, hw: Homework, deadline: datetime | None = None
     ) -> "HomeworkResponse":
         return cls(
             id=hw.id,
@@ -74,7 +74,7 @@ class HomeworkResponseDetail(HomeworkResponse):
     @classmethod
     def from_domain(
         cls,
-        hw: Any,
+        hw: Homework,
         assignee_ids: list[int] | None = None,
         deadline: datetime | None = None,
         coding_exercises: list[ExerciseSummaryDTO] | None = None,
