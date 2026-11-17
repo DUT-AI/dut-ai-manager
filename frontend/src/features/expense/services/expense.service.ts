@@ -15,6 +15,8 @@ const expenseService = {
     status?: ExpenseStatusType;
     spender_id?: number;
     team_id?: number;
+    fund_code?: string;
+    search?: string;
     page?: number;
     pageSize?: number;
     limit?: number;
@@ -26,6 +28,8 @@ const expenseService = {
       status: params?.status,
       spender_id: params?.spender_id,
       team_id: params?.team_id,
+      fund_code: params?.fund_code,
+      search: params?.search,
       page: params?.page ?? (params?.offset !== undefined && params?.limit ? Math.floor(params.offset / params.limit) + 1 : undefined),
       page_size: params?.pageSize ?? params?.limit,
     };
@@ -35,7 +39,7 @@ const expenseService = {
     return response.data;
   },
 
-  getExpenseSummary: async (params?: { month?: number; year?: number; spender_id?: number; team_id?: number }) => {
+  getExpenseSummary: async (params?: { month?: number; year?: number; spender_id?: number; team_id?: number; fund_code?: string }) => {
     const response = await axiosInstance.get<ApiResponse<ExpenseSummary>>("/expenses/summary", {
       params,
     });

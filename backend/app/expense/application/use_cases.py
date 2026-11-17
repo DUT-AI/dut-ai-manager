@@ -32,7 +32,8 @@ class CreateExpenseUseCase:
         amount: int,
         description: str,
         spender_id: int,
-        team_id: int,
+        team_id: int | None = None,
+        fund_code: str = "DUT_AI",
         status: ExpenseStatus = ExpenseStatus.UNPAID,
         payment_date: date | None = None,
         note: str | None = None,
@@ -43,10 +44,11 @@ class CreateExpenseUseCase:
         if not user:
             raise BadRequestException(f"Người chi với ID {spender_id} không tồn tại")
 
-        # Check team exists
-        team = self.team_repo.get_by_id(team_id)
-        if not team:
-            raise BadRequestException(f"Nhóm với ID {team_id} không tồn tại")
+        # Check team exists if provided
+        if team_id is not None:
+            team = self.team_repo.get_by_id(team_id)
+            if not team:
+                raise BadRequestException(f"Nhóm với ID {team_id} không tồn tại")
 
         if amount <= 0:
             raise BadRequestException("Số tiền phải lớn hơn 0")
@@ -60,6 +62,7 @@ class CreateExpenseUseCase:
             amount=amount,
             description=description,
             spender_id=spender_id,
+            fund_code=fund_code,
             team_id=team_id,
             status=status,
             payment_date=payment_date if status == ExpenseStatus.PAID else None,
@@ -84,6 +87,8 @@ class GetExpensesUseCase:
         status: ExpenseStatus | None = None,
         spender_id: int | None = None,
         team_id: int | None = None,
+        fund_code: str | None = None,
+        search: str | None = None,
         page: int = 1,
         page_size: int = 20,
     ) -> tuple[Sequence[ExpenseInvoiceModel], int]:
@@ -93,6 +98,8 @@ class GetExpensesUseCase:
             status=status,
             spender_id=spender_id,
             team_id=team_id,
+            fund_code=fund_code,
+            search=search,
             page=page,
             page_size=page_size,
         )
@@ -127,6 +134,7 @@ class UpdateExpenseUseCase:
         amount: int | None = None,
         description: str | None = None,
         spender_id: int | None = None,
+        fund_code: str | None = None,
         team_id: int | None = None,
         status: ExpenseStatus | None = None,
         payment_date: date | None = None,
@@ -144,6 +152,9 @@ class UpdateExpenseUseCase:
                     f"Người chi với ID {spender_id} không tồn tại"
                 )
             model.spender_id = spender_id
+
+        if fund_code is not None:
+            model.fund_code = fund_code
 
         if team_id is not None:
             team = self.team_repo.get_by_id(team_id)
@@ -245,7 +256,12 @@ class GetExpenseSummaryUseCase:
         year: int | None = None,
         spender_id: int | None = None,
         team_id: int | None = None,
+        fund_code: str | None = None,
     ) -> dict[str, int]:
         return self.repo.get_summary(
-            month=month, year=year, spender_id=spender_id, team_id=team_id
+            month=month,
+            year=year,
+            spender_id=spender_id,
+            team_id=team_id,
+            fund_code=fund_code,
         )

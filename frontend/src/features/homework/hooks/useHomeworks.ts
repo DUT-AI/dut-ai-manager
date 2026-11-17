@@ -66,12 +66,13 @@ export const useHomework = (id: number | null) => {
   });
 };
 
-export const useUnsubmittedReport = () => {
+export const useUnsubmittedReport = (options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: ['homeworks', 'report', 'unsubmitted'],
     queryFn: () => homeworkService.getUnsubmittedReport(),
     staleTime: 0,
     refetchOnMount: 'always',
+    enabled: options?.enabled,
   });
 };
 

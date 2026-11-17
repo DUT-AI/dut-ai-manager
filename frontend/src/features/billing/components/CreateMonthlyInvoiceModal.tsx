@@ -23,9 +23,10 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useUserOptions } from '@/features/users';
+import CurrencyInput from '@/components/CurrencyInput';
 import { useTeams } from '@/features/teams';
 import { useCreateMonthlyInvoices } from '@/features/billing/hooks/useBilling';
-import { InvoiceItemType } from '@/features/billing/types/billing.types';
+import { InvoiceItemType, FundCode } from '@/features/billing/types/billing.types';
 import type { MonthlyInvoiceItemPreview } from '@/features/billing/types/billing.types';
 
 const { Title, Text } = Typography;
@@ -61,7 +62,8 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
       const payload = {
         month: values.billing_period.month() + 1,
         year: values.billing_period.year(),
-        team_id: values.team_id,
+        fund_code: values.fund_code || FundCode.DUT_AI,
+        team_id: values.team_id || undefined,
         user_ids: values.user_ids || [],
         violation_price: values.violation_price,
         fund_amount: values.fund_amount,
@@ -88,7 +90,8 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
       const payload = {
         month: values.billing_period.month() + 1,
         year: values.billing_period.year(),
-        team_id: values.team_id,
+        fund_code: values.fund_code || FundCode.DUT_AI,
+        team_id: values.team_id || undefined,
         user_ids: values.user_ids || [],
         violation_price: values.violation_price,
         fund_amount: values.fund_amount,
@@ -180,35 +183,55 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
         layout="vertical"
         initialValues={{
           billing_period: dayjs(),
+          fund_code: FundCode.DUT_AI,
           violation_price: 20000,
           fund_amount: 50000,
           extra_items: []
         }}
         className="mt-4"
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Form.Item
+            name="fund_code"
+            label="Nộp vào Quỹ / Tổ chức"
+            rules={[{ required: true, message: 'Vui lòng chọn quỹ' }]}
+          >
+            <Select placeholder="Chọn quỹ thụ hưởng">
+              <Option value={FundCode.DUT_AI}>DUT AI (Chính)</Option>
+              <Option value={FundCode.DUT_MAKER}>DUT Maker (Chia sẻ)</Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="team_id"
+            label="Nhóm thành viên (Tùy chọn)"
+            tooltip="Chọn nhóm để nạp nhanh thành viên nhóm đó"
+          >
+            <Select
+              placeholder="Chọn nhóm để nạp người"
+              showSearch
+              allowClear
+              optionFilterProp="children"
+              onChange={(newTeamId) => {
+                if (!newTeamId) return;
+                const team = (teams ?? []).find(t => t.id === newTeamId);
+                if (team && team.members && team.members.length > 0) {
+                  form.setFieldsValue({ user_ids: team.members.map(m => m.user_id) });
+                }
+              }}
+            >
+              {(teams ?? []).map(t => (
+                <Option key={t.id} value={t.id}>{t.team_name}</Option>
+              ))}
+            </Select>
+          </Form.Item>
+
           <Form.Item
             name="billing_period"
             label="Kỳ hóa đơn (Tháng/Năm)"
             rules={[{ required: true, message: 'Vui lòng chọn kỳ hóa đơn' }]}
           >
             <DatePicker picker="month" className="w-full" format="MM/YYYY" placeholder="Chọn tháng/năm" />
-          </Form.Item>
-
-          <Form.Item
-            name="team_id"
-            label="Gán cho Nhóm / Quỹ (Bắt buộc)"
-            rules={[{ required: true, message: 'Vui lòng chọn nhóm gán hóa đơn' }]}
-          >
-            <Select
-              placeholder="Chọn nhóm để gán hóa đơn"
-              showSearch
-              optionFilterProp="children"
-            >
-              {(teams ?? []).map(t => (
-                <Option key={t.id} value={t.id}>{t.team_name}</Option>
-              ))}
-            </Select>
           </Form.Item>
         </div>
 
@@ -297,10 +320,8 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
             label="Đơn giá 1 vi phạm (VNĐ)"
             rules={[{ required: true }]}
           >
-            <InputNumber
+            <CurrencyInput
               className="w-full"
-              formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={value => value?.replace(/\$\s?|(,*)/g, '') as any}
             />
           </Form.Item>
 
@@ -309,10 +330,8 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
             label="Tiền quỹ tháng (VNĐ)"
             rules={[{ required: true }]}
           >
-            <InputNumber
+            <CurrencyInput
               className="w-full"
-              formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={value => value?.replace(/\$\s?|(,*)/g, '') as any}
             />
           </Form.Item>
         </div>
@@ -350,10 +369,8 @@ const CreateMonthlyInvoiceModal = ({ open, onCancel, onSuccess }: CreateMonthlyI
                     rules={[{ required: true, message: 'Nhập tiền' }]}
                     style={{ marginBottom: 0 }}
                   >
-                    <InputNumber
+                    <CurrencyInput
                       min={0}
-                      formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                      parser={value => (value?.replace(/\$\s?|(,*)/g, '') || 0) as any}
                       placeholder="Số tiền"
                       style={{ width: 150 }}
                     />

@@ -47,8 +47,10 @@ export const HomeworkPage: React.FC = () => {
     // Table pagination
     const { page, pageSize, getPaginationProps } = useTablePagination();
 
-    // Report refetch (lifted here for tabBarExtraContent)
-    const { isLoading: reportLoading, refetch: refetchReport } = useUnsubmittedReport();
+    // Report refetch (lifted here for tabBarExtraContent, only enabled when tab is active)
+    const { isLoading: reportLoading, refetch: refetchReport } = useUnsubmittedReport({
+        enabled: activeTab === '3',
+    });
 
     // Core Logic Hook
     const {

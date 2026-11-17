@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Card, Button, Typography, Space, Form, message, Grid, Tabs, Select, DatePicker, Row, Col, Statistic, Tooltip } from 'antd';
-import { PlusOutlined, AuditOutlined, CalendarOutlined, BarChartOutlined, DollarOutlined, ImportOutlined, ExportOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { Card, Button, Typography, Space, Form, message, Grid, Tabs, Select, DatePicker, Row, Col, Statistic, Tooltip, Input, Drawer, Badge, Modal } from 'antd';
+import { PlusOutlined, AuditOutlined, CalendarOutlined, BarChartOutlined, DollarOutlined, ImportOutlined, ExportOutlined, CheckCircleOutlined, ClockCircleOutlined, SearchOutlined, FilterOutlined, RightOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useAllInvoices, useCreateInvoice, useUpdateInvoice, useUpdateInvoiceStatus, useInvoiceDetail, useDeleteInvoice, useBillingSummary } from '@/features/billing/hooks/useBilling';
 import { useUserOptions } from '@/features/users';
@@ -49,14 +49,18 @@ const AdminBillingPage = () => {
   const { page, pageSize, resetPage, getPaginationProps } = useTablePagination();
   const [filterUser, setFilterUser] = useState<number | undefined>(undefined);
   const [filterTeam, setFilterTeam] = useState<number | undefined>(undefined);
+  const [filterFund, setFilterFund] = useState<string | undefined>(undefined);
   const [filterStatus, setFilterStatus] = useState<string | undefined>(undefined);
   const [filterPeriod, setFilterPeriod] = useState<dayjs.Dayjs | null>(null);
+  const [filterSearch, setFilterSearch] = useState<string>('');
 
   const { data: invoicesData, isLoading } = useAllInvoices({
     user_id: filterUser,
     team_id: filterTeam,
+    fund_code: filterFund,
     status: filterStatus,
     billing_period: filterPeriod ? filterPeriod.startOf('month').format('YYYY-MM-DD') : undefined,
+    search: filterSearch || undefined,
   }, page, pageSize);
   const invoices = invoicesData ?? [];
   const { data: usersData } = useUserOptions();
@@ -72,8 +76,18 @@ const AdminBillingPage = () => {
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [isMonthlyModalOpen, setIsMonthlyModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+
+  const activeFilterCount = [
+    filterUser,
+    filterTeam,
+    filterFund,
+    filterStatus,
+    filterPeriod,
+  ].filter((val) => val !== undefined && val !== null).length;
 
   const [form] = Form.useForm();
   const [updateForm] = Form.useForm();
@@ -85,7 +99,8 @@ const AdminBillingPage = () => {
       const userIds: number[] = values.user_ids || (values.user_id ? [values.user_id] : []);
       const payload: CreateInvoiceFormValues = {
         user_ids: userIds,
-        team_id: values.team_id,
+        fund_code: values.fund_code || 'DUT_AI',
+        team_id: values.team_id || undefined,
         description: values.description,
         billing_period: values.billing_period ? values.billing_period.startOf('month').format('YYYY-MM-DD') : '',
         items: values.items.map((item: any) => ({
@@ -152,6 +167,7 @@ const AdminBillingPage = () => {
   const { data: summary, isLoading: isLoadingSummary } = useBillingSummary({
     user_id: filterUser,
     team_id: filterTeam,
+    fund_code: filterFund,
     billing_period: filterPeriod ? filterPeriod.startOf('month').format('YYYY-MM-DD') : undefined,
   });
 
@@ -166,10 +182,376 @@ const AdminBillingPage = () => {
       ),
       children: (
         <div className="p-4">
-          {/* KPI Stat Cards (Quỹ nhập vào) */}
-          <Row gutter={[16, 16]} className="mb-4">
-            <Col xs={24} sm={8}>
-              <Card loading={isLoadingSummary} className="shadow-sm border-gray-100">
+          {/* KPI Stat Cards - Desktop */}
+          <div className="hidden md:block mb-4">
+            <Row gutter={[16, 16]}>
+              <Col xs={24} sm={8}>
+                <Card loading={isLoadingSummary} className="shadow-sm border-gray-100">
+                  <Statistic
+                    title="Tổng số tiền quỹ (Quỹ & Phạt)"
+                    value={summary?.total_amount || 0}
+                    formatter={(val) => `${Number(val).toLocaleString()} VNĐ`}
+                    prefix={<DollarOutlined className="text-blue-500 mr-2" />}
+                  />
+                </Card>
+              </Col>
+              <Col xs={24} sm={8}>
+                <Card loading={isLoadingSummary} className="shadow-sm border-gray-100">
+                  <Statistic
+                    title="Đã nhập vào (Đã thanh toán)"
+                    value={summary?.paid_amount || 0}
+                    formatter={(val) => `${Number(val).toLocaleString()} VNĐ`}
+                    styles={{ content: { color: '#52c41a' } }}
+                    prefix={<CheckCircleOutlined className="text-green-500 mr-2" />}
+                  />
+                </Card>
+              </Col>
+              <Col xs={24} sm={8}>
+                <Card loading={isLoadingSummary} className="shadow-sm border-gray-100">
+                  <Statistic
+                    title="Chưa thanh toán (Chờ nộp quỹ)"
+                    value={summary?.unpaid_amount || 0}
+                    formatter={(val) => `${Number(val).toLocaleString()} VNĐ`}
+                    styles={{ content: { color: '#faad14' } }}
+                    prefix={<ClockCircleOutlined className="text-amber-500 mr-2" />}
+                  />
+                </Card>
+              </Col>
+            </Row>
+          </div>
+
+          {/* Quick Summary Card - Mobile */}
+          <div
+            onClick={() => setIsSummaryModalOpen(true)}
+            className="md:hidden bg-white border border-gray-100 p-3.5 rounded-xl shadow-xs cursor-pointer active:scale-[0.99] transition-all mb-3 flex items-center justify-between"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+                <DollarOutlined className="text-base" />
+              </div>
+              <div>
+                <div className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Tổng tiền quỹ</div>
+                <div className="text-base font-bold text-gray-900 tracking-tight">
+                  {Number(summary?.total_amount || 0).toLocaleString()} VNĐ
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 text-xs text-blue-600 font-medium bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-lg">
+              <span>Chi tiết</span>
+              <RightOutlined className="text-[10px]" />
+            </div>
+          </div>
+
+          {/* Filters Bar - Desktop */}
+          <div className="hidden md:block mb-4">
+            <Row gutter={[12, 12]} align="middle" className="bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+              <Col xs={24} sm={12} md={8} lg={4}>
+                <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Mã hóa đơn</div>
+                <Input
+                  placeholder="Tìm mã (VD: DUT...)"
+                  prefix={<SearchOutlined className="text-gray-400" />}
+                  allowClear
+                  value={filterSearch}
+                  onChange={(e) => {
+                    setFilterSearch(e.target.value);
+                    resetPage();
+                  }}
+                />
+              </Col>
+
+              <Col xs={24} sm={12} md={8} lg={4}>
+                <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Thành viên</div>
+                <Select
+                  showSearch
+                  placeholder="Tất cả thành viên"
+                  style={{ width: '100%' }}
+                  allowClear
+                  value={filterUser}
+                  onChange={(value) => {
+                    setFilterUser(value);
+                    resetPage();
+                  }}
+                  optionFilterProp="children"
+                >
+                  {users.map((u) => (
+                    <Select.Option key={u.id} value={u.id}>
+                      {u.name}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Col>
+
+              <Col xs={24} sm={12} md={8} lg={4}>
+                <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Quỹ / Tổ chức</div>
+                <Select
+                  placeholder="Tất cả quỹ"
+                  style={{ width: '100%' }}
+                  allowClear
+                  value={filterFund}
+                  onChange={(value) => {
+                    setFilterFund(value);
+                    resetPage();
+                  }}
+                >
+                  <Select.Option value="DUT_AI">DUT AI (Chính)</Select.Option>
+                  <Select.Option value="DUT_MAKER">DUT Maker (Chia sẻ)</Select.Option>
+                </Select>
+              </Col>
+
+              <Col xs={24} sm={12} md={8} lg={4}>
+                <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Nhóm</div>
+                <Select
+                  showSearch
+                  placeholder="Tất cả nhóm"
+                  style={{ width: '100%' }}
+                  allowClear
+                  value={filterTeam}
+                  onChange={(value) => {
+                    setFilterTeam(value);
+                    resetPage();
+                  }}
+                  optionFilterProp="children"
+                >
+                  {teams.map((t) => (
+                    <Select.Option key={t.id} value={t.id}>
+                      {t.name || (t as { team_name?: string }).team_name}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Col>
+
+              <Col xs={24} sm={12} md={8} lg={4}>
+                <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Trạng thái</div>
+                <Select
+                  placeholder="Tất cả trạng thái"
+                  style={{ width: '100%' }}
+                  allowClear
+                  value={filterStatus}
+                  onChange={(value) => {
+                    setFilterStatus(value);
+                    resetPage();
+                  }}
+                >
+                  <Select.Option value="PENDING">Chờ thanh toán (PENDING)</Select.Option>
+                  <Select.Option value="PAID">Đã thanh toán (PAID)</Select.Option>
+                  <Select.Option value="CANCELLED">Đã hủy (CANCELLED)</Select.Option>
+                  <Select.Option value="EXPIRED">Hết hạn (EXPIRED)</Select.Option>
+                </Select>
+              </Col>
+
+              <Col xs={24} sm={12} md={8} lg={4}>
+                <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Kỳ hóa đơn</div>
+                <DatePicker
+                  picker="month"
+                  format="MM/YYYY"
+                  placeholder="Tất cả các kỳ"
+                  style={{ width: '100%' }}
+                  allowClear
+                  value={filterPeriod}
+                  onChange={(value) => {
+                    setFilterPeriod(value);
+                    resetPage();
+                  }}
+                />
+              </Col>
+            </Row>
+          </div>
+
+          {/* Quick Search & Filter Trigger - Mobile */}
+          <div className="md:hidden flex items-center gap-2 mb-3">
+            <Input
+              placeholder="Tìm mã (VD: DUT...)"
+              prefix={<SearchOutlined className="text-gray-400" />}
+              allowClear
+              value={filterSearch}
+              onChange={(e) => {
+                setFilterSearch(e.target.value);
+                resetPage();
+              }}
+              className="flex-1 rounded-lg"
+            />
+            <Badge count={activeFilterCount} size="small" offset={[-2, 2]}>
+              <Button
+                icon={<FilterOutlined />}
+                onClick={() => setIsFilterDrawerOpen(true)}
+                className={`rounded-lg flex items-center gap-1 ${
+                  activeFilterCount > 0 ? 'border-blue-500 text-blue-600 bg-blue-50/50' : ''
+                }`}
+              >
+                Lọc
+              </Button>
+            </Badge>
+          </div>
+
+          {/* Mobile Filter Drawer */}
+          <Drawer
+            title={
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-gray-800">Bộ lọc hóa đơn</span>
+                {activeFilterCount > 0 && (
+                  <Button
+                    type="link"
+                    size="small"
+                    onClick={() => {
+                      setFilterUser(undefined);
+                      setFilterTeam(undefined);
+                      setFilterFund(undefined);
+                      setFilterStatus(undefined);
+                      setFilterPeriod(null);
+                      resetPage();
+                    }}
+                    className="text-xs text-rose-600 p-0"
+                  >
+                    Đặt lại ({activeFilterCount})
+                  </Button>
+                )}
+              </div>
+            }
+            placement="bottom"
+            height="auto"
+            open={isFilterDrawerOpen}
+            onClose={() => setIsFilterDrawerOpen(false)}
+            className="rounded-t-2xl"
+            footer={
+              <div className="flex gap-2 p-1">
+                <Button
+                  block
+                  onClick={() => {
+                    setFilterUser(undefined);
+                    setFilterTeam(undefined);
+                    setFilterFund(undefined);
+                    setFilterStatus(undefined);
+                    setFilterPeriod(null);
+                    resetPage();
+                  }}
+                >
+                  Thiết lập lại
+                </Button>
+                <Button
+                  type="primary"
+                  block
+                  onClick={() => setIsFilterDrawerOpen(false)}
+                >
+                  Áp dụng
+                </Button>
+              </div>
+            }
+          >
+            <div className="space-y-3.5 py-1">
+              <div>
+                <div className="text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Quỹ / Tổ chức</div>
+                <Select
+                  placeholder="Tất cả quỹ"
+                  style={{ width: '100%' }}
+                  allowClear
+                  value={filterFund}
+                  onChange={(value) => {
+                    setFilterFund(value);
+                    resetPage();
+                  }}
+                >
+                  <Select.Option value="DUT_AI">DUT AI (Chính)</Select.Option>
+                  <Select.Option value="DUT_MAKER">DUT Maker (Chia sẻ)</Select.Option>
+                </Select>
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Thành viên</div>
+                <Select
+                  showSearch
+                  placeholder="Tất cả thành viên"
+                  style={{ width: '100%' }}
+                  allowClear
+                  value={filterUser}
+                  onChange={(value) => {
+                    setFilterUser(value);
+                    resetPage();
+                  }}
+                  optionFilterProp="children"
+                >
+                  {users.map((u) => (
+                    <Select.Option key={u.id} value={u.id}>
+                      {u.name}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Nhóm</div>
+                <Select
+                  showSearch
+                  placeholder="Tất cả nhóm"
+                  style={{ width: '100%' }}
+                  allowClear
+                  value={filterTeam}
+                  onChange={(value) => {
+                    setFilterTeam(value);
+                    resetPage();
+                  }}
+                  optionFilterProp="children"
+                >
+                  {teams.map((t) => (
+                    <Select.Option key={t.id} value={t.id}>
+                      {t.name || (t as { team_name?: string }).team_name}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Trạng thái</div>
+                <Select
+                  placeholder="Tất cả trạng thái"
+                  style={{ width: '100%' }}
+                  allowClear
+                  value={filterStatus}
+                  onChange={(value) => {
+                    setFilterStatus(value);
+                    resetPage();
+                  }}
+                >
+                  <Select.Option value="PENDING">Chờ thanh toán (PENDING)</Select.Option>
+                  <Select.Option value="PAID">Đã thanh toán (PAID)</Select.Option>
+                  <Select.Option value="CANCELLED">Đã hủy (CANCELLED)</Select.Option>
+                  <Select.Option value="EXPIRED">Hết hạn (EXPIRED)</Select.Option>
+                </Select>
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Kỳ hóa đơn</div>
+                <DatePicker
+                  picker="month"
+                  format="MM/YYYY"
+                  placeholder="Tất cả các kỳ"
+                  style={{ width: '100%' }}
+                  allowClear
+                  value={filterPeriod}
+                  onChange={(value) => {
+                    setFilterPeriod(value);
+                    resetPage();
+                  }}
+                />
+              </div>
+            </div>
+          </Drawer>
+
+          {/* Mobile Summary Modal */}
+          <Modal
+            title={
+              <div className="flex items-center gap-2">
+                <DollarOutlined className="text-blue-500" />
+                <span>Chi tiết thống kê quỹ</span>
+              </div>
+            }
+            open={isSummaryModalOpen}
+            onCancel={() => setIsSummaryModalOpen(false)}
+            footer={null}
+            centered
+            width={400}
+          >
+            <div className="space-y-3 pt-2">
+              <Card size="small" className="bg-slate-50 border-slate-100">
                 <Statistic
                   title="Tổng số tiền quỹ (Quỹ & Phạt)"
                   value={summary?.total_amount || 0}
@@ -177,108 +559,26 @@ const AdminBillingPage = () => {
                   prefix={<DollarOutlined className="text-blue-500 mr-2" />}
                 />
               </Card>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Card loading={isLoadingSummary} className="shadow-sm border-gray-100">
+              <Card size="small" className="bg-emerald-50/50 border-emerald-100">
                 <Statistic
                   title="Đã nhập vào (Đã thanh toán)"
                   value={summary?.paid_amount || 0}
                   formatter={(val) => `${Number(val).toLocaleString()} VNĐ`}
-                  styles={{ content: { color: '#52c41a' } }}
-                  prefix={<CheckCircleOutlined className="text-green-500 mr-2" />}
+                  styles={{ content: { color: '#059669' } }}
+                  prefix={<CheckCircleOutlined className="text-emerald-500 mr-2" />}
                 />
               </Card>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Card loading={isLoadingSummary} className="shadow-sm border-gray-100">
+              <Card size="small" className="bg-amber-50/50 border-amber-100">
                 <Statistic
                   title="Chưa thanh toán (Chờ nộp quỹ)"
                   value={summary?.unpaid_amount || 0}
                   formatter={(val) => `${Number(val).toLocaleString()} VNĐ`}
-                  styles={{ content: { color: '#faad14' } }}
+                  styles={{ content: { color: '#d97706' } }}
                   prefix={<ClockCircleOutlined className="text-amber-500 mr-2" />}
                 />
               </Card>
-            </Col>
-          </Row>
-
-          {/* Filters Bar */}
-          <Row gutter={[16, 16]} align="middle" className="bg-gray-50/50 p-4 rounded-xl border border-gray-100 mb-4">
-            <Col xs={24} sm={12} md={6} lg={6}>
-              <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Thành viên</div>
-              <Select
-                showSearch
-                placeholder="Tất cả thành viên"
-                style={{ width: '100%' }}
-                allowClear
-                onChange={(value) => {
-                  setFilterUser(value);
-                  resetPage();
-                }}
-                optionFilterProp="children"
-              >
-                {users.map((u) => (
-                  <Select.Option key={u.id} value={u.id}>
-                    {u.name}
-                  </Select.Option>
-                ))}
-              </Select>
-            </Col>
-
-            <Col xs={24} sm={12} md={6} lg={6}>
-              <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Nhóm</div>
-              <Select
-                showSearch
-                placeholder="Tất cả nhóm"
-                style={{ width: '100%' }}
-                allowClear
-                onChange={(value) => {
-                  setFilterTeam(value);
-                  resetPage();
-                }}
-                optionFilterProp="children"
-              >
-                {teams.map((t) => (
-                  <Select.Option key={t.id} value={t.id}>
-                    {t.name || (t as { team_name?: string }).team_name}
-                  </Select.Option>
-                ))}
-              </Select>
-            </Col>
-
-            <Col xs={24} sm={12} md={6} lg={6}>
-              <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Trạng thái</div>
-              <Select
-                placeholder="Tất cả trạng thái"
-                style={{ width: '100%' }}
-                allowClear
-                onChange={(value) => {
-                  setFilterStatus(value);
-                  resetPage();
-                }}
-              >
-                <Select.Option value="PENDING">Chờ thanh toán (PENDING)</Select.Option>
-                <Select.Option value="PAID">Đã thanh toán (PAID)</Select.Option>
-                <Select.Option value="CANCELLED">Đã hủy (CANCELLED)</Select.Option>
-                <Select.Option value="EXPIRED">Hết hạn (EXPIRED)</Select.Option>
-              </Select>
-            </Col>
-
-            <Col xs={24} sm={12} md={6} lg={6}>
-              <div className="text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">Kỳ hóa đơn</div>
-              <DatePicker
-                picker="month"
-                format="MM/YYYY"
-                placeholder="Tất cả các kỳ"
-                style={{ width: '100%' }}
-                allowClear
-                onChange={(value) => {
-                  setFilterPeriod(value);
-                  resetPage();
-                }}
-              />
-            </Col>
-          </Row>
+            </div>
+          </Modal>
 
           <BillingTable
             invoices={invoices}

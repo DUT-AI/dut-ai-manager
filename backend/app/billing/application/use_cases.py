@@ -1,5 +1,8 @@
 import random
+import re
 import string
+import unicodedata
+import urllib.parse
 from datetime import UTC, date, datetime
 
 from fastapi import status
@@ -29,14 +32,12 @@ class CreateInvoiceUseCase:
         self,
         items_data: list[dict],
         billing_period: date,
-        team_id: int,
+        team_id: int | None = None,
+        fund_code: str = "DUT_AI",
         user_id: int | None = None,
         user_ids: list[int] | None = None,
         description: str | None = None,
     ) -> list[Invoice]:
-        if not team_id:
-            raise BadRequestException("Vui lòng chọn nhóm")
-
         # Determine target user IDs
         target_uids = (
             list(user_ids) if user_ids else ([user_id] if user_id is not None else [])
@@ -52,8 +53,8 @@ class CreateInvoiceUseCase:
             item_type = InvoiceItemType(item["item_type"])
             amount = item.get("amount", 0)
 
-            # Rule: Violation price is fixed at 20,000 VND
-            if item_type == InvoiceItemType.VIOLATION:
+            # Default violation amount to 20,000 VND if not specified or <= 0
+            if item_type == InvoiceItemType.VIOLATION and amount <= 0:
                 amount = 20000
 
             total_amount += amount
@@ -86,6 +87,7 @@ class CreateInvoiceUseCase:
 
             invoice = Invoice(
                 user_id=uid,
+                fund_code=fund_code,
                 team_id=team_id,
                 amount=total_amount,
                 status=InvoiceStatus.PENDING,
@@ -132,6 +134,8 @@ class UpdateInvoiceUseCase:
         items_data: list[dict],
         description: str | None = None,
         new_status: InvoiceStatus | None = None,
+        fund_code: str | None = None,
+        team_id: int | None = None,
     ) -> Invoice:
         # 1. Get the invoice
         invoice = self.repo.get_by_id(invoice_id)
@@ -147,9 +151,6 @@ class UpdateInvoiceUseCase:
         for item in items_data:
             item_type = InvoiceItemType(item["item_type"])
             amount = item.get("amount", 0)
-
-            if item_type == InvoiceItemType.VIOLATION:
-                amount = 20000
 
             total_amount += amount
             new_items.append(
@@ -167,6 +168,10 @@ class UpdateInvoiceUseCase:
         # 3. Update fields
         invoice.amount = total_amount
         invoice.items = new_items
+        if fund_code is not None:
+            invoice.fund_code = fund_code
+        if team_id is not None:
+            invoice.team_id = team_id
         if description is not None:
             invoice.description = description
         if new_status is not None:
@@ -305,6 +310,7 @@ class GetInvoicesUseCase:
         status: str | None = None,
         billing_period: date | None = None,
         team_id: int | None = None,
+        fund_code: str | None = None,
         skip: int = 0,
         limit: int = 100,
     ) -> list[Invoice]:
@@ -313,6 +319,7 @@ class GetInvoicesUseCase:
             status=status,
             billing_period=billing_period,
             team_id=team_id,
+            fund_code=fund_code,
             skip=skip,
             limit=limit,
         )
@@ -323,6 +330,8 @@ class GetInvoicesUseCase:
         status: str | None = None,
         billing_period: date | None = None,
         team_id: int | None = None,
+        fund_code: str | None = None,
+        search: str | None = None,
         page: int = 1,
         page_size: int = 20,
     ) -> tuple[list[Invoice], int]:
@@ -331,6 +340,8 @@ class GetInvoicesUseCase:
             status=status,
             billing_period=billing_period,
             team_id=team_id,
+            fund_code=fund_code,
+            search=search,
             page=page,
             page_size=page_size,
         )
@@ -357,11 +368,13 @@ class GetInvoicesUseCase:
         self,
         billing_period: date | None = None,
         team_id: int | None = None,
+        fund_code: str | None = None,
         user_id: int | None = None,
     ) -> dict[str, int]:
         return self.repo.get_summary(
             billing_period=billing_period,
             team_id=team_id,
+            fund_code=fund_code,
             user_id=user_id,
         )
 
@@ -370,16 +383,116 @@ class QRGenerator:
     """Utility to generate VietQR URL for an invoice."""
 
     @staticmethod
-    def get_url(invoice: Invoice) -> str:
+    def _remove_accents(text: str) -> str:
+        """Chuyển tiếng Việt có dấu thành không dấu, viết hoa."""
+        if not text:
+            return ""
+        nfkd = unicodedata.normalize("NFKD", text)
+        ascii_text = "".join(c for c in nfkd if not unicodedata.combining(c))
+        ascii_text = ascii_text.replace("đ", "d").replace("Đ", "D")
+        return ascii_text.upper().strip()
+
+    @staticmethod
+    def _format_user_name(user_name: str | None) -> str:
+        """
+        Chuẩn hóa tên thành viên:
+        - Bỏ dấu, viết hoa.
+        - Nếu độ dài <= 22 ký tự: Giữ nguyên họ tên.
+        - Nếu độ dài > 22 ký tự: Lấy 2 từ cuối (Tên lót + Tên chính).
+        """
+        if not user_name:
+            return ""
+        user_name = re.sub(r"\(.*?\)", "", user_name)
+        clean_name = QRGenerator._remove_accents(user_name)
+        clean_name = re.sub(r"[^A-Z\s]", "", clean_name)
+        clean_name = re.sub(r"\s+", " ", clean_name).strip()
+
+        if not clean_name:
+            return ""
+
+        if len(clean_name) <= 22:
+            return clean_name
+
+        words = clean_name.split()
+        if len(words) >= 2:
+            short_name = f"{words[-2]} {words[-1]}"
+            if len(short_name) <= 22:
+                return short_name
+            return words[-1][:22]
+        return words[0][:22]
+
+    @staticmethod
+    def _format_description_or_type(invoice: Invoice) -> str:
+        """
+        Xác định phần mô tả/loại hóa đơn:
+        - Nếu mô tả là "Hóa đơn tháng MM/YYYY": HD T{MM}/{YYYY} (ví dụ HD T10/2026)
+        - Còn các trường hợp khác: map theo loại InvoiceItemType (VI PHAM, TIEN QUY, AN UONG, KHAC)
+        """
+        desc = invoice.description or ""
+        clean_desc = QRGenerator._remove_accents(desc)
+
+        # 1. Kiểm tra chính xác mẫu "Hóa đơn tháng MM/YYYY" (ví dụ: HOA DON THANG 10/2026)
+        match = re.search(r"HOA\s+DON\s+THANG\s*(\d{1,2})[/_-](\d{4})", clean_desc)
+        if match:
+            month = match.group(1)
+            year = match.group(2)
+            return f"HD T{month}/{year}"
+
+        match_month_only = re.search(r"HOA\s+DON\s+THANG\s*(\d{1,2})", clean_desc)
+        if match_month_only and invoice.billing_period:
+            month = match_month_only.group(1)
+            return f"HD T{month}/{invoice.billing_period.year}"
+
+        # 2. Các trường hợp khác: Map theo loại hóa đơn (InvoiceItemType)
+        type_mapping = {
+            InvoiceItemType.VIOLATION: "VI PHAM",
+            InvoiceItemType.FUND: "TIEN QUY",
+            InvoiceItemType.DINING: "AN UONG",
+            InvoiceItemType.OTHER: "KHAC",
+        }
+
+        if invoice.items:
+            seen_types: list[str] = []
+            for item in invoice.items:
+                mapped = type_mapping.get(item.item_type, "KHAC")
+                if mapped not in seen_types:
+                    seen_types.append(mapped)
+            return " ".join(seen_types)
+
+        return "KHAC"
+
+    @classmethod
+    def get_transfer_description(cls, invoice: Invoice) -> str:
+        """Tạo nội dung chuyển khoản theo cú pháp [MÃ_HD] [TÊN] [MÔ_TẢ_HOẶC_LOẠI]."""
+        ref_code = (invoice.reference_code or "").strip()
+        user_name_part = cls._format_user_name(invoice.user_name)
+        desc_part = cls._format_description_or_type(invoice)
+
+        parts = [ref_code]
+        if user_name_part:
+            parts.append(user_name_part)
+        if desc_part:
+            parts.append(desc_part)
+
+        transfer_des = " ".join(parts).strip()
+        # Đảm bảo tối đa 48 ký tự an toàn cho Napas / VietQR
+        return transfer_des[:48].strip()
+
+    @classmethod
+    def get_url(cls, invoice: Invoice) -> str:
         """Builds the SePay VietQR image URL."""
         base_url = "https://qr.sepay.vn/img"
+        transfer_des = cls.get_transfer_description(invoice)
         params = {
             "bank": settings.SEPAY_BANK_CODE,
             "acc": settings.SEPAY_ACCOUNT_NO,
             "amount": invoice.amount,
-            "des": invoice.reference_code,
+            "des": transfer_des,
         }
-        query_str = "&".join(f"{k}={v}" for k, v in params.items())
+        query_str = urllib.parse.urlencode(
+            params,
+            quote_via=lambda s, *args, **kwargs: urllib.parse.quote(str(s), safe="/"),
+        )
         return f"{base_url}?{query_str}"
 
 
@@ -400,7 +513,8 @@ class CreateMonthlyInvoicesUseCase:
         self,
         month: int,
         year: int,
-        team_id: int,
+        team_id: int | None = None,
+        fund_code: str = "DUT_AI",
         user_ids: list[int] = None,
         violation_price: int = 20000,
         fund_amount: int = 50000,
@@ -411,19 +525,19 @@ class CreateMonthlyInvoicesUseCase:
             extra_items = []
         if user_ids is None:
             user_ids = []
-        if not team_id:
-            raise BadRequestException("Vui lòng chọn nhóm để gán hóa đơn")
 
-        team = self.team_repo.get_by_id_with_members(team_id)
-        if not team:
-            raise BadRequestException(f"Không tìm thấy nhóm #{team_id}")
+        team = None
+        team_member_map = {}
+        if team_id:
+            team = self.team_repo.get_by_id_with_members(team_id)
+            if team:
+                team_member_map = {m.user_id: m.user_name for m in team.members}
 
         if not user_ids:
             raise BadRequestException(
                 "Vui lòng chọn ít nhất 1 thành viên để tạo hóa đơn"
             )
 
-        team_member_map = {m.user_id: m.user_name for m in team.members}
         target_users = {}
 
         for uid in user_ids:
@@ -497,6 +611,8 @@ class CreateMonthlyInvoicesUseCase:
 
                 invoice = Invoice(
                     user_id=uid,
+                    user_name=user_name,
+                    fund_code=fund_code,
                     team_id=team_id,
                     amount=total_amount,
                     status=InvoiceStatus.PENDING,

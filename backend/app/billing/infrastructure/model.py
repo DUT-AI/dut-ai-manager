@@ -9,6 +9,7 @@ from sqlalchemy import Date, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.billing.domain.entity import (
+    FundCode,
     Invoice,
     InvoiceItem,
     InvoiceItemType,
@@ -32,7 +33,12 @@ class InvoiceModel(SQLAlchemyTimestampMixin, Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
-    team_id: Mapped[int] = mapped_column(ForeignKey("teams.id"), index=True, default=6)
+    fund_code: Mapped[str] = mapped_column(
+        String(50), default=FundCode.DUT_AI, index=True, nullable=False
+    )
+    team_id: Mapped[int | None] = mapped_column(
+        ForeignKey("teams.id"), index=True, nullable=True, default=None
+    )
     amount: Mapped[int] = mapped_column(Integer, default=0)
     status: Mapped[str] = mapped_column(
         String(50), default=InvoiceStatus.PENDING, index=True
@@ -62,6 +68,8 @@ class InvoiceModel(SQLAlchemyTimestampMixin, Base):
         return Invoice(
             id=self.id,
             user_id=self.user_id,
+            user_name=self.user_rel.name if self.user_rel else None,
+            fund_code=getattr(self, "fund_code", FundCode.DUT_AI) or FundCode.DUT_AI,
             team_id=self.team_id,
             team_name=self.team_rel.team_name if self.team_rel else None,
             amount=self.amount,
@@ -85,6 +93,7 @@ class InvoiceModel(SQLAlchemyTimestampMixin, Base):
         return cls(
             id=entity.id,
             user_id=entity.user_id,
+            fund_code=entity.fund_code or FundCode.DUT_AI,
             team_id=entity.team_id,
             amount=entity.amount,
             status=entity.status,

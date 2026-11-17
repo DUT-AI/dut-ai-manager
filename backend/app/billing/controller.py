@@ -50,6 +50,7 @@ async def create_invoice(
         user_id=data.user_id,
         user_ids=data.user_ids,
         team_id=data.team_id,
+        fund_code=data.fund_code,
         items_data=[item.model_dump() for item in data.items],
         billing_period=data.billing_period,
         description=data.description,
@@ -78,6 +79,8 @@ async def update_invoice(
         items_data=[item.model_dump() for item in data.items],
         description=data.description,
         new_status=data.status,
+        fund_code=data.fund_code,
+        team_id=data.team_id,
     )
     return ApiResponse.success(data=InvoiceResponse.from_domain(invoice))
 
@@ -121,6 +124,7 @@ async def create_monthly_invoices(
         month=data.month,
         year=data.year,
         team_id=data.team_id,
+        fund_code=data.fund_code,
         user_ids=data.user_ids,
         violation_price=data.violation_price,
         fund_amount=data.fund_amount,
@@ -159,8 +163,10 @@ async def get_all_invoices(
     pagination: Annotated[PaginationParams, Depends()],
     user_id: int | None = Query(default=None),
     team_id: int | None = Query(default=None),
+    fund_code: str | None = Query(default=None),
     bill_status: InvoiceStatus | None = Query(default=None),
     billing_period: date | None = Query(default=None),
+    search: str | None = Query(default=None, description="Search by reference code"),
 ):
     """
     Get all invoices with server-side pagination (Admin only).
@@ -170,6 +176,8 @@ async def get_all_invoices(
         status=bill_status,
         billing_period=billing_period,
         team_id=team_id,
+        fund_code=fund_code,
+        search=search,
         page=pagination.page,
         page_size=pagination.page_size,
     )
@@ -215,6 +223,7 @@ async def get_billing_summary(
     _: Annotated[CurrentUser, Depends(PermissionChecker(BillingPermission.READ))],
     user_id: int | None = Query(default=None),
     team_id: int | None = Query(default=None),
+    fund_code: str | None = Query(default=None),
     billing_period: date | None = Query(default=None),
 ):
     """
@@ -224,6 +233,7 @@ async def get_billing_summary(
     summary = get_uc.get_summary(
         billing_period=billing_period,
         team_id=team_id,
+        fund_code=fund_code,
         user_id=user_id,
     )
     return ApiResponse.success(data=BillingSummaryResponse(**summary))

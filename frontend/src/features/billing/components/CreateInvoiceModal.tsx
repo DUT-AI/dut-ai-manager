@@ -1,9 +1,10 @@
-import { Modal, Form, Select, Input, Divider, Space, InputNumber, Button, DatePicker, type FormInstance } from 'antd';
+import { Modal, Form, Select, Input, Divider, Space, Button, DatePicker, Radio, type FormInstance } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import { InvoiceItemType } from '@/features/billing/types/billing.types';
+import { InvoiceItemType, FundCode } from '@/features/billing/types/billing.types';
 import { useTeams } from '@/features/teams/hooks/useTeams';
 import { useUserOptions } from '@/features/users';
 import type { CreateInvoiceFormValues } from '@/features/billing/types/billing.types';
+import CurrencyInput from '@/components/CurrencyInput';
 
 const { Option } = Select;
 
@@ -31,6 +32,16 @@ const CreateInvoiceModal = ({
   const teamMembers = (currentTeam?.members || []).map(m => ({ id: m.user_id, name: m.user_name, email: m.email }));
   const otherUsers = (users || []).filter(u => !teamMemberIds.has(u.id));
 
+  // Handler khi đổi nhóm: hỏi hoặc hỗ trợ nạp thành viên
+  const handleTeamChange = (newTeamId: number | undefined) => {
+    if (!newTeamId) return;
+    const team = (teams || []).find(t => t.id === newTeamId);
+    if (team && team.members && team.members.length > 0) {
+      const memberIds = team.members.map(m => m.user_id);
+      form.setFieldsValue({ user_ids: memberIds });
+    }
+  };
+
   return (
     <Modal
       title="Tạo hóa đơn mới"
@@ -38,7 +49,7 @@ const CreateInvoiceModal = ({
       onCancel={onCancel}
       onOk={() => form.submit()}
       confirmLoading={loading}
-      width={700}
+      width={750}
       okText="Tạo hóa đơn"
       cancelText="Hủy"
       centered
@@ -48,20 +59,36 @@ const CreateInvoiceModal = ({
         form={form}
         layout="vertical"
         onFinish={onFinish}
-        initialValues={{ items: [{ item_type: InvoiceItemType.VIOLATION, amount: 20000 }] }}
+        initialValues={{
+          fund_code: FundCode.DUT_AI,
+          items: [{ item_type: InvoiceItemType.VIOLATION, amount: 20000 }]
+        }}
         className="mt-4"
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Form.Item
+            name="fund_code"
+            label="Nộp vào Quỹ / Tổ chức"
+            rules={[{ required: true, message: 'Vui lòng chọn quỹ' }]}
+          >
+            <Select placeholder="Chọn quỹ thụ hưởng">
+              <Option value={FundCode.DUT_AI}>DUT AI (Chính)</Option>
+              <Option value={FundCode.DUT_MAKER}>DUT Maker (Chia sẻ)</Option>
+            </Select>
+          </Form.Item>
+
           <Form.Item
             name="team_id"
-            label="Gán cho Nhóm / Quỹ (Bắt buộc)"
-            rules={[{ required: true, message: 'Vui lòng chọn nhóm' }]}
+            label="Nhóm thành viên (Tùy chọn)"
+            tooltip="Chọn nhóm để nạp nhanh danh sách thành viên của nhóm đó"
           >
             <Select
               showSearch
-              placeholder="Chọn nhóm từ danh sách"
+              allowClear
+              placeholder="Chọn nhóm để nạp người"
               loading={isLoadingTeams}
               optionFilterProp="children"
+              onChange={handleTeamChange}
             >
               {(teams || []).map(t => (
                 <Option key={t.id} value={t.id}>{t.team_name}</Option>
@@ -196,10 +223,8 @@ const CreateInvoiceModal = ({
                     name={[name, 'amount']}
                     rules={[{ required: true, message: 'Nhập số tiền' }]}
                   >
-                    <InputNumber<number>
+                    <CurrencyInput
                       min={0}
-                      formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                      parser={value => Number(value?.replace(/\$\s?|(,*)/g, '') || 0)}
                       placeholder="Số tiền"
                       style={{ width: 150 }}
                     />

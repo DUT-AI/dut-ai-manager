@@ -34,13 +34,15 @@ class InvoiceItemResponse(InvoiceItemBase):
 class InvoiceCreate(BaseModel):
     user_id: int | None = None
     user_ids: list[int] = Field(default_factory=list)
-    team_id: int
+    fund_code: str = "DUT_AI"
+    team_id: int | None = None
     items: list[InvoiceItemCreate]
     billing_period: date
     description: str | None = None
 
 
 class InvoiceUpdate(BaseModel):
+    fund_code: str | None = None
     team_id: int | None = None
     items: list[InvoiceItemCreate]
     description: str | None = None
@@ -56,7 +58,9 @@ class InvoiceResponse(BaseModel):
 
     id: int
     user_id: int
-    team_id: int = 6
+    user_name: str | None = None
+    fund_code: str = "DUT_AI"
+    team_id: int | None = None
     amount: int
     status: InvoiceStatus
     description: str | None
@@ -95,16 +99,19 @@ class InvoiceResponse(BaseModel):
 
         effective_team = team
         invoice_team_name = getattr(invoice, "team_name", None)
-        if effective_team is None and invoice_team_name:
+        invoice_team_id = getattr(invoice, "team_id", None)
+        if effective_team is None and invoice_team_name and invoice_team_id:
             effective_team = InvoiceTeamInfo(
-                id=getattr(invoice, "team_id", 6),
+                id=invoice_team_id,
                 team_name=str(invoice_team_name),
             )
 
         response = cls(
             id=invoice.id,
             user_id=invoice.user_id,
-            team_id=getattr(invoice, "team_id", 6),
+            user_name=getattr(invoice, "user_name", None),
+            fund_code=getattr(invoice, "fund_code", "DUT_AI") or "DUT_AI",
+            team_id=invoice_team_id,
             amount=invoice.amount,
             status=invoice.status,
             description=invoice.description,
@@ -170,7 +177,8 @@ class MonthlyInvoicePreviewResponse(BaseModel):
 class MonthlyInvoiceCreate(BaseModel):
     month: int
     year: int
-    team_id: int
+    fund_code: str = "DUT_AI"
+    team_id: int | None = None
     user_ids: list[int] = []
     violation_price: int = 20000
     fund_amount: int = 50000

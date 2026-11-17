@@ -68,7 +68,7 @@ const SidebarContent = ({ activeKey, sideMenuItems }: SidebarContentProps) => {
 };
 
 const DashboardPage = () => {
-    const { loading, hasPermission } = useAuth();
+    const { loading, hasPermission, isOnlyMember } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const screens = useBreakpoint();
@@ -121,9 +121,13 @@ const DashboardPage = () => {
         }
     };
 
-    // Map cấu hình tĩnh thành định dạng menu của Antd dựa trên quyền hạn (hasPermission)
+    // Map cấu hình tĩnh thành định dạng menu của Antd dựa trên quyền hạn (hasPermission) và vai trò thành viên
     const sideMenuItems: MenuProps['items'] = sidebarMenuConfig
-        .filter(item => !item.permission || hasPermission(item.permission))
+        .filter(item => {
+            if (item.hideForOnlyMember && isOnlyMember()) return false;
+            if (item.permission && !hasPermission(item.permission)) return false;
+            return true;
+        })
         .map(item => ({
             key: item.key,
             icon: item.icon,
@@ -185,6 +189,11 @@ const DashboardPage = () => {
                     <div className="min-h-full relative">
                         <Routes>
                             {dashboardRoutesConfig.map((route, idx) => {
+                                // Chặn người dùng chỉ là thành viên truy cập các trang quản lý bị giới hạn
+                                if (route.hideForOnlyMember && isOnlyMember()) {
+                                    return <Route key={idx} path={route.path} element={<Navigate to="/dashboard" replace />} />;
+                                }
+
                                 // Kiểm tra quyền truy cập route
                                 if (route.permission && !hasPermission(route.permission)) {
                                     return <Route key={idx} path={route.path} element={<Navigate to="/dashboard" replace />} />;

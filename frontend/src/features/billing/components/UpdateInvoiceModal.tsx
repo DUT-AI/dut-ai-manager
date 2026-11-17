@@ -1,9 +1,10 @@
-import { Modal, Form, Select, Input, Divider, Space, InputNumber, Button, type FormInstance } from 'antd';
+import { Modal, Form, Select, Input, Divider, Space, Button, type FormInstance } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { InvoiceItemType } from '@/features/billing/types/billing.types';
 import type { Invoice } from '@/features/billing/types/billing.types';
 import { useEffect } from 'react';
 import type { UpdateInvoiceFormValues } from '@/features/billing/types/billing.types';
+import CurrencyInput from '@/components/CurrencyInput';
 
 const { Option } = Select;
 
@@ -112,10 +113,8 @@ const UpdateInvoiceModal = ({
                     name={[name, 'amount']}
                     rules={[{ required: true, message: 'Nhập số tiền' }]}
                   >
-                    <InputNumber<number>
+                    <CurrencyInput
                       min={0}
-                      formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                      parser={value => Number(value?.replace(/\$\s?|(,*)/g, '') || 0)}
                       placeholder="Số tiền"
                       style={{ width: 150 }}
                     />

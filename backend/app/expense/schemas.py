@@ -29,7 +29,8 @@ class ExpenseInvoiceCreate(BaseModel):
     amount: int
     description: str
     spender_id: int
-    team_id: int
+    fund_code: str = "DUT_AI"
+    team_id: int | None = None
     status: ExpenseStatus = ExpenseStatus.UNPAID
     payment_date: date | None = None
     note: str | None = None
@@ -40,6 +41,7 @@ class ExpenseInvoiceUpdate(BaseModel):
     amount: int | None = None
     description: str | None = None
     spender_id: int | None = None
+    fund_code: str | None = None
     team_id: int | None = None
     status: ExpenseStatus | None = None
     payment_date: date | None = None
@@ -59,7 +61,8 @@ class ExpenseInvoiceResponse(BaseModel):
     amount: int
     description: str
     spender_id: int
-    team_id: int
+    fund_code: str = "DUT_AI"
+    team_id: int | None = None
     status: ExpenseStatus
     payment_date: date | None = None
     note: str | None = None

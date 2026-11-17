@@ -43,13 +43,15 @@ dayjs.extend(isoWeek);
 const { Title, Text } = Typography;
 
 export const DutyManagementPage: React.FC = () => {
-  const { user, hasPermission } = useAuth();
+  const { user, hasPermission, isOnlyMember } = useAuth();
 
   const canManage =
-    hasPermission('duty:create') ||
-    user?.role_names?.some((r) =>
-      ['admin', 'hr'].includes(r.toLowerCase())
-    ) || false;
+    !isOnlyMember() &&
+    (hasPermission('duty:create') ||
+      user?.role_names?.some((r) =>
+        ['admin', 'hr'].includes(r.toLowerCase())
+      ) ||
+      false);
 
   const [currentDate, setCurrentDate] = useState<Dayjs>(dayjs());
   const [activeTab, setActiveTab] = useState<string>('calendar');

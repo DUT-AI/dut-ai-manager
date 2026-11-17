@@ -36,6 +36,7 @@ export interface RouteConfig {
     element: React.ReactNode;
     index?: boolean;       // Có phải route mặc định không
     permission?: string;   // Quyền yêu cầu để truy cập (nếu có)
+    hideForOnlyMember?: boolean; // Ẩn và chặn truy cập với người dùng chỉ là thành viên
 }
 
 export const dashboardRoutesConfig: RouteConfig[] = [
@@ -63,10 +64,12 @@ export const dashboardRoutesConfig: RouteConfig[] = [
     {
         path: 'rbac',
         element: <RoleManagementPage />,
+        hideForOnlyMember: true,
     },
     {
         path: 'users',
         element: <UserManagementPage />,
+        hideForOnlyMember: true,
     },
     {
         path: 'bonus-points',
@@ -91,14 +94,17 @@ export const dashboardRoutesConfig: RouteConfig[] = [
     {
         path: 'teams',
         element: <TeamManagementPage />,
+        hideForOnlyMember: true,
     },
     {
         path: 'homeworks',
         element: <HomeworkPage />,
+        hideForOnlyMember: true,
     },
     {
         path: 'homeworks/:id',
         element: <HomeworkDetailPage />,
+        hideForOnlyMember: true,
     },
     {
         path: 'meetings',

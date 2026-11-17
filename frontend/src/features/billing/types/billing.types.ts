@@ -16,20 +16,36 @@ export const InvoiceStatus = {
 } as const;
 export type InvoiceStatus = Schema<'InvoiceStatus'>;
 
+export const FundCode = {
+  DUT_AI: 'DUT_AI',
+  DUT_MAKER: 'DUT_MAKER',
+} as const;
+export type FundCode = (typeof FundCode)[keyof typeof FundCode];
+
 // OpenAPI Generated Schemas
 export type InvoiceItem = Schema<'InvoiceItemResponse'>;
 export type Invoice = Schema<'InvoiceResponse'> & {
   // Client-compatible optional fields for UI components
+  fund_code?: string;
   user_name?: string | null;
   team_name?: string | null;
   total_amount?: number;
   invoice_code?: string;
 };
 
-export type InvoiceCreate = Schema<'InvoiceCreate'>;
-export type InvoiceUpdate = Schema<'InvoiceUpdate'>;
+export type InvoiceCreate = Omit<Schema<'InvoiceCreate'>, 'team_id'> & {
+  fund_code?: string;
+  team_id?: number | null;
+};
+export type InvoiceUpdate = Omit<Schema<'InvoiceUpdate'>, 'team_id'> & {
+  fund_code?: string;
+  team_id?: number | null;
+};
 export type InvoiceStatusUpdate = Schema<'InvoiceStatusUpdate'>;
-export type MonthlyInvoiceCreate = Schema<'MonthlyInvoiceCreate'>;
+export type MonthlyInvoiceCreate = Omit<Schema<'MonthlyInvoiceCreate'>, 'team_id'> & {
+  fund_code?: string;
+  team_id?: number | null;
+};
 export type MonthlyInvoiceItemPreview = Schema<'MonthlyInvoiceItemPreview'> & {
   extra_items_amount?: number;
   items?: InvoiceItem[];
@@ -43,7 +59,8 @@ export type MonthlyInvoicePreviewResponse = Schema<'MonthlyInvoicePreviewRespons
 export interface CreateInvoiceFormValues {
   user_ids: number[];
   user_id?: number;
-  team_id: number;
+  fund_code?: string;
+  team_id?: number | null;
   billing_period: string;
   description?: string | null;
   items: Array<{
@@ -55,6 +72,8 @@ export interface CreateInvoiceFormValues {
 }
 
 export interface UpdateInvoiceFormValues {
+  fund_code?: string;
+  team_id?: number | null;
   status?: InvoiceStatus;
   description?: string | null;
   items?: Array<{

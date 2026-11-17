@@ -4,7 +4,7 @@ Expense Repository — SQLAlchemy 2.0 infrastructure layer.
 
 from collections.abc import Sequence
 
-from sqlalchemy import extract, func, select
+from sqlalchemy import extract, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.expense.domain.entity import ExpenseInvoice, ExpenseStatus
@@ -43,6 +43,8 @@ class ExpenseRepository:
         status: ExpenseStatus | str | None = None,
         spender_id: int | None = None,
         team_id: int | None = None,
+        fund_code: str | None = None,
+        search: str | None = None,
         limit: int = 100,
         offset: int = 0,
     ) -> Sequence[ExpenseInvoiceModel]:
@@ -66,8 +68,18 @@ class ExpenseRepository:
             stmt = stmt.where(ExpenseInvoiceModel.status == status_str)
         if spender_id is not None:
             stmt = stmt.where(ExpenseInvoiceModel.spender_id == spender_id)
+        if fund_code is not None:
+            stmt = stmt.where(ExpenseInvoiceModel.fund_code == fund_code)
         if team_id is not None:
             stmt = stmt.where(ExpenseInvoiceModel.team_id == team_id)
+        if search and search.strip():
+            search_term = f"%{search.strip()}%"
+            stmt = stmt.where(
+                or_(
+                    ExpenseInvoiceModel.description.ilike(search_term),
+                    ExpenseInvoiceModel.note.ilike(search_term),
+                )
+            )
 
         stmt = stmt.order_by(
             ExpenseInvoiceModel.expense_date.desc(),
@@ -84,6 +96,8 @@ class ExpenseRepository:
         status: ExpenseStatus | str | None = None,
         spender_id: int | None = None,
         team_id: int | None = None,
+        fund_code: str | None = None,
+        search: str | None = None,
         page: int = 1,
         page_size: int = 20,
     ) -> tuple[Sequence[ExpenseInvoiceModel], int]:
@@ -103,8 +117,18 @@ class ExpenseRepository:
             count_stmt = count_stmt.where(ExpenseInvoiceModel.status == status_str)
         if spender_id is not None:
             count_stmt = count_stmt.where(ExpenseInvoiceModel.spender_id == spender_id)
+        if fund_code is not None:
+            count_stmt = count_stmt.where(ExpenseInvoiceModel.fund_code == fund_code)
         if team_id is not None:
             count_stmt = count_stmt.where(ExpenseInvoiceModel.team_id == team_id)
+        if search and search.strip():
+            search_term = f"%{search.strip()}%"
+            count_stmt = count_stmt.where(
+                or_(
+                    ExpenseInvoiceModel.description.ilike(search_term),
+                    ExpenseInvoiceModel.note.ilike(search_term),
+                )
+            )
 
         total = self.session.scalar(count_stmt) or 0
 
@@ -129,8 +153,18 @@ class ExpenseRepository:
             stmt = stmt.where(ExpenseInvoiceModel.status == status_str)
         if spender_id is not None:
             stmt = stmt.where(ExpenseInvoiceModel.spender_id == spender_id)
+        if fund_code is not None:
+            stmt = stmt.where(ExpenseInvoiceModel.fund_code == fund_code)
         if team_id is not None:
             stmt = stmt.where(ExpenseInvoiceModel.team_id == team_id)
+        if search and search.strip():
+            search_term = f"%{search.strip()}%"
+            stmt = stmt.where(
+                or_(
+                    ExpenseInvoiceModel.description.ilike(search_term),
+                    ExpenseInvoiceModel.note.ilike(search_term),
+                )
+            )
 
         stmt = (
             stmt.order_by(
@@ -150,6 +184,7 @@ class ExpenseRepository:
         year: int | None = None,
         spender_id: int | None = None,
         team_id: int | None = None,
+        fund_code: str | None = None,
     ) -> dict[str, int]:
         stmt = select(
             ExpenseInvoiceModel.status,
@@ -164,6 +199,8 @@ class ExpenseRepository:
             stmt = stmt.where(extract("year", ExpenseInvoiceModel.expense_date) == year)
         if spender_id is not None:
             stmt = stmt.where(ExpenseInvoiceModel.spender_id == spender_id)
+        if fund_code is not None:
+            stmt = stmt.where(ExpenseInvoiceModel.fund_code == fund_code)
         if team_id is not None:
             stmt = stmt.where(ExpenseInvoiceModel.team_id == team_id)
 

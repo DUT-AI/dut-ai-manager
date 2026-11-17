@@ -6,9 +6,12 @@ import pytest
 from app.billing.application.use_cases import (
     CreateInvoiceUseCase,
     CreateMonthlyInvoicesUseCase,
+    UpdateInvoiceUseCase,
 )
 from app.billing.domain.entity import (
     Invoice,
+    InvoiceItemType,
+    InvoiceStatus,
 )
 from app.shared.application.response import BadRequestException
 from app.team.domain.entity import Team, TeamMemberInfo
@@ -103,9 +106,51 @@ async def test_create_invoice_requires_team_id():
     assert "chọn nhóm" in str(exc_info.value.message).lower()
 
 
+def test_update_invoice_custom_violation_amount():
+    invoice_repo = MagicMock()
+    existing_invoice = Invoice(
+        id=1,
+        user_id=10,
+        team_id=5,
+        amount=20000,
+        reference_code="DUT123456",
+        billing_period=date(2026, 9, 1),
+        status=InvoiceStatus.PENDING,
+    )
+    invoice_repo.get_by_id.return_value = existing_invoice
+    invoice_repo.save_invoice.side_effect = lambda inv: inv
+
+    uc = UpdateInvoiceUseCase(invoice_repo)
+    updated = uc.execute(
+        invoice_id=1,
+        items_data=[{"item_type": "VIOLATION", "amount": 10000, "note": "Test Violation"}],
+    )
+
+    assert updated.amount == 10000
+    assert len(updated.items) == 1
+    assert updated.items[0].amount == 10000
+    assert updated.items[0].item_type == InvoiceItemType.VIOLATION
+
+
+@pytest.mark.asyncio
+async def test_create_invoice_custom_violation_amount():
+    invoice_repo = MagicMock()
+    invoice_repo.save_invoice.side_effect = lambda inv: inv
+
+    uc = CreateInvoiceUseCase(invoice_repo)
+    invoices = await uc.execute(
+        items_data=[{"item_type": "VIOLATION", "amount": 10000, "note": "Custom"}],
+        billing_period=date(2026, 9, 1),
+        user_id=1,
+        team_id=5,
+    )
+
+    assert len(invoices) == 1
+    assert invoices[0].amount == 10000
+    assert invoices[0].items[0].amount == 10000
+
+
 if __name__ == "__main__":
     test_invoice_entity_requires_team_id()
-    test_create_monthly_invoices_requires_team_id()
-    test_create_monthly_invoices_with_team_id()
-    test_create_invoice_requires_team_id()
-    print("All billing use case tests passed!")
+    test_update_invoice_custom_violation_amount()
+    print("All sync billing use case tests passed!")

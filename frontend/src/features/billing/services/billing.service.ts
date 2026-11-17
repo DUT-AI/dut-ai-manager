@@ -16,7 +16,7 @@ const billingService = {
   },
 
   getAllInvoices: async (
-    filters?: { user_id?: number; team_id?: number; status?: string; billing_period?: string },
+    filters?: { user_id?: number; team_id?: number; fund_code?: string; status?: string; billing_period?: string; search?: string },
     page: number = 1,
     pageSize: number = 20
   ) => {
@@ -28,8 +28,10 @@ const billingService = {
     if (filters) {
       if (filters.user_id !== undefined) apiParams.user_id = filters.user_id;
       if (filters.team_id !== undefined) apiParams.team_id = filters.team_id;
+      if (filters.fund_code !== undefined) apiParams.fund_code = filters.fund_code;
       if (filters.status !== undefined) apiParams.bill_status = filters.status;
       if (filters.billing_period !== undefined) apiParams.billing_period = filters.billing_period;
+      if (filters.search !== undefined && filters.search.trim()) apiParams.search = filters.search.trim();
     }
 
     const response = await axiosInstance.get<ApiResponse<Invoice[]>>("/billing/", {
@@ -45,7 +47,7 @@ const billingService = {
     return response.data;
   },
 
-  getBillingSummary: async (filters?: { user_id?: number; team_id?: number; billing_period?: string }) => {
+  getBillingSummary: async (filters?: { user_id?: number; team_id?: number; fund_code?: string; billing_period?: string }) => {
     const response = await axiosInstance.get<ApiResponse<BillingSummary>>("/billing/summary", {
       params: filters
     });

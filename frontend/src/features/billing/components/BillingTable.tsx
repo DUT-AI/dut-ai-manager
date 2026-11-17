@@ -1,5 +1,5 @@
 import { Table, Space, Avatar, Typography, Tag, Button, Popconfirm, Tooltip, type TablePaginationConfig } from 'antd';
-import { UserOutlined, EyeOutlined, DeleteOutlined, EditOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { UserOutlined, EyeOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { type Invoice, InvoiceStatus } from '@/types';
 import type { UserResponse } from '@/features/users/types/user.types';
@@ -64,11 +64,27 @@ const BillingTable = ({
       }
     },
     {
+      title: 'Quỹ',
+      key: 'fund_code',
+      render: (_: unknown, record: Invoice) => {
+        const isMaker = record.fund_code === 'DUT_MAKER';
+        return (
+          <Tag color={isMaker ? 'purple' : 'cyan'}>
+            {isMaker ? 'DUT Maker' : 'DUT AI'}
+          </Tag>
+        );
+      },
+    },
+    {
       title: 'Nhóm',
       key: 'team',
-      render: (_: unknown, record: Invoice) => (
-        <Tag color="blue">{record.team?.team_name || record.team_name || 'N/A'}</Tag>
-      ),
+      render: (_: unknown, record: Invoice) => {
+        const name = record.team?.team_name || record.team_name;
+        if (!name || name === 'DUT AI' || name === 'DUT Maker') {
+          return <Text type="secondary">-</Text>;
+        }
+        return <Tag color="blue">{name}</Tag>;
+      },
     },
     {
       title: 'Số tiền',
@@ -100,12 +116,6 @@ const BillingTable = ({
       key: 'action',
       render: (_: unknown, record: Invoice) => {
         const isPaid = record.status === InvoiceStatus.PAID;
-        const statusTooltip = !canUpdate
-          ? 'Bạn không có quyền cập nhật trạng thái hóa đơn'
-          : isPaid
-            ? 'Chuyển về chờ thanh toán'
-            : 'Đánh dấu đã nộp tiền';
-
         const editTooltip = !canUpdate
           ? 'Bạn không có quyền chỉnh sửa hóa đơn'
           : 'Sửa hóa đơn';
@@ -118,57 +128,13 @@ const BillingTable = ({
 
         return (
           <Space>
-            <Button
-              icon={<EyeOutlined />}
-              size="small"
-              onClick={() => onViewDetail(record.id)}
-            >
-              Chi tiết
-            </Button>
-
-            {onUpdateStatus && (
-              <Tooltip title={statusTooltip}>
-                <span className="inline-block">
-                  <Popconfirm
-                    title={
-                      isPaid
-                        ? 'Chuyển về Chưa thanh toán?'
-                        : 'Xác nhận bạn này đã nộp tiền?'
-                    }
-                    description={
-                      isPaid
-                        ? 'Hóa đơn sẽ chuyển lại về PENDING.'
-                        : 'Hóa đơn sẽ được đánh dấu đã nộp (PAID).'
-                    }
-                    onConfirm={() =>
-                      onUpdateStatus(
-                        record.id,
-                        isPaid ? InvoiceStatus.PENDING : InvoiceStatus.PAID
-                      )
-                    }
-                    okText="Đồng ý"
-                    cancelText="Hủy"
-                    disabled={!canUpdate}
-                  >
-                    <Button
-                      size="small"
-                      disabled={!canUpdate || updatingStatusId === record.id}
-                      className={
-                        !canUpdate
-                          ? 'opacity-50 cursor-not-allowed'
-                          : isPaid
-                            ? 'text-amber-600 border-amber-300 hover:text-amber-700'
-                            : 'text-emerald-600 border-emerald-300 hover:text-emerald-700'
-                      }
-                      icon={isPaid ? <ClockCircleOutlined /> : <CheckCircleOutlined />}
-                      loading={updatingStatusId === record.id}
-                    >
-                      {isPaid ? 'Hủy gạch nợ' : 'Đã nộp'}
-                    </Button>
-                  </Popconfirm>
-                </span>
-              </Tooltip>
-            )}
+            <Tooltip title="Xem chi tiết">
+              <Button
+                icon={<EyeOutlined />}
+                size="small"
+                onClick={() => onViewDetail(record.id)}
+              />
+            </Tooltip>
 
             <Tooltip title={editTooltip}>
               <span className="inline-block">

@@ -11,6 +11,7 @@ interface AuthContextType {
     logout: () => Promise<void>;
     hasPermission: (permission: string) => boolean;
     isAdminOrLeader: () => boolean;
+    isOnlyMember: () => boolean;
     refreshUser: () => Promise<void>;
 }
 
@@ -70,6 +71,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return roles.includes('admin') || roles.includes('leader');
     };
 
+    const isOnlyMember = (): boolean => {
+        if (!user) return false;
+        const roles = user.role_names?.map((r) => r.trim().toLowerCase()) || [];
+        if (roles.length === 0) return true;
+        const memberAliases = ['teammate', 'member', 'thành viên', 'thanh vien'];
+        return roles.every((r) => memberAliases.includes(r));
+    };
+
     const value = {
         user,
         loading,
@@ -78,6 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         hasPermission,
         isAdminOrLeader,
+        isOnlyMember,
         refreshUser: fetchUser,
     };
 
