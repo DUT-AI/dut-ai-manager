@@ -35,6 +35,16 @@ class UpdateDutyUseCase:
 
         if req.checklist is not None:
             duty.checklist = req.checklist
+            # Tự động cập nhật lại danh sách responsible_ids từ checklist thực tế
+            current_assignee_ids = [
+                item.get("assignee_id")
+                for item in (req.checklist or [])
+                if isinstance(item, dict) and item.get("assignee_id") is not None
+            ]
+            if current_assignee_ids:
+                duty.responsible_ids = list(dict.fromkeys(current_assignee_ids))
+            elif req.checklist == []:
+                duty.responsible_ids = []
         if req.note is not None:
             duty.note = req.note
         if req.duty_date is not None:

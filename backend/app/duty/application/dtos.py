@@ -51,6 +51,23 @@ class DutyResponse(BaseModel):
     rejected_at: datetime | None = None
 
 
+class TeamCandidateMember(BaseModel):
+    id: int
+    name: str
+    email: str | None = None
+    avatar_url: str | None = None
+    served: bool = False
+
+
+class DutyCandidatesResponse(BaseModel):
+    team_id: int
+    team_name: str
+    current_round: int
+    total_members: int
+    all_members: list[TeamCandidateMember] = []
+    available_members: list[TeamCandidateMember] = []
+
+
 class ToggleDutyScheduleRequest(BaseModel):
     duty_date: date
     team_id: int | list[int]
@@ -60,6 +77,8 @@ class ToggleDutyScheduleRequest(BaseModel):
     meeting_id: int | None = None
     checklist: list[dict] | None = None
     note: str | None = None
+    responsible_ids: list[int] | None = None
+    random_round: int | None = None
 
 
 class BatchCreateDutyRequest(BaseModel):

@@ -5,10 +5,19 @@ import type {
   WeeklyDutyClassDto,
   ToggleDutyScheduleRequest,
   BatchCreateDutyRequest,
+  DutyCandidatesResponse,
 } from '../types/duty.types';
 
 export const dutyService = {
   subPath: 'duties',
+
+  async getCandidates(teamId: number) {
+    const response = await axiosInstance.get<ApiResponse<DutyCandidatesResponse>>(
+      `/${this.subPath}/candidates`,
+      { params: { team_id: teamId } }
+    );
+    return response.data;
+  },
 
   async getWeeklySchedule(targetDate?: string) {
     const response = await axiosInstance.get<ApiResponse<WeeklyDutyClassDto[]>>(

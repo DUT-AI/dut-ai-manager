@@ -76,12 +76,26 @@ class CheckOverdueDutiesUseCase:
                 elif team and team.members:
                     team_member_ids.update(m.user_id for m in team.members if m.user_id)
 
+            # Lấy danh sách bạn chịu trách nhiệm thực tế từ ca trực
+            assigned_user_ids: list[int] = []
+            if duty.checklist:
+                # Chỉ lấy những bạn được phân công đầu việc nhưng CHƯA hoàn thành (chưa tick / chưa approved)
+                for item in duty.checklist:
+                    a_id = item.get("assignee_id")
+                    if a_id and not item.get("checked") and item.get("status") != "APPROVED":
+                        assigned_user_ids.append(a_id)
+            elif duty.responsible_ids:
+                assigned_user_ids = list(duty.responsible_ids)
+
             # Trường hợp 1: Có liên kết với Meeting
             if duty.meeting_id:
                 meeting = self.meeting_repo.get_by_id(duty.meeting_id)
                 if meeting and meeting.participants:
                     candidates: list[int] = []
                     meeting_creator_id = getattr(meeting, "created_by", None)
+
+                    # Ưu tiên xét đúng những bạn được phân công mà chưa hoàn thành
+                    target_scope_ids = set(assigned_user_ids) if assigned_user_ids else team_member_ids
 
                     for p in meeting.participants:
                         # 1. Bỏ qua nếu participant đã bị xóa
@@ -99,8 +113,8 @@ class CheckOverdueDutiesUseCase:
                         ):
                             continue
 
-                        # 4. Phải có check_in_at thực tế (bao gồm cả học viên chính thức và học viên nhóm khác đổi lớp/học bù có mặt tại phòng Lab)
-                        if p.check_in_at is not None:
+                        # 4. Phải có check_in_at thực tế và nằm trong danh sách chưa hoàn thành nhiệm vụ
+                        if p.check_in_at is not None and p.user_id in target_scope_ids:
                             candidates.append(p.user_id)
 
                     # Loại bỏ trùng lặp user_id
@@ -119,7 +133,9 @@ class CheckOverdueDutiesUseCase:
 
             # Trường hợp 2: Ca trực độc lập không có meeting
             else:
-                if team_member_ids:
+                if assigned_user_ids:
+                    penalized_user_ids = list(dict.fromkeys(assigned_user_ids))
+                elif team_member_ids:
                     penalized_user_ids = list(team_member_ids)
 
                 if not penalized_user_ids:

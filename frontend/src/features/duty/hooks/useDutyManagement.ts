@@ -66,6 +66,8 @@ export const useDutyManagement = () => {
       end_time?: string | null;
       checklist?: DutyChecklistItem[];
       note?: string | null;
+      responsible_ids?: number[];
+      random_round?: number;
     }
   ) => {
     try {

@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 
 class CleaningDutyModel(SQLAlchemyAuditTimestampMixin, Base):
-    """ORM mapping to 'cleaning_duties' table."""
+    """ORM mapping to 'cleaning_duties' table with responsible members support."""
 
     __tablename__ = "cleaning_duties"
     __table_args__ = (
@@ -39,6 +39,10 @@ class CleaningDutyModel(SQLAlchemyAuditTimestampMixin, Base):
     status: Mapped[str] = mapped_column(
         String(50), nullable=False, default=DutyStatus.PENDING.value
     )
+
+    # Responsible members and round tracking
+    responsible_ids: Mapped[list[int]] = mapped_column(JSONB, nullable=False, default=list)
+    random_round: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
     # Nội dung công việc trực nhật hôm đó (mặc định + tạo thêm)
     checklist: Mapped[list[dict]] = mapped_column(JSONB, nullable=False, default=list)
@@ -98,6 +102,8 @@ class CleaningDutyModel(SQLAlchemyAuditTimestampMixin, Base):
             meeting_id=self.meeting_id,
             meeting_title=meeting_title,
             status=DutyStatus(self.status),
+            responsible_ids=list(self.responsible_ids or []),
+            random_round=self.random_round or 1,
             checklist=list(self.checklist or []),
             note=self.note,
             evidence_image_urls=list(self.evidence_image_urls or []),

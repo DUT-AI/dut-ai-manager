@@ -41,6 +41,35 @@ class CleaningDuty(BaseAuditEntity):
     meeting_id: int | None = None
     meeting_title: str | None = None
 
+    # New fields for responsible members and random round
+    responsible_ids: list[int] = Field(default_factory=list)
+    random_round: int = 1
+
+    status: DutyStatus = DutyStatus.PENDING
+
+    @field_validator("team_id", mode="before")
+    @classmethod
+    def parse_team_id(cls, v: Any) -> list[int]:
+        if isinstance(v, int):
+            return [v]
+        if isinstance(v, (list, tuple, set)):
+            return [int(x) for x in v]
+        if v is None:
+            return []
+        return [int(v)]
+
+    # ... rest of the file unchanged ...
+    """Domain Entity representing a Cleaning Duty task."""
+
+    duty_date: date
+    start_time: time | None = None
+    end_time: time | None = None
+    team_id: list[int] = Field(default_factory=list)
+    team_name: str | None = None
+    team_names: list[str] = Field(default_factory=list)
+    meeting_id: int | None = None
+    meeting_title: str | None = None
+
     status: DutyStatus = DutyStatus.PENDING
 
     @field_validator("team_id", mode="before")
