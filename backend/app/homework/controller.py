@@ -88,8 +88,8 @@ async def rescan_all_homeworks(
     rescan_use_case: FromDishka[RescanAllHomeworksUseCase],
     dry_run: bool = Query(False, description="Chạy thử nghiệm không lưu DB"),
 ):
-    """Admin API: Quét lại toàn bộ bài tập (cũ & mới) và tạo lại vi phạm chuẩn"""
-    count = await rescan_use_case.execute(auto_sync_legacy=not dry_run)
+    """Admin API: Quét lại toàn bộ bài tập quá hạn và phát sự kiện vi phạm"""
+    count = 0 if dry_run else await rescan_use_case.execute()
     return ApiResponse.success(
         data={
             "message": "Rescan completed",
@@ -327,22 +327,6 @@ async def receive_submission_webhook(
 
     res = await record_uc.execute(payload)
     return ApiResponse.success(data=res)
-
-
-@router.get(
-    "/{homework_id}/my-submissions",
-    response_model=ApiResponse[list[HomeworkSubmissionDetailResponse]],
-    dependencies=[hasPermission(HomeworkPermission.READ)],
-)
-@inject
-async def get_my_homework_submissions(
-    homework_id: int,
-    current_user: CurrentUser,
-    use_case: FromDishka[GetUserHomeworkSubmissionsUseCase],
-):
-    """Lấy danh sách lịch sử tất cả các lần nộp bài (Audit log) của học viên đang đăng nhập."""
-    submissions = await use_case.execute(homework_id, current_user.user_id)
-    return ApiResponse.success(data=submissions)
 
 
 @router.get(

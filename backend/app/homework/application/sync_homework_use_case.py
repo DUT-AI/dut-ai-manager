@@ -296,53 +296,10 @@ class SyncHomeworkFromQuizUseCase:
                             )
                         )
                         synced += 1
-            else:
-                synced_legacy = await self._sync_coding_legacy(homework_id, slug)
-                synced += synced_legacy
         except Exception as e:
             logger.warning(f"Error syncing coding submissions for slug={slug}: {e}")
 
         return synced, updated
-
-    async def _sync_coding_legacy(self, homework_id: int, slug: str) -> int:
-        """Fallback sang completed-members nếu submissions-for-sync không khả dụng."""
-        synced = 0
-        coding_map = await QuizSubmissionHelper.get_coding_completed_map(
-            self.quiz_api, slug
-        )
-        if not coding_map:
-            return 0
-
-        for uid, entry in coding_map.items():
-            if uid >= 1_000_000:
-                continue
-
-            raw_sub_at = entry.get("submitted_at") or entry.get("completed_at")
-            sub_time = parse_datetime_to_utc(raw_sub_at)
-            if not sub_time:
-                continue
-
-            existing = self.homework_submission_repo.find_submission_match(
-                homework_id,
-                uid,
-                SubmissionType.CODING,
-                submitted_at=sub_time,
-            )
-            if not existing:
-                self.homework_submission_repo.add_submission(
-                    HomeworkSubmission.create_coding(
-                        homework_id=homework_id,
-                        user_id=uid,
-                        exercise_id=f"sync-legacy-{homework_id}-{uid}",
-                        submitted_at=sub_time,
-                        is_passed=True,
-                        details={
-                            "source": "manual_sync",
-                        },
-                    )
-                )
-                synced += 1
-        return synced
 
     async def _sync_game_submissions(
         self, homework_id: int, slug: str
@@ -419,56 +376,7 @@ class SyncHomeworkFromQuizUseCase:
                             )
                         )
                         synced += 1
-            else:
-                synced_legacy = await self._sync_game_legacy(homework_id, slug)
-                synced += synced_legacy
         except Exception as e:
             logger.warning(f"Error syncing game sessions for slug={slug}: {e}")
 
         return synced, updated
-
-    async def _sync_game_legacy(self, homework_id: int, slug: str) -> int:
-        """Fallback sang leaderboard nếu sessions-for-sync không khả dụng."""
-        synced = 0
-        leaderboard = await self.quiz_api.get_game_leaderboard(slug)
-        if not leaderboard:
-            return 0
-
-        for row in leaderboard:
-            uid = row.get("user_id")
-            if not uid or uid >= 1_000_000:
-                continue
-
-            is_completed = row.get("is_completed", False)
-            total_q = row.get("total_questions", 0)
-            ans_q = row.get("answered_questions", 0)
-
-            if is_completed and total_q > 0 and ans_q >= total_q:
-                raw_sub_at = row.get("completed_at") or row.get("submitted_at")
-                sub_time = parse_datetime_to_utc(raw_sub_at)
-                if not sub_time:
-                    continue
-
-                existing = self.homework_submission_repo.find_submission_match(
-                    homework_id,
-                    uid,
-                    SubmissionType.GAME,
-                    submitted_at=sub_time,
-                )
-                if not existing:
-                    self.homework_submission_repo.add_submission(
-                        HomeworkSubmission.create_game(
-                            homework_id=homework_id,
-                            user_id=uid,
-                            submitted_at=sub_time,
-                            is_passed=True,
-                            details={
-                                "final_score": row.get("final_score", 0),
-                                "gold": row.get("gold", 0),
-                                "attempt_count": row.get("attempt_count", 1),
-                                "source": "manual_sync",
-                            },
-                        )
-                    )
-                    synced += 1
-        return synced

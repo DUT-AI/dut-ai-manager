@@ -65,9 +65,9 @@ async def run_sync_and_rescan(dry_run: bool = False) -> None:
                     logger.info(
                         "ℹ️ Running in DRY-RUN mode. No changes will be committed."
                     )
-                    count = await use_case.execute(auto_sync_legacy=False)
+                    count = 0
                 else:
-                    count = await use_case.execute(auto_sync_legacy=True)
+                    count = await use_case.execute()
                 logger.info(
                     f"✅ [Rescan & Sync Job] Completed - Violations processed: {count}"
                 )

@@ -441,15 +441,6 @@ def test_receive_submission_webhook_success_game(
     assert data["is_success"] is True
 
 
-def test_get_my_homework_submissions(admin_client, test_homework):
-    """Lấy lịch sử tất cả các lần nộp bài của chính học viên hiện tại."""
-    res = admin_client.get(f"/api/v1/homeworks/{test_homework['id']}/my-submissions")
-    assert res.status_code == 200
-    data = res.json()
-    assert data["is_success"] is True
-    assert isinstance(data["data"], list)
-
-
 def test_get_user_homework_submissions(admin_client, test_homework, mock_current_user):
     """Admin lấy lịch sử tất cả các lần nộp bài của một học viên cụ thể."""
     res = admin_client.get(

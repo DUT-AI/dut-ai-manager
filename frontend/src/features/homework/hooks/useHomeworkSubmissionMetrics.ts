@@ -36,54 +36,8 @@ const EMPTY_CATEGORY_STATUS: CategoryStatus = {
   not_submitted: [],
 };
 
-function pickByRequirements(
-  hasCoding: boolean,
-  hasGame: boolean,
-  codingValue: number,
-  gameValue: number,
-): number {
-  if (hasCoding && !hasGame) return codingValue;
-  if (!hasCoding && hasGame) return gameValue;
-  return Math.max(codingValue, gameValue);
-}
-
-function resolveTotalSubmitted(
-  statusData: HomeworkSubmissionStatus | null | undefined,
-  hasCoding: boolean,
-  hasGame: boolean,
-  codingSubmittedCount: number,
-  gameSubmittedCount: number,
-): number {
-  if (statusData?.total_completed_count != null) {
-    return statusData.total_completed_count;
-  }
-
-  return pickByRequirements(hasCoding, hasGame, codingSubmittedCount, gameSubmittedCount);
-}
-
-function resolveTotalAssigned(
-  homework: HomeworkRequirementsSource,
-  statusData: HomeworkSubmissionStatus | null | undefined,
-  hasCoding: boolean,
-  hasGame: boolean,
-  codingTotalCount: number,
-  gameTotalCount: number,
-): number {
-  if (statusData?.students?.length) {
-    return statusData.students.length;
-  }
-
-  const assigneeIds = homework && 'assignee_ids' in homework ? homework.assignee_ids : undefined;
-  if (assigneeIds?.length) {
-    return assigneeIds.length;
-  }
-
-  return pickByRequirements(hasCoding, hasGame, codingTotalCount, gameTotalCount);
-}
-
 /**
- * Computes submission metrics (coding, game, overall progress) from a homework and its submission status.
- * Prefers backend SSOT aggregates (`total_completed_count`, `students`) and falls back to category counts.
+ * Computes submission metrics (coding, game, overall progress) directly from backend SSOT fields.
  */
 export function useHomeworkSubmissionMetrics(
   homework: HomeworkRequirementsSource,
@@ -102,22 +56,10 @@ export function useHomeworkSubmissionMetrics(
     const gameSubmittedCount = gameStatus.submitted.length;
     const gameTotalCount = gameSubmittedCount + gameStatus.not_submitted.length;
 
-    const totalSubmitted = resolveTotalSubmitted(
-      statusData,
-      hasCoding,
-      hasGame,
-      codingSubmittedCount,
-      gameSubmittedCount,
-    );
-
-    const totalAssigned = resolveTotalAssigned(
-      homework,
-      statusData,
-      hasCoding,
-      hasGame,
-      codingTotalCount,
-      gameTotalCount,
-    );
+    const totalSubmitted = statusData?.total_completed_count ?? 0;
+    const assigneeCount =
+      homework && 'assignee_ids' in homework ? (homework.assignee_ids?.length ?? 0) : 0;
+    const totalAssigned = statusData?.students?.length ?? assigneeCount;
 
     const submissionPercent =
       totalAssigned > 0 ? Math.round((totalSubmitted / totalAssigned) * 100) : 0;

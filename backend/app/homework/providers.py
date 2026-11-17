@@ -318,16 +318,12 @@ class HomeworkModuleProvider(Provider):
         homework_submission_repo: HomeworkSubmissionRepositoryPort,
         homework_assignee_repo: HomeworkAssigneeRepositoryPort,
         homework_exercise_repo: HomeworkExerciseRepositoryPort,
-        user_repo: UserRepository,
-        quiz_api: QuizApiClient,
     ) -> RescanAllHomeworksUseCase:
         return RescanAllHomeworksUseCase(
             homework_repo=homework_repo,
             homework_submission_repo=homework_submission_repo,
             homework_assignee_repo=homework_assignee_repo,
             homework_exercise_repo=homework_exercise_repo,
-            user_repo=user_repo,
-            quiz_api=quiz_api,
         )
 
     @provide

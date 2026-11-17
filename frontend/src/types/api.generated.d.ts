@@ -1169,26 +1169,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/homeworks/{homework_id}/my-submissions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get My Homework Submissions
-         * @description Lấy danh sách lịch sử tất cả các lần nộp bài (Audit log) của học viên đang đăng nhập.
-         */
-        get: operations["get_my_homework_submissions_api_v1_homeworks__homework_id__my_submissions_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/homeworks/{homework_id}/users/{user_id}/submissions": {
         parameters: {
             query?: never;
@@ -9022,37 +9002,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_HomeworkWebhookResponse_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_my_homework_submissions_api_v1_homeworks__homework_id__my_submissions_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                homework_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_list_HomeworkSubmissionDetailResponse__"];
                 };
             };
             /** @description Validation Error */
