@@ -57,11 +57,9 @@ export const HomeworkPage: React.FC = () => {
         state,
         dispatch,
         data,
-        user,
         hasPermission,
-        isAdminOrLeader,
         handlers
-    } = useHomeworkActions(activeTab, { page, pageSize });
+    } = useHomeworkActions({ page, pageSize });
 
     const {
         isFormModalOpen,
@@ -170,7 +168,6 @@ export const HomeworkPage: React.FC = () => {
                     dataSource={dataSource}
                     loading={loading}
                     emptyText={emptyText}
-                    activeTab={activeTab}
                     onViewDetail={(record) => navigate(`/dashboard/homeworks/${record.id}`)}
                     handlers={handlers}
                 />

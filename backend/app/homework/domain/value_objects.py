@@ -14,21 +14,6 @@ class AssigneeUserInfo(NamedTuple):
     deadline: datetime
 
 
-class ScoreDetail(BaseModel):
-    id: int
-    criterion: str
-    status: bool
-    description: str
-    weight: float
-
-
-class HomeworkStatus(StrEnum):
-    NOT_SUBMITTED = "NOT_SUBMITTED"
-    SUBMITTED = "SUBMITTED"
-    LEADER_CHECKED = "LEADER_CHECKED"
-    FINISHED = "FINISHED"
-
-
 class CompletionStatus(StrEnum):
     """Mức độ hoàn thành bài tập (độc lập với tính đúng hạn)."""
 
@@ -49,12 +34,6 @@ class TimelinessStatus(StrEnum):
 class HomeworkAssigned(DomainEvent):
     homework_id: int
     assignee_ids: list[int]
-
-
-class HomeworkSubmitted(DomainEvent):
-    homework_id: int
-    user_id: int
-    is_late: bool
 
 
 class HomeworkGraded(DomainEvent):

@@ -200,7 +200,7 @@ async def create_homework(
 ):
     result = await create_uc.execute(data)
     return ApiResponse.success(
-        data=HomeworkResponse.from_entity(result, deadline=data.deadline)
+        data=HomeworkResponse.from_domain(result, deadline=data.deadline)
     )
 
 
@@ -288,7 +288,7 @@ async def update_homework(
         )
         effective_dl = min_deadlines.get(result.id)
     return ApiResponse.success(
-        data=HomeworkResponse.from_entity(result, deadline=effective_dl)
+        data=HomeworkResponse.from_domain(result, deadline=effective_dl)
     )
 
 

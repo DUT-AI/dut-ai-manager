@@ -85,20 +85,6 @@ class HomeworkAssigneeRepositoryPort(ABC):
         ...
 
     @abstractmethod
-    def add_assignees(
-        self, homework_id: int, user_ids: list[int], deadline: datetime
-    ) -> None:
-        """Thêm học viên vào bài tập."""
-        ...
-
-    @abstractmethod
-    def remove_assignees(
-        self, homework_id: int, user_ids: list[int]
-    ) -> None:
-        """Xóa học viên khỏi bài tập."""
-        ...
-
-    @abstractmethod
     def get_distinct_past_deadline_dates(
         self, before_date: date
     ) -> list[date]:

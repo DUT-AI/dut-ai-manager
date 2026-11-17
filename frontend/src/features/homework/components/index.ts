@@ -10,7 +10,6 @@ export { SubmissionHistoryModal } from './SubmissionHistoryModal';
 export { UserSubmissionCard } from './UserSubmissionCard';
 export { UserSubmissionCategoryView } from './UserSubmissionCategoryView';
 export { HomeworkOverviewStats } from './HomeworkOverviewStats';
-export { MySubmissionTimeline } from './MySubmissionTimeline';
 export { UnifiedSubmissionTimeline } from './UnifiedSubmissionTimeline';
 export { SubmissionItemCard } from './SubmissionItemCard';
 export { ExerciseProgressOverview } from './ExerciseProgressOverview';

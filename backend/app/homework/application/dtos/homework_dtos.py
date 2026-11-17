@@ -84,8 +84,6 @@ class HomeworkResponse(HomeworkBase):
             has_game=hw.requires_game,
         )
 
-    from_entity = from_domain
-
     @classmethod
     def from_evaluation(
         cls,
@@ -157,8 +155,6 @@ class HomeworkResponseDetail(HomeworkResponse):
             assignee_ids=assignee_ids or [],
             coding_exercises=coding_exercises or [],
         )
-
-    from_entity = from_domain
 
 
 class MyHomeworksStats(BaseModel):

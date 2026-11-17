@@ -93,45 +93,6 @@ class HomeworkRepository(HomeworkRepositoryPort):
         models = self.session.scalars(statement).all()
         return [m.to_entity() for m in models], total
 
-    def get_assigned_to_user_paged(
-        self,
-        user_id: int,
-        page: int = 1,
-        page_size: int = 20,
-        deleted: bool = False,
-    ) -> tuple[list[HomeworkEntity], int]:
-        """Get paginated homeworks assigned to a specific user directly via SQL JOIN."""
-        count_stmt = (
-            select(func.count(HomeworkModel.id))
-            .join(
-                HomeworkAssigneeModel,
-                HomeworkModel.id == HomeworkAssigneeModel.homework_id,
-            )
-            .where(
-                HomeworkAssigneeModel.user_id == user_id,
-            )
-        )
-        total = self.session.scalar(count_stmt) or 0
-        if total == 0:
-            return [], 0
-
-        offset = (page - 1) * page_size
-        statement = (
-            select(HomeworkModel)
-            .join(
-                HomeworkAssigneeModel,
-                HomeworkModel.id == HomeworkAssigneeModel.homework_id,
-            )
-            .where(
-                HomeworkAssigneeModel.user_id == user_id,
-            )
-            .order_by(desc(HomeworkModel.created_at))
-            .offset(offset)
-            .limit(page_size)
-        )
-        models = self.session.scalars(statement).all()
-        return [m.to_entity() for m in models], total
-
     def get_all_assigned_to_user(
         self,
         user_id: int,

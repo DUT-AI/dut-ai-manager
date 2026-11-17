@@ -163,23 +163,3 @@ class InMemoryHomeworkSubmissionRepository(HomeworkSubmissionRepositoryPort):
                     return s
 
         return None
-
-    def get_submissions_by_exercise(
-        self, homework_id: int, exercise_id: str
-    ) -> list[HomeworkSubmission]:
-        items = [
-            s
-            for s in self._submissions
-            if s.homework_id == homework_id and s.exercise_id == exercise_id
-        ]
-        items.sort(key=lambda x: x.submitted_at, reverse=True)
-        return items
-
-    def get_submitted_exercise_ids(
-        self, homework_id: int, user_id: int
-    ) -> set[str]:
-        return {
-            s.exercise_id
-            for s in self.get_submissions_by_user(homework_id, user_id)
-            if s.exercise_id and s.is_passed
-        }

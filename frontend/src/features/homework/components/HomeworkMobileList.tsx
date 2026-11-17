@@ -14,7 +14,6 @@ interface HomeworkMobileListProps {
     dataSource: Homework[];
     loading: boolean;
     emptyText?: string;
-    activeTab: string;
     onViewDetail?: (homework: Homework) => void;
     handlers: {
         handleOpenEdit: (homework: Homework) => void;
@@ -26,7 +25,6 @@ export const HomeworkMobileList: React.FC<HomeworkMobileListProps> = ({
     dataSource,
     loading,
     emptyText,
-    activeTab,
     onViewDetail,
     handlers
 }) => {

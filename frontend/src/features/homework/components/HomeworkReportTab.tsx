@@ -15,7 +15,7 @@ import { useUnsubmittedReport, useUnsubmittedByUser } from '@/features/homework/
 import type { HomeworkReportResponse, Homework } from '@/features/homework/types/homework.types';
 import type { ColumnsType } from 'antd/es/table';
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 const { useBreakpoint } = Grid;
 
 export const HomeworkReportTab: React.FC = () => {

@@ -270,25 +270,6 @@ class HomeworkAssigneeRepository(HomeworkAssigneeRepositoryPort):
         )
         return list(self.session.scalars(statement).all())
 
-    def get_assigned_homework_ids_for_users(
-        self, user_ids: list[int]
-    ) -> dict[int, set[int]]:
-        """Lấy mapping user_id -> set[homework_id] cho nhiều users trong 1 query duy nhất."""
-        if not user_ids:
-            return {}
-        statement = (
-            select(HomeworkAssigneeModel.user_id, HomeworkAssigneeModel.homework_id)
-            .join(HomeworkModel, HomeworkAssigneeModel.homework_id == HomeworkModel.id)
-            .where(
-                HomeworkAssigneeModel.user_id.in_(user_ids),
-            )
-        )
-        rows = self.session.execute(statement).all()
-        user_hw_map: dict[int, set[int]] = {uid: set() for uid in user_ids}
-        for uid, hw_id in rows:
-            user_hw_map.setdefault(uid, set()).add(hw_id)
-        return user_hw_map
-
     def get_user_deadlines_for_homeworks(
         self, homework_ids: list[int], user_id: int
     ) -> dict[int, datetime]:
@@ -327,37 +308,6 @@ class HomeworkAssigneeRepository(HomeworkAssigneeRepositoryPort):
         )
         rows = self.session.execute(statement).all()
         return {r[0]: r[1] for r in rows if r[1] is not None}
-
-    def add_assignees(
-        self,
-        homework_id: int,
-        user_ids: list[int],
-        deadline: datetime,
-    ) -> None:
-        """Thêm các assignee mới nếu chưa tồn tại."""
-        clean_dl = ensure_utc(deadline)
-        existing = self.get_assigned_user_ids(homework_id)
-        for uid in set(user_ids):
-            if uid not in existing:
-                self.session.add(
-                    HomeworkAssigneeModel(
-                        homework_id=homework_id, user_id=uid, deadline=clean_dl
-                    )
-                )
-        self.session.flush()
-
-    def remove_assignees(self, homework_id: int, user_ids: list[int]) -> None:
-        """Xóa assignee khỏi bài tập."""
-        if not user_ids:
-            return
-        statement = select(HomeworkAssigneeModel).where(
-            HomeworkAssigneeModel.homework_id == homework_id,
-            HomeworkAssigneeModel.user_id.in_(user_ids),
-        )
-        assignees = self.session.scalars(statement).all()
-        for a in assignees:
-            self.session.delete(a)
-        self.session.flush()
 
     def get_distinct_past_deadline_dates(self, before_date: date) -> list[date]:
         """Lấy danh sách các ngày có deadline trong quá khứ theo giờ VN."""

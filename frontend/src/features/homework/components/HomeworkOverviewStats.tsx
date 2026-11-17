@@ -11,12 +11,6 @@ export interface HomeworkOverviewStatsProps {
     submissionPercent: number;
     totalSubmitted: number;
     totalAssigned: number;
-    hasCoding?: boolean;
-    hasGame?: boolean;
-    codingSubmittedCount?: number;
-    codingTotalCount?: number;
-    gameSubmittedCount?: number;
-    gameTotalCount?: number;
 }
 
 export const HomeworkOverviewStats: React.FC<HomeworkOverviewStatsProps> = ({

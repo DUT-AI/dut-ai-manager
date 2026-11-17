@@ -5,7 +5,6 @@ from app.homework.domain.entity import (
     GameHomeworkSubmission,
     Homework,
     HomeworkExercise,
-    SubmissionType,
 )
 from app.homework.domain.value_objects import CompletionStatus, TimelinessStatus
 
@@ -269,30 +268,3 @@ def test_pure_domain_not_started_upcoming_vs_overdue():
     assert overdue.timeliness_status == TimelinessStatus.OVERDUE
     assert overdue.is_submitted is False
     assert overdue.is_overdue is True
-
-
-def test_pure_domain_index_submissions_grouping():
-    """Kiểm tra Aggregate Root lập chỉ mục bài nộp chính xác theo học viên và bài con."""
-    hw = Homework(id=4, title="Indexing Test")
-
-    sub_ex1 = CodingHomeworkSubmission.create_coding(
-        homework_id=4,
-        user_id=101,
-        exercise_id="task-1",
-        submitted_at=datetime.now(UTC),
-        is_passed=True,
-    )
-    sub_game = GameHomeworkSubmission.create_game(
-        homework_id=4,
-        user_id=101,
-        submitted_at=datetime.now(UTC),
-        is_passed=True,
-    )
-
-    ex_map, general_map, game_map = hw.index_submissions([sub_ex1, sub_game])
-
-    assert (101, "task-1") in ex_map
-    assert ex_map[(101, "task-1")].submission_type == SubmissionType.CODING
-    assert 101 in general_map
-    assert 101 in game_map
-    assert game_map[101].submission_type == SubmissionType.GAME

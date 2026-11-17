@@ -202,39 +202,3 @@ class HomeworkSubmissionRepository(HomeworkSubmissionRepositoryPort):
         if str(model.submission_type).upper() == "GAME":
             return GameSubmissionDetails(**current_dict)
         return CodingSubmissionDetails(**current_dict)
-
-    def get_submissions_by_exercise(
-        self, homework_id: int, exercise_id: str
-    ) -> list[HomeworkSubmissionEntity]:
-        """Get all submissions for a specific exercise under a homework."""
-        statement = (
-            select(HomeworkSubmissionModel)
-            .where(
-                HomeworkSubmissionModel.homework_id == homework_id,
-                HomeworkSubmissionModel.exercise_id == exercise_id,
-            )
-            .order_by(desc(HomeworkSubmissionModel.submitted_at))
-        )
-        models = self.session.scalars(statement).all()
-        return [m.to_entity() for m in models]
-
-    def get_submitted_exercise_ids(
-        self,
-        homework_id: int,
-        user_id: int,
-        deadline: datetime | None = None,
-    ) -> set[str]:
-        """Get set of unique passed exercise_ids submitted by a user for a homework."""
-        statement = select(HomeworkSubmissionModel.exercise_id).where(
-            HomeworkSubmissionModel.homework_id == homework_id,
-            HomeworkSubmissionModel.user_id == user_id,
-            func.upper(HomeworkSubmissionModel.submission_type) == "CODING",
-            HomeworkSubmissionModel.is_passed == True,
-            HomeworkSubmissionModel.exercise_id.is_not(None),
-        )
-        if deadline is not None:
-            statement = statement.where(
-                HomeworkSubmissionModel.submitted_at <= deadline
-            )
-        results = self.session.scalars(statement).all()
-        return {str(eid) for eid in results if eid}

@@ -15,6 +15,22 @@ import asyncio
 from loguru import logger
 from sqlalchemy.orm import Session
 
+# Register all SQLAlchemy ORM models so cross-module relationships (e.g. UserModel -> MeetingParticipant) resolve cleanly
+import app.auth.infrastructure.model  # noqa: F401
+import app.billing.infrastructure.model  # noqa: F401
+import app.bonus_point.infrastructure.model  # noqa: F401
+import app.chatbot.infrastructure.models  # noqa: F401
+import app.duty.infrastructure.model  # noqa: F401
+import app.expense.infrastructure.model  # noqa: F401
+import app.homework.infrastructure.model  # noqa: F401
+import app.meeting.infrastructure.model  # noqa: F401
+import app.permission_request.infrastructure.model  # noqa: F401
+import app.rbac.infrastructure.model  # noqa: F401
+import app.reminder.infrastructure.model  # noqa: F401
+import app.team.infrastructure.model  # noqa: F401
+import app.user.infrastructure.model  # noqa: F401
+import app.user.infrastructure.monthly_stats_model  # noqa: F401
+import app.violation.infrastructure.model  # noqa: F401
 from app.homework.application.backfill_homework_exercises_use_case import (
     BackfillHomeworkExercisesUseCase,
 )

@@ -45,11 +45,6 @@ class CheckOverdueHomeworkUseCase:
         self.homework_exercise_repo = homework_exercise_repo
         self.event_bus = event_bus
 
-    def _get_effective_assigned_user_ids(self, homework: HomeworkEntity) -> set[int]:
-        if not homework.id:
-            return set()
-        return self.homework_assignee_repo.get_assigned_user_ids(homework.id)
-
     def _evaluate_assignment(
         self,
         assignment: DueHomeworkAssignment,

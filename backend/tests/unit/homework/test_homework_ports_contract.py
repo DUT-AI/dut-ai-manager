@@ -108,7 +108,6 @@ def test_in_memory_submission_repo_append_only_fidelity():
     saved = repo.add_submission(sub1)
     assert saved.id == 1
     assert len(repo.get_submissions_by_user(10, 42)) == 1
-    assert repo.get_submitted_exercise_ids(10, 42) == {"ex-1"}
 
     # Match cùng external_submission_id -> tìm thấy
     matched_same = repo.find_submission_match(

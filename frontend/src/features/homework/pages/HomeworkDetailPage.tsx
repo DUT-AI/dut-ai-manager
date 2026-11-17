@@ -32,6 +32,7 @@ import {
   useHomeworkSubmissionStatus,
   useSyncHomeworkFromQuiz,
 } from '../hooks/useHomeworks';
+import { useHomeworkSubmissionMetrics } from '../hooks/useHomeworkSubmissionMetrics';
 import type { UserSubmissionInfo } from '../types/homework.types';
 import { HomeworkOverviewStats } from '../components/HomeworkOverviewStats';
 import { ExerciseCompletionStats } from '../components/ExerciseCompletionStats';
@@ -67,8 +68,9 @@ export const HomeworkDetailPage: React.FC = () => {
       const res = await syncMutation.mutateAsync(homeworkId);
       message.success(res?.message || 'Đồng bộ từ Quiz thành công!');
       refetch();
-    } catch (error: any) {
-      message.error(error?.response?.data?.message || 'Đồng bộ từ Quiz thất bại');
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      message.error(err?.response?.data?.message || 'Đồng bộ từ Quiz thất bại');
     }
   };
 
@@ -76,46 +78,19 @@ export const HomeworkDetailPage: React.FC = () => {
     setHistoryUser(user);
   };
 
-  // Chuẩn bị dữ liệu Coding & Game
-  const codingStatus = useMemo(() => {
-    return statusData?.coding ?? { submitted: [], not_submitted: [] };
-  }, [statusData]);
-
-  const gameStatus = useMemo(() => {
-    return statusData?.game ?? { submitted: [], not_submitted: [] };
-  }, [statusData]);
-
-  const hasCoding = homework?.requires_coding ?? true;
-  const hasGame = homework?.requires_game ?? false;
-
-  const codingSubmittedCount = codingStatus.submitted.length;
-  const codingTotalCount = codingSubmittedCount + codingStatus.not_submitted.length;
-
-  const gameSubmittedCount = gameStatus.submitted.length;
-  const gameTotalCount = gameSubmittedCount + gameStatus.not_submitted.length;
-
-  // SSOT: Lấy số lượng học viên hoàn thành trọn vẹn từ statusData backend
-  const totalSubmitted =
-    statusData?.total_completed_count ??
-    (hasCoding && !hasGame
-      ? codingSubmittedCount
-      : !hasCoding && hasGame
-        ? gameSubmittedCount
-        : Math.max(codingSubmittedCount, gameSubmittedCount));
-
-  const totalAssigned =
-    statusData?.students && statusData.students.length > 0
-      ? statusData.students.length
-      : homework?.assignee_ids && homework.assignee_ids.length > 0
-        ? homework.assignee_ids.length
-        : hasCoding && !hasGame
-          ? codingTotalCount
-          : !hasCoding && hasGame
-            ? gameTotalCount
-            : Math.max(codingTotalCount, gameTotalCount);
-
-  const submissionPercent =
-    totalAssigned > 0 ? Math.round((totalSubmitted / totalAssigned) * 100) : 0;
+  const {
+    hasCoding,
+    hasGame,
+    codingStatus,
+    gameStatus,
+    codingSubmittedCount,
+    codingTotalCount,
+    gameSubmittedCount,
+    gameTotalCount,
+    totalSubmitted,
+    totalAssigned,
+    submissionPercent,
+  } = useHomeworkSubmissionMetrics(homework, statusData);
 
   // Tabs for Submissions
   const tabItems = useMemo(() => {
@@ -328,12 +303,6 @@ export const HomeworkDetailPage: React.FC = () => {
         {/* Overview Stats */}
         <div className="pt-4 space-y-4">
           <HomeworkOverviewStats
-            hasCoding={hasCoding}
-            hasGame={hasGame}
-            codingSubmittedCount={codingSubmittedCount}
-            codingTotalCount={codingTotalCount}
-            gameSubmittedCount={gameSubmittedCount}
-            gameTotalCount={gameTotalCount}
             totalSubmitted={totalSubmitted}
             totalAssigned={totalAssigned}
             submissionPercent={submissionPercent}
@@ -344,7 +313,6 @@ export const HomeworkDetailPage: React.FC = () => {
             exercises={statusData?.coding_exercises}
             hasGame={hasGame}
             gameSubmittedCount={gameSubmittedCount}
-            gameTotalCount={gameTotalCount}
             totalAssigned={totalAssigned}
           />
         </div>

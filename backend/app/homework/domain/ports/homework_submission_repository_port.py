@@ -76,17 +76,3 @@ class HomeworkSubmissionRepositoryPort(ABC):
         2. Fallback khớp chính xác (homework_id, user_id, submission_type, exercise_id, submitted_at) khi thiếu ID.
         """
         ...
-
-    @abstractmethod
-    def get_submissions_by_exercise(
-        self, homework_id: int, exercise_id: str
-    ) -> list[HomeworkSubmission]:
-        """Lấy danh sách nộp bài cho một bài tập coding con cụ thể."""
-        ...
-
-    @abstractmethod
-    def get_submitted_exercise_ids(
-        self, homework_id: int, user_id: int
-    ) -> set[str]:
-        """Lấy tập mã các bài tập coding con mà học viên đã nộp đạt."""
-        ...

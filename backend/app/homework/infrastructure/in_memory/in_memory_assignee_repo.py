@@ -213,17 +213,6 @@ class InMemoryHomeworkAssigneeRepository(HomeworkAssigneeRepositoryPort):
                     res[hid] = dl
         return res
 
-    def add_assignees(
-        self, homework_id: int, user_ids: list[int], deadline: datetime
-    ) -> None:
-        self.assign_users(homework_id, user_ids, deadline)
-
-    def remove_assignees(
-        self, homework_id: int, user_ids: list[int]
-    ) -> None:
-        for uid in user_ids:
-            self._assignees.pop((homework_id, uid), None)
-
     def get_distinct_past_deadline_dates(
         self, before_date: date
     ) -> list[date]:

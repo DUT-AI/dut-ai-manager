@@ -372,38 +372,6 @@ class Homework(BaseAuditEntity):
             return "PARTIALLY_SUBMITTED"
         return "NOT_SUBMITTED"
 
-    def index_submissions(
-        self, submissions: list["HomeworkSubmission"]
-    ) -> tuple[
-        dict[tuple[int, str], "HomeworkSubmission"],
-        dict[int, "HomeworkSubmission"],
-        dict[int, "HomeworkSubmission"],
-    ]:
-        """Aggregate Root: Phân loại và lập chỉ mục các bài nộp theo học viên và bài tập con."""
-        exercise_map: dict[tuple[int, str], HomeworkSubmission] = {}
-        coding_general_map: dict[int, HomeworkSubmission] = {}
-        game_map: dict[int, HomeworkSubmission] = {}
-
-        for sub in submissions:
-            if sub.is_coding:
-                if sub.exercise_id:
-                    key = (sub.user_id, str(sub.exercise_id))
-                    if key not in exercise_map or (
-                        sub.is_passed and not exercise_map[key].is_passed
-                    ):
-                        exercise_map[key] = sub
-                if sub.user_id not in coding_general_map or (
-                    sub.is_passed and not coding_general_map[sub.user_id].is_passed
-                ):
-                    coding_general_map[sub.user_id] = sub
-            elif sub.is_game:
-                if sub.user_id not in game_map or (
-                    sub.is_passed and not game_map[sub.user_id].is_passed
-                ):
-                    game_map[sub.user_id] = sub
-
-        return exercise_map, coding_general_map, game_map
-
 
 class HomeworkAssignee(BaseGenericEntity[int]):
     """Domain model for a user assigned to a homework with their individual deadline."""
@@ -427,12 +395,6 @@ class HomeworkSubmission(BaseEntity):
     exercise_title: str | None = None
     score: float | None = None
     attempt_number: int = 1
-
-    def is_late_for(self, deadline: datetime | None) -> bool:
-        """Domain Rule: Xác định bài nộp có bị trễ so với deadline hiệu lực không."""
-        if not deadline:
-            return False
-        return ensure_utc(self.submitted_at) > ensure_utc(deadline)
 
     @property
     def is_coding(self) -> bool:

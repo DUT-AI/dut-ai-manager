@@ -109,11 +109,4 @@ export const homeworkService = {
         );
         return response.data.data;
     },
-
-    async getMySubmissions(homeworkId: number) {
-        const response = await axiosInstance.get<ApiResponse<SubmissionHistoryItem[]>>(
-            `/${this.baseUrl}/${homeworkId}/my-submissions`
-        );
-        return response.data.data;
-    },
 };

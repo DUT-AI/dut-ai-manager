@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Tag, Typography } from 'antd';
+import { Card, Tag } from 'antd';
 import {
   CodeOutlined,
   PlayCircleOutlined,
@@ -9,8 +9,6 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { NormalizedSubmission } from '../utils/submissionUtils';
-
-const { Text } = Typography;
 
 export interface SubmissionItemCardProps {
   submission: NormalizedSubmission;

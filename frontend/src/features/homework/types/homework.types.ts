@@ -1,14 +1,5 @@
 import type { Schema } from '@/types/api';
 
-export const HomeworkStatus = {
-  NOT_SUBMITTED: 'NOT_SUBMITTED',
-  SUBMITTED: 'SUBMITTED',
-  LeaderChecked: 'LEADER_CHECKED',
-  FINISHED: 'FINISHED',
-} as const;
-
-export type HomeworkStatus = typeof HomeworkStatus[keyof typeof HomeworkStatus];
-
 export type CompletionStatus = Schema<'CompletionStatus'>;
 export type TimelinessStatus = Schema<'TimelinessStatus'>;
 export type HomeworkFilterStatus = 'all' | 'uncompleted' | 'completed' | 'overdue';

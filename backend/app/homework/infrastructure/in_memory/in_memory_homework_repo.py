@@ -44,17 +44,6 @@ class InMemoryHomeworkRepository(HomeworkRepositoryPort):
         deadlines: dict[int, datetime | None] = {h.id: None for h in items if h.id}
         return items, total, deadlines
 
-    def get_assigned_to_user_paged(
-        self, user_id: int, page: int = 1, page_size: int = 10, deleted: bool = False
-    ) -> tuple[list[HomeworkEntity], int, dict[int, datetime | None]]:
-        all_items = self.get_all(deleted=deleted)
-        total = len(all_items)
-        start = (page - 1) * page_size
-        end = start + page_size
-        items = all_items[start:end]
-        deadlines: dict[int, datetime | None] = {h.id: None for h in items if h.id}
-        return items, total, deadlines
-
     def get_all_assigned_to_user(
         self,
         user_id: int,

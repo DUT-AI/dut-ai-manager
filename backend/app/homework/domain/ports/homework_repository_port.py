@@ -25,13 +25,6 @@ class HomeworkRepositoryPort(ABC):
         ...
 
     @abstractmethod
-    def get_assigned_to_user_paged(
-        self, user_id: int, page: int = 1, page_size: int = 10, deleted: bool = False
-    ) -> tuple[list[HomeworkEntity], int, dict[int, datetime | None]]:
-        """Lấy danh sách bài tập được giao cho một học viên theo phân trang."""
-        ...
-
-    @abstractmethod
     def get_all_assigned_to_user(
         self,
         user_id: int,

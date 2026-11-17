@@ -14,7 +14,6 @@ import type { Homework, HomeworkDetail } from '@/features/homework/types/homewor
 
 type HomeworkModalState = {
     isFormModalOpen: boolean;
-    selectedHomework: Homework | null;
     editingHomework: Homework | HomeworkDetail | null;
 };
 
@@ -24,7 +23,6 @@ type HomeworkModalAction =
 
 const initialState: HomeworkModalState = {
     isFormModalOpen: false,
-    selectedHomework: null,
     editingHomework: null,
 };
 
@@ -39,8 +37,8 @@ function homeworkModalReducer(state: HomeworkModalState, action: HomeworkModalAc
     }
 }
 
-export const useHomeworkActions = (activeTab: string, pagination?: { page?: number; pageSize?: number }) => {
-    const { user, hasPermission, isAdminOrLeader } = useAuth();
+export const useHomeworkActions = (pagination?: { page?: number; pageSize?: number }) => {
+    const { hasPermission } = useAuth();
     const [state, dispatch] = useReducer(homeworkModalReducer, initialState);
 
     const { data: allData, isLoading: allLoading, refetch: refetchAllHomeworks } = useHomeworks({
@@ -95,9 +93,7 @@ export const useHomeworkActions = (activeTab: string, pagination?: { page?: numb
             teams: teamsData ?? [],
             allLoading
         },
-        user,
         hasPermission,
-        isAdminOrLeader,
         handlers: {
             handleOpenCreate,
             handleOpenEdit,

@@ -15,7 +15,6 @@ export interface ExerciseCompletionStatsProps {
   exercises?: ExerciseSummary[] | null;
   hasGame?: boolean;
   gameSubmittedCount?: number;
-  gameTotalCount?: number;
   totalAssigned?: number;
 }
 
@@ -23,7 +22,6 @@ export const ExerciseCompletionStats: React.FC<ExerciseCompletionStatsProps> = (
   exercises = [],
   hasGame = false,
   gameSubmittedCount = 0,
-  gameTotalCount = 0,
   totalAssigned = 0,
 }) => {
   const codingExercises = exercises ?? [];

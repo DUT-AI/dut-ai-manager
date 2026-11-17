@@ -40,6 +40,7 @@ from app.homework.domain.value_objects import (
 from app.shared.infrastructure.base_model import (
     Base,
     SQLAlchemyAuditTimestampMixin,
+    SQLAlchemyTimestampOnlyMixin,
 )
 
 
@@ -129,7 +130,7 @@ class HomeworkModel(SQLAlchemyAuditTimestampMixin, Base):
         )
 
 
-class HomeworkExerciseModel(SQLAlchemyAuditTimestampMixin, Base):
+class HomeworkExerciseModel(SQLAlchemyTimestampOnlyMixin, Base):
     """Official required coding exercises catalog owned by each Homework."""
 
     __tablename__ = "homework_exercises"

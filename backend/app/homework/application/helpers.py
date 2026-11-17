@@ -25,11 +25,6 @@ class QuizSubmissionHelper:
         return homework.effective_slug
 
     @staticmethod
-    def detect_homework_type(link: str | None, slug: str | None) -> str:
-        """Tự động kiểm tra cả Coding và Game; nếu mục nào Quiz API trả về 404/None sẽ tự động bỏ qua."""
-        return "both"
-
-    @staticmethod
     async def get_coding_completed_map(
         quiz_api: QuizApiClient, slug: str
     ) -> dict[int, dict] | None:
@@ -97,14 +92,3 @@ class QuizSubmissionHelper:
         if completed_map is None:
             return None
         return set(completed_map.keys())
-
-    @staticmethod
-    async def get_lesson_exercises(
-        quiz_api: QuizApiClient, slug: str
-    ) -> list[dict] | None:
-        """Lấy danh sách các bài tập coding con của bài học từ Quiz API."""
-        try:
-            return await quiz_api.get_lesson_exercises(slug)
-        except Exception as exc:
-            logger.warning(f"Quiz get_lesson_exercises error for slug={slug}: {exc}")
-            return None
