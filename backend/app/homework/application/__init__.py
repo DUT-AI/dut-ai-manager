@@ -1,3 +1,6 @@
+from .backfill_homework_exercises_use_case import (
+    BackfillHomeworkExercisesUseCase,
+)
 from .check_overdue_homework_use_case import (
     CheckOverdueHomeworkUseCase,
 )
@@ -20,6 +23,9 @@ from .get_homework_submission_status_use_case import (
 from .get_homeworks_paged_use_case import (
     GetHomeworksPagedUseCase,
 )
+from .get_my_homework_detail_use_case import (
+    GetMyHomeworkDetailUseCase,
+)
 from .get_unsubmitted_homework_report_use_case import (
     GetUnsubmittedHomeworkReportUseCase,
 )
@@ -32,9 +38,6 @@ from .get_user_homework_submissions_use_case import (
 from .get_user_homeworks_use_case import (
     GetUserHomeworksUseCase,
 )
-from .homework_exercise_resolver import (
-    HomeworkExerciseResolver,
-)
 from .record_submission_use_case import (
     RecordHomeworkSubmissionUseCase,
 )
@@ -44,18 +47,22 @@ from .rescan_all_homeworks_use_case import (
 from .sync_homework_use_case import (
     SyncHomeworkFromQuizUseCase,
 )
+from .sync_my_unsubmitted_homeworks_use_case import (
+    SyncMyUnsubmittedHomeworksUseCase,
+)
 from .update_homework_use_case import (
     UpdateHomeworkUseCase,
 )
 
 __all__ = [
+    "BackfillHomeworkExercisesUseCase",
     "CheckOverdueHomeworkUseCase",
     "CreateHomeworkUseCase",
     "DeleteHomeworkUseCase",
     "GetHomeworkDetailUseCase",
     "GetHomeworkSubmissionStatusUseCase",
-    "HomeworkExerciseResolver",
     "GetHomeworksPagedUseCase",
+    "GetMyHomeworkDetailUseCase",
     "GetUnsubmittedHomeworkReportUseCase",
     "GetUnsubmittedHomeworksForUserUseCase",
     "GetUserHomeworkSubmissionsUseCase",
@@ -65,5 +72,6 @@ __all__ = [
     "RecordHomeworkSubmissionUseCase",
     "RescanAllHomeworksUseCase",
     "SyncHomeworkFromQuizUseCase",
+    "SyncMyUnsubmittedHomeworksUseCase",
     "UpdateHomeworkUseCase",
 ]

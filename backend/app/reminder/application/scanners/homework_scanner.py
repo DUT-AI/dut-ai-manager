@@ -1,20 +1,19 @@
 """
 Homework Task Scanner.
-Scans upcoming homeworks and filters out completed submissions.
+Scans upcoming homeworks and filters out completed submissions via SSOT.
 """
 
 from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
-from app.homework.domain.entity import Homework
-from app.homework.infrastructure.homework_assignee_repository import (
-    AssigneeUserInfo,
-    HomeworkAssigneeRepository,
+from app.homework.domain.entity import Homework, HomeworkExercise
+from app.homework.domain.ports import (
+    HomeworkAssigneeRepositoryPort,
+    HomeworkExerciseRepositoryPort,
+    HomeworkRepositoryPort,
+    HomeworkSubmissionRepositoryPort,
 )
-from app.homework.infrastructure.homework_repository import HomeworkRepository
-from app.homework.infrastructure.homework_submission_repository import (
-    HomeworkSubmissionRepository,
-)
+from app.homework.domain.value_objects import AssigneeUserInfo
 from app.reminder.application.scanners.base_scanner import (
     BaseTaskScanner,
     ScannedCandidateTask,
@@ -27,22 +26,22 @@ from app.shared.domain.datetime_types import ensure_utc
 class HomeworkTaskScanner(BaseTaskScanner):
     def __init__(
         self,
-        homework_repo: HomeworkRepository,
-        homework_assignee_repo: HomeworkAssigneeRepository,
-        homework_submission_repo: HomeworkSubmissionRepository,
+        homework_repo: HomeworkRepositoryPort,
+        homework_assignee_repo: HomeworkAssigneeRepositoryPort,
+        homework_submission_repo: HomeworkSubmissionRepositoryPort,
+        homework_exercise_repo: HomeworkExerciseRepositoryPort,
     ):
         self.homework_repo = homework_repo
         self.homework_assignee_repo = homework_assignee_repo
         self.homework_submission_repo = homework_submission_repo
+        self.homework_exercise_repo = homework_exercise_repo
 
     def scan_pending_tasks(self, now: datetime) -> list[ScannedCandidateTask]:
         candidates: list[ScannedCandidateTask] = []
         all_homeworks = self.homework_repo.get_all(limit=200)
 
-        hw_ids = [hw.id for hw in all_homeworks if hw.id]
-        required_exercises_map = (
-            self.homework_submission_repo.get_required_exercise_ids_map(hw_ids)
-        )
+        hw_ids = [hw.id for hw in all_homeworks if hw.id is not None]
+        exercises_by_hw = self.homework_exercise_repo.get_active_by_homework_ids(hw_ids)
 
         now_utc = ensure_utc(now)
 
@@ -54,14 +53,14 @@ class HomeworkTaskScanner(BaseTaskScanner):
             if not assignees:
                 continue
 
-            hw_req_ex_ids = required_exercises_map.get(hw.id)
+            hw_exercises = exercises_by_hw.get(hw.id, [])
 
             for assignee in assignees:
                 candidate = self._evaluate_assignee_candidate(
                     hw=hw,
                     assignee=assignee,
                     now_utc=now_utc,
-                    hw_req_ex_ids=hw_req_ex_ids,
+                    hw_exercises=hw_exercises,
                 )
                 if candidate:
                     candidates.append(candidate)
@@ -82,15 +81,14 @@ class HomeworkTaskScanner(BaseTaskScanner):
         hw: Homework,
         assignee: AssigneeUserInfo,
         now_utc: datetime,
-        hw_req_ex_ids: set[str] | None,
+        hw_exercises: list[HomeworkExercise],
     ) -> ScannedCandidateTask | None:
         dl = assignee.deadline
-        if not dl:
+        if not dl or not hw.id:
             return None
 
         hw_deadline_dt = self._normalize_deadline(dl)
 
-        # Chỉ xét task có deadline trong tương lai và cách tối đa 3 ngày
         time_diff = (hw_deadline_dt - now_utc).total_seconds()
         if hw_deadline_dt < now_utc or time_diff > 3 * 86400:
             return None
@@ -100,17 +98,17 @@ class HomeworkTaskScanner(BaseTaskScanner):
             return None
 
         uid = assignee.user_id
-        # Kiểm tra xem user đã hoàn thành đầy đủ tất cả yêu cầu của bài tập chưa
         submissions = self.homework_submission_repo.get_submissions_by_user(
             homework_id=hw.id, user_id=uid
         )
         evaluation = hw.evaluate_submissions(
             submissions,
+            required_exercises=hw_exercises,
             deadline=hw_deadline_dt,
-            required_exercise_ids=hw_req_ex_ids,
+            reference_time=now_utc,
         )
         if evaluation.is_submitted:
-            return None  # Đã hoàn thành trọn vẹn cả Coding và Game -> Bỏ qua
+            return None
 
         return ScannedCandidateTask(
             task_type=TaskType.HOMEWORK,

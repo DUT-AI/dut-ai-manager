@@ -303,3 +303,77 @@ async def test_webhook_update_existing_exercise_submission(
     assert result["submission_id"] == 101
     assert result["exercise_id"] == "uuid-ex-1"
     mock_submission_repo.update_submission.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_webhook_append_only_preserves_earlier_submission_timestamp():
+    """
+    US5: Nộp lần 1 (submission_id=sub-1) trước hạn, sau hạn nộp lại (submission_id=sub-2)
+    cùng exercise_id -> lưu 2 bản ghi riêng biệt, KHÔNG ghi đè submitted_at của lần 1;
+    gửi lặp submission_id=sub-2 -> idempotent update không tạo bản ghi thứ 3.
+    """
+    from datetime import timedelta
+
+    from app.homework.infrastructure.in_memory import (
+        InMemoryHomeworkRepository,
+        InMemoryHomeworkSubmissionRepository,
+    )
+
+    hw_repo = InMemoryHomeworkRepository(
+        [Homework(id=5, title="Deep Learning Lab", slug="dl-lab", requires_coding=True)]
+    )
+    sub_repo = InMemoryHomeworkSubmissionRepository()
+    use_case = RecordHomeworkSubmissionUseCase(
+        homework_repo=hw_repo,
+        homework_submission_repo=sub_repo,
+    )
+
+    t1 = datetime(2026, 11, 10, 10, 0, 0, tzinfo=UTC)
+    t2 = t1 + timedelta(days=2)
+
+    r1 = await use_case.execute(
+        HomeworkSubmissionWebhookIn(
+            lesson_slug="dl-lab",
+            user_id=42,
+            type=SubmissionType.CODING,
+            submitted_at=t1,
+            exercise_id="uuid-ex-1",
+            submission_id="sub-1",
+            score=90.0,
+            is_passed=True,
+        )
+    )
+    r2 = await use_case.execute(
+        HomeworkSubmissionWebhookIn(
+            lesson_slug="dl-lab",
+            user_id=42,
+            type=SubmissionType.CODING,
+            submitted_at=t2,
+            exercise_id="uuid-ex-1",
+            submission_id="sub-2",
+            score=100.0,
+            is_passed=True,
+        )
+    )
+    r2_dup = await use_case.execute(
+        HomeworkSubmissionWebhookIn(
+            lesson_slug="dl-lab",
+            user_id=42,
+            type=SubmissionType.CODING,
+            submitted_at=t2,
+            exercise_id="uuid-ex-1",
+            submission_id="sub-2",
+            score=100.0,
+            is_passed=True,
+        )
+    )
+
+    assert r1.status == "recorded"
+    assert r2.status == "recorded"
+    assert r2_dup.status == "updated"
+    assert r1.submission_id != r2.submission_id
+    assert r2_dup.submission_id == r2.submission_id
+
+    all_subs = sub_repo.get_submissions_by_user(5, 42)
+    assert len(all_subs) == 2
+    assert {s.submitted_at for s in all_subs} == {t1, t2}

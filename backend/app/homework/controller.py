@@ -1,4 +1,4 @@
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
@@ -7,11 +7,13 @@ from app.core.config import settings
 from app.core.deps import CurrentUser, hasPermission
 from app.core.permissions import HomeworkPermission
 from app.homework.application import (
+    BackfillHomeworkExercisesUseCase,
     CreateHomeworkUseCase,
     DeleteHomeworkUseCase,
     GetHomeworkDetailUseCase,
     GetHomeworksPagedUseCase,
     GetHomeworkSubmissionStatusUseCase,
+    GetMyHomeworkDetailUseCase,
     GetUnsubmittedHomeworkReportUseCase,
     GetUnsubmittedHomeworksForUserUseCase,
     GetUserHomeworkSubmissionsUseCase,
@@ -20,9 +22,11 @@ from app.homework.application import (
     RecordHomeworkSubmissionUseCase,
     RescanAllHomeworksUseCase,
     SyncHomeworkFromQuizUseCase,
+    SyncMyUnsubmittedHomeworksUseCase,
     UpdateHomeworkUseCase,
 )
 from app.homework.application.dtos import (
+    BackfillHomeworkExercisesResult,
     HomeworkCreate,
     HomeworkReportResponse,
     HomeworkResponse,
@@ -31,7 +35,10 @@ from app.homework.application.dtos import (
     HomeworkSubmissionStatusResponse,
     HomeworkUpdate,
     HomeworkWebhookResponse,
+    MyHomeworkDetailResponse,
+    MyHomeworksPageResponse,
     SyncHomeworkResult,
+    SyncMyHomeworksResult,
 )
 from app.homework.infrastructure.homework_assignee_repository import (
     HomeworkAssigneeRepository,
@@ -92,9 +99,29 @@ async def rescan_all_homeworks(
     )
 
 
+@router.post(
+    "/admin/backfill-exercises",
+    response_model=ApiResponse[BackfillHomeworkExercisesResult],
+    dependencies=[hasPermission(HomeworkPermission.CREATE)],
+)
+@inject
+async def backfill_homework_exercises(
+    backfill_uc: FromDishka[BackfillHomeworkExercisesUseCase],
+    sync_submissions: bool = Query(
+        True, description="Đồng bộ kèm toàn bộ lượt nộp từ Quiz API"
+    ),
+):
+    """Admin API: Chuẩn hóa danh mục bài tập con chính thức cho toàn bộ bài tập hiện có."""
+    result = await backfill_uc.execute(sync_submissions=sync_submissions)
+    return ApiResponse.success(
+        data=result,
+        message="Hoàn tất chuẩn hóa danh mục bài tập con.",
+    )
+
+
 @router.get(
     "/me",
-    response_model=ApiResponse[list[HomeworkResponse]],
+    response_model=ApiResponse[MyHomeworksPageResponse],
     dependencies=[hasPermission(HomeworkPermission.READ)],
 )
 @inject
@@ -102,10 +129,18 @@ async def get_my_homeworks(
     current_user: CurrentUser,
     get_user_homeworks_uc: FromDishka[GetUserHomeworksUseCase],
     pagination: Annotated[PaginationParams, Depends()],
+    status: Literal["all", "uncompleted", "completed", "overdue"] = Query(
+        "all", description="Lọc theo trạng thái hoàn thành / quá hạn"
+    ),
+    search: str | None = Query(None, description="Tìm kiếm theo tên bài tập"),
 ):
-    """Get homeworks assigned to the current user"""
+    """Lấy danh sách bài tập được giao cho học viên hiện tại (Server-driven filter, search, stats & pagination)."""
     result, total = await get_user_homeworks_uc.execute(
-        current_user.user_id, page=pagination.page, page_size=pagination.page_size
+        current_user.user_id,
+        page=pagination.page,
+        page_size=pagination.page_size,
+        status=status,
+        search=search,
     )
     meta = PaginationMeta.create(
         page=pagination.page,
@@ -113,6 +148,44 @@ async def get_my_homeworks(
         total=total,
     )
     return ApiResponse.success(data=result, pagination=meta)
+
+
+@router.post(
+    "/me/sync",
+    response_model=ApiResponse[SyncMyHomeworksResult],
+    dependencies=[hasPermission(HomeworkPermission.READ)],
+)
+@inject
+async def sync_my_unsubmitted_homeworks(
+    current_user: CurrentUser,
+    sync_my_uc: FromDishka[SyncMyUnsubmittedHomeworksUseCase],
+):
+    """Học viên chủ động đồng bộ nhanh các bài tập chưa hoàn thành của mình từ hệ thống Quiz."""
+    result = await sync_my_uc.execute(current_user.user_id)
+    message = (
+        f"Đã đồng bộ {result.synced_count}/{result.total_checked} bài tập chưa hoàn thành từ Quiz."
+        if result.total_checked > 0
+        else "Tất cả bài tập của bạn đã được hoàn thành."
+    )
+    return ApiResponse.success(data=result, message=message)
+
+
+@router.get(
+    "/me/{homework_id}",
+    response_model=ApiResponse[MyHomeworkDetailResponse],
+    dependencies=[hasPermission(HomeworkPermission.READ)],
+)
+@inject
+async def get_my_homework_detail(
+    homework_id: int,
+    current_user: CurrentUser,
+    get_my_detail_uc: FromDishka[GetMyHomeworkDetailUseCase],
+):
+    """Lấy chi tiết bài tập cá nhân của học viên kèm hạn nộp cá nhân, tiến độ bài con và lịch sử nộp."""
+    result = await get_my_detail_uc.execute(homework_id, current_user.user_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Homework not found")
+    return ApiResponse.success(data=result)
 
 
 @router.post(
@@ -268,8 +341,7 @@ async def get_my_homework_submissions(
     use_case: FromDishka[GetUserHomeworkSubmissionsUseCase],
 ):
     """Lấy danh sách lịch sử tất cả các lần nộp bài (Audit log) của học viên đang đăng nhập."""
-    assert current_user.id is not None
-    submissions = await use_case.execute(homework_id, current_user.id)
+    submissions = await use_case.execute(homework_id, current_user.user_id)
     return ApiResponse.success(data=submissions)
 
 
@@ -300,8 +372,7 @@ async def sync_homework_from_quiz(
     sync_uc: FromDishka[SyncHomeworkFromQuizUseCase],
 ):
     """
-    Đồng bộ thủ công từ Quiz API về bảng homework_submissions cho 1 bài tập.
-    Hỗ trợ nút bấm 'Đồng bộ từ Quiz' trên giao diện quản trị.
+    Đồng bộ thủ công từ Quiz API về bảng homework_exercises & homework_submissions cho 1 bài tập.
     """
     result = await sync_uc.execute(homework_id)
     return ApiResponse.success(data=result)

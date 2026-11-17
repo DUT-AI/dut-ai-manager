@@ -1,6 +1,6 @@
 """
 Test suite for Homework & Quiz API integration, aggregated per-lesson violation checking,
-and rescan use cases.
+and sync use cases with official homework_exercises catalog.
 """
 
 from datetime import UTC, datetime, timedelta
@@ -10,22 +10,30 @@ import pytest
 
 from app.homework.application import (
     CheckOverdueHomeworkUseCase,
-    HomeworkExerciseResolver,
+    SyncHomeworkFromQuizUseCase,
 )
-from app.homework.domain.entity import Homework, SubmissionType
+from app.homework.application.dtos import SyncHomeworkResult
+from app.homework.domain.entity import (
+    CodingHomeworkSubmission,
+    GameHomeworkSubmission,
+    Homework,
+)
 from app.homework.domain.value_objects import DueHomeworkAssignment
+from app.homework.infrastructure.in_memory import (
+    InMemoryHomeworkExerciseRepository,
+    InMemoryHomeworkSubmissionRepository,
+)
 from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.shared.domain.event_bus import EventBus
 
 
 @pytest.mark.asyncio
 async def test_lesson_aggregated_violation_single_ticket():
-    """
-    Test Case 1: Học viên thiếu CẢ Coding VÀ Game trong 1 Lesson -> Sinh ĐÚNG 1 VÉ VI PHẠM GỘP.
-    Lý do vi phạm phải chứa nội dung tổng hợp cả 'bài tập coding' và 'trắc nghiệm game'.
-    """
+    """Học viên thiếu CẢ Coding VÀ Game -> Sinh ĐÚNG 1 VÉ VI PHẠM GỘP."""
     mock_homework_repo = MagicMock()
+    mock_homework_repo.get_by_id.return_value = None
     mock_submission_repo = MagicMock()
+    exercise_repo = InMemoryHomeworkExerciseRepository()
 
     today = datetime.now(UTC).date()
     dl = datetime.now(UTC) - timedelta(hours=2)
@@ -41,23 +49,13 @@ async def test_lesson_aggregated_violation_single_ticket():
             requires_game=True,
         )
     ]
+    mock_submission_repo.get_submissions_by_user.return_value = []
 
-    # User 10 completed NOTHING on Coding, NOTHING on Game in DB
-    mock_submission_repo.get_submissions_by_homework.return_value = []
-    mock_submission_repo.has_valid_submission.return_value = False
-
-    mock_quiz_api = MagicMock(spec=QuizApiClient)
-    mock_quiz_api.get_lesson_exercises = AsyncMock(return_value=[])
-
-    exercise_resolver = HomeworkExerciseResolver(
-        quiz_api=mock_quiz_api,
-        homework_submission_repo=mock_submission_repo,
-    )
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=mock_homework_repo,
         homework_submission_repo=mock_submission_repo,
         homework_assignee_repo=mock_assignee_repo,
-        exercise_resolver=exercise_resolver,
+        homework_exercise_repo=exercise_repo,
     )
 
     published_events = []
@@ -68,21 +66,18 @@ async def test_lesson_aggregated_violation_single_ticket():
     with patch.object(EventBus, "publish", side_effect=mock_publish):
         await use_case.execute(target_date=today)
 
-    # Exactly 1 ticket created for User 10
-    assert len(published_events) == 1, (
-        f"Expected 1 aggregated ticket, got {len(published_events)}"
-    )
+    assert len(published_events) == 1
     reason = published_events[0].reason.lower()
     assert "bài tập coding" in reason and "trắc nghiệm game" in reason
 
 
 @pytest.mark.asyncio
 async def test_lesson_coding_only_violation():
-    """
-    Test Case 2: Học viên làm xong Game nhưng THIẾU Coding -> Sinh ĐÚNG 1 VÉ VI PHẠM về Coding.
-    """
+    """Học viên xong Game nhưng thiếu Coding -> Sinh ĐÚNG 1 vé về Coding."""
     mock_homework_repo = MagicMock()
+    mock_homework_repo.get_by_id.return_value = None
     mock_submission_repo = MagicMock()
+    exercise_repo = InMemoryHomeworkExerciseRepository()
 
     today = datetime.now(UTC).date()
     dl = datetime.now(UTC) - timedelta(hours=1)
@@ -98,30 +93,20 @@ async def test_lesson_coding_only_violation():
             requires_game=True,
         )
     ]
-
-    # User 20 completed Game in DB, but did NOT complete Coding
-    mock_submission_repo.get_submissions_by_homework.return_value = []
     mock_submission_repo.get_submissions_by_user.return_value = [
-        MagicMock(
-            submission_type=SubmissionType.GAME,
-            is_passed=True,
+        GameHomeworkSubmission.create_game(
+            homework_id=102,
+            user_id=20,
             submitted_at=dl - timedelta(minutes=10),
-            is_late_for=lambda d: False,
+            is_passed=True,
         )
     ]
 
-    mock_quiz_api = MagicMock(spec=QuizApiClient)
-    mock_quiz_api.get_lesson_exercises = AsyncMock(return_value=[])
-
-    exercise_resolver = HomeworkExerciseResolver(
-        quiz_api=mock_quiz_api,
-        homework_submission_repo=mock_submission_repo,
-    )
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=mock_homework_repo,
         homework_submission_repo=mock_submission_repo,
         homework_assignee_repo=mock_assignee_repo,
-        exercise_resolver=exercise_resolver,
+        homework_exercise_repo=exercise_repo,
     )
 
     published_events = []
@@ -140,11 +125,11 @@ async def test_lesson_coding_only_violation():
 
 @pytest.mark.asyncio
 async def test_lesson_game_only_violation():
-    """
-    Test Case 3: Học viên làm xong Coding nhưng THIẾU Game (hoặc làm chưa xong game) -> Sinh 1 VÉ VI PHẠM về Game.
-    """
+    """Học viên xong Coding nhưng thiếu Game -> Sinh ĐÚNG 1 vé về Game."""
     mock_homework_repo = MagicMock()
+    mock_homework_repo.get_by_id.return_value = None
     mock_submission_repo = MagicMock()
+    exercise_repo = InMemoryHomeworkExerciseRepository()
 
     today = datetime.now(UTC).date()
     dl = datetime.now(UTC) - timedelta(hours=1)
@@ -160,31 +145,21 @@ async def test_lesson_game_only_violation():
             requires_game=True,
         )
     ]
-
-    # User 30 completed Coding, but did NOT complete Game
-    mock_submission_repo.get_submissions_by_homework.return_value = []
     mock_submission_repo.get_submissions_by_user.return_value = [
-        MagicMock(
-            submission_type=SubmissionType.CODING,
-            is_passed=True,
-            submitted_at=dl - timedelta(minutes=10),
+        CodingHomeworkSubmission.create_coding(
+            homework_id=103,
+            user_id=30,
             exercise_id="default",
-            is_late_for=lambda d: False,
+            submitted_at=dl - timedelta(minutes=10),
+            is_passed=True,
         )
     ]
 
-    mock_quiz_api = MagicMock(spec=QuizApiClient)
-    mock_quiz_api.get_lesson_exercises = AsyncMock(return_value=[])
-
-    exercise_resolver = HomeworkExerciseResolver(
-        quiz_api=mock_quiz_api,
-        homework_submission_repo=mock_submission_repo,
-    )
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=mock_homework_repo,
         homework_submission_repo=mock_submission_repo,
         homework_assignee_repo=mock_assignee_repo,
-        exercise_resolver=exercise_resolver,
+        homework_exercise_repo=exercise_repo,
     )
 
     published_events = []
@@ -203,30 +178,18 @@ async def test_lesson_game_only_violation():
 
 @pytest.mark.asyncio
 async def test_unassigned_legacy_homework_does_not_penalize_users():
-    """
-    Test Case 4: Bài tập cũ chưa được phân công (assignee_ids rỗng)
-    -> KHÔNG tự động phạt nhầm toàn bộ active users trong hệ thống.
-    """
+    """Bài tập chưa có assignee -> không phạt nhầm active users."""
     mock_homework_repo = MagicMock()
     mock_submission_repo = MagicMock()
-
-    today = datetime.now(UTC).date()
-
     mock_assignee_repo = MagicMock()
     mock_assignee_repo.get_by_deadline_date.return_value = []
+    exercise_repo = InMemoryHomeworkExerciseRepository()
 
-    mock_quiz_api = MagicMock(spec=QuizApiClient)
-    mock_quiz_api.get_lesson_exercises = AsyncMock(return_value=[])
-
-    exercise_resolver = HomeworkExerciseResolver(
-        quiz_api=mock_quiz_api,
-        homework_submission_repo=mock_submission_repo,
-    )
     use_case = CheckOverdueHomeworkUseCase(
         homework_repo=mock_homework_repo,
         homework_submission_repo=mock_submission_repo,
         homework_assignee_repo=mock_assignee_repo,
-        exercise_resolver=exercise_resolver,
+        homework_exercise_repo=exercise_repo,
     )
 
     published_events = []
@@ -235,23 +198,17 @@ async def test_unassigned_legacy_homework_does_not_penalize_users():
         published_events.append(event)
 
     with patch.object(EventBus, "publish", side_effect=mock_publish):
-        await use_case.execute(target_date=today)
+        await use_case.execute(target_date=datetime.now(UTC).date())
 
-    # Exactly 0 tickets! Active users are NOT penalized for unassigned homework
     assert len(published_events) == 0
 
 
 @pytest.mark.asyncio
 async def test_sync_homework_from_quiz_with_string_timestamps():
-    """
-    Test Case 5: Đồng bộ bài tập từ Quiz API khi Quiz trả về submitted_at/completed_at dạng chuỗi ISO.
-    """
-    from app.homework.application.sync_homework_use_case import (
-        SyncHomeworkFromQuizUseCase,
-    )
-
+    """Đồng bộ bài tập từ Quiz API khi Quiz trả về submitted_at/completed_at dạng chuỗi ISO."""
     mock_homework_repo = MagicMock()
-    mock_submission_repo = MagicMock()
+    submission_repo = InMemoryHomeworkSubmissionRepository()
+    exercise_repo = InMemoryHomeworkExerciseRepository()
     mock_quiz_api = MagicMock(spec=QuizApiClient)
 
     hw = Homework(
@@ -262,10 +219,7 @@ async def test_sync_homework_from_quiz_with_string_timestamps():
         requires_coding=True,
         requires_game=True,
     )
-
     mock_homework_repo.get_by_id.return_value = hw
-    mock_submission_repo.find_submission_match.return_value = None
-
     mock_quiz_api.get_lesson_metadata = AsyncMock(return_value=None)
     mock_quiz_api.get_lesson_exercises = AsyncMock(return_value=None)
     mock_quiz_api.get_homework_submissions_for_sync = AsyncMock(
@@ -295,31 +249,26 @@ async def test_sync_homework_from_quiz_with_string_timestamps():
 
     use_case = SyncHomeworkFromQuizUseCase(
         homework_repo=mock_homework_repo,
-        homework_submission_repo=mock_submission_repo,
+        homework_submission_repo=submission_repo,
+        homework_exercise_repo=exercise_repo,
         quiz_api=mock_quiz_api,
     )
 
     result = await use_case.execute(homework_id=201)
 
-    assert result["synced_coding_count"] == 1
-    assert result["synced_game_count"] == 1
-    assert mock_submission_repo.add_submission.call_count == 2
+    assert isinstance(result, SyncHomeworkResult)
+    assert result.synced_coding_count == 1
+    assert result.synced_game_count == 1
+    assert result.last_synced_at is not None
+    assert submission_repo.count() == 2
 
 
 @pytest.mark.asyncio
-async def test_sync_homework_refreshes_metadata_flags_and_syncs_both():
-    """
-    Test Case 6 (US1 & US2): Tự động làm mới cấu hình bài tập từ Quiz API khi đồng bộ.
-    Ban đầu requires_coding=False, requires_game=False.
-    Quiz API trả về metadata has_coding=True, has_game=True, coding_count=2, game_question_count=10.
-    Sau đồng bộ: Homework entity được update requires_coding=True, requires_game=True và cả Coding + Game đều được kéo.
-    """
-    from app.homework.application.sync_homework_use_case import (
-        SyncHomeworkFromQuizUseCase,
-    )
-
+async def test_sync_homework_refreshes_metadata_flags_exercises_and_respects_failed_coding():
+    """Sync tự làm mới cờ requires_coding/requires_game, danh mục bài con và tôn trọng status=FAILED."""
     mock_homework_repo = MagicMock()
-    mock_submission_repo = MagicMock()
+    submission_repo = InMemoryHomeworkSubmissionRepository()
+    exercise_repo = InMemoryHomeworkExerciseRepository()
     mock_quiz_api = MagicMock(spec=QuizApiClient)
 
     hw = Homework(
@@ -331,9 +280,6 @@ async def test_sync_homework_refreshes_metadata_flags_and_syncs_both():
         requires_game=False,
     )
     mock_homework_repo.get_by_id.return_value = hw
-    mock_submission_repo.find_submission_match.return_value = None
-
-    # Quiz metadata & exercises
     mock_quiz_api.get_lesson_metadata = AsyncMock(
         return_value={
             "slug": "ml-101",
@@ -350,8 +296,6 @@ async def test_sync_homework_refreshes_metadata_flags_and_syncs_both():
             {"id": "ex-2", "title": "Logistic Regression"},
         ]
     )
-
-    # Submissions
     mock_quiz_api.get_homework_submissions_for_sync = AsyncMock(
         return_value=[
             {
@@ -360,9 +304,20 @@ async def test_sync_homework_refreshes_metadata_flags_and_syncs_both():
                 "exercise_id": "ex-1",
                 "exercise_title": "Linear Regression",
                 "score": 100,
+                "status": "PASSED",
                 "attempt_number": 1,
                 "submitted_at": "2026-11-01T08:00:00Z",
-            }
+            },
+            {
+                "submission_id": "sub-c2",
+                "user_id": 15,
+                "exercise_id": "ex-2",
+                "exercise_title": "Logistic Regression",
+                "score": 0,
+                "status": "FAILED",
+                "attempt_number": 1,
+                "submitted_at": "2026-11-01T08:15:00Z",
+            },
         ]
     )
     mock_quiz_api.get_game_sessions_for_sync = AsyncMock(
@@ -379,39 +334,32 @@ async def test_sync_homework_refreshes_metadata_flags_and_syncs_both():
 
     use_case = SyncHomeworkFromQuizUseCase(
         homework_repo=mock_homework_repo,
-        homework_submission_repo=mock_submission_repo,
+        homework_submission_repo=submission_repo,
+        homework_exercise_repo=exercise_repo,
         quiz_api=mock_quiz_api,
     )
 
     result = await use_case.execute(homework_id=301)
 
-    # 1. Kiểm tra homework entity được update cờ và lưu vào repo
     assert hw.requires_coding is True
     assert hw.requires_game is True
-    mock_homework_repo.save.assert_called_once()
+    assert result.coding_exercises_count == 2
+    assert result.game_questions_count == 10
+    assert result.synced_coding_count == 2
+    assert result.synced_game_count == 1
+    assert [e.exercise_id for e in exercise_repo.get_active_by_homework(301)] == ["ex-1", "ex-2"]
 
-    # 2. Kiểm tra cả Coding và Game đều được sync thành công
-    assert result["requires_coding"] is True
-    assert result["requires_game"] is True
-    assert result["coding_exercises_count"] == 2
-    assert result["game_questions_count"] == 10
-    assert result["synced_coding_count"] == 1
-    assert result["synced_game_count"] == 1
-    assert mock_submission_repo.add_submission.call_count == 2
+    subs = {s.external_submission_id: s for s in submission_repo.get_submissions_by_user(301, 15)}
+    assert subs["sub-c1"].is_passed is True
+    assert subs["sub-c2"].is_passed is False
 
 
 @pytest.mark.asyncio
 async def test_sync_homework_metadata_failsafe_on_network_error():
-    """
-    Test Case 7 (US1 Fail-Safe): Khi Quiz API metadata lỗi mạng hoặc gián đoạn,
-    tiến trình đồng bộ không crash và fallback tiếp tục đồng bộ bài nộp bình thường.
-    """
-    from app.homework.application.sync_homework_use_case import (
-        SyncHomeworkFromQuizUseCase,
-    )
-
+    """Khi Quiz API lỗi mạng ở metadata/exercises, giữ nguyên danh mục cũ và tiếp tục đồng bộ submissions."""
     mock_homework_repo = MagicMock()
-    mock_submission_repo = MagicMock()
+    submission_repo = InMemoryHomeworkSubmissionRepository()
+    exercise_repo = InMemoryHomeworkExerciseRepository()
     mock_quiz_api = MagicMock(spec=QuizApiClient)
 
     hw = Homework(
@@ -423,16 +371,12 @@ async def test_sync_homework_metadata_failsafe_on_network_error():
         requires_game=False,
     )
     mock_homework_repo.get_by_id.return_value = hw
-    mock_submission_repo.find_submission_match.return_value = None
-
-    # Giả lập Quiz API lỗi mạng khi lấy metadata & exercises
     mock_quiz_api.get_lesson_metadata = AsyncMock(
         side_effect=RuntimeError("Cannot connect to Quiz metadata service")
     )
     mock_quiz_api.get_lesson_exercises = AsyncMock(
         side_effect=RuntimeError("Cannot connect to Quiz exercises service")
     )
-
     mock_quiz_api.get_homework_submissions_for_sync = AsyncMock(
         return_value=[
             {
@@ -449,138 +393,14 @@ async def test_sync_homework_metadata_failsafe_on_network_error():
 
     use_case = SyncHomeworkFromQuizUseCase(
         homework_repo=mock_homework_repo,
-        homework_submission_repo=mock_submission_repo,
+        homework_submission_repo=submission_repo,
+        homework_exercise_repo=exercise_repo,
         quiz_api=mock_quiz_api,
     )
 
-    # Không raise exception (Fail-Safe), tiếp tục sync coding theo cờ hiện tại
     result = await use_case.execute(homework_id=302)
 
-    assert result["requires_coding"] is True
-    assert result["requires_game"] is False
-    assert result["synced_coding_count"] == 1
-    assert mock_submission_repo.add_submission.call_count == 1
-
-
-@pytest.mark.asyncio
-async def test_sync_homework_detects_new_exercises_when_no_submissions():
-    """
-    Test Case 8 (US2): Giảng viên thêm bài tập con mới nhưng chưa ai nộp.
-    Đồng bộ vẫn nhận diện được chính xác số lượng bài tập con mới trên Quiz.
-    """
-    from app.homework.application.sync_homework_use_case import (
-        SyncHomeworkFromQuizUseCase,
-    )
-
-    mock_homework_repo = MagicMock()
-    mock_submission_repo = MagicMock()
-    mock_quiz_api = MagicMock(spec=QuizApiClient)
-
-    hw = Homework(
-        id=303,
-        title="Computer Vision",
-        link="https://quiz.dutai.site/lesson/computer-vision",
-        slug="computer-vision",
-        requires_coding=True,
-        requires_game=False,
-    )
-    mock_homework_repo.get_by_id.return_value = hw
-
-    # Quiz có 3 bài tập con mới thêm
-    mock_quiz_api.get_lesson_metadata = AsyncMock(
-        return_value={
-            "slug": "computer-vision",
-            "name": "Computer Vision",
-            "has_coding": True,
-            "has_game": False,
-            "coding_count": 3,
-            "game_question_count": 0,
-        }
-    )
-    mock_quiz_api.get_lesson_exercises = AsyncMock(
-        return_value=[
-            {"id": "cv-1", "title": "Image Filtering"},
-            {"id": "cv-2", "title": "Edge Detection"},
-            {"id": "cv-3", "title": "Corner Detection"},
-        ]
-    )
-
-    # Chưa có học sinh nào nộp bài
-    mock_quiz_api.get_homework_submissions_for_sync = AsyncMock(return_value=[])
-
-    use_case = SyncHomeworkFromQuizUseCase(
-        homework_repo=mock_homework_repo,
-        homework_submission_repo=mock_submission_repo,
-        quiz_api=mock_quiz_api,
-    )
-
-    result = await use_case.execute(homework_id=303)
-
-    assert result["coding_exercises_count"] == 3
-    assert result["game_questions_count"] == 0
-    assert result["synced_coding_count"] == 0
-    assert result["updated_coding_count"] == 0
-
-
-@pytest.mark.asyncio
-async def test_sync_homework_result_payload_contract():
-    """
-    Test Case 9 (US3): Kiểm tra kết quả trả về của use case tuân thủ cấu trúc SyncHomeworkResult.
-    """
-    from app.homework.application.sync_homework_use_case import (
-        SyncHomeworkFromQuizUseCase,
-    )
-
-    mock_homework_repo = MagicMock()
-    mock_submission_repo = MagicMock()
-    mock_quiz_api = MagicMock(spec=QuizApiClient)
-
-    hw = Homework(
-        id=304,
-        title="NLP Transformer",
-        link="https://quiz.dutai.site/lesson/transformer",
-        slug="transformer",
-        requires_coding=True,
-        requires_game=True,
-    )
-    mock_homework_repo.get_by_id.return_value = hw
-    mock_submission_repo.find_submission_match.return_value = None
-
-    mock_quiz_api.get_lesson_metadata = AsyncMock(
-        return_value={
-            "has_coding": True,
-            "has_game": True,
-            "coding_count": 1,
-            "game_question_count": 5,
-        }
-    )
-    mock_quiz_api.get_lesson_exercises = AsyncMock(
-        return_value=[{"id": "tf-1", "title": "Self Attention"}]
-    )
-    mock_quiz_api.get_homework_submissions_for_sync = AsyncMock(return_value=[])
-    mock_quiz_api.get_game_sessions_for_sync = AsyncMock(return_value=[])
-
-    use_case = SyncHomeworkFromQuizUseCase(
-        homework_repo=mock_homework_repo,
-        homework_submission_repo=mock_submission_repo,
-        quiz_api=mock_quiz_api,
-    )
-
-    result = await use_case.execute(homework_id=304)
-
-    expected_keys = {
-        "homework_id",
-        "title",
-        "requires_coding",
-        "requires_game",
-        "coding_exercises_count",
-        "game_questions_count",
-        "synced_coding_count",
-        "updated_coding_count",
-        "synced_game_count",
-        "updated_game_count",
-        "message",
-    }
-    assert expected_keys.issubset(set(result.keys()))
-    assert isinstance(result["message"], str)
-    assert len(result["message"]) > 0
+    assert result.requires_coding is True
+    assert result.requires_game is False
+    assert result.synced_coding_count == 1
+    assert submission_repo.count() == 1

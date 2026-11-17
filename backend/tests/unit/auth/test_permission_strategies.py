@@ -5,6 +5,7 @@ import pytest
 from fastapi import HTTPException
 
 from app.homework.domain.entity import Homework, HomeworkSubmission
+from app.homework.infrastructure.in_memory import InMemoryHomeworkExerciseRepository
 from app.meeting.domain.entity import Meeting
 from app.permission_request.application.strategies import (
     AbsenceStrategy,
@@ -45,7 +46,7 @@ def test_strategy_registry_routing():
     strategies = [
         AbsenceStrategy(repo, meeting_repo),
         LateStrategy(repo, meeting_repo),
-        PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo),
+        PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo, InMemoryHomeworkExerciseRepository()),
         ChangeMeetingStrategy(repo, meeting_repo, participant_repo),
         OtherStrategy(),
     ]
@@ -72,7 +73,7 @@ def test_postpone_strategy_validation_happy_path():
     hw_repo.get_by_id.return_value = hw
     hw_assignee_repo.get_user_deadline.return_value = current_deadline
     hw_sub_repo.get_submissions_by_user.return_value = []
-    strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo)
+    strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo, InMemoryHomeworkExerciseRepository())
 
     # Gia hạn sau 2 ngày (hợp lệ <= 4 ngày)
     req_valid = PermissionRequest(
@@ -93,7 +94,7 @@ def test_postpone_strategy_rejects_past_extended_deadline():
     hw_sub_repo = MagicMock()
 
     now = datetime.now(UTC)
-    strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo)
+    strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo, InMemoryHomeworkExerciseRepository())
 
     req = PermissionRequest(
         created_by=1,
@@ -120,7 +121,7 @@ def test_postpone_strategy_rejects_past_current_deadline():
     hw = Homework(id=1, title="Bài tập Python")
     hw_repo.get_by_id.return_value = hw
     hw_assignee_repo.get_user_deadline.return_value = past_deadline
-    strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo)
+    strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo, InMemoryHomeworkExerciseRepository())
 
     req = PermissionRequest(
         created_by=1,
@@ -163,7 +164,7 @@ def test_postpone_strategy_rejects_already_completed_homework():
             submitted_at=now,
         ),
     ]
-    strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo)
+    strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo, InMemoryHomeworkExerciseRepository())
 
     req = PermissionRequest(
         created_by=1,
@@ -192,7 +193,7 @@ def test_postpone_strategy_cumulative_postpone_success():
     hw_repo.get_by_id.return_value = hw
     hw_assignee_repo.get_user_deadline.return_value = postponed_deadline
     hw_sub_repo.get_submissions_by_user.return_value = []
-    strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo)
+    strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo, InMemoryHomeworkExerciseRepository())
 
     # Hoãn tích luỹ lần 2: xin dời thêm 3 ngày nữa (tổng cộng cách postponed_deadline là 3 ngày <= 4 ngày)
     req_cumulative = PermissionRequest(
@@ -218,7 +219,7 @@ def test_postpone_strategy_rejects_exceeding_four_days():
     hw_repo.get_by_id.return_value = hw
     hw_assignee_repo.get_user_deadline.return_value = current_deadline
     hw_sub_repo.get_submissions_by_user.return_value = []
-    strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo)
+    strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo, InMemoryHomeworkExerciseRepository())
 
     req_invalid_exceed = PermissionRequest(
         created_by=1,
@@ -246,7 +247,7 @@ def test_postpone_strategy_rejects_before_or_equal_current_deadline():
     hw_repo.get_by_id.return_value = hw
     hw_assignee_repo.get_user_deadline.return_value = current_deadline
     hw_sub_repo.get_submissions_by_user.return_value = []
-    strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo)
+    strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo, InMemoryHomeworkExerciseRepository())
 
     req_invalid_equal = PermissionRequest(
         created_by=1,
@@ -271,7 +272,7 @@ async def test_postpone_strategy_lifecycle():
     initial_deadline = datetime(2026, 11, 1, 12, 0, tzinfo=UTC)
     hw_assignee_repo.get_user_deadline.return_value = initial_deadline
 
-    strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo)
+    strategy = PostponeStrategy(hw_repo, hw_assignee_repo, hw_sub_repo, InMemoryHomeworkExerciseRepository())
 
     new_deadline = datetime(2026, 11, 3, 12, 0, tzinfo=UTC)
     req = PermissionRequest(

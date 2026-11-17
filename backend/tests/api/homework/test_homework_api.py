@@ -19,17 +19,26 @@ from app.core.config import settings
 
 @pytest.fixture(autouse=True)
 def mock_quiz_api_metadata():
-    """Mock QuizApiClient.get_lesson_metadata để không phụ thuộc Quiz network API."""
-    with patch(
-        "app.homework.infrastructure.quiz_api.QuizApiClient.get_lesson_metadata",
-        new_callable=AsyncMock,
-    ) as mock_get:
-        mock_get.return_value = {
+    """Mock QuizApiClient để không phụ thuộc Quiz network API."""
+    with (
+        patch(
+            "app.homework.infrastructure.quiz_api.QuizApiClient.get_lesson_metadata",
+            new_callable=AsyncMock,
+        ) as mock_meta,
+        patch(
+            "app.homework.infrastructure.quiz_api.QuizApiClient.get_lesson_exercises",
+            new_callable=AsyncMock,
+        ) as mock_ex,
+    ):
+        mock_meta.return_value = {
             "name": "Mocked Quiz Lesson",
             "has_coding": True,
             "has_game": True,
         }
-        yield mock_get
+        mock_ex.return_value = [
+            {"id": "exercise_01", "title": "Viết thuật toán tìm kiếm"},
+        ]
+        yield mock_meta
 
 
 @pytest.fixture
@@ -83,13 +92,52 @@ def test_list_homeworks_as_admin_success(admin_client, test_homework):
     assert any(h["id"] == test_homework["id"] for h in data["data"])
 
 
-def test_get_my_homeworks_success(admin_client):
-    """Lấy danh sách bài tập được giao cho current user."""
-    res = admin_client.get("/api/v1/homeworks/me")
+def test_get_my_homeworks_success(admin_client, test_homework):
+    """Lấy danh sách bài tập được giao cho current user kèm stats tổng và bộ lọc server-side."""
+    res = admin_client.get("/api/v1/homeworks/me?page=1&page_size=20&status=all")
     assert res.status_code == 200
     data = res.json()
     assert data["is_success"] is True
-    assert isinstance(data["data"], list)
+    assert isinstance(data["data"]["items"], list)
+    assert "stats" in data["data"]
+    assert data["data"]["stats"]["total"] >= 1
+    assert any(h["id"] == test_homework["id"] for h in data["data"]["items"])
+
+
+def test_get_my_homework_detail_success(admin_client, test_homework):
+    """Lấy chi tiết bài tập cá nhân của current user kèm deadline cá nhân & danh sách bài con."""
+    res = admin_client.get(f"/api/v1/homeworks/me/{test_homework['id']}")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["is_success"] is True
+    assert data["data"]["homework"]["id"] == test_homework["id"]
+    assert isinstance(data["data"]["coding_exercises"], list)
+    assert isinstance(data["data"]["submissions"], list)
+
+
+def test_get_my_homework_detail_not_found(admin_client):
+    """Bài tập không tồn tại hoặc user không được giao trả về 404."""
+    res = admin_client.get("/api/v1/homeworks/me/99999999")
+    assert res.status_code == 404
+
+
+@patch(
+    "app.homework.infrastructure.quiz_api.QuizApiClient.get_homework_submissions_for_sync",
+    new_callable=AsyncMock,
+    return_value=[],
+)
+@patch(
+    "app.homework.infrastructure.quiz_api.QuizApiClient.get_game_sessions_for_sync",
+    new_callable=AsyncMock,
+    return_value=[],
+)
+def test_sync_my_unsubmitted_homeworks_success(_mock_game, _mock_coding, admin_client, test_homework):
+    """Học viên chủ động đồng bộ nhanh các bài tập chưa hoàn thành của mình."""
+    res = admin_client.post("/api/v1/homeworks/me/sync")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["is_success"] is True
+    assert "synced_count" in data["data"]
 
 
 def test_rescan_all_homeworks_dry_run(admin_client):

@@ -4,27 +4,31 @@ from zoneinfo import ZoneInfo
 
 from loguru import logger
 
-from app.homework.application.homework_exercise_resolver import (
-    HomeworkExerciseResolver,
-)
 from app.homework.domain.constants import HOMEWORK_VIOLATION_CHECK_DELAY_DAYS
 from app.homework.domain.entity import Homework as HomeworkEntity
+from app.homework.domain.entity import HomeworkExercise
 from app.homework.domain.ports import (
     HomeworkAssigneeRepositoryPort,
+    HomeworkExerciseRepositoryPort,
     HomeworkRepositoryPort,
     HomeworkSubmissionRepositoryPort,
 )
 from app.homework.domain.value_objects import (
+    CompletionStatus,
     DueHomeworkAssignment,
     HomeworkOverdueDetected,
+    SubmissionEvaluation,
 )
 from app.shared.domain.event_bus import DomainEvent, EventBus
 
 
 class CheckOverdueHomeworkUseCase:
     """
-    Kiểm tra bài tập quá hạn đối chiếu Assignees và Submissions trong Database.
-    Phát sự kiện HomeworkOverdueDetected qua EventBus để kỷ luật.
+    Kiểm tra bài tập quá hạn bằng Aggregate Root SSOT Homework.evaluate_submissions().
+    Xét kỷ luật nghiêm ngặt theo tiêu chí `is_completed_on_time`:
+    - Đã hoàn thành đúng hạn (kể cả sau đó có nộp lại cải thiện) -> KHÔNG phạt.
+    - Hoàn thành sau hạn (`COMPLETED + LATE`) -> Phát vi phạm với lý do nộp trễ hạn rõ ràng.
+    - Chưa hoàn thành (`NOT_STARTED / IN_PROGRESS`) -> Phát vi phạm liệt kê hạng mục còn thiếu.
     """
 
     def __init__(
@@ -32,13 +36,13 @@ class CheckOverdueHomeworkUseCase:
         homework_repo: HomeworkRepositoryPort,
         homework_submission_repo: HomeworkSubmissionRepositoryPort,
         homework_assignee_repo: HomeworkAssigneeRepositoryPort,
-        exercise_resolver: HomeworkExerciseResolver,
+        homework_exercise_repo: HomeworkExerciseRepositoryPort,
         event_bus: type[EventBus] = EventBus,
     ):
         self.homework_repo = homework_repo
         self.homework_submission_repo = homework_submission_repo
         self.homework_assignee_repo = homework_assignee_repo
-        self.exercise_resolver = exercise_resolver
+        self.homework_exercise_repo = homework_exercise_repo
         self.event_bus = event_bus
 
     def _get_effective_assigned_user_ids(self, homework: HomeworkEntity) -> set[int]:
@@ -49,15 +53,13 @@ class CheckOverdueHomeworkUseCase:
     def _evaluate_assignment(
         self,
         assignment: DueHomeworkAssignment,
-        required_exercise_ids: set[str],
+        required_exercises: list[HomeworkExercise],
         homework_entity: HomeworkEntity | None = None,
-    ) -> list[str]:
-        """Đánh giá assignment và trả về danh sách các phần mục chưa hoàn thành."""
+    ) -> SubmissionEvaluation:
         user_id = assignment.user_id
         hw_id = assignment.homework_id
         assignee_deadline = assignment.deadline
 
-        # 1. Đánh giá qua Aggregate Root Homework.evaluate_submissions
         hw = homework_entity or self.homework_repo.get_by_id(hw_id)
         if not isinstance(hw, HomeworkEntity):
             hw = HomeworkEntity(
@@ -72,21 +74,13 @@ class CheckOverdueHomeworkUseCase:
             hw_id, user_id
         )
 
-        eval_result = hw.evaluate_submissions(
+        return hw.evaluate_submissions(
             submissions,
+            required_exercises=required_exercises,
             deadline=assignee_deadline,
-            required_exercise_ids=required_exercise_ids,
         )
-        if eval_result.is_submitted:
-            return []
-        return eval_result.uncompleted_items
 
     async def execute(self, target_date: date | None = None) -> int:
-        """
-        Quét tất cả các bài tập có deadline là target_date:
-        - Mặc định: quét các bài phân công có deadline cách đây 2 ngày.
-        - Khi truyền target_date: quét chính xác các bài có deadline ngày đó.
-        """
         if target_date is None:
             now = datetime.now(UTC)
             today_vn = now.astimezone(ZoneInfo("Asia/Ho_Chi_Minh")).date()
@@ -99,34 +93,31 @@ class CheckOverdueHomeworkUseCase:
             )
             return 0
 
-        # Phân giải và cache danh sách bài tập con qua HomeworkExerciseResolver (SSOT)
-        hw_required_exercises: dict[int, set[str]] = {}
-        hw_entities: dict[int, HomeworkEntity | None] = {}
-        for item in due_assignments:
-            if item.homework_id not in hw_required_exercises:
-                hw_required_exercises[item.homework_id] = (
-                    await self.exercise_resolver.resolve_required_exercise_ids(
-                        item.homework_id, item.slug
-                    )
-                )
-                hw_entities[item.homework_id] = self.homework_repo.get_by_id(
-                    item.homework_id
-                )
+        hw_ids = sorted({item.homework_id for item in due_assignments})
+        exercises_by_hw = self.homework_exercise_repo.get_active_by_homework_ids(hw_ids)
+        hw_entities: dict[int, HomeworkEntity | None] = {
+            hid: self.homework_repo.get_by_id(hid) for hid in hw_ids
+        }
 
         events_published_count = 0
         for assignment in due_assignments:
-            uncompleted_labels = self._evaluate_assignment(
+            eval_result = self._evaluate_assignment(
                 assignment=assignment,
-                required_exercise_ids=hw_required_exercises.get(
-                    assignment.homework_id, set()
-                ),
+                required_exercises=exercises_by_hw.get(assignment.homework_id, []),
                 homework_entity=hw_entities.get(assignment.homework_id),
             )
-            if not uncompleted_labels:
+            if eval_result.is_completed_on_time:
                 continue
 
-            items_str = " và ".join(uncompleted_labels)
-            reason_msg = f"Chưa hoàn thành {items_str} ({assignment.homework_title})"
+            if eval_result.completion_status == CompletionStatus.COMPLETED:
+                reason_msg = f"Nộp bài tập trễ hạn ({assignment.homework_title})"
+                uncompleted_labels = ["Nộp trễ hạn"]
+            else:
+                uncompleted_labels = eval_result.uncompleted_items
+                items_str = " và ".join(uncompleted_labels)
+                reason_msg = (
+                    f"Chưa hoàn thành {items_str} ({assignment.homework_title})"
+                )
 
             await self.event_bus.publish(
                 cast(

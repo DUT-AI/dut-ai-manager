@@ -10,6 +10,9 @@ from app.duty.infrastructure.repository import DutyRepository
 from app.homework.infrastructure.homework_assignee_repository import (
     HomeworkAssigneeRepository,
 )
+from app.homework.infrastructure.homework_exercise_repository import (
+    HomeworkExerciseRepository,
+)
 from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.homework.infrastructure.homework_submission_repository import (
     HomeworkSubmissionRepository,
@@ -145,11 +148,13 @@ class ReminderModuleProvider(Provider):
         homework_repo: HomeworkRepository,
         homework_assignee_repo: HomeworkAssigneeRepository,
         homework_submission_repo: HomeworkSubmissionRepository,
+        homework_exercise_repo: HomeworkExerciseRepository,
     ) -> HomeworkTaskScanner:
         return HomeworkTaskScanner(
             homework_repo=homework_repo,
             homework_assignee_repo=homework_assignee_repo,
             homework_submission_repo=homework_submission_repo,
+            homework_exercise_repo=homework_exercise_repo,
         )
 
     @provide

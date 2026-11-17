@@ -15,7 +15,9 @@ from app.shared.application.response import BadRequestException
 from tests.fixtures.homework_fixtures import (
     FakeQuizApiClient,
     InMemoryHomeworkAssigneeRepository,
+    InMemoryHomeworkExerciseRepository,
     InMemoryHomeworkRepository,
+    make_exercise,
 )
 
 
@@ -23,13 +25,14 @@ from tests.fixtures.homework_fixtures import (
 async def test_create_homework_rejects_when_no_options_selected(
     in_memory_homework_repo: InMemoryHomeworkRepository,
     in_memory_assignee_repo: InMemoryHomeworkAssigneeRepository,
+    in_memory_exercise_repo: InMemoryHomeworkExerciseRepository,
     fake_quiz_api: FakeQuizApiClient,
 ):
-    """Bắt lỗi khi không chọn bất kỳ option nào (cả coding và game đều False)."""
     use_case = CreateHomeworkUseCase(
         homework_repo=in_memory_homework_repo,
         quiz_api=fake_quiz_api,  # type: ignore
         homework_assignee_repo=in_memory_assignee_repo,
+        homework_exercise_repo=in_memory_exercise_repo,
     )
 
     data = HomeworkCreate(
@@ -51,14 +54,15 @@ async def test_create_homework_rejects_when_no_options_selected(
 async def test_create_homework_rejects_when_lesson_not_found_on_quiz(
     in_memory_homework_repo: InMemoryHomeworkRepository,
     in_memory_assignee_repo: InMemoryHomeworkAssigneeRepository,
+    in_memory_exercise_repo: InMemoryHomeworkExerciseRepository,
     fake_quiz_api: FakeQuizApiClient,
 ):
-    """Bắt lỗi khi slug bài học không tồn tại trên hệ thống Quiz (404/None)."""
     fake_quiz_api.set_lesson_metadata("lesson-khong-ton-tai", None)  # type: ignore
     use_case = CreateHomeworkUseCase(
         homework_repo=in_memory_homework_repo,
         quiz_api=fake_quiz_api,  # type: ignore
         homework_assignee_repo=in_memory_assignee_repo,
+        homework_exercise_repo=in_memory_exercise_repo,
     )
 
     data = HomeworkCreate(
@@ -80,9 +84,9 @@ async def test_create_homework_rejects_when_lesson_not_found_on_quiz(
 async def test_create_homework_rejects_when_coding_not_available(
     in_memory_homework_repo: InMemoryHomeworkRepository,
     in_memory_assignee_repo: InMemoryHomeworkAssigneeRepository,
+    in_memory_exercise_repo: InMemoryHomeworkExerciseRepository,
     fake_quiz_api: FakeQuizApiClient,
 ):
-    """Bắt lỗi khi chọn 'requires_coding' nhưng Quiz metadata báo chưa có bài tập coding."""
     fake_quiz_api.set_lesson_metadata(
         "batch-norm",
         {
@@ -99,6 +103,7 @@ async def test_create_homework_rejects_when_coding_not_available(
         homework_repo=in_memory_homework_repo,
         quiz_api=fake_quiz_api,  # type: ignore
         homework_assignee_repo=in_memory_assignee_repo,
+        homework_exercise_repo=in_memory_exercise_repo,
     )
 
     data = HomeworkCreate(
@@ -121,9 +126,9 @@ async def test_create_homework_rejects_when_coding_not_available(
 async def test_create_homework_rejects_when_game_not_available(
     in_memory_homework_repo: InMemoryHomeworkRepository,
     in_memory_assignee_repo: InMemoryHomeworkAssigneeRepository,
+    in_memory_exercise_repo: InMemoryHomeworkExerciseRepository,
     fake_quiz_api: FakeQuizApiClient,
 ):
-    """Bắt lỗi khi chọn 'requires_game' nhưng Quiz metadata báo chưa có câu hỏi game."""
     fake_quiz_api.set_lesson_metadata(
         "resnet-intro",
         {
@@ -140,6 +145,7 @@ async def test_create_homework_rejects_when_game_not_available(
         homework_repo=in_memory_homework_repo,
         quiz_api=fake_quiz_api,  # type: ignore
         homework_assignee_repo=in_memory_assignee_repo,
+        homework_exercise_repo=in_memory_exercise_repo,
     )
 
     data = HomeworkCreate(
@@ -159,12 +165,13 @@ async def test_create_homework_rejects_when_game_not_available(
 
 
 @pytest.mark.asyncio
-async def test_create_homework_success(
+async def test_create_homework_success_initializes_official_exercises(
     in_memory_homework_repo: InMemoryHomeworkRepository,
     in_memory_assignee_repo: InMemoryHomeworkAssigneeRepository,
+    in_memory_exercise_repo: InMemoryHomeworkExerciseRepository,
     fake_quiz_api: FakeQuizApiClient,
 ):
-    """Tạo bài tập thành công khi thỏa mãn điều kiện tồn tại trên Quiz."""
+    """Tạo bài tập thành công và khởi tạo ngay danh mục homework_exercises chính thức."""
     fake_quiz_api.set_lesson_metadata(
         "unet-01",
         {
@@ -172,15 +179,23 @@ async def test_create_homework_success(
             "name": "Mạng UNet",
             "has_coding": True,
             "has_game": True,
-            "coding_count": 1,
+            "coding_count": 2,
             "game_question_count": 5,
             "is_ready": True,
         },
+    )
+    fake_quiz_api.set_lesson_exercises(
+        "unet-01",
+        [
+            {"id": "unet-ex-1", "title": "Encoder"},
+            {"id": "unet-ex-2", "title": "Decoder"},
+        ],
     )
     use_case = CreateHomeworkUseCase(
         homework_repo=in_memory_homework_repo,
         quiz_api=fake_quiz_api,  # type: ignore
         homework_assignee_repo=in_memory_assignee_repo,
+        homework_exercise_repo=in_memory_exercise_repo,
     )
 
     dl = datetime.now(UTC) + timedelta(days=7)
@@ -197,25 +212,19 @@ async def test_create_homework_success(
 
     assert saved.title == "UNet Project"
     assert saved.slug == "unet-01"
-    assert saved.requires_coding is True
-    assert saved.requires_game is True
-
-    # Xác minh lưu thực tế trong In-Memory Repository
-    stored_hw = in_memory_homework_repo.get_by_id(saved.id)
-    assert stored_hw is not None
-    assert stored_hw.slug == "unet-01"
-
-    # Xác minh gán assignees thực tế
+    assert saved.last_synced_at is not None
     assert in_memory_assignee_repo.get_assigned_user_ids(saved.id) == {1, 2, 3}
+    active_exs = in_memory_exercise_repo.get_active_by_homework(saved.id)
+    assert [e.exercise_id for e in active_exs] == ["unet-ex-1", "unet-ex-2"]
 
 
 @pytest.mark.asyncio
 async def test_update_homework_validation(
     in_memory_homework_repo: InMemoryHomeworkRepository,
     in_memory_assignee_repo: InMemoryHomeworkAssigneeRepository,
+    in_memory_exercise_repo: InMemoryHomeworkExerciseRepository,
     fake_quiz_api: FakeQuizApiClient,
 ):
-    """Cập nhật bài tập: xác thực điều kiện tương tự khi đổi slug hoặc đổi yêu cầu."""
     in_memory_homework_repo.save(
         Homework(
             id=1,
@@ -225,7 +234,6 @@ async def test_update_homework_validation(
             requires_game=True,
         )
     )
-
     fake_quiz_api.set_lesson_metadata(
         "new-slug",
         {
@@ -240,10 +248,10 @@ async def test_update_homework_validation(
     use_case = UpdateHomeworkUseCase(
         homework_repo=in_memory_homework_repo,
         homework_assignee_repo=in_memory_assignee_repo,
+        homework_exercise_repo=in_memory_exercise_repo,
         quiz_api=fake_quiz_api,  # type: ignore
     )
 
-    # Thử update thành requires_coding=True khi quiz không có coding -> Phải fail
     with pytest.raises(BadRequestException) as exc_info:
         await use_case.execute(
             homework_id=1,
@@ -260,9 +268,9 @@ async def test_update_homework_validation(
 async def test_update_homework_uncheck_game_success(
     in_memory_homework_repo: InMemoryHomeworkRepository,
     in_memory_assignee_repo: InMemoryHomeworkAssigneeRepository,
+    in_memory_exercise_repo: InMemoryHomeworkExerciseRepository,
     fake_quiz_api: FakeQuizApiClient,
 ):
-    """Cập nhật bài tập: bỏ chọn requires_game thành công khi ban đầu có cả coding và game."""
     in_memory_homework_repo.save(
         Homework(
             id=1,
@@ -272,7 +280,6 @@ async def test_update_homework_uncheck_game_success(
             requires_game=True,
         )
     )
-
     fake_quiz_api.set_lesson_metadata(
         "test-slug",
         {
@@ -283,38 +290,27 @@ async def test_update_homework_uncheck_game_success(
             "is_ready": True,
         },
     )
+    fake_quiz_api.set_lesson_exercises("test-slug", [{"id": "ex-1", "title": "Ex 1"}])
 
     use_case = UpdateHomeworkUseCase(
         homework_repo=in_memory_homework_repo,
         homework_assignee_repo=in_memory_assignee_repo,
+        homework_exercise_repo=in_memory_exercise_repo,
         quiz_api=fake_quiz_api,  # type: ignore
     )
 
     result = await use_case.execute(
         homework_id=1,
-        data=HomeworkUpdate(
-            requires_game=False,
-        ),
+        data=HomeworkUpdate(requires_game=False),
     )
 
     assert result.requires_game is False
     assert result.requires_coding is True
-
-    # Xác minh trạng thái lưu thực tế trong RAM
-    updated_hw = in_memory_homework_repo.get_by_id(1)
-    assert updated_hw is not None
-    assert updated_hw.requires_game is False
-    assert updated_hw.requires_coding is True
+    assert [e.exercise_id for e in in_memory_exercise_repo.get_active_by_homework(1)] == ["ex-1"]
 
 
 def test_evaluate_submissions_partial_coding():
-    """Kiểm tra evaluate_submissions khi học sinh mới làm 1/2 bài coding con."""
-    hw = Homework(
-        id=1,
-        title="Bài tập con test",
-        requires_coding=True,
-        requires_game=False,
-    )
+    hw = Homework(id=1, title="Bài tập con test", requires_coding=True, requires_game=False)
     submissions = [
         HomeworkSubmission(
             id=1,
@@ -327,7 +323,8 @@ def test_evaluate_submissions_partial_coding():
         )
     ]
     eval_result = hw.evaluate_submissions(
-        submissions, required_exercise_ids={"ex-1", "ex-2"}
+        submissions,
+        required_exercises=[make_exercise(1, "ex-1", order_index=1), make_exercise(1, "ex-2", order_index=2)],
     )
     assert eval_result.is_submitted is False
     assert eval_result.coding_submitted is False
@@ -338,13 +335,7 @@ def test_evaluate_submissions_partial_coding():
 
 
 def test_evaluate_submissions_full_coding():
-    """Kiểm tra evaluate_submissions khi học sinh làm đủ cả 2 bài coding con."""
-    hw = Homework(
-        id=1,
-        title="Bài tập con test",
-        requires_coding=True,
-        requires_game=False,
-    )
+    hw = Homework(id=1, title="Bài tập con test", requires_coding=True, requires_game=False)
     submissions = [
         HomeworkSubmission(
             id=1,
@@ -366,7 +357,8 @@ def test_evaluate_submissions_full_coding():
         ),
     ]
     eval_result = hw.evaluate_submissions(
-        submissions, required_exercise_ids={"ex-1", "ex-2"}
+        submissions,
+        required_exercises=[make_exercise(1, "ex-1", order_index=1), make_exercise(1, "ex-2", order_index=2)],
     )
     assert eval_result.is_submitted is True
     assert eval_result.coding_submitted is True

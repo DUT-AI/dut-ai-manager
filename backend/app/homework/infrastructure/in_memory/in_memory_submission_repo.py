@@ -11,15 +11,15 @@ from app.homework.domain.value_objects import (
 class InMemoryHomeworkSubmissionRepository(HomeworkSubmissionRepositoryPort):
     """Cài đặt In-Memory của HomeworkSubmissionRepositoryPort phục vụ kiểm thử nhanh và độc lập."""
 
-    def __init__(self, initial_submissions: list[HomeworkSubmission] | None = None) -> None:
+    def __init__(
+        self, initial_submissions: list[HomeworkSubmission] | None = None
+    ) -> None:
         self._submissions: list[HomeworkSubmission] = []
         self._next_id: int = 1
         if initial_submissions:
             self.add_submissions(initial_submissions)
 
-    def add_submission(
-        self, submission: HomeworkSubmission
-    ) -> HomeworkSubmission:
+    def add_submission(self, submission: HomeworkSubmission) -> HomeworkSubmission:
         if submission.id is None:
             submission = submission.model_copy(update={"id": self._next_id})
             self._next_id += 1
@@ -47,22 +47,42 @@ class InMemoryHomeworkSubmissionRepository(HomeworkSubmissionRepositoryPort):
     def update_submission(
         self,
         submission: HomeworkSubmission,
-        submitted_at: datetime,
-        is_passed: bool,
+        submitted_at: datetime | None = None,
+        is_passed: bool | None = None,
         exercise_id: str | None = None,
         exercise_title: str | None = None,
         score: float | None = None,
-        attempt_number: int = 1,
+        attempt_number: int | None = None,
         details: CodingSubmissionDetails | GameSubmissionDetails | None = None,
+        external_submission_id: str | None = None,
     ) -> HomeworkSubmission:
         updated = submission.model_copy(
             update={
-                "submitted_at": submitted_at,
-                "is_passed": is_passed,
-                "exercise_id": exercise_id if exercise_id is not None else submission.exercise_id,
-                "exercise_title": exercise_title if exercise_title is not None else submission.exercise_title,
+                "submitted_at": (
+                    submitted_at if submitted_at is not None else submission.submitted_at
+                ),
+                "is_passed": (
+                    is_passed if is_passed is not None else submission.is_passed
+                ),
+                "exercise_id": (
+                    exercise_id if exercise_id is not None else submission.exercise_id
+                ),
+                "external_submission_id": (
+                    external_submission_id
+                    if external_submission_id is not None
+                    else submission.external_submission_id
+                ),
+                "exercise_title": (
+                    exercise_title
+                    if exercise_title is not None
+                    else submission.exercise_title
+                ),
                 "score": score if score is not None else submission.score,
-                "attempt_number": attempt_number,
+                "attempt_number": (
+                    attempt_number
+                    if attempt_number is not None
+                    else submission.attempt_number
+                ),
                 "details": details if details is not None else submission.details,
             }
         )
@@ -75,19 +95,25 @@ class InMemoryHomeworkSubmissionRepository(HomeworkSubmissionRepositoryPort):
     def get_submissions_by_user(
         self, homework_id: int, user_id: int
     ) -> list[HomeworkSubmission]:
-        return [
-            s for s in self._submissions
+        items = [
+            s
+            for s in self._submissions
             if s.homework_id == homework_id and s.user_id == user_id
         ]
+        items.sort(key=lambda x: x.submitted_at, reverse=True)
+        return items
 
     def get_user_submissions_for_homeworks(
         self, homework_ids: list[int], user_id: int
-    ) -> dict[int, list[HomeworkSubmission]]:
-        res: dict[int, list[HomeworkSubmission]] = {hid: [] for hid in homework_ids}
-        for s in self._submissions:
-            if s.homework_id in res and s.user_id == user_id:
-                res[s.homework_id].append(s)
-        return res
+    ) -> list[HomeworkSubmission]:
+        hw_set = set(homework_ids)
+        items = [
+            s
+            for s in self._submissions
+            if s.homework_id in hw_set and s.user_id == user_id
+        ]
+        items.sort(key=lambda x: x.submitted_at, reverse=True)
+        return items
 
     def get_all_submissions(self) -> list[HomeworkSubmission]:
         return list(self._submissions)
@@ -95,7 +121,9 @@ class InMemoryHomeworkSubmissionRepository(HomeworkSubmissionRepositoryPort):
     def get_submissions_by_homework(
         self, homework_id: int
     ) -> list[HomeworkSubmission]:
-        return [s for s in self._submissions if s.homework_id == homework_id]
+        items = [s for s in self._submissions if s.homework_id == homework_id]
+        items.sort(key=lambda x: x.submitted_at, reverse=True)
+        return items
 
     def find_submission_match(
         self,
@@ -103,44 +131,55 @@ class InMemoryHomeworkSubmissionRepository(HomeworkSubmissionRepositoryPort):
         user_id: int,
         submission_type: SubmissionType,
         exercise_id: str | None = None,
-        quiz_submission_id: str | None = None,
+        external_submission_id: str | None = None,
         submitted_at: datetime | None = None,
     ) -> HomeworkSubmission | None:
-        for s in reversed(self._submissions):
-            if s.homework_id != homework_id or s.user_id != user_id:
-                continue
-            if s.submission_type != submission_type:
-                continue
-            if exercise_id and s.exercise_id == exercise_id:
-                return s
-            if quiz_submission_id and hasattr(s.details, "submission_id"):
-                if s.details.submission_id == quiz_submission_id:
+        if external_submission_id:
+            clean_ext_id = str(external_submission_id).strip()
+            for s in reversed(self._submissions):
+                if (
+                    s.homework_id == homework_id
+                    and s.user_id == user_id
+                    and s.submission_type == submission_type
+                    and s.external_submission_id == clean_ext_id
+                ):
                     return s
-            if submitted_at and s.submitted_at == submitted_at:
-                return s
+            return None
+
+        if submitted_at:
+            for s in reversed(self._submissions):
+                if (
+                    s.homework_id == homework_id
+                    and s.user_id == user_id
+                    and s.submission_type == submission_type
+                    and s.submitted_at == submitted_at
+                ):
+                    if (
+                        submission_type == SubmissionType.CODING
+                        and exercise_id
+                        and s.exercise_id != exercise_id
+                    ):
+                        continue
+                    return s
+
         return None
 
     def get_submissions_by_exercise(
         self, homework_id: int, exercise_id: str
     ) -> list[HomeworkSubmission]:
-        return [
-            s for s in self._submissions
+        items = [
+            s
+            for s in self._submissions
             if s.homework_id == homework_id and s.exercise_id == exercise_id
         ]
+        items.sort(key=lambda x: x.submitted_at, reverse=True)
+        return items
 
     def get_submitted_exercise_ids(
         self, homework_id: int, user_id: int
     ) -> set[str]:
         return {
-            s.exercise_id for s in self.get_submissions_by_user(homework_id, user_id)
+            s.exercise_id
+            for s in self.get_submissions_by_user(homework_id, user_id)
             if s.exercise_id and s.is_passed
         }
-
-    def get_required_exercise_ids_map(
-        self, homework_ids: list[int]
-    ) -> dict[int, set[str]]:
-        res: dict[int, set[str]] = {hid: set() for hid in homework_ids}
-        for s in self._submissions:
-            if s.homework_id in res and s.exercise_id:
-                res[s.homework_id].add(s.exercise_id)
-        return res

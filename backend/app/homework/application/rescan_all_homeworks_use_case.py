@@ -11,16 +11,13 @@ from app.homework.application.check_overdue_homework_use_case import (
     CheckOverdueHomeworkUseCase,
 )
 from app.homework.application.helpers import QuizSubmissionHelper
-from app.homework.application.homework_exercise_resolver import (
-    HomeworkExerciseResolver,
+from app.homework.domain.ports import (
+    HomeworkAssigneeRepositoryPort,
+    HomeworkExerciseRepositoryPort,
+    HomeworkRepositoryPort,
+    HomeworkSubmissionRepositoryPort,
 )
-from app.homework.infrastructure.homework_assignee_repository import (
-    HomeworkAssigneeRepository,
-)
-from app.homework.infrastructure.homework_repository import HomeworkRepository
-from app.homework.infrastructure.homework_submission_repository import (
-    HomeworkSubmissionRepository,
-)
+from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.shared.domain.event_bus import EventBus
 from app.user.infrastructure.repository import UserRepository
 
@@ -30,32 +27,29 @@ class RescanAllHomeworksUseCase:
 
     def __init__(
         self,
-        homework_repo: HomeworkRepository,
-        homework_submission_repo: HomeworkSubmissionRepository,
-        exercise_resolver: HomeworkExerciseResolver,
+        homework_repo: HomeworkRepositoryPort,
+        homework_submission_repo: HomeworkSubmissionRepositoryPort,
+        homework_exercise_repo: HomeworkExerciseRepositoryPort,
         user_repo: UserRepository,
-        homework_assignee_repo: HomeworkAssigneeRepository,
+        homework_assignee_repo: HomeworkAssigneeRepositoryPort,
+        quiz_api: QuizApiClient,
         event_bus: type[EventBus] = EventBus,
     ):
         self.checker = CheckOverdueHomeworkUseCase(
             homework_repo=homework_repo,
             homework_submission_repo=homework_submission_repo,
             homework_assignee_repo=homework_assignee_repo,
-            exercise_resolver=exercise_resolver,
+            homework_exercise_repo=homework_exercise_repo,
             event_bus=event_bus,
         )
         self.homework_repo = homework_repo
         self.homework_submission_repo = homework_submission_repo
-        self.exercise_resolver = exercise_resolver
+        self.homework_exercise_repo = homework_exercise_repo
         self.user_repo = user_repo
         self.homework_assignee_repo = homework_assignee_repo
+        self.quiz_api = quiz_api
 
     async def execute(self, auto_sync_legacy: bool = True) -> int:
-        """
-        Quét lại toàn bộ các bài tập trong quá khứ có deadline <= hiện tại:
-        1. Đồng bộ các bài tập cũ chưa có dữ liệu trong homework_assignees.
-        2. Chạy kiểm tra vi phạm cho từng ngày deadline trong quá khứ và phát sinh event tạo vi phạm chuẩn.
-        """
         all_homeworks = self.homework_repo.get_all(limit=1000)
         now_date = datetime.now(UTC).astimezone(ZoneInfo("Asia/Ho_Chi_Minh")).date()
 

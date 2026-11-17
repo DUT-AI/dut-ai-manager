@@ -33,8 +33,11 @@ class HomeworkRepositoryPort(ABC):
 
     @abstractmethod
     def get_all_assigned_to_user(
-        self, user_id: int, deleted: bool = False
-    ) -> tuple[list[HomeworkEntity], dict[int, datetime | None]]:
+        self,
+        user_id: int,
+        deleted: bool = False,
+        search: str | None = None,
+    ) -> list[HomeworkEntity]:
         """Lấy toàn bộ danh sách bài tập được giao cho một học viên."""
         ...
 

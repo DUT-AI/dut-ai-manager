@@ -3,12 +3,11 @@ from datetime import UTC, datetime
 from fastapi import HTTPException
 
 from app.homework.domain.entity import Homework
-from app.homework.infrastructure.homework_assignee_repository import (
-    HomeworkAssigneeRepository,
-)
-from app.homework.infrastructure.homework_repository import HomeworkRepository
-from app.homework.infrastructure.homework_submission_repository import (
-    HomeworkSubmissionRepository,
+from app.homework.domain.ports import (
+    HomeworkAssigneeRepositoryPort,
+    HomeworkExerciseRepositoryPort,
+    HomeworkRepositoryPort,
+    HomeworkSubmissionRepositoryPort,
 )
 from app.permission_request.application.strategies.base import PermissionStrategy
 from app.permission_request.domain.entity import PermissionRequest
@@ -22,13 +21,15 @@ class PostponeStrategy(PermissionStrategy[PostponePayload]):
 
     def __init__(
         self,
-        homework_repo: HomeworkRepository,
-        homework_assignee_repo: HomeworkAssigneeRepository,
-        homework_submission_repo: HomeworkSubmissionRepository,
+        homework_repo: HomeworkRepositoryPort,
+        homework_assignee_repo: HomeworkAssigneeRepositoryPort,
+        homework_submission_repo: HomeworkSubmissionRepositoryPort,
+        homework_exercise_repo: HomeworkExerciseRepositoryPort,
     ):
         self.homework_repo = homework_repo
         self.homework_assignee_repo = homework_assignee_repo
         self.homework_submission_repo = homework_submission_repo
+        self.homework_exercise_repo = homework_exercise_repo
 
     @property
     def category(self) -> RequestCategory:
@@ -96,15 +97,14 @@ class PostponeStrategy(PermissionStrategy[PostponePayload]):
         submissions = self.homework_submission_repo.get_submissions_by_user(
             homework_id, uid
         )
-        req_ex_map = self.homework_submission_repo.get_required_exercise_ids_map(
-            [homework_id]
+        required_exercises = self.homework_exercise_repo.get_active_by_homework(
+            homework_id
         )
-        req_ex_ids = req_ex_map.get(homework_id)
 
         evaluation = homework.evaluate_submissions(
             submissions,
+            required_exercises=required_exercises,
             deadline=current_deadline_utc,
-            required_exercise_ids=req_ex_ids,
         )
         if evaluation.is_submitted:
             raise HTTPException(

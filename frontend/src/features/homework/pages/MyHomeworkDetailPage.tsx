@@ -10,6 +10,8 @@ import {
   Card,
   Alert,
   Breadcrumb,
+  Space,
+  message,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -22,13 +24,20 @@ import {
   WarningOutlined,
   CheckCircleOutlined,
   BookOutlined,
+  SyncOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/vi';
 
-import { useHomework, useMyHomeworkSubmissions } from '../hooks/useHomeworks';
-import { UnifiedSubmissionTimeline } from '../components/UnifiedSubmissionTimeline';
+import {
+  useMyHomeworkDetail,
+  useSyncHomeworkFromQuiz,
+} from '../hooks/useHomeworks';
+import {
+  MyHomeworkExerciseChecklist,
+  UnifiedSubmissionTimeline,
+} from '../components';
 
 dayjs.extend(relativeTime);
 dayjs.locale('vi');
@@ -40,55 +49,41 @@ export const MyHomeworkDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const homeworkId = id ? Number(id) : null;
 
-  const { data: homework, isLoading: isHwLoading } = useHomework(homeworkId);
-  const { data: submissions = [], isLoading: isSubLoading } = useMyHomeworkSubmissions(homeworkId);
+  const { data: detail, isLoading } = useMyHomeworkDetail(homeworkId);
+  const { mutate: syncHomework, isPending: isSyncing } = useSyncHomeworkFromQuiz();
 
-  const isLoading = isHwLoading || isSubLoading;
-  const deadlineObj = homework ? dayjs(homework.deadline) : null;
-  const isOverdue = deadlineObj ? dayjs().isAfter(deadlineObj) : false;
+  const homework = detail?.homework;
+  const codingExercises = useMemo(() => detail?.coding_exercises ?? [], [detail?.coding_exercises]);
+  const submissions = useMemo(() => detail?.submissions ?? [], [detail?.submissions]);
 
-  const requiresCoding = homework?.requires_coding ?? true;
-  const requiresGame = homework?.requires_game ?? false;
-
-  const hasBoth = requiresCoding && requiresGame;
-  const hasOnlyCoding = requiresCoding && !requiresGame;
-  const hasOnlyGame = !requiresCoding && requiresGame;
-
-  // Filter submissions
   const codingSubmissions = useMemo(
-    () => (submissions || []).filter((s) => s.submission_type === 'CODING'),
+    () => submissions.filter((s) => s.submission_type === 'CODING'),
     [submissions]
   );
   const gameSubmissions = useMemo(
-    () => (submissions || []).filter((s) => s.submission_type === 'GAME'),
+    () => submissions.filter((s) => s.submission_type === 'GAME'),
     [submissions]
   );
 
-  const isCodingSubmitted = codingSubmissions.length > 0;
-  const isGamePassed = useMemo(
-    () => (gameSubmissions || []).some((s) => s.is_passed),
-    [gameSubmissions]
+  // Convert official coding exercises into summary items for timeline overview
+  const timelineExercises = useMemo(
+    () =>
+      codingExercises.map((ex) => ({
+        exercise_id: ex.exercise_id,
+        title: ex.title,
+        order_index: ex.order_index ?? 0,
+        completed_count: 0,
+        total_assigned: 0,
+        completion_rate: 0,
+      })),
+    [codingExercises]
   );
-  const isCodingCompleted = useMemo(() => {
-    const exercises = homework?.coding_exercises || [];
-    if (exercises.length === 0) return codingSubmissions.length > 0;
-    const passedExIds = new Set(
-      codingSubmissions.filter((s) => s.is_passed).map((s) => s.exercise_id)
-    );
-    return exercises.every((ex) => passedExIds.has(ex.exercise_id));
-  }, [homework?.coding_exercises, codingSubmissions]);
-
-  const isFullyPassed = hasBoth
-    ? isCodingCompleted && isGamePassed
-    : hasOnlyCoding
-      ? isCodingCompleted
-      : isGamePassed;
 
   if (isLoading && !homework) {
     return (
       <div className="p-8 flex flex-col justify-center items-center gap-3 min-h-[60vh]">
         <Spin size="large" />
-        <Text type="secondary" className="text-sm">Đang tải lịch sử làm bài...</Text>
+        <Text type="secondary" className="text-sm">Đang tải chi tiết bài tập...</Text>
       </div>
     );
   }
@@ -96,7 +91,7 @@ export const MyHomeworkDetailPage: React.FC = () => {
   if (!homework) {
     return (
       <div className="p-8">
-        <Empty description="Không tìm thấy bài tập yêu cầu">
+        <Empty description="Không tìm thấy bài tập yêu cầu hoặc bạn chưa được giao bài tập này">
           <Button type="primary" onClick={() => navigate('/dashboard/my-homeworks')}>
             Quay lại Bài tập của tôi
           </Button>
@@ -104,6 +99,70 @@ export const MyHomeworkDetailPage: React.FC = () => {
       </div>
     );
   }
+
+  // Pure presentation from Backend SSOT evaluation
+  const completionStatus = homework.completion_status ?? 'NOT_STARTED';
+  const timelinessStatus = homework.timeliness_status ?? 'UPCOMING';
+  const isCompleted = completionStatus === 'COMPLETED';
+  const isCompletedLate = isCompleted && timelinessStatus === 'LATE';
+  const isInProgress = completionStatus === 'IN_PROGRESS';
+  const isOverdue = timelinessStatus === 'OVERDUE';
+
+  const requiresCoding = homework.has_coding ?? homework.requires_coding ?? true;
+  const requiresGame = homework.has_game ?? homework.requires_game ?? false;
+  const hasBoth = requiresCoding && requiresGame;
+  const hasOnlyCoding = requiresCoding && !requiresGame;
+  const hasOnlyGame = !requiresCoding && requiresGame;
+
+  const deadlineObj = homework.deadline ? dayjs(homework.deadline) : null;
+
+  const handleSync = () => {
+    if (!homework.id) return;
+    syncHomework(homework.id, {
+      onSuccess: (res) => {
+        message.success(res?.message || 'Đã đồng bộ dữ liệu mới nhất từ Quiz.');
+      },
+      onError: () => {
+        message.error('Không thể đồng bộ từ Quiz. Vui lòng thử lại sau.');
+      },
+    });
+  };
+
+  const renderStatusTag = () => {
+    if (isCompleted && !isCompletedLate) {
+      return (
+        <Tag color="success" icon={<CheckCircleOutlined />} className="text-xs rounded-md font-semibold">
+          Đã hoàn thành • Đúng hạn
+        </Tag>
+      );
+    }
+    if (isCompletedLate) {
+      return (
+        <Tag color="cyan" icon={<CheckCircleOutlined />} className="text-xs rounded-md font-semibold">
+          Đã hoàn thành • Nộp trễ
+        </Tag>
+      );
+    }
+    if (isOverdue) {
+      return (
+        <Tag color="error" icon={<WarningOutlined />} className="text-xs rounded-md font-semibold">
+          {isInProgress ? 'Quá hạn (Làm dở)' : 'Quá hạn nộp'}
+        </Tag>
+      );
+    }
+    if (isInProgress) {
+      return (
+        <Tag color="warning" icon={<ClockCircleOutlined />} className="text-xs rounded-md font-semibold">
+          Đang làm dở
+        </Tag>
+      );
+    }
+    return (
+      <Tag color="blue" icon={<ClockCircleOutlined />} className="text-xs rounded-md font-semibold">
+        Chưa nộp bài
+      </Tag>
+    );
+  };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 w-full space-y-6">
@@ -131,13 +190,25 @@ export const MyHomeworkDetailPage: React.FC = () => {
           ]}
         />
 
-        <Button
-          icon={<ArrowLeftOutlined />}
-          onClick={() => navigate('/dashboard/my-homeworks')}
-          className="rounded-lg font-medium"
-        >
-          Quay lại
-        </Button>
+        <Space>
+          {!isCompleted && (
+            <Button
+              icon={<SyncOutlined spin={isSyncing} />}
+              loading={isSyncing}
+              onClick={handleSync}
+              className="rounded-lg font-medium border-blue-200 text-blue-600 hover:border-blue-500"
+            >
+              Đồng bộ từ Quiz
+            </Button>
+          )}
+          <Button
+            icon={<ArrowLeftOutlined />}
+            onClick={() => navigate('/dashboard/my-homeworks')}
+            className="rounded-lg font-medium"
+          >
+            Quay lại
+          </Button>
+        </Space>
       </div>
 
       {/* Main Header Card */}
@@ -151,30 +222,26 @@ export const MyHomeworkDetailPage: React.FC = () => {
               <Title level={4} className="!mb-0 !text-xl font-bold text-gray-900 dark:text-gray-100 truncate">
                 {homework.title}
               </Title>
-              {isFullyPassed ? (
-                <Tag color="success" icon={<CheckCircleOutlined />} className="text-xs rounded-md font-semibold">
-                  Đã hoàn thành
-                </Tag>
-              ) : isOverdue ? (
-                <Tag color="error" icon={<WarningOutlined />} className="text-xs rounded-md font-semibold">
-                  {isCodingCompleted || isGamePassed ? 'Quá hạn (Làm dở)' : 'Quá hạn nộp'}
-                </Tag>
-              ) : (isCodingCompleted || isGamePassed || codingSubmissions.length > 0) ? (
-                <Tag color="warning" icon={<ClockCircleOutlined />} className="text-xs rounded-md font-semibold">
-                  Đang làm dở
-                </Tag>
-              ) : (
-                <Tag color="blue" icon={<ClockCircleOutlined />} className="text-xs rounded-md font-semibold">
-                  Chưa nộp bài
-                </Tag>
-              )}
+              {renderStatusTag()}
             </div>
 
             <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 flex-wrap pt-1">
               {deadlineObj && (
                 <span className="flex items-center gap-1.5">
                   <CalendarOutlined className="text-indigo-500" />
-                  <b>Hạn nộp:</b> {deadlineObj.format('DD/MM/YYYY HH:mm')} ({deadlineObj.fromNow()})
+                  <b>Hạn nộp cá nhân:</b> {deadlineObj.format('DD/MM/YYYY HH:mm')} ({deadlineObj.fromNow()})
+                </span>
+              )}
+              {homework.completed_at && (
+                <span className="flex items-center gap-1.5 text-emerald-600">
+                  <CheckCircleOutlined />
+                  <b>Mốc hoàn thành:</b> {dayjs(homework.completed_at).format('DD/MM/YYYY HH:mm')}
+                </span>
+              )}
+              {homework.last_synced_at && (
+                <span className="flex items-center gap-1.5">
+                  <SyncOutlined />
+                  <b>Đồng bộ gần nhất:</b> {dayjs(homework.last_synced_at).format('DD/MM/YYYY HH:mm')}
                 </span>
               )}
             </div>
@@ -189,23 +256,30 @@ export const MyHomeworkDetailPage: React.FC = () => {
               icon={<ExportOutlined />}
               className="bg-indigo-600 hover:bg-indigo-700 rounded-xl font-semibold h-10 px-5 shadow-xs"
             >
-              Làm bài trên Quiz ngay
+              {isCompleted ? 'Xem bài trên Quiz' : 'Làm bài trên Quiz ngay'}
             </Button>
           )}
         </div>
 
         {/* Requirements Alert Banner */}
         <Alert
-          type="info"
+          type={isCompleted ? 'success' : 'info'}
           showIcon
-          icon={<ThunderboltOutlined className="text-indigo-600" />}
-          className="text-xs rounded-xl bg-indigo-50/60 dark:bg-indigo-950/40 border-indigo-100 dark:border-indigo-900/50"
+          icon={<ThunderboltOutlined className={isCompleted ? 'text-emerald-600' : 'text-indigo-600'} />}
+          className="text-xs rounded-xl"
           message={
             <span className="text-gray-800 dark:text-gray-200">
               <b>Tiêu chuẩn hoàn thành:</b>{' '}
-              {hasBoth && 'Nộp file bài tập Coding và Hoàn thành Game trắc nghiệm.'}
-              {hasOnlyCoding && 'Nộp file bài tập Coding thành công lên hệ thống Quiz.'}
-              {hasOnlyGame && 'Hoàn thành bài tập Game trắc nghiệm.'}
+              {hasBoth &&
+                `Hoàn thành đủ ${homework.total_coding_required ?? codingExercises.length} bài tập Coding và Game trắc nghiệm.`}
+              {hasOnlyCoding &&
+                `Hoàn thành đạt đủ ${homework.total_coding_required ?? codingExercises.length} bài tập Coding trên hệ thống Quiz.`}
+              {hasOnlyGame && 'Hoàn thành đạt bài tập Game trắc nghiệm.'}
+              {!isCompleted && homework.uncompleted_items && homework.uncompleted_items.length > 0 && (
+                <span className="ml-2 font-semibold text-amber-700">
+                  • Còn thiếu: {homework.uncompleted_items.join(', ')}.
+                </span>
+              )}
             </span>
           }
         />
@@ -223,26 +297,24 @@ export const MyHomeworkDetailPage: React.FC = () => {
                   <span className="flex items-center gap-2 font-semibold text-sm">
                     <CodeOutlined className="text-indigo-600" />
                     Bài tập Coding
-                    {isCodingSubmitted ? (
-                      <Tag color="success" className="m-0 text-xs rounded-md">
-                        {codingSubmissions.length} lần nộp
-                      </Tag>
-                    ) : (
-                      <Tag color="default" className="m-0 text-xs rounded-md">
-                        Chưa nộp
-                      </Tag>
-                    )}
+                    <Tag
+                      color={homework.coding_submitted ? 'success' : codingSubmissions.length > 0 ? 'warning' : 'default'}
+                      className="m-0 text-xs rounded-md"
+                    >
+                      {homework.total_coding_completed ?? 0}/{homework.total_coding_required ?? 0} bài đạt
+                    </Tag>
                   </span>
                 ),
                 children: (
                   <div className="pt-2">
+                    <MyHomeworkExerciseChecklist exercises={codingExercises} />
                     <UnifiedSubmissionTimeline
                       submissions={codingSubmissions}
                       type="CODING"
                       deadline={homework.deadline}
                       homeworkLink={homework.link}
-                      showExerciseOverview={true}
-                      allExercises={homework.coding_exercises}
+                      showExerciseOverview={false}
+                      allExercises={timelineExercises}
                     />
                   </div>
                 ),
@@ -253,9 +325,9 @@ export const MyHomeworkDetailPage: React.FC = () => {
                   <span className="flex items-center gap-2 font-semibold text-sm">
                     <TrophyOutlined className="text-purple-600" />
                     Trắc nghiệm Game
-                    {isGamePassed ? (
-                      <Tag color="success" className="m-0 text-xs rounded-md">
-                        Đã hoàn thành
+                    {homework.game_submitted ? (
+                      <Tag color={homework.game_is_late ? 'cyan' : 'success'} className="m-0 text-xs rounded-md">
+                        {homework.game_is_late ? 'Hoàn thành (Trễ)' : 'Đã hoàn thành'}
                       </Tag>
                     ) : (
                       <Tag color="default" className="m-0 text-xs rounded-md">
@@ -283,16 +355,17 @@ export const MyHomeworkDetailPage: React.FC = () => {
             <div className="flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-zinc-700">
               <CodeOutlined className="text-indigo-600 text-lg" />
               <Title level={5} className="!mb-0 font-bold text-gray-800 dark:text-gray-100">
-                Lịch sử nộp bài tập Coding
+                Tiến độ & lịch sử nộp bài tập Coding
               </Title>
             </div>
+            <MyHomeworkExerciseChecklist exercises={codingExercises} />
             <UnifiedSubmissionTimeline
               submissions={codingSubmissions}
               type="CODING"
               deadline={homework.deadline}
               homeworkLink={homework.link}
-              showExerciseOverview={true}
-              allExercises={homework.coding_exercises}
+              showExerciseOverview={false}
+              allExercises={timelineExercises}
             />
           </div>
         ) : hasOnlyGame ? (
@@ -317,12 +390,13 @@ export const MyHomeworkDetailPage: React.FC = () => {
             type="CODING"
             deadline={homework.deadline}
             homeworkLink={homework.link}
-            showExerciseOverview={true}
-            allExercises={homework.coding_exercises}
+            showExerciseOverview={false}
+            allExercises={timelineExercises}
           />
         )}
       </Card>
     </div>
   );
 };
+
 export default MyHomeworkDetailPage;

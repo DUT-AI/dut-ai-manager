@@ -195,11 +195,12 @@ class InMemoryHomeworkAssigneeRepository(HomeworkAssigneeRepositoryPort):
         return [hid for (hid, uid) in self._assignees if uid == user_id]
 
     def get_user_deadlines_for_homeworks(
-        self, user_id: int, homework_ids: list[int]
-    ) -> dict[int, datetime | None]:
+        self, homework_ids: list[int], user_id: int
+    ) -> dict[int, datetime]:
         return {
-            hid: self._assignees.get((hid, user_id))
+            hid: dl
             for hid in homework_ids
+            if (dl := self._assignees.get((hid, user_id))) is not None
         }
 
     def get_min_deadlines_by_homework_ids(

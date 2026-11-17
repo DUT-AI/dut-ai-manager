@@ -171,10 +171,13 @@ async def test_scan_and_send_reminders_homework_dry_run():
     notif_repo.has_reminder_been_sent.return_value = False
     notif_repo.get_last_reminder_time.return_value = None
 
+    from app.homework.infrastructure.in_memory import InMemoryHomeworkExerciseRepository
+
     homework_scanner = HomeworkTaskScanner(
         homework_repo=hw_repo,
         homework_assignee_repo=hw_assignee_repo,
         homework_submission_repo=hw_sub_repo,
+        homework_exercise_repo=InMemoryHomeworkExerciseRepository(),
     )
     mock_unified_dispatcher = MagicMock()
     mock_unified_dispatcher.dispatch = AsyncMock(
@@ -438,10 +441,13 @@ def test_homework_scanner_incomplete_submission_still_reminds():
         )
     ]
 
+    from app.homework.infrastructure.in_memory import InMemoryHomeworkExerciseRepository
+
     scanner = HomeworkTaskScanner(
         homework_repo=hw_repo,
         homework_assignee_repo=hw_assignee_repo,
         homework_submission_repo=hw_sub_repo,
+        homework_exercise_repo=InMemoryHomeworkExerciseRepository(),
     )
 
     candidates = scanner.scan_pending_tasks(now=now)
@@ -490,10 +496,13 @@ def test_homework_scanner_failed_submission_still_reminds():
         )
     ]
 
+    from app.homework.infrastructure.in_memory import InMemoryHomeworkExerciseRepository
+
     scanner = HomeworkTaskScanner(
         homework_repo=hw_repo,
         homework_assignee_repo=hw_assignee_repo,
         homework_submission_repo=hw_sub_repo,
+        homework_exercise_repo=InMemoryHomeworkExerciseRepository(),
     )
 
     candidates = scanner.scan_pending_tasks(now=now)
@@ -548,10 +557,13 @@ def test_homework_scanner_fully_completed_skips():
         ),
     ]
 
+    from app.homework.infrastructure.in_memory import InMemoryHomeworkExerciseRepository
+
     scanner = HomeworkTaskScanner(
         homework_repo=hw_repo,
         homework_assignee_repo=hw_assignee_repo,
         homework_submission_repo=hw_sub_repo,
+        homework_exercise_repo=InMemoryHomeworkExerciseRepository(),
     )
 
     candidates = scanner.scan_pending_tasks(now=now)

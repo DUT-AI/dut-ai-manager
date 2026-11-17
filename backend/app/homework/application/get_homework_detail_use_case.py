@@ -2,32 +2,31 @@ from app.homework.application.dtos import (
     ExerciseSummaryDTO,
     HomeworkResponseDetail,
 )
-from app.homework.application.homework_exercise_resolver import (
-    HomeworkExerciseResolver,
+from app.homework.domain.ports import (
+    HomeworkAssigneeRepositoryPort,
+    HomeworkExerciseRepositoryPort,
+    HomeworkRepositoryPort,
 )
-from app.homework.infrastructure.homework_assignee_repository import (
-    HomeworkAssigneeRepository,
-)
-from app.homework.infrastructure.homework_repository import HomeworkRepository
 
 
 class GetHomeworkDetailUseCase:
-    """Use case lấy thông tin chi tiết một bài tập theo ID bao gồm danh sách assignee_ids và danh mục bài tập con."""
+    """Use case lấy thông tin chi tiết một bài tập theo ID bao gồm danh sách assignee_ids và danh mục bài tập con chính thức."""
 
     def __init__(
         self,
-        homework_repo: HomeworkRepository,
-        homework_assignee_repo: HomeworkAssigneeRepository,
-        exercise_resolver: HomeworkExerciseResolver,
+        homework_repo: HomeworkRepositoryPort,
+        homework_assignee_repo: HomeworkAssigneeRepositoryPort,
+        homework_exercise_repo: HomeworkExerciseRepositoryPort,
     ):
         self.homework_repo = homework_repo
         self.homework_assignee_repo = homework_assignee_repo
-        self.exercise_resolver = exercise_resolver
+        self.homework_exercise_repo = homework_exercise_repo
 
     async def execute(self, homework_id: int) -> HomeworkResponseDetail | None:
         hw = self.homework_repo.get_by_id(homework_id)
-        if not hw:
+        if not hw or not hw.id:
             return None
+
         assignees = self.homework_assignee_repo.get_assignees_with_user_info(
             homework_id
         )
@@ -37,9 +36,15 @@ class GetHomeworkDetailUseCase:
 
         coding_exercises: list[ExerciseSummaryDTO] = []
         if hw.requires_coding:
-            coding_exercises = await self.exercise_resolver.get_coding_exercises(
-                hw.id, hw.slug
-            )
+            active_exercises = self.homework_exercise_repo.get_active_by_homework(hw.id)
+            coding_exercises = [
+                ExerciseSummaryDTO(
+                    exercise_id=ex.exercise_id,
+                    title=ex.title,
+                    order_index=ex.order_index,
+                )
+                for ex in active_exercises
+            ]
 
         return HomeworkResponseDetail.from_domain(
             hw,

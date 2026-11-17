@@ -1,12 +1,30 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { homeworkService } from '@/features/homework/services/homework.service';
-import type { HomeworkCreate, HomeworkUpdate, Homework } from '@/features/homework/types/homework.types';
+import {
+  homeworkService,
+  type MyHomeworksQueryParams,
+} from '@/features/homework/services/homework.service';
+import type {
+  HomeworkCreate,
+  HomeworkUpdate,
+  Homework,
+  MyHomeworksStats,
+} from '@/features/homework/types/homework.types';
 import type { PaginationMeta } from '@/types/api.types';
 
 // Query Keys
 const homeworkKeys = {
   all: ['homeworks'] as const,
   detail: (id: number) => ['homeworks', id] as const,
+  myDetail: (id: number) => ['homeworks', 'me-detail', id] as const,
+};
+
+const EMPTY_STATS: MyHomeworksStats = {
+  total: 0,
+  completed: 0,
+  completed_on_time: 0,
+  completed_late: 0,
+  uncompleted: 0,
+  overdue: 0,
 };
 
 // Queries
@@ -32,27 +50,42 @@ export const useHomeworks = (options?: {
       result.pagination = res.pagination ?? null;
       return result;
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 2 * 60 * 1000,
     enabled: options?.enabled,
   });
 };
 
-export const useMyHomeworks = (options?: { page?: number; pageSize?: number }) => {
+export const useMyHomeworks = (options?: MyHomeworksQueryParams) => {
   const page = options?.page ?? 1;
   const pageSize = options?.pageSize ?? 20;
+  const status = options?.status ?? 'all';
+  const search = options?.search?.trim() ?? '';
+
   return useQuery({
-    queryKey: ['homeworks', 'me', { page, pageSize }],
+    queryKey: ['homeworks', 'me', { page, pageSize, status, search }],
     queryFn: async () => {
-      const res = await homeworkService.getMyHomeworks(page, pageSize);
-      const items = res.data ?? [];
-      const result = items as Array<Homework> & {
-        data: Homework[];
-        pagination: PaginationMeta | null;
+      const res = await homeworkService.getMyHomeworks({
+        page,
+        pageSize,
+        status,
+        search,
+      });
+      return {
+        items: res.data?.items ?? [],
+        stats: res.data?.stats ?? EMPTY_STATS,
+        pagination: res.pagination ?? null,
       };
-      result.data = items;
-      result.pagination = res.pagination ?? null;
-      return result;
     },
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
+};
+
+export const useMyHomeworkDetail = (homeworkId: number | null) => {
+  return useQuery({
+    queryKey: homeworkKeys.myDetail(homeworkId!),
+    queryFn: () => homeworkService.getMyHomeworkDetail(homeworkId!),
+    enabled: !!homeworkId,
     staleTime: 0,
     refetchOnMount: 'always',
   });
@@ -91,7 +124,7 @@ export const useHomeworkSubmissionStatus = (homeworkId: number | null) => {
     queryKey: ['homeworks', 'submission-status', homeworkId],
     queryFn: () => homeworkService.getSubmissionStatus(homeworkId!),
     enabled: !!homeworkId,
-    staleTime: 60 * 1000, // 1 minute
+    staleTime: 60 * 1000,
   });
 };
 
@@ -103,6 +136,7 @@ export const useCreateHomework = () => {
     mutationFn: (data: HomeworkCreate) => homeworkService.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: homeworkKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
@@ -115,6 +149,7 @@ export const useUpdateHomework = () => {
       homeworkService.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: homeworkKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
@@ -126,6 +161,7 @@ export const useDeleteHomework = () => {
     mutationFn: (id: number) => homeworkService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: homeworkKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
@@ -139,8 +175,22 @@ export const useSyncHomeworkFromQuiz = () => {
       queryClient.invalidateQueries({ queryKey: ['homeworks', 'submission-status', homeworkId] });
       queryClient.invalidateQueries({ queryKey: ['homeworks', 'submissions', homeworkId] });
       queryClient.invalidateQueries({ queryKey: ['homeworks', 'my-submissions', homeworkId] });
+      queryClient.invalidateQueries({ queryKey: homeworkKeys.myDetail(homeworkId) });
       queryClient.invalidateQueries({ queryKey: ['homeworks', 'me'] });
       queryClient.invalidateQueries({ queryKey: homeworkKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+};
+
+export const useSyncMyUnsubmitted = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => homeworkService.syncMyUnsubmitted(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['homeworks'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
@@ -160,4 +210,3 @@ export const useMyHomeworkSubmissions = (homeworkId: number | null) => {
     enabled: !!homeworkId,
   });
 };
-

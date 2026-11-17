@@ -12,6 +12,7 @@ from sqlalchemy import (
     Integer,
     String,
     TypeDecorator,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -25,6 +26,9 @@ from app.homework.domain.entity import (
 )
 from app.homework.domain.entity import (
     HomeworkAssignee as HomeworkAssigneeEntity,
+)
+from app.homework.domain.entity import (
+    HomeworkExercise as HomeworkExerciseEntity,
 )
 from app.homework.domain.entity import (
     HomeworkSubmission as HomeworkSubmissionEntity,
@@ -68,7 +72,7 @@ class SubmissionDetailsJSON(TypeDecorator):
 
 
 class HomeworkModel(SQLAlchemyAuditTimestampMixin, Base):
-    """Homework model containing assignment details (Không còn cột deadline)"""
+    """Homework model containing assignment details (Không còn cột deadline)."""
 
     __tablename__ = "homeworks"
 
@@ -83,7 +87,13 @@ class HomeworkModel(SQLAlchemyAuditTimestampMixin, Base):
     requires_game: Mapped[bool] = mapped_column(
         Boolean, default=False, server_default="false", nullable=False
     )
+    last_synced_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=None, nullable=True
+    )
 
+    exercises: Mapped[list["HomeworkExerciseModel"]] = relationship(
+        back_populates="homework", cascade="all, delete-orphan", lazy="selectin"
+    )
     assignees: Mapped[list["HomeworkAssigneeModel"]] = relationship(
         back_populates="homework", cascade="all, delete-orphan", lazy="select"
     )
@@ -99,6 +109,7 @@ class HomeworkModel(SQLAlchemyAuditTimestampMixin, Base):
             slug=self.slug,
             requires_coding=self.requires_coding,
             requires_game=self.requires_game,
+            last_synced_at=self.last_synced_at,
             created_at=self.created_at,
             updated_at=self.updated_at,
             created_by=self.created_by,
@@ -114,11 +125,61 @@ class HomeworkModel(SQLAlchemyAuditTimestampMixin, Base):
             slug=entity.slug,
             requires_coding=entity.requires_coding,
             requires_game=entity.requires_game,
+            last_synced_at=entity.last_synced_at,
+        )
+
+
+class HomeworkExerciseModel(SQLAlchemyAuditTimestampMixin, Base):
+    """Official required coding exercises catalog owned by each Homework."""
+
+    __tablename__ = "homework_exercises"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    homework_id: Mapped[int] = mapped_column(
+        ForeignKey("homeworks.id", ondelete="CASCADE"), nullable=False
+    )
+    exercise_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    order_index: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0", nullable=False
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="true", nullable=False
+    )
+
+    homework: Mapped[HomeworkModel] = relationship(back_populates="exercises")
+
+    __table_args__ = (
+        UniqueConstraint("homework_id", "exercise_id", name="uq_hw_exercises_hw_ex"),
+        Index("ix_hw_exercises_hw_active", "homework_id", "is_active"),
+    )
+
+    def to_entity(self) -> HomeworkExerciseEntity:
+        return HomeworkExerciseEntity(
+            id=self.id,
+            homework_id=self.homework_id,
+            exercise_id=self.exercise_id,
+            title=self.title,
+            order_index=self.order_index,
+            is_active=self.is_active,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
+        )
+
+    @classmethod
+    def from_entity(cls, entity: HomeworkExerciseEntity) -> "HomeworkExerciseModel":
+        return cls(
+            id=entity.id,
+            homework_id=entity.homework_id,
+            exercise_id=entity.exercise_id,
+            title=entity.title,
+            order_index=entity.order_index,
+            is_active=entity.is_active,
         )
 
 
 class HomeworkAssigneeModel(SQLAlchemyAuditTimestampMixin, Base):
-    """Mapping between Homework and direct User assignees with individual deadline"""
+    """Mapping between Homework and direct User assignees with individual deadline."""
 
     __tablename__ = "homework_assignees"
 
@@ -171,6 +232,9 @@ class HomeworkSubmissionModel(Base):
     exercise_id: Mapped[str | None] = mapped_column(
         String(64), index=True, nullable=True
     )
+    external_submission_id: Mapped[str | None] = mapped_column(
+        String(128), index=True, nullable=True
+    )
     exercise_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     score: Mapped[float | None] = mapped_column(Float, nullable=True)
     attempt_number: Mapped[int] = mapped_column(
@@ -214,7 +278,6 @@ class HomeworkSubmissionModel(Base):
     )
 
     def to_entity(self) -> HomeworkSubmissionEntity:
-
         sub_type = (
             SubmissionType(self.submission_type.upper())
             if self.submission_type
@@ -226,6 +289,7 @@ class HomeworkSubmissionModel(Base):
                 homework_id=self.homework_id,
                 user_id=self.user_id,
                 submission_type=SubmissionType.GAME,
+                external_submission_id=self.external_submission_id,
                 score=self.score,
                 attempt_number=self.attempt_number or 1,
                 submitted_at=self.submitted_at,
@@ -240,6 +304,7 @@ class HomeworkSubmissionModel(Base):
             user_id=self.user_id,
             submission_type=SubmissionType.CODING,
             exercise_id=self.exercise_id or f"legacy-{self.homework_id}-{self.id}",
+            external_submission_id=self.external_submission_id,
             exercise_title=self.exercise_title,
             score=self.score,
             attempt_number=self.attempt_number or 1,
@@ -262,6 +327,7 @@ class HomeworkSubmissionModel(Base):
             user_id=entity.user_id,
             submission_type=sub_type,
             exercise_id=entity.exercise_id,
+            external_submission_id=entity.external_submission_id,
             exercise_title=entity.exercise_title,
             score=entity.score,
             attempt_number=entity.attempt_number,

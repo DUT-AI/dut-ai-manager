@@ -1,28 +1,35 @@
+from datetime import UTC, datetime
+
 from fastapi import status
+from loguru import logger
 
 from app.homework.application.dtos import HomeworkUpdate
 from app.homework.application.helpers import QuizSubmissionHelper
 from app.homework.domain.entity import Homework as HomeworkEntity
-from app.homework.infrastructure.homework_assignee_repository import (
-    HomeworkAssigneeRepository,
+from app.homework.domain.entity import HomeworkExercise
+from app.homework.domain.ports import (
+    HomeworkAssigneeRepositoryPort,
+    HomeworkExerciseRepositoryPort,
+    HomeworkRepositoryPort,
 )
-from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.shared.application.response import BadRequestException
 
 
 class UpdateHomeworkUseCase:
-    """Update an existing Homework record."""
+    """Update an existing Homework record and synchronize its official coding exercises catalog."""
 
     def __init__(
         self,
-        homework_repo: HomeworkRepository,
+        homework_repo: HomeworkRepositoryPort,
         quiz_api: QuizApiClient,
-        homework_assignee_repo: HomeworkAssigneeRepository,
+        homework_assignee_repo: HomeworkAssigneeRepositoryPort,
+        homework_exercise_repo: HomeworkExerciseRepositoryPort,
     ):
         self.homework_repo = homework_repo
         self.quiz_api = quiz_api
         self.homework_assignee_repo = homework_assignee_repo
+        self.homework_exercise_repo = homework_exercise_repo
 
     async def execute(
         self,
@@ -62,11 +69,11 @@ class UpdateHomeworkUseCase:
                 "Bài tập bắt buộc phải có slug (hoặc đường dẫn Quiz URL hợp lệ chứa slug) để theo dõi nộp bài trên Quiz API."
             )
 
-        # Validate with Quiz API if requirements or slug provided
         await self._validate_requirements(
             extracted_slug, effective_coding, effective_game
         )
 
+        now = datetime.now(UTC)
         updated = existing.model_copy(
             update={
                 k: v
@@ -76,6 +83,7 @@ class UpdateHomeworkUseCase:
                     "slug": extracted_slug,
                     "requires_coding": effective_coding,
                     "requires_game": effective_game,
+                    "last_synced_at": now,
                 }.items()
                 if v is not None
             }
@@ -83,6 +91,12 @@ class UpdateHomeworkUseCase:
 
         saved = self.homework_repo.save(updated)
         self._sync_assignees_and_deadlines(homework_id, data)
+
+        if effective_coding:
+            await self._sync_official_exercises(homework_id, extracted_slug)
+        else:
+            self.homework_exercise_repo.sync_exercises(homework_id, [])
+
         return saved
 
     async def _validate_requirements(
@@ -108,6 +122,27 @@ class UpdateHomeworkUseCase:
             lesson_name = metadata.get("name") or extracted_slug
             raise BadRequestException(
                 f"Bài học '{lesson_name}' chưa có {missing_str} trên hệ thống Quiz. Vui lòng bổ sung trên Quiz trước khi giao bài."
+            )
+
+    async def _sync_official_exercises(self, homework_id: int, slug: str) -> None:
+        try:
+            quiz_exercises = await self.quiz_api.get_lesson_exercises(slug)
+            if quiz_exercises is not None:
+                entities = [
+                    HomeworkExercise(
+                        homework_id=homework_id,
+                        exercise_id=str(ex["id"]),
+                        title=str(ex.get("title") or f"Bài tập {idx + 1}"),
+                        order_index=idx + 1,
+                        is_active=True,
+                    )
+                    for idx, ex in enumerate(quiz_exercises)
+                    if isinstance(ex, dict) and ex.get("id")
+                ]
+                self.homework_exercise_repo.sync_exercises(homework_id, entities)
+        except Exception as exc:
+            logger.warning(
+                f"[UpdateHomework] Không thể đồng bộ danh mục bài tập con cho slug='{slug}': {exc}"
             )
 
     def _sync_assignees_and_deadlines(

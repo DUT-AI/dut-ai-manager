@@ -3,6 +3,9 @@ export { HomeworkMobileList } from './HomeworkMobileList';
 export { HomeworkFormModal } from './HomeworkFormModal';
 export { HomeworkReportTab } from './HomeworkReportTab';
 export { HomeworkCard } from './HomeworkCard';
+export { MyHomeworkStatsCards } from './MyHomeworkStatsCards';
+export { MyHomeworkFilterBar } from './MyHomeworkFilterBar';
+export { MyHomeworkExerciseChecklist } from './MyHomeworkExerciseChecklist';
 export { SubmissionHistoryModal } from './SubmissionHistoryModal';
 export { UserSubmissionCard } from './UserSubmissionCard';
 export { UserSubmissionCategoryView } from './UserSubmissionCategoryView';
@@ -12,4 +15,3 @@ export { UnifiedSubmissionTimeline } from './UnifiedSubmissionTimeline';
 export { SubmissionItemCard } from './SubmissionItemCard';
 export { ExerciseProgressOverview } from './ExerciseProgressOverview';
 export { ExerciseCompletionStats } from './ExerciseCompletionStats';
-

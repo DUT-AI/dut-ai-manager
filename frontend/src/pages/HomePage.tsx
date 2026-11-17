@@ -12,6 +12,7 @@ import { Card, Col, DatePicker, Empty, List, Row, Space, Spin, Tag, Typography }
 import dayjs from "dayjs";
 import { motion, type Variants } from "motion/react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { reportService } from "../features/academic-report/services/report.service";
 import { useAuth } from "../features/auth/context/AuthContext";
 
@@ -56,6 +57,7 @@ const listItemVariants: Variants = {
 };
 
 const HomePage = () => {
+    const navigate = useNavigate();
     const { user } = useAuth();
     const [date, setDate] = useState(() => dayjs());
 
@@ -223,19 +225,42 @@ const HomePage = () => {
                                 <motion.div variants={listVariants}>
                                     <List
                                         dataSource={data?.unsubmitted_homeworks}
-                                        renderItem={(hw) => (
-                                            <motion.div variants={listItemVariants}>
-                                                <List.Item className="px-0 py-4 hover:bg-gray-50/50 transition-colors rounded-lg">
-                                                    <div className="w-full flex justify-between items-center px-2">
-                                                        <Space direction="vertical" size={0}>
-                                                            <Text strong className="text-gray-800">{hw.title}</Text>
-                                                            <Text type="secondary" className="text-xs">Hết hạn: {dayjs(hw.deadline).format('DD/MM/YYYY HH:mm')}</Text>
-                                                        </Space>
-                                                        <Tag color="error" className="rounded-full px-3">Chưa nộp</Tag>
-                                                    </div>
-                                                </List.Item>
-                                            </motion.div>
-                                        )}
+                                        renderItem={(hw) => {
+                                            const isInProgress = hw.completion_status === 'IN_PROGRESS';
+                                            const isOverdue = hw.timeliness_status === 'OVERDUE';
+                                            const tagColor = isOverdue ? 'error' : isInProgress ? 'warning' : 'default';
+                                            const tagLabel = isOverdue
+                                                ? isInProgress
+                                                    ? 'Quá hạn (Làm dở)'
+                                                    : 'Quá hạn'
+                                                : isInProgress
+                                                    ? 'Đang làm dở'
+                                                    : 'Chưa nộp';
+
+                                            return (
+                                                <motion.div variants={listItemVariants}>
+                                                    <List.Item
+                                                        onClick={() => navigate(`/dashboard/my-homeworks/${hw.id}`)}
+                                                        className="px-0 py-4 hover:bg-gray-50/50 transition-colors rounded-lg cursor-pointer"
+                                                    >
+                                                        <div className="w-full flex justify-between items-center px-2 gap-3">
+                                                            <Space direction="vertical" size={0}>
+                                                                <Text strong className="text-gray-800">{hw.title}</Text>
+                                                                <Text type="secondary" className="text-xs">
+                                                                    Hết hạn: {hw.deadline ? dayjs(hw.deadline).format('DD/MM/YYYY HH:mm') : 'Chưa thiết lập'}
+                                                                    {hw.uncompleted_items && hw.uncompleted_items.length > 0
+                                                                        ? ` • ${hw.uncompleted_items.join(', ')}`
+                                                                        : ''}
+                                                                </Text>
+                                                            </Space>
+                                                            <Tag color={tagColor} className="rounded-full px-3 shrink-0">
+                                                                {tagLabel}
+                                                            </Tag>
+                                                        </div>
+                                                    </List.Item>
+                                                </motion.div>
+                                            );
+                                        }}
                                     />
                                 </motion.div>
                             )}

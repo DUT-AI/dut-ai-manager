@@ -989,6 +989,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/homeworks/admin/backfill-exercises": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Backfill Homework Exercises
+         * @description Admin API: Chuẩn hóa danh mục bài tập con chính thức cho toàn bộ bài tập hiện có.
+         */
+        post: operations["backfill_homework_exercises_api_v1_homeworks_admin_backfill_exercises_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/homeworks/me": {
         parameters: {
             query?: never;
@@ -998,9 +1018,49 @@ export interface paths {
         };
         /**
          * Get My Homeworks
-         * @description Get homeworks assigned to the current user
+         * @description Lấy danh sách bài tập được giao cho học viên hiện tại (Server-driven filter, search, stats & pagination).
          */
         get: operations["get_my_homeworks_api_v1_homeworks_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/homeworks/me/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sync My Unsubmitted Homeworks
+         * @description Học viên chủ động đồng bộ nhanh các bài tập chưa hoàn thành của mình từ hệ thống Quiz.
+         */
+        post: operations["sync_my_unsubmitted_homeworks_api_v1_homeworks_me_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/homeworks/me/{homework_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get My Homework Detail
+         * @description Lấy chi tiết bài tập cá nhân của học viên kèm hạn nộp cá nhân, tiến độ bài con và lịch sử nộp.
+         */
+        get: operations["get_my_homework_detail_api_v1_homeworks_me__homework_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1160,8 +1220,7 @@ export interface paths {
         put?: never;
         /**
          * Sync Homework From Quiz
-         * @description Đồng bộ thủ công từ Quiz API về bảng homework_submissions cho 1 bài tập.
-         *     Hỗ trợ nút bấm 'Đồng bộ từ Quiz' trên giao diện quản trị.
+         * @description Đồng bộ thủ công từ Quiz API về bảng homework_exercises & homework_submissions cho 1 bài tập.
          */
         post: operations["sync_homework_from_quiz_api_v1_homeworks__homework_id__sync_post"];
         delete?: never;
@@ -2480,6 +2539,17 @@ export interface components {
             message: string;
             pagination?: components["schemas"]["PaginationMeta"] | null;
         };
+        /** ApiResponse[BackfillHomeworkExercisesResult] */
+        ApiResponse_BackfillHomeworkExercisesResult_: {
+            /** Is Success */
+            is_success: boolean;
+            /** Status Code */
+            status_code: number;
+            data?: components["schemas"]["BackfillHomeworkExercisesResult"] | null;
+            /** Message */
+            message: string;
+            pagination?: components["schemas"]["PaginationMeta"] | null;
+        };
         /** ApiResponse[BillingSummaryResponse] */
         ApiResponse_BillingSummaryResponse_: {
             /** Is Success */
@@ -2497,7 +2567,7 @@ export interface components {
             is_success: boolean;
             /** Status Code */
             status_code: number;
-            data?: components["schemas"]["app__bonus_point__application__dtos__BonusPointResponse"] | null;
+            data?: components["schemas"]["BonusPointResponse"] | null;
             /** Message */
             message: string;
             pagination?: components["schemas"]["PaginationMeta"] | null;
@@ -2612,6 +2682,17 @@ export interface components {
             message: string;
             pagination?: components["schemas"]["PaginationMeta"] | null;
         };
+        /** ApiResponse[HomeworkWebhookResponse] */
+        ApiResponse_HomeworkWebhookResponse_: {
+            /** Is Success */
+            is_success: boolean;
+            /** Status Code */
+            status_code: number;
+            data?: components["schemas"]["HomeworkWebhookResponse"] | null;
+            /** Message */
+            message: string;
+            pagination?: components["schemas"]["PaginationMeta"] | null;
+        };
         /** ApiResponse[InvoiceResponse] */
         ApiResponse_InvoiceResponse_: {
             /** Is Success */
@@ -2663,6 +2744,28 @@ export interface components {
             /** Status Code */
             status_code: number;
             data?: components["schemas"]["MeetingResponse"] | null;
+            /** Message */
+            message: string;
+            pagination?: components["schemas"]["PaginationMeta"] | null;
+        };
+        /** ApiResponse[MyHomeworkDetailResponse] */
+        ApiResponse_MyHomeworkDetailResponse_: {
+            /** Is Success */
+            is_success: boolean;
+            /** Status Code */
+            status_code: number;
+            data?: components["schemas"]["MyHomeworkDetailResponse"] | null;
+            /** Message */
+            message: string;
+            pagination?: components["schemas"]["PaginationMeta"] | null;
+        };
+        /** ApiResponse[MyHomeworksPageResponse] */
+        ApiResponse_MyHomeworksPageResponse_: {
+            /** Is Success */
+            is_success: boolean;
+            /** Status Code */
+            status_code: number;
+            data?: components["schemas"]["MyHomeworksPageResponse"] | null;
             /** Message */
             message: string;
             pagination?: components["schemas"]["PaginationMeta"] | null;
@@ -2796,6 +2899,17 @@ export interface components {
             /** Status Code */
             status_code: number;
             data?: components["schemas"]["SyncHomeworkResult"] | null;
+            /** Message */
+            message: string;
+            pagination?: components["schemas"]["PaginationMeta"] | null;
+        };
+        /** ApiResponse[SyncMyHomeworksResult] */
+        ApiResponse_SyncMyHomeworksResult_: {
+            /** Is Success */
+            is_success: boolean;
+            /** Status Code */
+            status_code: number;
+            data?: components["schemas"]["SyncMyHomeworksResult"] | null;
             /** Message */
             message: string;
             pagination?: components["schemas"]["PaginationMeta"] | null;
@@ -3046,7 +3160,7 @@ export interface components {
             /** Status Code */
             status_code: number;
             /** Data */
-            data?: components["schemas"]["app__bonus_point__application__dtos__BonusPointResponse"][] | null;
+            data?: components["schemas"]["BonusPointResponse"][] | null;
             /** Message */
             message: string;
             pagination?: components["schemas"]["PaginationMeta"] | null;
@@ -3363,6 +3477,46 @@ export interface components {
             message: string;
             pagination?: components["schemas"]["PaginationMeta"] | null;
         };
+        /**
+         * BackfillFailedItem
+         * @description Thông tin một bài tập thất bại trong quá trình backfill danh mục bài con.
+         */
+        BackfillFailedItem: {
+            /** Homework Id */
+            homework_id: number;
+            /** Title */
+            title: string;
+            /** Error */
+            error: string;
+        };
+        /**
+         * BackfillHomeworkExercisesResult
+         * @description Kết quả chuẩn hóa dữ liệu danh mục bài con cho toàn bộ bài tập hiện có.
+         */
+        BackfillHomeworkExercisesResult: {
+            /**
+             * Total Homeworks
+             * @default 0
+             */
+            total_homeworks: number;
+            /**
+             * Succeeded
+             * @default 0
+             */
+            succeeded: number;
+            /**
+             * Skipped No Slug
+             * @default 0
+             */
+            skipped_no_slug: number;
+            /**
+             * Failed
+             * @default 0
+             */
+            failed: number;
+            /** Failed Details */
+            failed_details?: components["schemas"]["BackfillFailedItem"][];
+        };
         /** BatchCreateDutyRequest */
         BatchCreateDutyRequest: {
             /** Team Ids */
@@ -3475,10 +3629,6 @@ export interface components {
         };
         /** BonusPointResponse */
         BonusPointResponse: {
-            /** Id */
-            id: number;
-            /** User Id */
-            user_id: number;
             /** Points */
             points: number;
             /** Reason */
@@ -3488,10 +3638,15 @@ export interface components {
              * Format: date-time
              */
             date: string;
-            /** User Name */
-            user_name?: string | null;
-            /** User Avatar Url */
-            user_avatar_url?: string | null;
+            /** @default OTHER */
+            type: components["schemas"]["BonusPointType"];
+            /** Id */
+            id: number;
+            /** User Id */
+            user_id: number;
+            owner?: components["schemas"]["UserRef"] | null;
+            creator?: components["schemas"]["UserRef"] | null;
+            updater?: components["schemas"]["UserRef"] | null;
             /**
              * Created At
              * Format: date-time
@@ -3641,6 +3796,14 @@ export interface components {
             tools_invoked?: components["schemas"]["ToolCallRecord"][];
             /** Citations */
             citations?: string[];
+            /** Usage */
+            usage?: {
+                [key: string]: unknown;
+            } | null;
+            /** Timings */
+            timings?: {
+                [key: string]: unknown;
+            } | null;
         };
         /**
          * ChatSessionDto
@@ -3736,6 +3899,12 @@ export interface components {
              */
             source: string;
         };
+        /**
+         * CompletionStatus
+         * @description Mức độ hoàn thành bài tập (độc lập với tính đúng hạn).
+         * @enum {string}
+         */
+        CompletionStatus: "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED";
         /** CriteriaAverageScoreDto */
         CriteriaAverageScoreDto: {
             /** Criteria Code */
@@ -3767,7 +3936,7 @@ export interface components {
              * Bonus Points
              * @default []
              */
-            bonus_points: components["schemas"]["BonusPointResponse"][];
+            bonus_points: components["schemas"]["app__report__schemas__BonusPointResponse"][];
             /**
              * Violations
              * @default []
@@ -3784,7 +3953,7 @@ export interface components {
             /** Permission Requests */
             permission_requests: components["schemas"]["PermissionRequestResponse"][];
             /** Bonus Points */
-            bonus_points: components["schemas"]["BonusPointResponse"][];
+            bonus_points: components["schemas"]["app__report__schemas__BonusPointResponse"][];
             /** Violations */
             violations: components["schemas"]["ViolationResponse"][];
             /** Unsubmitted Homeworks */
@@ -4172,6 +4341,8 @@ export interface components {
             id: number;
             /** Deadline */
             deadline?: string | null;
+            /** Last Synced At */
+            last_synced_at?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -4189,8 +4360,19 @@ export interface components {
              * @default 0
              */
             submission_count: number;
+            /** @default NOT_STARTED */
+            completion_status: components["schemas"]["CompletionStatus"];
+            /** @default UPCOMING */
+            timeliness_status: components["schemas"]["TimelinessStatus"];
+            /** Completed At */
+            completed_at?: string | null;
             /** Is Submitted */
             is_submitted?: boolean | null;
+            /**
+             * Is Late
+             * @default false
+             */
+            is_late: boolean;
             /** Is Overdue */
             is_overdue?: boolean | null;
             /**
@@ -4204,6 +4386,26 @@ export interface components {
              */
             coding_submitted: boolean;
             /**
+             * Coding Is Late
+             * @default false
+             */
+            coding_is_late: boolean;
+            /**
+             * Coding Status
+             * @default NOT_SUBMITTED
+             */
+            coding_status: string;
+            /**
+             * Total Coding Required
+             * @default 0
+             */
+            total_coding_required: number;
+            /**
+             * Total Coding Completed
+             * @default 0
+             */
+            total_coding_completed: number;
+            /**
              * Has Game
              * @default false
              */
@@ -4213,12 +4415,17 @@ export interface components {
              * @default false
              */
             game_submitted: boolean;
+            /**
+             * Game Is Late
+             * @default false
+             */
+            game_is_late: boolean;
             /** Uncompleted Items */
             uncompleted_items?: string[];
         };
         /**
          * HomeworkResponseDetail
-         * @description DTO chi tiết bài tập bao gồm danh sách assignee_ids phục vụ màn hình chỉnh sửa/chi tiết.
+         * @description DTO chi tiết bài tập phục vụ màn hình quản trị chỉnh sửa/chi tiết.
          */
         HomeworkResponseDetail: {
             /** Title */
@@ -4241,6 +4448,8 @@ export interface components {
             id: number;
             /** Deadline */
             deadline?: string | null;
+            /** Last Synced At */
+            last_synced_at?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -4258,8 +4467,19 @@ export interface components {
              * @default 0
              */
             submission_count: number;
+            /** @default NOT_STARTED */
+            completion_status: components["schemas"]["CompletionStatus"];
+            /** @default UPCOMING */
+            timeliness_status: components["schemas"]["TimelinessStatus"];
+            /** Completed At */
+            completed_at?: string | null;
             /** Is Submitted */
             is_submitted?: boolean | null;
+            /**
+             * Is Late
+             * @default false
+             */
+            is_late: boolean;
             /** Is Overdue */
             is_overdue?: boolean | null;
             /**
@@ -4273,6 +4493,26 @@ export interface components {
              */
             coding_submitted: boolean;
             /**
+             * Coding Is Late
+             * @default false
+             */
+            coding_is_late: boolean;
+            /**
+             * Coding Status
+             * @default NOT_SUBMITTED
+             */
+            coding_status: string;
+            /**
+             * Total Coding Required
+             * @default 0
+             */
+            total_coding_required: number;
+            /**
+             * Total Coding Completed
+             * @default 0
+             */
+            total_coding_completed: number;
+            /**
              * Has Game
              * @default false
              */
@@ -4282,6 +4522,11 @@ export interface components {
              * @default false
              */
             game_submitted: boolean;
+            /**
+             * Game Is Late
+             * @default false
+             */
+            game_is_late: boolean;
             /** Uncompleted Items */
             uncompleted_items?: string[];
             /** Assignee Ids */
@@ -4337,6 +4582,11 @@ export interface components {
              *     }
              */
             game: components["schemas"]["CategorySubmissionStatus"];
+            /**
+             * Total Completed Count
+             * @default 0
+             */
+            total_completed_count: number;
             /** Coding Exercises */
             coding_exercises?: components["schemas"]["ExerciseSummaryDTO"][];
             /** Students */
@@ -4378,9 +4628,7 @@ export interface components {
             /** Original Filename */
             original_filename?: string | null;
             /** Details */
-            details?: {
-                [key: string]: unknown;
-            };
+            details?: components["schemas"]["CodingSubmissionDetails"] | components["schemas"]["GameSubmissionDetails"] | null;
         };
         /** HomeworkUpdate */
         HomeworkUpdate: {
@@ -4403,6 +4651,26 @@ export interface components {
              * @default false
              */
             force_override_deadlines: boolean;
+        };
+        /**
+         * HomeworkWebhookResponse
+         * @description Phản hồi chuẩn từ Webhook nộp bài tập.
+         */
+        HomeworkWebhookResponse: {
+            /** Status */
+            status: string;
+            /** Message */
+            message?: string | null;
+            /** Reason */
+            reason?: string | null;
+            /** Submission Id */
+            submission_id?: number | null;
+            /** Homework Id */
+            homework_id?: number | null;
+            /** User Id */
+            user_id?: number | null;
+            /** Exercise Id */
+            exercise_id?: string | null;
         };
         /** InvoiceCreate */
         InvoiceCreate: {
@@ -4830,6 +5098,103 @@ export interface components {
             year: number;
             /** Items */
             items: components["schemas"]["MonthlyInvoiceItemPreview"][];
+        };
+        /**
+         * MyHomeworkDetailResponse
+         * @description Phản hồi chi tiết bài tập cá nhân của học viên kèm hạn nộp cá nhân và tiến độ từng bài con.
+         */
+        MyHomeworkDetailResponse: {
+            homework: components["schemas"]["HomeworkResponse"];
+            /** Coding Exercises */
+            coding_exercises?: components["schemas"]["MyHomeworkExerciseStatusDTO"][];
+            /** Submissions */
+            submissions?: components["schemas"]["HomeworkSubmissionDetailResponse"][];
+        };
+        /**
+         * MyHomeworkExerciseStatusDTO
+         * @description Trạng thái chi tiết của 1 bài tập coding con bắt buộc cho màn hình học viên.
+         */
+        MyHomeworkExerciseStatusDTO: {
+            /** Exercise Id */
+            exercise_id: string;
+            /** Title */
+            title: string;
+            /**
+             * Order Index
+             * @default 0
+             */
+            order_index: number;
+            /**
+             * Is Submitted
+             * @default false
+             */
+            is_submitted: boolean;
+            /**
+             * Is Passed
+             * @default false
+             */
+            is_passed: boolean;
+            /** First Passed At */
+            first_passed_at?: string | null;
+            /** Latest Submitted At */
+            latest_submitted_at?: string | null;
+            /** Best Score */
+            best_score?: number | null;
+            /**
+             * Attempt Count
+             * @default 0
+             */
+            attempt_count: number;
+            /**
+             * Is Late
+             * @default false
+             */
+            is_late: boolean;
+        };
+        /**
+         * MyHomeworksPageResponse
+         * @description Phản hồi chuẩn cho trang Bài tập của tôi (Server-driven filter/search/pagination + tổng stats).
+         */
+        MyHomeworksPageResponse: {
+            /** Items */
+            items?: components["schemas"]["HomeworkResponse"][];
+            stats?: components["schemas"]["MyHomeworksStats"];
+        };
+        /**
+         * MyHomeworksStats
+         * @description Thống kê tổng quan trên 100% bài tập được giao của học viên.
+         */
+        MyHomeworksStats: {
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
+            /**
+             * Completed
+             * @default 0
+             */
+            completed: number;
+            /**
+             * Completed On Time
+             * @default 0
+             */
+            completed_on_time: number;
+            /**
+             * Completed Late
+             * @default 0
+             */
+            completed_late: number;
+            /**
+             * Uncompleted
+             * @default 0
+             */
+            uncompleted: number;
+            /**
+             * Overdue
+             * @default 0
+             */
+            overdue: number;
         };
         /**
          * NotificationCategory
@@ -5483,8 +5848,35 @@ export interface components {
              * @default 0
              */
             updated_game_count: number;
+            /** Last Synced At */
+            last_synced_at?: string | null;
             /** Message */
             message: string;
+        };
+        /**
+         * SyncMyHomeworksResult
+         * @description Kết quả đồng bộ nhanh các bài chưa hoàn thành của học viên hiện tại.
+         */
+        SyncMyHomeworksResult: {
+            /**
+             * Total Checked
+             * @default 0
+             */
+            total_checked: number;
+            /**
+             * Synced Count
+             * @default 0
+             */
+            synced_count: number;
+            /**
+             * Failed Count
+             * @default 0
+             */
+            failed_count: number;
+            /** Results */
+            results?: components["schemas"]["SyncHomeworkResult"][];
+            /** Failed Homework Ids */
+            failed_homework_ids?: number[];
         };
         /**
          * TaskType
@@ -5554,6 +5946,12 @@ export interface components {
             /** Failed Count */
             failed_count: number;
         };
+        /**
+         * TimelinessStatus
+         * @description Tính đúng hạn so với hạn nộp cá nhân của học viên.
+         * @enum {string}
+         */
+        TimelinessStatus: "ON_TIME" | "LATE" | "UPCOMING" | "OVERDUE";
         /** TitleReportItem */
         TitleReportItem: {
             user: components["schemas"]["UserInfoResponse"];
@@ -6098,7 +6496,11 @@ export interface components {
             zalo_access_token?: string | null;
         };
         /** BonusPointResponse */
-        app__bonus_point__application__dtos__BonusPointResponse: {
+        app__report__schemas__BonusPointResponse: {
+            /** Id */
+            id: number;
+            /** User Id */
+            user_id: number;
             /** Points */
             points: number;
             /** Reason */
@@ -6108,15 +6510,10 @@ export interface components {
              * Format: date-time
              */
             date: string;
-            /** @default OTHER */
-            type: components["schemas"]["BonusPointType"];
-            /** Id */
-            id: number;
-            /** User Id */
-            user_id: number;
-            owner?: components["schemas"]["UserRef"] | null;
-            creator?: components["schemas"]["UserRef"] | null;
-            updater?: components["schemas"]["UserRef"] | null;
+            /** User Name */
+            user_name?: string | null;
+            /** User Avatar Url */
+            user_avatar_url?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -8305,9 +8702,45 @@ export interface operations {
             };
         };
     };
+    backfill_homework_exercises_api_v1_homeworks_admin_backfill_exercises_post: {
+        parameters: {
+            query?: {
+                /** @description Đồng bộ kèm toàn bộ lượt nộp từ Quiz API */
+                sync_submissions?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_BackfillHomeworkExercisesResult_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_my_homeworks_api_v1_homeworks_me_get: {
         parameters: {
             query?: {
+                /** @description Lọc theo trạng thái hoàn thành / quá hạn */
+                status?: "all" | "uncompleted" | "completed" | "overdue";
+                /** @description Tìm kiếm theo tên bài tập */
+                search?: string | null;
                 page?: number;
                 page_size?: number;
             };
@@ -8323,7 +8756,58 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_list_HomeworkResponse__"];
+                    "application/json": components["schemas"]["ApiResponse_MyHomeworksPageResponse_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_my_unsubmitted_homeworks_api_v1_homeworks_me_sync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_SyncMyHomeworksResult_"];
+                };
+            };
+        };
+    };
+    get_my_homework_detail_api_v1_homeworks_me__homework_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                homework_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_MyHomeworkDetailResponse_"];
                 };
             };
             /** @description Validation Error */
@@ -8537,7 +9021,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ApiResponse_dict_str__Any__"];
+                    "application/json": components["schemas"]["ApiResponse_HomeworkWebhookResponse_"];
                 };
             };
             /** @description Validation Error */

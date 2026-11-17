@@ -72,8 +72,8 @@ class HomeworkAssigneeRepositoryPort(ABC):
 
     @abstractmethod
     def get_user_deadlines_for_homeworks(
-        self, user_id: int, homework_ids: list[int]
-    ) -> dict[int, datetime | None]:
+        self, homework_ids: list[int], user_id: int
+    ) -> dict[int, datetime]:
         """Lấy bản đồ hạn nộp của học viên cho danh sách bài tập."""
         ...
 

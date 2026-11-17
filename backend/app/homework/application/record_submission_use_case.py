@@ -16,7 +16,10 @@ from app.homework.domain.value_objects import (
 
 
 class RecordHomeworkSubmissionUseCase:
-    """Xử lý và lưu vết lịch sử nộp bài (Append-Only) nhận được từ Quiz Webhook."""
+    """
+    Xử lý và lưu vết lịch sử nộp bài (Append-Only với Idempotency theo external_submission_id)
+    nhận được từ Quiz Webhook. Không bao giờ ghi đè làm mất mốc thời gian của lượt nộp trước đó.
+    """
 
     def __init__(
         self,
@@ -67,9 +70,19 @@ class RecordHomeworkSubmissionUseCase:
             if payload.details and hasattr(payload.details, "model_dump")
             else dict(payload.details or {})
         )
-        sub_id = payload.submission_id or raw_details.get("submission_id")
-        if sub_id:
-            raw_details["submission_id"] = str(sub_id)
+
+        # Trích xuất external_submission_id theo loại bài nộp (Coding: submission_id, Game: session_id / submission_id)
+        if payload.type == SubmissionType.GAME:
+            raw_ext_id = raw_details.get("session_id") or payload.submission_id
+            if raw_ext_id:
+                raw_details["session_id"] = str(raw_ext_id).strip()
+        else:
+            raw_ext_id = payload.submission_id or raw_details.get("submission_id")
+            if raw_ext_id:
+                raw_details["submission_id"] = str(raw_ext_id).strip()
+
+        ext_id = str(raw_ext_id).strip() if raw_ext_id and str(raw_ext_id).strip() else None
+
         if payload.original_filename:
             raw_details["original_filename"] = payload.original_filename
 
@@ -93,13 +106,13 @@ class RecordHomeworkSubmissionUseCase:
             else CodingSubmissionDetails(**raw_details)
         )
 
-        # 4. Lưu hoặc cập nhật bản ghi lịch sử vào database (Idempotent Upsert)
+        # 4. Append-only với idempotent match CHỈ trên chính lượt nộp đó (theo external_submission_id hoặc timestamp chính xác)
         existing = self.homework_submission_repo.find_submission_match(
             homework.id,
             payload.user_id,
             payload.type,
-            exercise_id=exercise_id,
-            quiz_submission_id=str(sub_id) if sub_id else None,
+            exercise_id=str(exercise_id) if exercise_id else None,
+            external_submission_id=ext_id,
             submitted_at=submitted_at,
         )
         if existing:
@@ -107,28 +120,30 @@ class RecordHomeworkSubmissionUseCase:
                 existing,
                 submitted_at=submitted_at,
                 is_passed=payload.is_passed,
-                exercise_id=exercise_id,
+                exercise_id=str(exercise_id) if exercise_id else None,
+                external_submission_id=ext_id,
                 exercise_title=exercise_title,
                 score=float(score) if score is not None else None,
                 attempt_number=int(attempt_number) if attempt_number else 1,
                 details=typed_details,
             )
             logger.info(
-                f"✅ [Webhook] Cập nhật lịch sử bài nộp: id={saved.id}, hw_id={homework.id}, "
-                f"user_id={payload.user_id}, type={payload.type}, exercise_id={exercise_id}, is_passed={payload.is_passed}"
+                f"✅ [Webhook] Cập nhật idempotent lượt nộp: id={saved.id}, hw_id={homework.id}, "
+                f"user_id={payload.user_id}, type={payload.type}, ext_id={ext_id}, is_passed={payload.is_passed}"
             )
             return HomeworkWebhookResponse(
                 status="updated",
                 submission_id=saved.id,
                 homework_id=homework.id,
                 user_id=payload.user_id,
-                exercise_id=exercise_id,
+                exercise_id=str(exercise_id) if exercise_id else None,
             )
 
         if payload.type == SubmissionType.GAME:
             submission = HomeworkSubmission.create_game(
                 homework_id=homework.id,
                 user_id=payload.user_id,
+                external_submission_id=ext_id,
                 submitted_at=submitted_at,
                 score=float(score) if score is not None else None,
                 attempt_number=int(attempt_number) if attempt_number else 1,
@@ -139,12 +154,13 @@ class RecordHomeworkSubmissionUseCase:
             final_exercise_id = (
                 str(exercise_id)
                 if exercise_id
-                else f"legacy-{homework.id}-{sub_id or payload.user_id}"
+                else f"legacy-{homework.id}-{ext_id or payload.user_id}"
             )
             submission = HomeworkSubmission.create_coding(
                 homework_id=homework.id,
                 user_id=payload.user_id,
                 exercise_id=final_exercise_id,
+                external_submission_id=ext_id,
                 submitted_at=submitted_at,
                 exercise_title=exercise_title,
                 score=float(score) if score is not None else None,
@@ -155,8 +171,9 @@ class RecordHomeworkSubmissionUseCase:
         saved = self.homework_submission_repo.add_submission(submission)
 
         logger.info(
-            f"✅ [Webhook] Ghi nhận mới lịch sử bài nộp: id={saved.id}, hw_id={homework.id}, "
-            f"user_id={payload.user_id}, type={payload.type}, exercise_id={submission.exercise_id}, is_passed={payload.is_passed}"
+            f"✅ [Webhook] Ghi nhận mới lượt nộp: id={saved.id}, hw_id={homework.id}, "
+            f"user_id={payload.user_id}, type={payload.type}, exercise_id={submission.exercise_id}, "
+            f"ext_id={ext_id}, is_passed={payload.is_passed}"
         )
 
         return HomeworkWebhookResponse(
@@ -164,5 +181,5 @@ class RecordHomeworkSubmissionUseCase:
             submission_id=saved.id,
             homework_id=homework.id,
             user_id=payload.user_id,
-            exercise_id=exercise_id,
+            exercise_id=str(exercise_id) if exercise_id else None,
         )

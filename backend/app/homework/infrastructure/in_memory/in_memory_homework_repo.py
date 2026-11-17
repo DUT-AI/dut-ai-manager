@@ -56,11 +56,16 @@ class InMemoryHomeworkRepository(HomeworkRepositoryPort):
         return items, total, deadlines
 
     def get_all_assigned_to_user(
-        self, user_id: int, deleted: bool = False
-    ) -> tuple[list[HomeworkEntity], dict[int, datetime | None]]:
+        self,
+        user_id: int,
+        deleted: bool = False,
+        search: str | None = None,
+    ) -> list[HomeworkEntity]:
         items = self.get_all(deleted=deleted)
-        deadlines: dict[int, datetime | None] = {h.id: None for h in items if h.id}
-        return items, deadlines
+        if search and search.strip():
+            term = search.strip().lower()
+            items = [h for h in items if term in h.title.lower()]
+        return items
 
     def get_by_id(self, homework_id: int) -> HomeworkEntity | None:
         return self._storage.get(homework_id)

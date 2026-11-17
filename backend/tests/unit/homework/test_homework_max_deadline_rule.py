@@ -20,6 +20,7 @@ from app.homework.infrastructure.homework_assignee_repository import (
 from app.homework.infrastructure.homework_repository import HomeworkRepository
 from app.homework.infrastructure.model import (
     HomeworkAssigneeModel,
+    HomeworkExerciseModel,
     HomeworkModel,
     HomeworkSubmissionModel,
 )
@@ -37,6 +38,7 @@ def db_session():
         tables=[
             UserModel.__table__,
             HomeworkModel.__table__,
+            HomeworkExerciseModel.__table__,
             HomeworkAssigneeModel.__table__,
             HomeworkSubmissionModel.__table__,
         ],
@@ -131,6 +133,7 @@ def test_sync_assignees_force_override_works(db_session: Session):
 async def test_update_homework_use_case_protects_individual_deadlines(
     in_memory_homework_repo,
     in_memory_assignee_repo,
+    in_memory_exercise_repo,
 ):
     """
     Test Case 4: Kiểm tra UseCase UpdateHomeworkUseCase chuyển đúng force_override flag
@@ -140,6 +143,7 @@ async def test_update_homework_use_case_protects_individual_deadlines(
     fake_quiz_api.get_lesson_metadata = AsyncMock(
         return_value={"slug": "python-01", "has_coding": True, "has_game": False}
     )
+    fake_quiz_api.get_lesson_exercises = AsyncMock(return_value=[])
 
     existing_hw = Homework(
         id=10,
@@ -160,6 +164,7 @@ async def test_update_homework_use_case_protects_individual_deadlines(
         homework_repo=in_memory_homework_repo,
         quiz_api=fake_quiz_api,
         homework_assignee_repo=in_memory_assignee_repo,
+        homework_exercise_repo=in_memory_exercise_repo,
     )
 
     # 1. Update bình thường (force_override_deadlines=False) với hạn mới 12/11

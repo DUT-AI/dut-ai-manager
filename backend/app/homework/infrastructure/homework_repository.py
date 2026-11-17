@@ -136,8 +136,9 @@ class HomeworkRepository(HomeworkRepositoryPort):
         self,
         user_id: int,
         deleted: bool = False,
+        search: str | None = None,
     ) -> list[HomeworkEntity]:
-        """Get all homeworks assigned to a user directly via SQL JOIN."""
+        """Get all homeworks assigned to a user directly via SQL JOIN, with optional title search."""
         statement = (
             select(HomeworkModel)
             .join(
@@ -147,8 +148,12 @@ class HomeworkRepository(HomeworkRepositoryPort):
             .where(
                 HomeworkAssigneeModel.user_id == user_id,
             )
-            .order_by(desc(HomeworkModel.created_at))
         )
+        if search and search.strip():
+            statement = statement.where(
+                HomeworkModel.title.ilike(f"%{search.strip()}%")
+            )
+        statement = statement.order_by(desc(HomeworkModel.created_at))
         models = self.session.scalars(statement).all()
         return [m.to_entity() for m in models]
 
@@ -176,6 +181,7 @@ class HomeworkRepository(HomeworkRepositoryPort):
             model.slug = homework.slug
             model.requires_coding = homework.requires_coding
             model.requires_game = homework.requires_game
+            model.last_synced_at = homework.last_synced_at
             self.session.add(model)
             self.session.flush()
             return model.to_entity()

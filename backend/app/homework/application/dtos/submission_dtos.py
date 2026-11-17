@@ -25,6 +25,21 @@ class StudentExerciseStatusDTO(BaseModel):
     is_late: bool = False
 
 
+class MyHomeworkExerciseStatusDTO(BaseModel):
+    """Trạng thái chi tiết của 1 bài tập coding con bắt buộc cho màn hình học viên."""
+
+    exercise_id: str
+    title: str
+    order_index: int = 0
+    is_submitted: bool = False
+    is_passed: bool = False
+    first_passed_at: datetime | None = None
+    latest_submitted_at: datetime | None = None
+    best_score: float | None = None
+    attempt_count: int = 0
+    is_late: bool = False
+
+
 class StudentHomeworkDetailDTO(BaseModel):
     """Tiến độ nộp bài tổng thể của 1 học viên được phân công."""
 

@@ -2,20 +2,22 @@ from dishka import Provider, Scope, alias, provide
 from sqlalchemy.orm import Session
 
 from app.homework.application import (
+    BackfillHomeworkExercisesUseCase,
     CheckOverdueHomeworkUseCase,
     CreateHomeworkUseCase,
     DeleteHomeworkUseCase,
     GetHomeworkDetailUseCase,
     GetHomeworksPagedUseCase,
     GetHomeworkSubmissionStatusUseCase,
+    GetMyHomeworkDetailUseCase,
     GetUnsubmittedHomeworkReportUseCase,
     GetUnsubmittedHomeworksForUserUseCase,
     GetUserHomeworkSubmissionsUseCase,
     GetUserHomeworksUseCase,
-    HomeworkExerciseResolver,
     RecordHomeworkSubmissionUseCase,
     RescanAllHomeworksUseCase,
     SyncHomeworkFromQuizUseCase,
+    SyncMyUnsubmittedHomeworksUseCase,
     UpdateHomeworkUseCase,
 )
 from app.homework.application.event_handlers import (
@@ -24,11 +26,15 @@ from app.homework.application.event_handlers import (
 )
 from app.homework.domain.ports import (
     HomeworkAssigneeRepositoryPort,
+    HomeworkExerciseRepositoryPort,
     HomeworkRepositoryPort,
     HomeworkSubmissionRepositoryPort,
 )
 from app.homework.infrastructure.homework_assignee_repository import (
     HomeworkAssigneeRepository,
+)
+from app.homework.infrastructure.homework_exercise_repository import (
+    HomeworkExerciseRepository,
 )
 from app.homework.infrastructure.homework_repository import (
     HomeworkRepository,
@@ -49,6 +55,9 @@ class HomeworkModuleProvider(Provider):
     homework_repo_port = alias(
         source=HomeworkRepository, provides=HomeworkRepositoryPort
     )
+    homework_exercise_repo_port = alias(
+        source=HomeworkExerciseRepository, provides=HomeworkExerciseRepositoryPort
+    )
     homework_submission_repo_port = alias(
         source=HomeworkSubmissionRepository,
         provides=HomeworkSubmissionRepositoryPort,
@@ -65,6 +74,12 @@ class HomeworkModuleProvider(Provider):
     @provide
     def get_homework_repo(self, session: Session) -> HomeworkRepository:
         return HomeworkRepository(session)
+
+    @provide
+    def get_homework_exercise_repo(
+        self, session: Session
+    ) -> HomeworkExerciseRepository:
+        return HomeworkExerciseRepository(session)
 
     @provide
     def get_homework_submission_repo(
@@ -90,61 +105,70 @@ class HomeworkModuleProvider(Provider):
         )
 
     @provide
-    def get_homework_exercise_resolver(
-        self,
-        quiz_api: QuizApiClient,
-        homework_submission_repo: HomeworkSubmissionRepositoryPort,
-    ) -> HomeworkExerciseResolver:
-        return HomeworkExerciseResolver(
-            quiz_api=quiz_api,
-            homework_submission_repo=homework_submission_repo,
-        )
-
-    @provide
     def get_get_homework_detail_use_case(
         self,
-        homework_repo: HomeworkRepository,
-        homework_assignee_repo: HomeworkAssigneeRepository,
-        exercise_resolver: HomeworkExerciseResolver,
+        homework_repo: HomeworkRepositoryPort,
+        homework_assignee_repo: HomeworkAssigneeRepositoryPort,
+        homework_exercise_repo: HomeworkExerciseRepositoryPort,
     ) -> GetHomeworkDetailUseCase:
         return GetHomeworkDetailUseCase(
             homework_repo=homework_repo,
             homework_assignee_repo=homework_assignee_repo,
-            exercise_resolver=exercise_resolver,
+            homework_exercise_repo=homework_exercise_repo,
         )
 
     @provide
     def get_get_user_homeworks_use_case(
         self,
-        homework_repo: HomeworkRepository,
-        homework_submission_repo: HomeworkSubmissionRepository,
-        homework_assignee_repo: HomeworkAssigneeRepository,
+        homework_repo: HomeworkRepositoryPort,
+        homework_submission_repo: HomeworkSubmissionRepositoryPort,
+        homework_assignee_repo: HomeworkAssigneeRepositoryPort,
+        homework_exercise_repo: HomeworkExerciseRepositoryPort,
     ) -> GetUserHomeworksUseCase:
         return GetUserHomeworksUseCase(
             homework_repo=homework_repo,
             homework_submission_repo=homework_submission_repo,
             homework_assignee_repo=homework_assignee_repo,
+            homework_exercise_repo=homework_exercise_repo,
+        )
+
+    @provide
+    def get_get_my_homework_detail_use_case(
+        self,
+        homework_repo: HomeworkRepositoryPort,
+        homework_submission_repo: HomeworkSubmissionRepositoryPort,
+        homework_assignee_repo: HomeworkAssigneeRepositoryPort,
+        homework_exercise_repo: HomeworkExerciseRepositoryPort,
+    ) -> GetMyHomeworkDetailUseCase:
+        return GetMyHomeworkDetailUseCase(
+            homework_repo=homework_repo,
+            homework_submission_repo=homework_submission_repo,
+            homework_assignee_repo=homework_assignee_repo,
+            homework_exercise_repo=homework_exercise_repo,
         )
 
     @provide
     def get_get_unsubmitted_homeworks_for_user_use_case(
         self,
-        homework_repo: HomeworkRepository,
-        homework_submission_repo: HomeworkSubmissionRepository,
-        homework_assignee_repo: HomeworkAssigneeRepository,
+        homework_repo: HomeworkRepositoryPort,
+        homework_submission_repo: HomeworkSubmissionRepositoryPort,
+        homework_assignee_repo: HomeworkAssigneeRepositoryPort,
+        homework_exercise_repo: HomeworkExerciseRepositoryPort,
     ) -> GetUnsubmittedHomeworksForUserUseCase:
         return GetUnsubmittedHomeworksForUserUseCase(
             homework_repo=homework_repo,
             homework_submission_repo=homework_submission_repo,
             homework_assignee_repo=homework_assignee_repo,
+            homework_exercise_repo=homework_exercise_repo,
         )
 
     @provide
     def get_get_unsubmitted_homework_report_use_case(
         self,
-        homework_repo: HomeworkRepository,
-        homework_submission_repo: HomeworkSubmissionRepository,
-        homework_assignee_repo: HomeworkAssigneeRepository,
+        homework_repo: HomeworkRepositoryPort,
+        homework_submission_repo: HomeworkSubmissionRepositoryPort,
+        homework_assignee_repo: HomeworkAssigneeRepositoryPort,
+        homework_exercise_repo: HomeworkExerciseRepositoryPort,
         user_repo: UserRepository,
     ) -> GetUnsubmittedHomeworkReportUseCase:
         return GetUnsubmittedHomeworkReportUseCase(
@@ -152,31 +176,36 @@ class HomeworkModuleProvider(Provider):
             homework_submission_repo=homework_submission_repo,
             user_repo=user_repo,
             homework_assignee_repo=homework_assignee_repo,
+            homework_exercise_repo=homework_exercise_repo,
         )
 
     @provide
     def get_create_homework_use_case(
         self,
-        homework_repo: HomeworkRepository,
-        homework_assignee_repo: HomeworkAssigneeRepository,
+        homework_repo: HomeworkRepositoryPort,
+        homework_assignee_repo: HomeworkAssigneeRepositoryPort,
+        homework_exercise_repo: HomeworkExerciseRepositoryPort,
         quiz_api: QuizApiClient,
     ) -> CreateHomeworkUseCase:
         return CreateHomeworkUseCase(
             homework_repo=homework_repo,
             homework_assignee_repo=homework_assignee_repo,
+            homework_exercise_repo=homework_exercise_repo,
             quiz_api=quiz_api,
         )
 
     @provide
     def get_update_homework_use_case(
         self,
-        homework_repo: HomeworkRepository,
-        homework_assignee_repo: HomeworkAssigneeRepository,
+        homework_repo: HomeworkRepositoryPort,
+        homework_assignee_repo: HomeworkAssigneeRepositoryPort,
+        homework_exercise_repo: HomeworkExerciseRepositoryPort,
         quiz_api: QuizApiClient,
     ) -> UpdateHomeworkUseCase:
         return UpdateHomeworkUseCase(
             homework_repo=homework_repo,
             homework_assignee_repo=homework_assignee_repo,
+            homework_exercise_repo=homework_exercise_repo,
             quiz_api=quiz_api,
         )
 
@@ -210,31 +239,61 @@ class HomeworkModuleProvider(Provider):
     @provide
     def get_sync_homework_use_case(
         self,
-        homework_repo: HomeworkRepository,
-        homework_submission_repo: HomeworkSubmissionRepository,
+        homework_repo: HomeworkRepositoryPort,
+        homework_submission_repo: HomeworkSubmissionRepositoryPort,
+        homework_exercise_repo: HomeworkExerciseRepositoryPort,
         quiz_api: QuizApiClient,
     ) -> SyncHomeworkFromQuizUseCase:
         return SyncHomeworkFromQuizUseCase(
             homework_repo=homework_repo,
             homework_submission_repo=homework_submission_repo,
+            homework_exercise_repo=homework_exercise_repo,
             quiz_api=quiz_api,
+        )
+
+    @provide
+    def get_sync_my_unsubmitted_use_case(
+        self,
+        homework_repo: HomeworkRepositoryPort,
+        homework_submission_repo: HomeworkSubmissionRepositoryPort,
+        homework_assignee_repo: HomeworkAssigneeRepositoryPort,
+        homework_exercise_repo: HomeworkExerciseRepositoryPort,
+        sync_homework_uc: SyncHomeworkFromQuizUseCase,
+    ) -> SyncMyUnsubmittedHomeworksUseCase:
+        return SyncMyUnsubmittedHomeworksUseCase(
+            homework_repo=homework_repo,
+            homework_submission_repo=homework_submission_repo,
+            homework_assignee_repo=homework_assignee_repo,
+            homework_exercise_repo=homework_exercise_repo,
+            sync_homework_uc=sync_homework_uc,
+        )
+
+    @provide
+    def get_backfill_exercises_use_case(
+        self,
+        homework_repo: HomeworkRepositoryPort,
+        sync_homework_uc: SyncHomeworkFromQuizUseCase,
+    ) -> BackfillHomeworkExercisesUseCase:
+        return BackfillHomeworkExercisesUseCase(
+            homework_repo=homework_repo,
+            sync_homework_uc=sync_homework_uc,
         )
 
     @provide
     def get_submission_status_use_case(
         self,
-        homework_repo: HomeworkRepository,
-        homework_submission_repo: HomeworkSubmissionRepository,
-        homework_assignee_repo: HomeworkAssigneeRepository,
+        homework_repo: HomeworkRepositoryPort,
+        homework_submission_repo: HomeworkSubmissionRepositoryPort,
+        homework_assignee_repo: HomeworkAssigneeRepositoryPort,
+        homework_exercise_repo: HomeworkExerciseRepositoryPort,
         user_repo: UserRepository,
-        exercise_resolver: HomeworkExerciseResolver,
     ) -> GetHomeworkSubmissionStatusUseCase:
         return GetHomeworkSubmissionStatusUseCase(
             homework_repo=homework_repo,
             homework_submission_repo=homework_submission_repo,
             homework_assignee_repo=homework_assignee_repo,
+            homework_exercise_repo=homework_exercise_repo,
             user_repo=user_repo,
-            exercise_resolver=exercise_resolver,
         )
 
     @provide
@@ -243,30 +302,32 @@ class HomeworkModuleProvider(Provider):
         homework_repo: HomeworkRepositoryPort,
         homework_submission_repo: HomeworkSubmissionRepositoryPort,
         homework_assignee_repo: HomeworkAssigneeRepositoryPort,
-        exercise_resolver: HomeworkExerciseResolver,
+        homework_exercise_repo: HomeworkExerciseRepositoryPort,
     ) -> CheckOverdueHomeworkUseCase:
         return CheckOverdueHomeworkUseCase(
             homework_repo=homework_repo,
             homework_submission_repo=homework_submission_repo,
             homework_assignee_repo=homework_assignee_repo,
-            exercise_resolver=exercise_resolver,
+            homework_exercise_repo=homework_exercise_repo,
         )
 
     @provide
     def get_rescan_all_use_case(
         self,
-        homework_repo: HomeworkRepository,
-        homework_submission_repo: HomeworkSubmissionRepository,
-        homework_assignee_repo: HomeworkAssigneeRepository,
-        exercise_resolver: HomeworkExerciseResolver,
+        homework_repo: HomeworkRepositoryPort,
+        homework_submission_repo: HomeworkSubmissionRepositoryPort,
+        homework_assignee_repo: HomeworkAssigneeRepositoryPort,
+        homework_exercise_repo: HomeworkExerciseRepositoryPort,
         user_repo: UserRepository,
+        quiz_api: QuizApiClient,
     ) -> RescanAllHomeworksUseCase:
         return RescanAllHomeworksUseCase(
             homework_repo=homework_repo,
             homework_submission_repo=homework_submission_repo,
             homework_assignee_repo=homework_assignee_repo,
-            exercise_resolver=exercise_resolver,
+            homework_exercise_repo=homework_exercise_repo,
             user_repo=user_repo,
+            quiz_api=quiz_api,
         )
 
     @provide

@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.homework.domain.entity import (
     HomeworkSubmission as HomeworkSubmissionEntity,
 )
+from app.homework.domain.entity import SubmissionType
 from app.homework.domain.ports import HomeworkSubmissionRepositoryPort
 from app.homework.domain.value_objects import (
     CodingSubmissionDetails,
@@ -19,7 +20,7 @@ from app.homework.infrastructure.model import (
 
 
 class HomeworkSubmissionRepository(HomeworkSubmissionRepositoryPort):
-    """Repository chuyên trách quản lý bảng bài nộp homework_submissions."""
+    """Repository chuyên trách quản lý bảng lịch sử bài nộp homework_submissions (Append-Only)."""
 
     def __init__(self, session: Session):
         self.session = session
@@ -27,7 +28,7 @@ class HomeworkSubmissionRepository(HomeworkSubmissionRepositoryPort):
     def add_submission(
         self, submission: HomeworkSubmissionEntity
     ) -> HomeworkSubmissionEntity:
-        """Insert a new submission log into homework_submissions."""
+        """Insert a new immutable submission log into homework_submissions."""
         model = HomeworkSubmissionModel.from_entity(submission)
         self.session.add(model)
         self.session.flush()
@@ -71,32 +72,6 @@ class HomeworkSubmissionRepository(HomeworkSubmissionRepositoryPort):
         models = self.session.scalars(statement).all()
         return [m.to_entity() for m in models]
 
-    def has_valid_submission(
-        self,
-        homework_id: int,
-        user_id: int,
-        submission_type: Any,
-        deadline: datetime,
-    ) -> bool:
-        """
-        Check if user has at least one valid submission before or at deadline.
-        For coding: is_passed is always True.
-        For game: requires is_passed == True.
-        """
-        type_str = str(
-            submission_type.value
-            if hasattr(submission_type, "value")
-            else submission_type
-        ).upper()
-        statement = select(HomeworkSubmissionModel.id).where(
-            HomeworkSubmissionModel.homework_id == homework_id,
-            HomeworkSubmissionModel.user_id == user_id,
-            func.upper(HomeworkSubmissionModel.submission_type) == type_str,
-            HomeworkSubmissionModel.is_passed,
-            HomeworkSubmissionModel.submitted_at <= deadline,
-        )
-        return self.session.scalars(statement).first() is not None
-
     def get_submissions_by_homework(
         self, homework_id: int
     ) -> list[HomeworkSubmissionEntity]:
@@ -113,14 +88,16 @@ class HomeworkSubmissionRepository(HomeworkSubmissionRepositoryPort):
         self,
         homework_id: int,
         user_id: int,
-        submission_type: Any,
+        submission_type: SubmissionType | str,
         exercise_id: str | None = None,
-        quiz_submission_id: str | None = None,
+        external_submission_id: str | None = None,
         submitted_at: datetime | None = None,
-    ) -> HomeworkSubmissionModel | None:
+    ) -> HomeworkSubmissionEntity | None:
         """
-        Find an existing submission by exercise_id, quiz_submission_id (in details JSON),
-        or by exact (homework_id, user_id, submission_type, submitted_at).
+        Find an existing submission strictly for idempotent deduplication (append-only safe):
+        1. Match by (homework_id, user_id, submission_type, external_submission_id) when external ID is present.
+        2. Fallback to exact timestamp (+ exercise_id for CODING) ONLY when external_submission_id is absent.
+        NEVER match CODING solely by (homework_id, user_id, exercise_id) to avoid overwriting earlier passed attempts.
         """
         type_str = str(
             submission_type.value
@@ -128,34 +105,21 @@ class HomeworkSubmissionRepository(HomeworkSubmissionRepositoryPort):
             else submission_type
         ).upper()
 
-        # 1. Tìm theo exercise_id đối với bài tập CODING
-        if exercise_id and type_str == "CODING":
+        # 1. Primary idempotent match by external_submission_id
+        if external_submission_id:
+            clean_ext_id = str(external_submission_id).strip()
             stmt = select(HomeworkSubmissionModel).where(
                 HomeworkSubmissionModel.homework_id == homework_id,
                 HomeworkSubmissionModel.user_id == user_id,
-                HomeworkSubmissionModel.exercise_id == exercise_id,
+                func.upper(HomeworkSubmissionModel.submission_type) == type_str,
+                HomeworkSubmissionModel.external_submission_id == clean_ext_id,
             )
             found = self.session.scalars(stmt).first()
             if found:
-                return found
+                return found.to_entity()
+            return None
 
-        # 2. Tìm theo quiz_submission_id (nếu có)
-        if quiz_submission_id:
-            try:
-                stmt = select(HomeworkSubmissionModel).where(
-                    HomeworkSubmissionModel.homework_id == homework_id,
-                    HomeworkSubmissionModel.user_id == user_id,
-                    func.upper(HomeworkSubmissionModel.submission_type) == type_str,
-                    HomeworkSubmissionModel.details["submission_id"].astext
-                    == str(quiz_submission_id),
-                )
-                found = self.session.scalars(stmt).first()
-                if found:
-                    return found
-            except Exception:
-                pass
-
-        # 3. Tìm theo submitted_at chính xác
+        # 2. Fallback exact timestamp match when source does not provide external_submission_id
         if submitted_at:
             stmt = select(HomeworkSubmissionModel).where(
                 HomeworkSubmissionModel.homework_id == homework_id,
@@ -163,55 +127,81 @@ class HomeworkSubmissionRepository(HomeworkSubmissionRepositoryPort):
                 func.upper(HomeworkSubmissionModel.submission_type) == type_str,
                 HomeworkSubmissionModel.submitted_at == submitted_at,
             )
+            if exercise_id and type_str == "CODING":
+                stmt = stmt.where(
+                    HomeworkSubmissionModel.exercise_id == str(exercise_id)
+                )
             found = self.session.scalars(stmt).first()
             if found:
-                return found
+                return found.to_entity()
 
         return None
 
     def update_submission(
         self,
-        model: HomeworkSubmissionModel,
+        submission: HomeworkSubmissionEntity | HomeworkSubmissionModel,
         submitted_at: datetime | None = None,
         is_passed: bool | None = None,
         exercise_id: str | None = None,
         exercise_title: str | None = None,
         score: float | None = None,
         attempt_number: int | None = None,
-        details: dict | None = None,
+        details: CodingSubmissionDetails | GameSubmissionDetails | dict[str, Any] | None = None,
+        external_submission_id: str | None = None,
     ) -> HomeworkSubmissionEntity:
-        """Update an existing submission model and flush changes."""
-        if submitted_at is not None:
-            model.submitted_at = submitted_at
-        if is_passed is not None:
-            model.is_passed = is_passed
-        if exercise_id is not None:
-            model.exercise_id = exercise_id
-        if exercise_title is not None:
-            model.exercise_title = exercise_title
-        if score is not None:
-            model.score = score
-        if attempt_number is not None:
-            model.attempt_number = attempt_number
+        """Update an existing matched submission model and flush changes."""
+        model = self._resolve_model(submission)
+        field_updates = {
+            "submitted_at": submitted_at,
+            "is_passed": is_passed,
+            "exercise_id": exercise_id,
+            "external_submission_id": external_submission_id,
+            "exercise_title": exercise_title,
+            "score": score,
+            "attempt_number": attempt_number,
+        }
+        for attr, val in field_updates.items():
+            if val is not None:
+                setattr(model, attr, val)
+
         if details is not None:
-            current_dict = (
-                model.details.model_dump()
-                if isinstance(model.details, BaseModel)
-                else dict(model.details or {})
-            )
-            update_dict = (
-                details.model_dump()
-                if isinstance(details, BaseModel)
-                else dict(details)
-            )
-            current_dict.update(update_dict)
-            sub_type = str(model.submission_type).upper()
-            if sub_type == "GAME":
-                model.details = GameSubmissionDetails(**current_dict)
-            else:
-                model.details = CodingSubmissionDetails(**current_dict)
+            model.details = self._merge_details(model, details)
+
         self.session.flush()
         return model.to_entity()
+
+    def _resolve_model(
+        self, submission: HomeworkSubmissionEntity | HomeworkSubmissionModel
+    ) -> HomeworkSubmissionModel:
+        if isinstance(submission, HomeworkSubmissionModel):
+            return submission
+        assert submission.id is not None
+        loaded = self.session.get(HomeworkSubmissionModel, submission.id)
+        if loaded is None:
+            raise ValueError(
+                f"HomeworkSubmission id={submission.id} not found for update"
+            )
+        return loaded
+
+    @staticmethod
+    def _merge_details(
+        model: HomeworkSubmissionModel,
+        details: CodingSubmissionDetails | GameSubmissionDetails | dict[str, Any],
+    ) -> CodingSubmissionDetails | GameSubmissionDetails:
+        current_dict = (
+            model.details.model_dump()
+            if isinstance(model.details, BaseModel)
+            else dict(model.details or {})
+        )
+        update_dict = (
+            details.model_dump()
+            if isinstance(details, BaseModel)
+            else dict(details)
+        )
+        current_dict.update(update_dict)
+        if str(model.submission_type).upper() == "GAME":
+            return GameSubmissionDetails(**current_dict)
+        return CodingSubmissionDetails(**current_dict)
 
     def get_submissions_by_exercise(
         self, homework_id: int, exercise_id: str
@@ -234,12 +224,12 @@ class HomeworkSubmissionRepository(HomeworkSubmissionRepositoryPort):
         user_id: int,
         deadline: datetime | None = None,
     ) -> set[str]:
-        """Get set of unique exercise_ids submitted by a user for a homework."""
+        """Get set of unique passed exercise_ids submitted by a user for a homework."""
         statement = select(HomeworkSubmissionModel.exercise_id).where(
             HomeworkSubmissionModel.homework_id == homework_id,
             HomeworkSubmissionModel.user_id == user_id,
             func.upper(HomeworkSubmissionModel.submission_type) == "CODING",
-            HomeworkSubmissionModel.is_passed,
+            HomeworkSubmissionModel.is_passed == True,
             HomeworkSubmissionModel.exercise_id.is_not(None),
         )
         if deadline is not None:
@@ -248,32 +238,3 @@ class HomeworkSubmissionRepository(HomeworkSubmissionRepositoryPort):
             )
         results = self.session.scalars(statement).all()
         return {str(eid) for eid in results if eid}
-
-    def get_required_exercise_ids_map(
-        self, homework_ids: list[int]
-    ) -> dict[int, set[str]]:
-        """Lấy danh mục các mã bài tập coding con của danh sách homework_ids từ database."""
-        if not homework_ids:
-            return {}
-        statement = (
-            select(
-                HomeworkSubmissionModel.homework_id,
-                HomeworkSubmissionModel.exercise_id,
-            )
-            .where(
-                HomeworkSubmissionModel.homework_id.in_(homework_ids),
-                func.upper(HomeworkSubmissionModel.submission_type) == "CODING",
-                HomeworkSubmissionModel.exercise_id.is_not(None),
-                ~HomeworkSubmissionModel.exercise_id.startswith("sync-legacy"),
-            )
-            .group_by(
-                HomeworkSubmissionModel.homework_id,
-                HomeworkSubmissionModel.exercise_id,
-            )
-        )
-        rows = self.session.execute(statement).all()
-        result: dict[int, set[str]] = {hid: set() for hid in homework_ids}
-        for hw_id, ex_id in rows:
-            if ex_id:
-                result.setdefault(hw_id, set()).add(str(ex_id))
-        return result

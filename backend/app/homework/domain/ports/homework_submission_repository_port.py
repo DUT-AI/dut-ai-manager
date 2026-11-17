@@ -9,28 +9,29 @@ from app.homework.domain.value_objects import (
 
 
 class HomeworkSubmissionRepositoryPort(ABC):
-    """Cổng giao tiếp trừu tượng lưu trữ và truy xuất lịch sử nộp bài (Audit trail)."""
+    """Cổng giao tiếp trừu tượng lưu trữ và truy xuất lịch sử nộp bài (Append-only Audit trail)."""
 
     @abstractmethod
     def add_submission(
         self, submission: HomeworkSubmission
     ) -> HomeworkSubmission:
-        """Thêm mới một bản ghi bài nộp."""
+        """Thêm mới một bản ghi lượt nộp bài."""
         ...
 
     @abstractmethod
     def update_submission(
         self,
         submission: HomeworkSubmission,
-        submitted_at: datetime,
-        is_passed: bool,
+        submitted_at: datetime | None = None,
+        is_passed: bool | None = None,
         exercise_id: str | None = None,
         exercise_title: str | None = None,
         score: float | None = None,
-        attempt_number: int = 1,
+        attempt_number: int | None = None,
         details: CodingSubmissionDetails | GameSubmissionDetails | None = None,
+        external_submission_id: str | None = None,
     ) -> HomeworkSubmission:
-        """Cập nhật bản ghi bài nộp đã có."""
+        """Cập nhật metadata/trạng thái của một bản ghi lượt nộp bài trùng khớp."""
         ...
 
     @abstractmethod
@@ -43,8 +44,8 @@ class HomeworkSubmissionRepositoryPort(ABC):
     @abstractmethod
     def get_user_submissions_for_homeworks(
         self, homework_ids: list[int], user_id: int
-    ) -> dict[int, list[HomeworkSubmission]]:
-        """Lấy bài nộp của học viên gom nhóm theo từng bài tập."""
+    ) -> list[HomeworkSubmission]:
+        """Lấy danh sách tất cả bài nộp của học viên trên nhiều bài tập."""
         ...
 
     @abstractmethod
@@ -66,10 +67,14 @@ class HomeworkSubmissionRepositoryPort(ABC):
         user_id: int,
         submission_type: SubmissionType,
         exercise_id: str | None = None,
-        quiz_submission_id: str | None = None,
+        external_submission_id: str | None = None,
         submitted_at: datetime | None = None,
     ) -> HomeworkSubmission | None:
-        """Tìm bản ghi bài nộp trùng khớp để thực hiện idempotent update."""
+        """
+        Tìm bản ghi lượt nộp trùng khớp phục vụ idempotent upsert (KHÔNG ghi đè lượt nộp khác):
+        1. Ưu tiên khớp theo external_submission_id.
+        2. Fallback khớp chính xác (homework_id, user_id, submission_type, exercise_id, submitted_at) khi thiếu ID.
+        """
         ...
 
     @abstractmethod
@@ -83,12 +88,5 @@ class HomeworkSubmissionRepositoryPort(ABC):
     def get_submitted_exercise_ids(
         self, homework_id: int, user_id: int
     ) -> set[str]:
-        """Lấy tập mã các bài tập coding con mà học viên đã nộp."""
-        ...
-
-    @abstractmethod
-    def get_required_exercise_ids_map(
-        self, homework_ids: list[int]
-    ) -> dict[int, set[str]]:
-        """Lấy bản đồ tập các bài tập con bắt buộc của nhiều bài tập."""
+        """Lấy tập mã các bài tập coding con mà học viên đã nộp đạt."""
         ...
