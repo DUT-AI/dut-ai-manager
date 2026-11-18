@@ -1,10 +1,12 @@
+import secrets
 from enum import Enum
 from typing import Annotated, cast
 
-from fastapi import Depends, Request, status
+from fastapi import Depends, Header, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.context import set_current_user_id
 from app.core.database import get_session
 from app.core.principal import AuthPrincipal, PrincipalType
@@ -139,6 +141,46 @@ class PermissionChecker:
 def hasPermission(permission: str | Enum):
     """Dependency factory to check for a specific permission"""
     return Depends(PermissionChecker(permission))
+
+
+def _extract_manage_api_key(
+    authorization: str | None, x_webhook_secret: str | None
+) -> str | None:
+    """Extract MANAGE_API_KEY from Authorization Bearer or X-Webhook-Secret header."""
+    if authorization:
+        stripped = authorization.strip()
+        if stripped.lower().startswith("bearer "):
+            token = stripped[7:].strip()
+            if token:
+                return token
+    if x_webhook_secret:
+        token = x_webhook_secret.strip()
+        if token:
+            return token
+    return None
+
+
+def verify_manage_api_key(
+    authorization: Annotated[str | None, Header(alias="Authorization")] = None,
+    x_webhook_secret: Annotated[str | None, Header(alias="X-Webhook-Secret")] = None,
+) -> None:
+    """Verify MANAGE_API_KEY via Authorization Bearer or X-Webhook-Secret header."""
+    expected_key = settings.MANAGE_API_KEY.strip()
+    provided_key = _extract_manage_api_key(authorization, x_webhook_secret)
+    if (
+        not expected_key
+        or not provided_key
+        or not secrets.compare_digest(provided_key, expected_key)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing MANAGE_API_KEY credentials",
+        )
+
+
+def requireManageApiKey():
+    """Dependency factory to verify MANAGE_API_KEY for service-to-service / webhook endpoints."""
+    return Depends(verify_manage_api_key)
 
 
 def hasTeamLeaderAccess(target_user_id_param: str = "user_id"):

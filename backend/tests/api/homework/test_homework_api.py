@@ -374,7 +374,7 @@ def test_hard_delete_homework_cascades_completely(admin_client, mock_current_use
 def test_receive_submission_webhook_invalid_secret_returns_401(
     admin_client, test_homework
 ):
-    """Gửi webhook không có hoặc sai header X-Webhook-Secret trả về 401."""
+    """Gửi webhook không có hoặc sai MANAGE_API_KEY trả về 401."""
     payload = {
         "lesson_slug": test_homework["slug"],
         "user_id": 1,
@@ -386,19 +386,28 @@ def test_receive_submission_webhook_invalid_secret_returns_401(
     res1 = admin_client.post("/api/v1/homeworks/webhook/submission", json=payload)
     assert res1.status_code == 401
 
-    # Trường hợp sai header
-    headers = {"X-Webhook-Secret": "WRONG_SECRET_12345"}
+    # Trường hợp sai X-Webhook-Secret
     res2 = admin_client.post(
-        "/api/v1/homeworks/webhook/submission", json=payload, headers=headers
+        "/api/v1/homeworks/webhook/submission",
+        json=payload,
+        headers={"X-Webhook-Secret": "WRONG_SECRET_12345"},
     )
     assert res2.status_code == 401
+
+    # Trường hợp sai Authorization Bearer
+    res3 = admin_client.post(
+        "/api/v1/homeworks/webhook/submission",
+        json=payload,
+        headers={"Authorization": "Bearer WRONG_SECRET_12345"},
+    )
+    assert res3.status_code == 401
 
 
 def test_receive_submission_webhook_success_coding(
     admin_client, test_homework, mock_current_user
 ):
-    """Quiz webhook ghi nhận nộp bài Coding hợp lệ từ hệ thống Quiz."""
-    headers = {"X-Webhook-Secret": settings.QUIZ_WEBHOOK_SECRET}
+    """Quiz webhook ghi nhận nộp bài Coding hợp lệ qua Authorization Bearer MANAGE_API_KEY."""
+    headers = {"Authorization": f"Bearer {settings.MANAGE_API_KEY}"}
     payload = {
         "lesson_slug": test_homework["slug"],
         "user_id": mock_current_user.id,
@@ -422,8 +431,8 @@ def test_receive_submission_webhook_success_coding(
 def test_receive_submission_webhook_success_game(
     admin_client, test_homework, mock_current_user
 ):
-    """Quiz webhook ghi nhận hoàn thành bài tập Game hợp lệ."""
-    headers = {"X-Webhook-Secret": settings.QUIZ_WEBHOOK_SECRET}
+    """Quiz webhook ghi nhận hoàn thành bài tập Game hợp lệ qua header X-Webhook-Secret."""
+    headers = {"X-Webhook-Secret": settings.MANAGE_API_KEY}
     payload = {
         "lesson_slug": test_homework["slug"],
         "user_id": mock_current_user.id,

@@ -1,10 +1,9 @@
 from typing import Annotated, Any, Literal
 
 from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.core.config import settings
-from app.core.deps import CurrentUser, hasPermission
+from app.core.deps import CurrentUser, hasPermission, requireManageApiKey
 from app.core.permissions import HomeworkPermission
 from app.homework.application import (
     BackfillHomeworkExercisesUseCase,
@@ -308,23 +307,21 @@ async def delete_homework(
     return ApiResponse.success(data=result)
 
 
-@router.post("/webhook/submission", response_model=ApiResponse[HomeworkWebhookResponse])
+@router.post(
+    "/webhook/submission",
+    response_model=ApiResponse[HomeworkWebhookResponse],
+    dependencies=[requireManageApiKey()],
+)
 @inject
 async def receive_submission_webhook(
     payload: HomeworkSubmissionWebhookIn,
     record_uc: FromDishka[RecordHomeworkSubmissionUseCase],
-    x_webhook_secret: Annotated[str | None, Header(alias="X-Webhook-Secret")] = None,
 ):
     """
     Webhook endpoint nhận sự kiện nộp bài (Coding / Game) từ hệ thống Quiz.
-    Yêu cầu bảo mật: Header 'X-Webhook-Secret'.
+    Yêu cầu bảo mật: MANAGE_API_KEY qua header 'Authorization: Bearer <MANAGE_API_KEY>'
+    hoặc 'X-Webhook-Secret: <MANAGE_API_KEY>'.
     """
-    if not x_webhook_secret or x_webhook_secret != settings.QUIZ_WEBHOOK_SECRET:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid or missing X-Webhook-Secret header",
-        )
-
     res = await record_uc.execute(payload)
     return ApiResponse.success(data=res)
 

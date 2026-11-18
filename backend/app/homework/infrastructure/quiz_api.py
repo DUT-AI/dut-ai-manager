@@ -11,7 +11,7 @@ class QuizApiClient:
 
     def __init__(self):
         self.base_url = settings.QUIZ_API_URL.rstrip("/")
-        self.api_key = settings.QUIZ_API_KEY.strip()
+        self.api_key = settings.QUIZ_WEBHOOK_SECRET.strip()
 
     def _get_headers(self) -> dict[str, str]:
         headers = {"Content-Type": "application/json"}
