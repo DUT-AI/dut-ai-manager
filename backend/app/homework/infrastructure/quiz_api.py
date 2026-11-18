@@ -9,11 +9,15 @@ from app.core.config import settings
 class QuizApiClient:
     """Infrastructure client for interacting with the external Quiz API system."""
 
-    def __init__(self, base_url: str | None = None):
-        self.base_url = (base_url or settings.QUIZ_API_URL).rstrip("/")
+    def __init__(self):
+        self.base_url = settings.QUIZ_API_URL.rstrip("/")
+        self.api_key = settings.QUIZ_API_KEY.strip()
 
     def _get_headers(self) -> dict[str, str]:
-        return {"Content-Type": "application/json"}
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        return headers
 
     async def get_game_sessions_for_sync(
         self, game_slug: str

@@ -134,6 +134,7 @@ class Settings(BaseSettings):
     HOMEWORK_CHECKER_API_URL: str = ""
     SUBMISSION_CHECKER_API_URL: str = ""
     QUIZ_API_URL: str = "https://quiz.dutai.site"
+    QUIZ_API_KEY: str = ""
     QUIZ_WEBHOOK_SECRET: str = ""
     TTS_API_URL: str = ""
 

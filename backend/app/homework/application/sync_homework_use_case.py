@@ -16,6 +16,10 @@ from app.homework.domain.ports import (
     HomeworkRepositoryPort,
     HomeworkSubmissionRepositoryPort,
 )
+from app.homework.domain.value_objects import (
+    CodingSubmissionDetails,
+    GameSubmissionDetails,
+)
 from app.homework.infrastructure.quiz_api import QuizApiClient
 from app.shared.application.response import BadRequestException
 from app.shared.domain.datetime_types import parse_datetime_to_utc
@@ -246,13 +250,13 @@ class SyncHomeworkFromQuizUseCase:
                     )
                     is_passed = self._resolve_coding_is_passed(sub)
 
-                    details = {
-                        "submission_id": ext_id,
-                        "original_filename": sub.get("original_filename"),
-                        "status": sub.get("status"),
-                        "score_details": sub.get("score_details"),
-                        "source": "manual_sync",
-                    }
+                    details = CodingSubmissionDetails(
+                        submission_id=ext_id,
+                        original_filename=sub.get("original_filename"),
+                        status=sub.get("status"),
+                        score_details=sub.get("score_details"),
+                        source="manual_sync",
+                    )
 
                     existing = self.homework_submission_repo.find_submission_match(
                         homework_id,
@@ -336,15 +340,15 @@ class SyncHomeworkFromQuizUseCase:
                     game_score = s.get("final_score")
                     if game_score is not None:
                         game_score = float(game_score)
-                    details = {
-                        "session_id": ext_id,
-                        "final_score": game_score,
-                        "gold": s.get("gold", 0),
-                        "attempt_count": s.get("attempt_count", 1),
-                        "total_questions": s.get("total_questions", 0),
-                        "correct_count": s.get("correct_count", 0),
-                        "source": "manual_sync",
-                    }
+                    details = GameSubmissionDetails(
+                        session_id=ext_id,
+                        final_score=game_score,
+                        gold=int(s.get("gold") or 0),
+                        attempt_count=int(s.get("attempt_count") or 1),
+                        total_questions=int(s.get("total_questions") or 0),
+                        correct_count=int(s.get("correct_count") or 0),
+                        source="manual_sync",
+                    )
 
                     existing = self.homework_submission_repo.find_submission_match(
                         homework_id,
