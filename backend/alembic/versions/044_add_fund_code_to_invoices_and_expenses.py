@@ -26,45 +26,91 @@ def upgrade() -> None:
     # 2. Add fund_code as nullable to outgoing_invoices
     op.add_column('outgoing_invoices', sa.Column('fund_code', sa.String(length=50), nullable=True))
 
-    # 3. Backfill existing records: team_id = 9 -> DUT_MAKER, others -> DUT_AI
+    # 3. Dynamic Backfill existing records:
+    # Match by team_name in `teams` table (independent of environment IDs)
     op.execute(
         """
         UPDATE invoices
-        SET fund_code = CASE
-            WHEN team_id = 9 THEN 'DUT_MAKER'
-            ELSE 'DUT_AI'
-        END
+        SET fund_code = 'DUT_MAKER'
+        WHERE team_id IN (
+            SELECT id FROM teams WHERE team_name ILIKE '%DUT%Maker%'
+        );
+        """
+    )
+    op.execute(
+        """
+        UPDATE invoices
+        SET fund_code = 'DUT_AI'
         WHERE fund_code IS NULL;
+        """
+    )
+
+    op.execute(
+        """
+        UPDATE outgoing_invoices
+        SET fund_code = 'DUT_MAKER'
+        WHERE team_id IN (
+            SELECT id FROM teams WHERE team_name ILIKE '%DUT%Maker%'
+        );
         """
     )
     op.execute(
         """
         UPDATE outgoing_invoices
-        SET fund_code = CASE
-            WHEN team_id = 9 THEN 'DUT_MAKER'
-            ELSE 'DUT_AI'
-        END
+        SET fund_code = 'DUT_AI'
         WHERE fund_code IS NULL;
         """
     )
 
-    # 4. Set fund_code to NOT NULL with default 'DUT_AI'
+    # 4. Clean up team_id for records where team was solely used to represent fund
+    op.execute(
+        """
+        UPDATE invoices
+        SET team_id = NULL
+        WHERE team_id IN (
+            SELECT id FROM teams WHERE team_name ILIKE '%DUT%Maker%' OR team_name ILIKE '%DUT%AI%'
+        );
+        """
+    )
+    op.execute(
+        """
+        UPDATE outgoing_invoices
+        SET team_id = NULL
+        WHERE team_id IN (
+            SELECT id FROM teams WHERE team_name ILIKE '%DUT%Maker%' OR team_name ILIKE '%DUT%AI%'
+        );
+        """
+    )
+
+    # 5. Set fund_code to NOT NULL with default 'DUT_AI'
     op.alter_column('invoices', 'fund_code', nullable=False, server_default='DUT_AI')
     op.alter_column('outgoing_invoices', 'fund_code', nullable=False, server_default='DUT_AI')
 
-    # 5. Create index on fund_code
+    # 6. Create index on fund_code
     op.create_index(op.f('ix_invoices_fund_code'), 'invoices', ['fund_code'], unique=False)
     op.create_index(op.f('ix_outgoing_invoices_fund_code'), 'outgoing_invoices', ['fund_code'], unique=False)
 
-    # 6. Make team_id nullable so invoices/expenses are not strictly required to link to a team
+    # 7. Make team_id nullable so invoices/expenses are not strictly required to link to a team
     op.alter_column('invoices', 'team_id', nullable=True)
     op.alter_column('outgoing_invoices', 'team_id', nullable=True)
 
 
 def downgrade() -> None:
-    # 1. Revert team_id to NOT NULL (ensure no NULLs first)
-    op.execute("UPDATE invoices SET team_id = 6 WHERE team_id IS NULL;")
-    op.execute("UPDATE outgoing_invoices SET team_id = 6 WHERE team_id IS NULL;")
+    # 1. Revert team_id to NOT NULL (safely link to first available team if NULL, without hardcoded ID)
+    op.execute(
+        """
+        UPDATE invoices
+        SET team_id = (SELECT id FROM teams ORDER BY id ASC LIMIT 1)
+        WHERE team_id IS NULL;
+        """
+    )
+    op.execute(
+        """
+        UPDATE outgoing_invoices
+        SET team_id = (SELECT id FROM teams ORDER BY id ASC LIMIT 1)
+        WHERE team_id IS NULL;
+        """
+    )
     op.alter_column('invoices', 'team_id', nullable=False)
     op.alter_column('outgoing_invoices', 'team_id', nullable=False)
 

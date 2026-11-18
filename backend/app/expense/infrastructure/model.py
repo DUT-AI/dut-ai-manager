@@ -59,7 +59,7 @@ class ExpenseInvoiceModel(SQLAlchemyTimestampMixin, Base):
             amount=self.amount,
             description=self.description,
             spender_id=self.spender_id,
-            fund_code=getattr(self, "fund_code", "DUT_AI") or "DUT_AI",
+            fund_code=self.fund_code,
             team_id=self.team_id,
             status=ExpenseStatus(self.status),
             payment_date=self.payment_date,
@@ -80,7 +80,7 @@ class ExpenseInvoiceModel(SQLAlchemyTimestampMixin, Base):
             amount=entity.amount,
             description=entity.description,
             spender_id=entity.spender_id,
-            fund_code=entity.fund_code or "DUT_AI",
+            fund_code=entity.fund_code,
             team_id=entity.team_id,
             status=entity.status.value
             if isinstance(entity.status, ExpenseStatus)
