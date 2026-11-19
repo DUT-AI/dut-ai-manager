@@ -110,7 +110,7 @@ class InvoiceResponse(BaseModel):
             id=invoice.id,
             user_id=invoice.user_id,
             user_name=getattr(invoice, "user_name", None),
-            fund_code=getattr(invoice, "fund_code", "DUT_AI") or "DUT_AI",
+            fund_code=invoice.fund_code,
             team_id=invoice_team_id,
             amount=invoice.amount,
             status=invoice.status,

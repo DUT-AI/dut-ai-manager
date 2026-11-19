@@ -69,7 +69,7 @@ class InvoiceModel(SQLAlchemyTimestampMixin, Base):
             id=self.id,
             user_id=self.user_id,
             user_name=self.user_rel.name if self.user_rel else None,
-            fund_code=getattr(self, "fund_code", FundCode.DUT_AI) or FundCode.DUT_AI,
+            fund_code=self.fund_code,
             team_id=self.team_id,
             team_name=self.team_rel.team_name if self.team_rel else None,
             amount=self.amount,
@@ -93,7 +93,7 @@ class InvoiceModel(SQLAlchemyTimestampMixin, Base):
         return cls(
             id=entity.id,
             user_id=entity.user_id,
-            fund_code=entity.fund_code or FundCode.DUT_AI,
+            fund_code=entity.fund_code,
             team_id=entity.team_id,
             amount=entity.amount,
             status=entity.status,
