@@ -27,6 +27,44 @@ from app.shared.application.response import ApiResponse, BadRequestException
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+def _set_auth_cookies(
+    response: Response,
+    access_token: str,
+    refresh_token: str,
+) -> None:
+    """Set unified auth cookies scoped to parent domain for True SSO."""
+    kwargs: dict[str, Any] = {
+        "httponly": True,
+        "secure": settings.is_cookie_secure,
+        "samesite": "lax",
+        "path": "/",
+    }
+    if settings.COOKIE_DOMAIN:
+        kwargs["domain"] = settings.COOKIE_DOMAIN
+
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        **kwargs,
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        max_age=7 * 24 * 60 * 60,
+        **kwargs,
+    )
+
+
+def _clear_auth_cookies(response: Response) -> None:
+    """Clear unified auth cookies across parent domain."""
+    kwargs: dict[str, Any] = {"path": "/"}
+    if settings.COOKIE_DOMAIN:
+        kwargs["domain"] = settings.COOKIE_DOMAIN
+    response.delete_cookie(key="access_token", **kwargs)
+    response.delete_cookie(key="refresh_token", **kwargs)
+
+
 @router.post("/login", response_model=ApiResponse[TokenResponse])
 @inject
 async def login(
@@ -38,22 +76,7 @@ async def login(
     user, access_token, rf_token = uc.execute(request.email, request.password)
 
     # Set cookies
-    response.set_cookie(
-        key="access_token",
-        value=access_token,
-        httponly=True,
-        secure=settings.is_cookie_secure,
-        samesite="lax",
-        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-    )
-    response.set_cookie(
-        key="refresh_token",
-        value=rf_token,
-        httponly=True,
-        secure=settings.is_cookie_secure,
-        samesite="lax",
-        max_age=7 * 24 * 60 * 60,
-    )
+    _set_auth_cookies(response, access_token, rf_token)
 
     token_data = TokenResponse(access_token=access_token, refresh_token=rf_token)
 
@@ -73,22 +96,7 @@ async def zalo_phone_login(
     )
 
     # Set cookies
-    response.set_cookie(
-        key="access_token",
-        value=access_token,
-        httponly=True,
-        secure=settings.is_cookie_secure,
-        samesite="lax",
-        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-    )
-    response.set_cookie(
-        key="refresh_token",
-        value=rf_token,
-        httponly=True,
-        secure=settings.is_cookie_secure,
-        samesite="lax",
-        max_age=7 * 24 * 60 * 60,
-    )
+    _set_auth_cookies(response, access_token, rf_token)
 
     token_data = TokenResponse(access_token=access_token, refresh_token=rf_token)
 
@@ -118,22 +126,7 @@ async def refresh_token(
     access_token, new_refresh_token = uc.execute(token)
 
     # Set cookies
-    response.set_cookie(
-        key="access_token",
-        value=access_token,
-        httponly=True,
-        secure=settings.is_cookie_secure,
-        samesite="lax",
-        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-    )
-    response.set_cookie(
-        key="refresh_token",
-        value=new_refresh_token,
-        httponly=True,
-        secure=settings.is_cookie_secure,
-        samesite="lax",
-        max_age=7 * 24 * 60 * 60,
-    )
+    _set_auth_cookies(response, access_token, new_refresh_token)
 
     return ApiResponse.success(
         data=TokenResponse(access_token=access_token, refresh_token=new_refresh_token)
@@ -173,9 +166,8 @@ async def change_password(
 
 @router.post("/logout", response_model=ApiResponse)
 async def logout(response: Response):
-    """Logout by clearing cookies."""
-    response.delete_cookie(key="access_token")
-    response.delete_cookie(key="refresh_token")
+    """Logout by clearing cookies across parent domain."""
+    _clear_auth_cookies(response)
     return ApiResponse.success(message="Successfully logged out", data=None)
 
 

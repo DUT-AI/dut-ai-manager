@@ -1,7 +1,15 @@
 import axios from 'axios';
 import { message } from 'antd';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
+const getApiBaseUrl = () => {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/manage')) {
+    return '/manage/api/v1';
+  }
+  return '/api/v1';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,

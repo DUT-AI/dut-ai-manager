@@ -92,6 +92,11 @@ const AppContent = () => {
 };
 
 function App() {
+  const basename =
+    typeof window !== 'undefined' && window.location.pathname.startsWith('/manage')
+      ? '/manage'
+      : '/';
+
   return (
     <QueryClientProvider client={queryClient}>
       <ConfigProvider
@@ -103,7 +108,7 @@ function App() {
           },
         }}
       >
-        <BrowserRouter>
+        <BrowserRouter basename={basename}>
           <AuthProvider>
             <CapacityProvider>
               <AppContent />

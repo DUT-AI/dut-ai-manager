@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     BACKEND_PUBLIC_URL: str = "http://localhost:8000"
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
     COOKIE_SECURE: bool | None = None
+    COOKIE_DOMAIN: str | None = None
 
     @property
     def is_cookie_secure(self) -> bool:
@@ -95,9 +96,12 @@ class Settings(BaseSettings):
     @computed_field
     @property
     def all_cors_origins(self) -> list[str]:
-        return [str(origin).rstrip("/") for origin in self.BACKEND_CORS_ORIGINS] + [
-            self.FRONTEND_HOST
+        origins = [str(origin).rstrip("/") for origin in self.BACKEND_CORS_ORIGINS] + [
+            self.FRONTEND_HOST,
+            "https://workspace.dutai.io.vn",
+            "https://manage.dutai.io.vn",
         ]
+        return list(dict.fromkeys(origins))
 
     # Base PostgreSQL config
     POSTGRES_SERVER: str = "localhost"
