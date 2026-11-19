@@ -82,6 +82,8 @@ def create_access_token(
         )
     base = subject.model_dump(mode="json")
     base["sub"] = str(base["sub"])  # PyJWT yêu cầu sub là string (RFC)
+    # Add user_id for cross-service SSO compatibility (LMS, Meetly)
+    base["user_id"] = int(base["sub"]) if str(base["sub"]).isdigit() else base["sub"]
     to_encode = {"exp": exp_ts, "type": "access", **base, **(extra_claims or {})}
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
 
