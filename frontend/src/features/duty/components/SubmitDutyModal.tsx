@@ -12,15 +12,12 @@ import {
   Tag,
   Steps,
   Grid,
-  Card,
-  Tooltip,
   Typography,
 } from 'antd';
 import {
   InboxOutlined,
   CheckSquareOutlined,
   CarryOutOutlined,
-  UserOutlined,
   RightOutlined,
   LeftOutlined,
   CameraOutlined,

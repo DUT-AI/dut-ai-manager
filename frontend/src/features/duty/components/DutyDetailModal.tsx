@@ -18,7 +18,6 @@ import {
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
-  UserOutlined,
   CheckOutlined,
   CloseOutlined,
   ExclamationCircleOutlined,

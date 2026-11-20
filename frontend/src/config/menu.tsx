@@ -21,7 +21,6 @@ import {
     AuditOutlined,
     ScheduleOutlined,
     CarryOutOutlined,
-    BellOutlined,
     RobotOutlined,
 } from '@ant-design/icons';
 

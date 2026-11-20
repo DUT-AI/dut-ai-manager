@@ -12,6 +12,7 @@ import type { MenuProps } from 'antd';
 import { Avatar, Dropdown, Layout, Space, Typography, Button, Tooltip, Badge } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { notificationService } from '@/features/notification/services/notification.service';
+import { DutaiWaffle } from '@/components/common/DutaiWaffle';
 const { Header } = Layout;
 const { Title, Text } = Typography;
 
@@ -26,21 +27,26 @@ const HeaderLayout = ({ showMenuButton, onMenuClick }: HeaderLayoutProps) => {
     const location = useLocation();
     const [unreadCount, setUnreadCount] = useState<number>(0);
 
-    const fetchUnreadCount = async () => {
-        try {
-            const res = await notificationService.getUnreadCount();
-            if (res?.data?.unread_count !== undefined) {
-                setUnreadCount(res.data.unread_count);
-            }
-        } catch {
-            // Im lặng nếu lỗi mạng nền
-        }
-    };
-
     useEffect(() => {
-        fetchUnreadCount();
-        const interval = setInterval(fetchUnreadCount, 30000);
-        return () => clearInterval(interval);
+        let isMounted = true;
+        const fetchCount = () => {
+            notificationService.getUnreadCount()
+                .then((res) => {
+                    if (isMounted && res?.data?.unread_count !== undefined) {
+                        setUnreadCount(res.data.unread_count);
+                    }
+                })
+                .catch(() => {
+                    // Ignore background network error
+                });
+        };
+
+        fetchCount();
+        const interval = setInterval(fetchCount, 30000);
+        return () => {
+            isMounted = false;
+            clearInterval(interval);
+        };
     }, [location.pathname]);
 
     const handleLogout = async () => {
@@ -112,6 +118,8 @@ const HeaderLayout = ({ showMenuButton, onMenuClick }: HeaderLayoutProps) => {
                         className="hover:bg-white/10 flex items-center justify-center w-10 h-10 rounded-full border border-[#4fdbc8]/30 shadow-[0_0_10px_rgba(79,219,200,0.2)]"
                     />
                 </Tooltip>
+
+                <DutaiWaffle current="manage" />
 
                 <Dropdown menu={{ items: menuItems }} placement="bottomRight" arrow>
                     <Space className="cursor-pointer hover:bg-white/5 px-2 py-1 md:px-3 md:py-1.5 rounded-xl transition-all border border-transparent hover:border-white/10 group relative z-10">

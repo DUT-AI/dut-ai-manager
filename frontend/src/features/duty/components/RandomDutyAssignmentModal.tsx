@@ -5,12 +5,9 @@ import {
   Select,
   Input,
   Tag,
-  Space,
   Typography,
   Card,
   Tooltip,
-  Alert,
-  Divider,
   message,
   Spin,
 } from 'antd';
@@ -19,11 +16,7 @@ import {
   CheckCircleOutlined,
   PlusOutlined,
   DeleteOutlined,
-  UserOutlined,
-  CheckOutlined,
-  CloseOutlined,
   TrophyOutlined,
-  InfoCircleOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { dutyService } from '../services/duty.service';
