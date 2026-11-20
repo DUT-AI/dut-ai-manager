@@ -48,6 +48,9 @@ export function DutaiWaffle({ current = 'manage', className = '' }: DutaiWaffleP
             background: rgba(255, 255, 255, 0.1) !important;
             border-color: rgba(255, 255, 255, 0.35) !important;
           }
+          .popover {
+            z-index: 9999 !important;
+          }
         `;
         shadow.appendChild(style);
       }

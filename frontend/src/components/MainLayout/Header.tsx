@@ -74,7 +74,7 @@ const HeaderLayout = ({ showMenuButton, onMenuClick }: HeaderLayoutProps) => {
             style={{
                 background: 'linear-gradient(90deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)',
             }}
-            className="flex items-center justify-between shadow-2xl border-b border-indigo-500/20 z-20 h-16 relative overflow-hidden !px-4 md:!px-8"
+            className="flex items-center justify-between shadow-2xl border-b border-indigo-500/20 z-20 h-16 relative !px-4 md:!px-8"
         >
             {/* Subtle shine effect */}
             <div className="absolute top-0 left-0 w-full h-full pointer-events-none bg-[radial-gradient(circle_at_50%_0%,rgba(99,102,241,0.15),transparent_50%)]"></div>
